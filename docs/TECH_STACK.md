@@ -83,7 +83,7 @@ MVPがNext.js App Routerで構成されているため、画面構成やルー�
 
 ### Auth.js
 
-企業向けシステムでは認証方式が後から変わる可能性があります。Auth.jsを利用し、Microsoft Entra ID、Google、Keycloak、GitLabなどのIdP連携に備えます。初期権限は `admin`、`manager`、`viewer` 程度から開始し、将来的に部署や組織単位のRBACへ拡張できる形にします。
+企業向けシステムでは認証方式が後から変わる可能性があります。Auth.jsを利用し、Microsoft Entra ID、Google、Keycloak、GitLabなどのIdP連携に備えます。初期権限は `admin`、`manager`、`member` 程度から開始し、将来的に部署や組織単位のRBACへ拡張できる形にします。
 
 ### Zod + React Hook Form
 
@@ -99,6 +99,7 @@ MVPがNext.js App Routerで構成されているため、画面構成やルー�
 - Repositoryパターンは維持し、DB実装へ差し替える。
 - クライアント側に集約されていた集計処理を、DBクエリ、API、Server Component側へ移す。
 - CSV importは即時登録ではなく、プレビュー、検証エラー表示、差分確認、トランザクション登録を行う。
+- メンバー自身のスキル申告とmanager承認・補正フローを前提に、通知機能を設計に含める。
 - AI評価は画面から都度大量実行せず、キャッシュ、再評価、ジョブ履歴、失敗時フォールバックを設ける。
 - 監査ログを最初から設計に含める。
 - 型定義は単一ファイルへ集中させず、DB schema、domain model、DTO、form schemaを分離する。
