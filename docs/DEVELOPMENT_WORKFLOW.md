@@ -55,6 +55,8 @@ MRには以下を記載します。
 
 MRは可能な限り小さく保ちます。DB migration、画面変更、CI変更など影響範囲が異なる変更は、分けられる場合は分けます。
 
+pushまたはMR作成前には、最新のremote変更を取り込むために `git pull --rebase` を実行します。初回pushなど現在ブランチにupstreamがない場合は、MRのtarget branchを指定して `git pull --rebase origin <target-branch>` を実行します。conflictが発生した場合は解消し、必要な確認を行ってからpushします。
+
 ## Review方針
 
 レビューでは以下を優先します。
