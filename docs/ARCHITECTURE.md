@@ -24,6 +24,7 @@
 | `csv-import` | CSV import/export、プレビュー、検証、差分確認、一括登録 |
 | `auth` | 認証、セッション、ユーザー、権限ロール |
 | `audit` | 監査ログ、操作履歴、変更差分、import履歴 |
+| `notifications` | スキル申告、承認依頼、承認結果、差し戻し通知 |
 | `ai-evaluation` | AI評価、評価結果キャッシュ、再評価、利用ログ、フォールバック |
 
 ## レイヤー構成
@@ -74,6 +75,7 @@ src/
     csv-import/
     auth/
     audit/
+    notifications/
     ai-evaluation/
   shared/
     ui/
