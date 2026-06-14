@@ -147,6 +147,9 @@
 - 通知機能を実装する。
 - スキルレベル管理を実装する。
 - ロール達成判定を実装する。
+- 業務APIの設計方針としてOpenAPIを導入し、`docs/api/openapi.yaml` をAPI契約の正とする。
+- Route Handlersの入力検証にはZodを使い、OpenAPI仕様と実装スキーマの差分が広がらない運用を整える。
+- CIでOpenAPI仕様のvalidate/lintを実行する導線を検討し、API変更時のレビュー対象に含める。
 - Repository層をPostgreSQL + Prisma実装として整備する。
 - MVPのlocalStorage実装は本番コードへ持ち込まない。
 - モジュール間連携は公開されたuse caseまたはservice経由に統一する。
@@ -158,6 +161,7 @@
 - managerが申告内容を承認、補正承認、差し戻しできる。
 - 承認依頼と承認結果が通知される。
 - ロール要件に基づいて達成状況を判定できる。
+- Phase3で実装する主要業務APIのOpenAPI仕様が残っている。
 - 主要な業務ロジックにユニットテストがある。
 
 ## Phase 4: 可視化・検索・ダッシュボード
