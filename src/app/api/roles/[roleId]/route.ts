@@ -4,17 +4,17 @@ import {
   deactivateRole,
   updateRole
 } from "@/modules/roles/application/role-service";
-import { getCurrentSession } from "@/server/auth/session";
+import { adminOnly, authorizeApi } from "@/server/auth/authorization";
 
 type RoleContext = {
   params: Promise<{ roleId: string }>;
 };
 
 export async function PATCH(request: NextRequest, context: RoleContext) {
-  const session = await getCurrentSession();
+  const auth = await authorizeApi(adminOnly);
 
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if ("response" in auth) {
+    return auth.response;
   }
 
   const { roleId } = await context.params;
@@ -22,10 +22,10 @@ export async function PATCH(request: NextRequest, context: RoleContext) {
 }
 
 export async function DELETE(_request: NextRequest, context: RoleContext) {
-  const session = await getCurrentSession();
+  const auth = await authorizeApi(adminOnly);
 
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if ("response" in auth) {
+    return auth.response;
   }
 
   const { roleId } = await context.params;

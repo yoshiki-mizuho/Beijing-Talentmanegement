@@ -4,17 +4,21 @@ import {
   deactivateMember,
   updateMember
 } from "@/modules/members/application/member-service";
-import { getCurrentSession } from "@/server/auth/session";
+import {
+  adminOnly,
+  authorizeApi,
+  managerOrAdmin
+} from "@/server/auth/authorization";
 
 type MemberContext = {
   params: Promise<{ memberId: string }>;
 };
 
 export async function PATCH(request: NextRequest, context: MemberContext) {
-  const session = await getCurrentSession();
+  const auth = await authorizeApi(managerOrAdmin);
 
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if ("response" in auth) {
+    return auth.response;
   }
 
   const { memberId } = await context.params;
@@ -22,10 +26,10 @@ export async function PATCH(request: NextRequest, context: MemberContext) {
 }
 
 export async function DELETE(_request: NextRequest, context: MemberContext) {
-  const session = await getCurrentSession();
+  const auth = await authorizeApi(adminOnly);
 
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if ("response" in auth) {
+    return auth.response;
   }
 
   const { memberId } = await context.params;

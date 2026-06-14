@@ -1,20 +1,20 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { markNotificationRead } from "@/modules/notifications/application/notification-service";
-import { getCurrentSession } from "@/server/auth/session";
+import { authorizeApi } from "@/server/auth/authorization";
 
 type NotificationContext = {
   params: Promise<{ notificationId: string }>;
 };
 
 export async function POST(_request: NextRequest, context: NotificationContext) {
-  const session = await getCurrentSession();
+  const auth = await authorizeApi();
 
-  if (!session?.user.memberId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if ("response" in auth) {
+    return auth.response;
   }
 
   const { notificationId } = await context.params;
-  await markNotificationRead(notificationId, session.user.memberId);
+  await markNotificationRead(notificationId, auth.session.user.memberId);
   return new NextResponse(null, { status: 204 });
 }

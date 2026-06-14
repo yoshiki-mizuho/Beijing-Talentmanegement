@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { reviewSkillAssessment } from "@/modules/members/application/member-service";
-import { getCurrentSession } from "@/server/auth/session";
+import { authorizeApi, managerOrAdmin } from "@/server/auth/authorization";
 
 type SkillAssessmentReviewContext = {
   params: Promise<{ assessmentId: string }>;
@@ -11,10 +11,10 @@ export async function POST(
   request: NextRequest,
   context: SkillAssessmentReviewContext
 ) {
-  const session = await getCurrentSession();
+  const auth = await authorizeApi(managerOrAdmin);
 
-  if (!session?.user.memberId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if ("response" in auth) {
+    return auth.response;
   }
 
   const { assessmentId } = await context.params;
@@ -24,7 +24,7 @@ export async function POST(
     await reviewSkillAssessment({
       ...body,
       assessmentId,
-      reviewerMemberId: session.user.memberId
+      reviewerMemberId: auth.session.user.memberId
     })
   );
 }

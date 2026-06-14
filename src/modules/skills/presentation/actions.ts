@@ -8,6 +8,7 @@ import {
   deactivateSkill,
   updateSkill
 } from "@/modules/skills/application/skill-service";
+import { adminOnly, requireRoles } from "@/server/auth/authorization";
 import { getNumber, getOptionalString, getString } from "@/shared/lib/form-data";
 
 function parseSkillForm(formData: FormData) {
@@ -21,6 +22,7 @@ function parseSkillForm(formData: FormData) {
 }
 
 export async function createSkillCategoryAction(formData: FormData) {
+  await requireRoles(adminOnly);
   await createSkillCategory({
     name: getString(formData, "name"),
     displayOrder: getNumber(formData, "displayOrder")
@@ -29,11 +31,13 @@ export async function createSkillCategoryAction(formData: FormData) {
 }
 
 export async function createSkillAction(formData: FormData) {
+  await requireRoles(adminOnly);
   await createSkill(parseSkillForm(formData));
   revalidatePath("/skills");
 }
 
 export async function updateSkillAction(formData: FormData) {
+  await requireRoles(adminOnly);
   await updateSkill(getString(formData, "id"), parseSkillForm(formData));
   revalidatePath("/skills");
   revalidatePath("/members");
@@ -41,6 +45,7 @@ export async function updateSkillAction(formData: FormData) {
 }
 
 export async function deactivateSkillAction(formData: FormData) {
+  await requireRoles(adminOnly);
   await deactivateSkill(getString(formData, "id"));
   revalidatePath("/skills");
   revalidatePath("/members");

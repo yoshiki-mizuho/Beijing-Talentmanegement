@@ -1,17 +1,17 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { setMemberSkillLevel } from "@/modules/members/application/member-service";
-import { getCurrentSession } from "@/server/auth/session";
+import { authorizeApi, managerOrAdmin } from "@/server/auth/authorization";
 
 type MemberSkillContext = {
   params: Promise<{ memberId: string }>;
 };
 
 export async function PUT(request: NextRequest, context: MemberSkillContext) {
-  const session = await getCurrentSession();
+  const auth = await authorizeApi(managerOrAdmin);
 
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if ("response" in auth) {
+    return auth.response;
   }
 
   const { memberId } = await context.params;

@@ -12,7 +12,12 @@ import {
   setMemberSkillLevel,
   updateMember
 } from "@/modules/members/application/member-service";
-import { getCurrentSession } from "@/server/auth/session";
+import {
+  adminOnly,
+  managerOrAdmin,
+  requireAuthenticatedMember,
+  requireRoles
+} from "@/server/auth/authorization";
 import { getNumber, getOptionalString, getString } from "@/shared/lib/form-data";
 
 function parseMemberForm(formData: FormData) {
@@ -28,21 +33,25 @@ function parseMemberForm(formData: FormData) {
 }
 
 export async function createMemberAction(formData: FormData) {
+  await requireRoles(managerOrAdmin);
   await createMember(parseMemberForm(formData));
   revalidatePath("/members");
 }
 
 export async function updateMemberAction(formData: FormData) {
+  await requireRoles(managerOrAdmin);
   await updateMember(getString(formData, "id"), parseMemberForm(formData));
   revalidatePath("/members");
 }
 
 export async function deactivateMemberAction(formData: FormData) {
+  await requireRoles(adminOnly);
   await deactivateMember(getString(formData, "id"));
   revalidatePath("/members");
 }
 
 export async function setMemberSkillLevelAction(formData: FormData) {
+  await requireRoles(managerOrAdmin);
   await setMemberSkillLevel({
     memberId: getString(formData, "memberId"),
     skillId: getString(formData, "skillId"),
@@ -53,17 +62,14 @@ export async function setMemberSkillLevelAction(formData: FormData) {
 }
 
 export async function removeMemberSkillAction(formData: FormData) {
+  await requireRoles(managerOrAdmin);
   await removeMemberSkill(getString(formData, "memberId"), getString(formData, "skillId"));
   revalidatePath("/members");
   revalidatePath("/roles");
 }
 
 export async function createSkillAssessmentAction(formData: FormData) {
-  const session = await getCurrentSession();
-
-  if (!session?.user.memberId) {
-    throw new Error("A member-linked session is required.");
-  }
+  const session = await requireAuthenticatedMember();
 
   await createSkillAssessment({
     memberId: session.user.memberId,
@@ -79,11 +85,7 @@ export async function createSkillAssessmentAction(formData: FormData) {
 }
 
 export async function reviewSkillAssessmentAction(formData: FormData) {
-  const session = await getCurrentSession();
-
-  if (!session?.user.memberId) {
-    throw new Error("A member-linked reviewer session is required.");
-  }
+  const session = await requireRoles(managerOrAdmin);
 
   await reviewSkillAssessment({
     assessmentId: getString(formData, "assessmentId"),

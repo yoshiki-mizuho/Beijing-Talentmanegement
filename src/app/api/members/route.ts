@@ -4,23 +4,23 @@ import {
   createMember,
   listMembers
 } from "@/modules/members/application/member-service";
-import { getCurrentSession } from "@/server/auth/session";
+import { authorizeApi, managerOrAdmin } from "@/server/auth/authorization";
 
 export async function GET() {
-  const session = await getCurrentSession();
+  const auth = await authorizeApi();
 
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if ("response" in auth) {
+    return auth.response;
   }
 
   return NextResponse.json(await listMembers());
 }
 
 export async function POST(request: NextRequest) {
-  const session = await getCurrentSession();
+  const auth = await authorizeApi(managerOrAdmin);
 
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if ("response" in auth) {
+    return auth.response;
   }
 
   const member = await createMember(await request.json());

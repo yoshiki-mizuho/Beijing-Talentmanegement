@@ -4,23 +4,23 @@ import {
   createRole,
   listRoles
 } from "@/modules/roles/application/role-service";
-import { getCurrentSession } from "@/server/auth/session";
+import { adminOnly, authorizeApi } from "@/server/auth/authorization";
 
 export async function GET() {
-  const session = await getCurrentSession();
+  const auth = await authorizeApi();
 
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if ("response" in auth) {
+    return auth.response;
   }
 
   return NextResponse.json(await listRoles());
 }
 
 export async function POST(request: NextRequest) {
-  const session = await getCurrentSession();
+  const auth = await authorizeApi(adminOnly);
 
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if ("response" in auth) {
+    return auth.response;
   }
 
   const role = await createRole(await request.json());

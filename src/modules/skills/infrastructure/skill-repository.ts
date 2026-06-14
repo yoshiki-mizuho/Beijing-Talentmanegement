@@ -20,8 +20,12 @@ export async function listSkills() {
   return prisma.skill.findMany({
     include: {
       category: true,
-      memberSkills: true,
-      roleRequirements: true
+      _count: {
+        select: {
+          memberSkills: true,
+          roleRequirements: true
+        }
+      }
     },
     orderBy: [{ category: { displayOrder: "asc" } }, { name: "asc" }]
   });

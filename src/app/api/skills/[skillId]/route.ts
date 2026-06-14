@@ -4,17 +4,17 @@ import {
   deactivateSkill,
   updateSkill
 } from "@/modules/skills/application/skill-service";
-import { getCurrentSession } from "@/server/auth/session";
+import { adminOnly, authorizeApi } from "@/server/auth/authorization";
 
 type SkillContext = {
   params: Promise<{ skillId: string }>;
 };
 
 export async function PATCH(request: NextRequest, context: SkillContext) {
-  const session = await getCurrentSession();
+  const auth = await authorizeApi(adminOnly);
 
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if ("response" in auth) {
+    return auth.response;
   }
 
   const { skillId } = await context.params;
@@ -22,10 +22,10 @@ export async function PATCH(request: NextRequest, context: SkillContext) {
 }
 
 export async function DELETE(_request: NextRequest, context: SkillContext) {
-  const session = await getCurrentSession();
+  const auth = await authorizeApi(adminOnly);
 
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if ("response" in auth) {
+    return auth.response;
   }
 
   const { skillId } = await context.params;

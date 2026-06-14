@@ -1,17 +1,17 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { setRoleRequirement } from "@/modules/roles/application/role-service";
-import { getCurrentSession } from "@/server/auth/session";
+import { adminOnly, authorizeApi } from "@/server/auth/authorization";
 
 type RoleRequirementContext = {
   params: Promise<{ roleId: string }>;
 };
 
 export async function PUT(request: NextRequest, context: RoleRequirementContext) {
-  const session = await getCurrentSession();
+  const auth = await authorizeApi(adminOnly);
 
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if ("response" in auth) {
+    return auth.response;
   }
 
   const { roleId } = await context.params;

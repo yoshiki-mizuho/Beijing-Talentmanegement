@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 
 import { listNotifications } from "@/modules/notifications/application/notification-service";
-import { getCurrentSession } from "@/server/auth/session";
+import { authorizeApi } from "@/server/auth/authorization";
 
 export async function GET() {
-  const session = await getCurrentSession();
+  const auth = await authorizeApi();
 
-  if (!session?.user.memberId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if ("response" in auth) {
+    return auth.response;
   }
 
-  return NextResponse.json(await listNotifications(session.user.memberId));
+  return NextResponse.json(await listNotifications(auth.session.user.memberId));
 }

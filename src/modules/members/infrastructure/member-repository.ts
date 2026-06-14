@@ -179,6 +179,11 @@ export async function reviewSkillAssessment(input: SkillAssessmentReviewInput) {
         skill: true
       }
     });
+
+    if (assessment.status !== SkillSelfAssessmentStatus.PENDING) {
+      throw new Error("Only pending skill assessments can be reviewed.");
+    }
+
     const approvedLevel =
       input.status === SkillSelfAssessmentStatus.CORRECTED
         ? input.correctedLevel
