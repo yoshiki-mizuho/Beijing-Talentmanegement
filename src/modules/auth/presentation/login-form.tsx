@@ -54,7 +54,6 @@ export function LoginForm() {
               name="email"
               type="email"
               autoComplete="email"
-              defaultValue="admin@example.com"
               required
             />
           </div>
@@ -65,7 +64,6 @@ export function LoginForm() {
               name="password"
               type="password"
               autoComplete="current-password"
-              defaultValue="password"
               required
             />
           </div>

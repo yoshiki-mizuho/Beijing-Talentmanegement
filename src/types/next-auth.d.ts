@@ -12,13 +12,16 @@ declare module "next-auth" {
       id: string;
       role: AuthRole;
       memberId: string | null;
+      isActive: boolean;
     } & DefaultSession["user"];
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
-    role: AuthRole;
+    role?: AuthRole;
     memberId: string | null;
+    isActive?: boolean;
+    authCheckedAt?: number;
   }
 }

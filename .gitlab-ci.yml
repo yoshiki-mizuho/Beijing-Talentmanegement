@@ -34,9 +34,17 @@ typecheck:
 
 migration_check:
   stage: validate
+  services:
+    - name: postgres:17-alpine
+      alias: postgres
+      variables:
+        POSTGRES_DB: talentmanagement
+        POSTGRES_USER: talent
+        POSTGRES_PASSWORD: talent_password
   script:
     - npm run prisma:generate
-    - npx prisma validate
+    - npx prisma migrate deploy
+    - npm run prisma:migrate:check
 
 test:
   stage: test

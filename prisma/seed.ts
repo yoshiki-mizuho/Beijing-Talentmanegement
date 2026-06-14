@@ -107,15 +107,25 @@ async function main() {
         }
       });
 
-      await tx.user.upsert({
+      const existingUser = await tx.user.findUnique({
         where: { email: memberInput.email },
-        update: {
-          name: memberInput.name,
-          passwordHash,
-          role: memberInput.role,
-          memberId: member.id
-        },
-        create: {
+        select: { id: true }
+      });
+
+      if (existingUser) {
+        await tx.user.update({
+          where: { id: existingUser.id },
+          data: {
+            name: memberInput.name,
+            role: memberInput.role,
+            memberId: member.id
+          }
+        });
+        continue;
+      }
+
+      await tx.user.create({
+        data: {
           email: memberInput.email,
           name: memberInput.name,
           passwordHash,

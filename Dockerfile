@@ -17,6 +17,9 @@ COPY . .
 RUN npx prisma generate
 RUN npm run build
 
+FROM builder AS migrator
+CMD ["sh", "-c", "npx prisma migrate deploy && npx prisma db seed"]
+
 FROM node:24-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production

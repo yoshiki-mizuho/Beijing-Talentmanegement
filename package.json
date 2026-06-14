@@ -11,16 +11,13 @@
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "eslint src prisma next.config.ts vitest.config.ts prisma.config.ts",
+    "lint": "eslint src prisma scripts next.config.ts vitest.config.ts prisma.config.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:migrate:check": "prisma validate",
+    "prisma:migrate:check": "prisma validate && node scripts/check-migrations.mjs",
     "db:seed": "prisma db seed"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
