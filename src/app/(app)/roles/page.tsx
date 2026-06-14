@@ -1,5 +1,5 @@
-import { PlaceholderPage } from "@/shared/ui/placeholder-page";
+import { DevPlaceholderPage } from "@/shared/ui/dev-placeholder-page";
 
 export default function RolesPage() {
-  return <PlaceholderPage title="ロール管理" phase="Phase3" />;
+  return <DevPlaceholderPage title="ロール管理" phase="Phase3" />;
 }

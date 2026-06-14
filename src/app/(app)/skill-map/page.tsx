@@ -1,5 +1,5 @@
-import { PlaceholderPage } from "@/shared/ui/placeholder-page";
+import { DevPlaceholderPage } from "@/shared/ui/dev-placeholder-page";
 
 export default function SkillMapPage() {
-  return <PlaceholderPage title="スキルマップ" phase="Phase4" />;
+  return <DevPlaceholderPage title="スキルマップ" phase="Phase4" />;
 }

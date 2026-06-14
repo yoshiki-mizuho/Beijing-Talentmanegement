@@ -1,11 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 
-type PlaceholderPageProps = {
+type DevPlaceholderPageProps = {
   title: string;
   phase: string;
 };
 
-export function PlaceholderPage({ title, phase }: PlaceholderPageProps) {
+export function DevPlaceholderPage({ title, phase }: DevPlaceholderPageProps) {
   return (
     <div className="space-y-4">
       <div>
@@ -16,7 +16,7 @@ export function PlaceholderPage({ title, phase }: PlaceholderPageProps) {
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Phase2の確認対象</CardTitle>
+          <CardTitle>Phase2の開発確認用プレースホルダー</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-slate-600">

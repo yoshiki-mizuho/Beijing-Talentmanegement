@@ -1,5 +1,5 @@
-import { PlaceholderPage } from "@/shared/ui/placeholder-page";
+import { DevPlaceholderPage } from "@/shared/ui/dev-placeholder-page";
 
 export default function SkillApprovalsPage() {
-  return <PlaceholderPage title="スキル承認" phase="Phase3" />;
+  return <DevPlaceholderPage title="スキル承認" phase="Phase3" />;
 }

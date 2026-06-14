@@ -1,5 +1,5 @@
-import { PlaceholderPage } from "@/shared/ui/placeholder-page";
+import { DevPlaceholderPage } from "@/shared/ui/dev-placeholder-page";
 
 export default function NotificationsPage() {
-  return <PlaceholderPage title="通知" phase="Phase3" />;
+  return <DevPlaceholderPage title="通知" phase="Phase3" />;
 }

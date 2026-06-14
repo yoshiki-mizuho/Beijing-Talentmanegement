@@ -76,6 +76,7 @@ Merge Request時の必須チェックは以下とします。
 
 - `lint`
 - `typecheck`
+- `migration_check`
 - `test`
 - `build`
 - `SAST`

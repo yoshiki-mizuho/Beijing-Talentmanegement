@@ -1,5 +1,5 @@
-import { PlaceholderPage } from "@/shared/ui/placeholder-page";
+import { DevPlaceholderPage } from "@/shared/ui/dev-placeholder-page";
 
 export default function AuditLogsPage() {
-  return <PlaceholderPage title="監査ログ" phase="Phase5" />;
+  return <DevPlaceholderPage title="監査ログ" phase="Phase5" />;
 }

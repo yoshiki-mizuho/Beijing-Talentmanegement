@@ -1,4 +1,6 @@
 import { spawnSync } from "node:child_process";
+import path from "node:path";
+import { delimiter } from "node:path";
 import pg from "pg";
 
 const databaseUrl =
@@ -7,6 +9,12 @@ const databaseUrl =
 const shadowDatabaseUrl =
   process.env.SHADOW_DATABASE_URL ??
   databaseUrl.replace(/\/([^/?]+)(\?|$)/, "/$1_shadow$2");
+const prismaBinary = path.join(
+  process.cwd(),
+  "node_modules",
+  ".bin",
+  process.platform === "win32" ? "prisma.cmd" : "prisma"
+);
 
 async function ensurePostgresShadowDatabase(url) {
   const shadowUrl = new URL(url);
@@ -37,12 +45,12 @@ async function ensurePostgresShadowDatabase(url) {
   }
 }
 
+// Prisma 7 requires shadowDatabaseUrl when diffing from a migrations directory.
 await ensurePostgresShadowDatabase(shadowDatabaseUrl);
 
 const result = spawnSync(
-  "npx",
+  prismaBinary,
   [
-    "prisma",
     "migrate",
     "diff",
     "--from-migrations",
@@ -55,7 +63,10 @@ const result = spawnSync(
     env: {
       ...process.env,
       DATABASE_URL: databaseUrl,
-      SHADOW_DATABASE_URL: shadowDatabaseUrl
+      SHADOW_DATABASE_URL: shadowDatabaseUrl,
+      PATH: [path.dirname(process.execPath), process.env.PATH]
+        .filter(Boolean)
+        .join(delimiter)
     },
     shell: process.platform === "win32",
     stdio: "inherit"

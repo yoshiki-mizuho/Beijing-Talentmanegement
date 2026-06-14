@@ -1,5 +1,5 @@
-import { PlaceholderPage } from "@/shared/ui/placeholder-page";
+import { DevPlaceholderPage } from "@/shared/ui/dev-placeholder-page";
 
 export default function CsvPage() {
-  return <PlaceholderPage title="CSV管理" phase="Phase5" />;
+  return <DevPlaceholderPage title="CSV管理" phase="Phase5" />;
 }

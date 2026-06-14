@@ -43,7 +43,7 @@ migration_check:
         POSTGRES_PASSWORD: talent_password
   script:
     - npm run prisma:generate
-    - npx prisma migrate deploy
+    - npm exec prisma migrate deploy
     - npm run prisma:migrate:check
 
 test:

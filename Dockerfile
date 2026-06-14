@@ -11,14 +11,14 @@ RUN apt-get update -y \
   && apt-get install -y --no-install-recommends openssl ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV DATABASE_URL="postgresql://talent:talent_password@localhost:5432/talentmanagement?schema=public"
+ENV DATABASE_URL="postgresql://build:build@localhost:5432/build?schema=public"
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npx prisma generate
+RUN npm exec prisma generate
 RUN npm run build
 
 FROM builder AS migrator
-CMD ["sh", "-c", "npx prisma migrate deploy && npx prisma db seed"]
+CMD ["sh", "-c", "npm exec prisma migrate deploy && npm exec prisma db seed"]
 
 FROM node:24-bookworm-slim AS runner
 WORKDIR /app
