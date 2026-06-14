@@ -1,0 +1,303 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum AuthRole {
+  ADMIN
+  MANAGER
+  MEMBER
+}
+
+enum MemberStatus {
+  ACTIVE
+  INACTIVE
+  LEAVE
+}
+
+enum SkillSelfAssessmentStatus {
+  PENDING
+  APPROVED
+  CORRECTED
+  REJECTED
+}
+
+enum NotificationType {
+  SKILL_ASSESSMENT_REQUESTED
+  SKILL_ASSESSMENT_APPROVED
+  SKILL_ASSESSMENT_CORRECTED
+  SKILL_ASSESSMENT_REJECTED
+}
+
+enum NotificationStatus {
+  UNREAD
+  READ
+}
+
+enum CsvImportTargetType {
+  DEPARTMENTS
+  MEMBERS
+  SKILLS
+  MEMBER_SKILLS
+}
+
+enum CsvImportStatus {
+  UPLOADED
+  VALIDATED
+  APPLIED
+  FAILED
+  CANCELED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  role          AuthRole  @default(MEMBER)
+  memberId      String?   @unique
+  member        Member?   @relation(fields: [memberId], references: [id])
+  accounts      Account[]
+  sessions      Session[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Department {
+  id                 String       @id @default(cuid())
+  code               String       @unique
+  name               String
+  parentDepartmentId String?
+  parentDepartment   Department?  @relation("DepartmentHierarchy", fields: [parentDepartmentId], references: [id])
+  childDepartments   Department[] @relation("DepartmentHierarchy")
+  isActive           Boolean      @default(true)
+  members            Member[]
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@index([parentDepartmentId])
+}
+
+model Member {
+  id                    String                @id @default(cuid())
+  employeeNo            String                @unique
+  name                  String
+  email                 String                @unique
+  departmentId          String
+  department            Department            @relation(fields: [departmentId], references: [id])
+  status                MemberStatus          @default(ACTIVE)
+  jobTitle              String?
+  profile               String?
+  users                 User[]
+  memberSkills          MemberSkill[]         @relation("MemberSkills")
+  approvedMemberSkills  MemberSkill[]         @relation("ApprovedMemberSkills")
+  selfAssessments       SkillSelfAssessment[] @relation("AssessmentMember")
+  reviewedAssessments   SkillSelfAssessment[] @relation("AssessmentReviewer")
+  notifications         Notification[]        @relation("NotificationRecipient")
+  auditLogs             AuditLog[]            @relation("AuditActor")
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  @@index([departmentId])
+  @@index([status])
+}
+
+model SkillCategory {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  displayOrder Int      @default(0)
+  skills       Skill[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Skill {
+  id              String                @id @default(cuid())
+  code            String                @unique
+  name            String
+  categoryId      String
+  category        SkillCategory         @relation(fields: [categoryId], references: [id])
+  description     String?
+  isActive        Boolean               @default(true)
+  memberSkills    MemberSkill[]
+  selfAssessments SkillSelfAssessment[]
+  roleRequirements RoleRequirement[]
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  @@unique([categoryId, name])
+  @@index([categoryId])
+}
+
+model SkillLevel {
+  level            Int                   @id
+  label            String
+  description      String
+  memberSkills     MemberSkill[]
+  selfAssessments  SkillSelfAssessment[]
+  roleRequirements RoleRequirement[]
+}
+
+model MemberSkill {
+  id                String     @id @default(cuid())
+  memberId          String
+  member            Member     @relation("MemberSkills", fields: [memberId], references: [id])
+  skillId           String
+  skill             Skill      @relation(fields: [skillId], references: [id])
+  level             Int
+  skillLevel        SkillLevel @relation(fields: [level], references: [level])
+  yearsOfExperience Decimal?   @db.Decimal(4, 1)
+  lastAssessedAt    DateTime?  @db.Date
+  approvedByMemberId String?
+  approvedByMember   Member?   @relation("ApprovedMemberSkills", fields: [approvedByMemberId], references: [id])
+  approvedAt        DateTime?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  @@unique([memberId, skillId])
+  @@index([skillId])
+  @@index([approvedByMemberId])
+}
+
+model SkillSelfAssessment {
+  id                 String                    @id @default(cuid())
+  memberId           String
+  member             Member                    @relation("AssessmentMember", fields: [memberId], references: [id])
+  skillId            String
+  skill              Skill                     @relation(fields: [skillId], references: [id])
+  requestedLevel     Int
+  requestedSkillLevel SkillLevel               @relation(fields: [requestedLevel], references: [level])
+  yearsOfExperience  Decimal?                  @db.Decimal(4, 1)
+  status             SkillSelfAssessmentStatus @default(PENDING)
+  managerComment     String?
+  reviewedByMemberId String?
+  reviewedByMember   Member?                   @relation("AssessmentReviewer", fields: [reviewedByMemberId], references: [id])
+  reviewedAt         DateTime?
+  notifications      Notification[]
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+
+  @@index([memberId])
+  @@index([skillId])
+  @@index([status])
+  @@index([reviewedByMemberId])
+}
+
+model Notification {
+  id                    String                @id @default(cuid())
+  recipientMemberId     String
+  recipientMember       Member                @relation("NotificationRecipient", fields: [recipientMemberId], references: [id])
+  type                  NotificationType
+  status                NotificationStatus    @default(UNREAD)
+  skillSelfAssessmentId String?
+  skillSelfAssessment   SkillSelfAssessment?  @relation(fields: [skillSelfAssessmentId], references: [id])
+  title                 String
+  body                  String?
+  createdAt             DateTime              @default(now())
+  readAt                DateTime?
+
+  @@index([recipientMemberId, status])
+  @@index([skillSelfAssessmentId])
+}
+
+model Role {
+  id               String            @id @default(cuid())
+  name             String            @unique
+  description      String?
+  isActive         Boolean           @default(true)
+  roleRequirements RoleRequirement[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+model RoleRequirement {
+  id            String     @id @default(cuid())
+  roleId        String
+  role          Role       @relation(fields: [roleId], references: [id])
+  skillId       String
+  skill         Skill      @relation(fields: [skillId], references: [id])
+  requiredLevel Int
+  skillLevel    SkillLevel @relation(fields: [requiredLevel], references: [level])
+  isRequired    Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@unique([roleId, skillId])
+  @@index([skillId])
+}
+
+model AuditLog {
+  id             String        @id @default(cuid())
+  actorMemberId  String?
+  actorMember    Member?       @relation("AuditActor", fields: [actorMemberId], references: [id])
+  action         String
+  targetType     String
+  targetId       String?
+  before         Json?
+  after          Json?
+  metadata       Json?
+  csvImportJobId String?
+  csvImportJob   CsvImportJob? @relation(fields: [csvImportJobId], references: [id])
+  occurredAt     DateTime      @default(now())
+
+  @@index([actorMemberId])
+  @@index([targetType, targetId])
+  @@index([csvImportJobId])
+  @@index([occurredAt])
+}
+
+model CsvImportJob {
+  id           String              @id @default(cuid())
+  targetType   CsvImportTargetType
+  status       CsvImportStatus     @default(UPLOADED)
+  originalName String?
+  totalRows    Int                 @default(0)
+  validRows    Int                 @default(0)
+  errorRows    Int                 @default(0)
+  summary      Json?
+  createdById  String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  auditLogs    AuditLog[]
+
+  @@index([targetType, status])
+}

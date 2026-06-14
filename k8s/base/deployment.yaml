@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: talentmanagement-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: talentmanagement-app
+  template:
+    metadata:
+      labels:
+        app: talentmanagement-app
+    spec:
+      containers:
+        - name: app
+          image: registry.gitlab.com/your-group/talentmanagement:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: talentmanagement-config
+            - secretRef:
+                name: talentmanagement-secret
+          readinessProbe:
+            httpGet:
+              path: /login
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /login
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
