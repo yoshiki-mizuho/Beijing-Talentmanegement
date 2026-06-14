@@ -1,0 +1,47 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: talentmanagement-db
+    environment:
+      POSTGRES_DB: talentmanagement
+      POSTGRES_USER: talent
+      POSTGRES_PASSWORD: talent_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U talent -d talentmanagement"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+    container_name: talentmanagement-app
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql://talent:talent_password@db:5432/talentmanagement?schema=public
+      AUTH_SECRET: replace-with-a-long-random-secret
+      AUTH_URL: http://localhost:3000
+      AUTH_TRUST_HOST: "true"
+    ports:
+      - "3000:3000"
+
+  db-init:
+    build:
+      context: .
+      target: migrator
+    container_name: talentmanagement-db-init
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://talent:talent_password@db:5432/talentmanagement?schema=public
+    restart: "no"
+
+volumes:
+  postgres-data:

@@ -1,0 +1,36 @@
+# dependencies
+node_modules/
+
+# next
+.next/
+out/
+
+# production
+build/
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# env
+.env
+.env*.local
+!.env.example
+
+# prisma
+prisma/dev.db
+
+# coverage
+coverage/
+*.tsbuildinfo
+
+# OS/editor
+Thumbs.db
+.vscode/
+.idea/

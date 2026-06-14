@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: talentmanagement-config
+data:
+  AUTH_URL: "https://talentmanagement.example.com"
+  AUTH_TRUST_HOST: "true"
