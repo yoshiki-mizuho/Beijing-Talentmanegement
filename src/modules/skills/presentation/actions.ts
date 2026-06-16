@@ -5,7 +5,9 @@ import { revalidatePath } from "next/cache";
 import {
   createSkill,
   createSkillCategory,
+  deleteSkillCategory,
   deactivateSkill,
+  updateSkillCategory,
   updateSkill
 } from "@/modules/skills/application/skill-service";
 import { adminOnly, requireRoles } from "@/server/auth/authorization";
@@ -13,7 +15,6 @@ import { getNumber, getOptionalString, getString } from "@/shared/lib/form-data"
 
 function parseSkillForm(formData: FormData) {
   return {
-    code: getString(formData, "code"),
     name: getString(formData, "name"),
     categoryId: getString(formData, "categoryId"),
     description: getOptionalString(formData, "description"),
@@ -30,6 +31,21 @@ export async function createSkillCategoryAction(formData: FormData) {
   revalidatePath("/skills");
 }
 
+export async function updateSkillCategoryAction(formData: FormData) {
+  await requireRoles(adminOnly);
+  await updateSkillCategory(getString(formData, "id"), {
+    name: getString(formData, "name"),
+    displayOrder: getNumber(formData, "displayOrder")
+  });
+  revalidatePath("/skills");
+}
+
+export async function deleteSkillCategoryAction(formData: FormData) {
+  await requireRoles(adminOnly);
+  await deleteSkillCategory(getString(formData, "id"));
+  revalidatePath("/skills");
+}
+
 export async function createSkillAction(formData: FormData) {
   await requireRoles(adminOnly);
   await createSkill(parseSkillForm(formData));
@@ -38,7 +54,10 @@ export async function createSkillAction(formData: FormData) {
 
 export async function updateSkillAction(formData: FormData) {
   await requireRoles(adminOnly);
-  await updateSkill(getString(formData, "id"), parseSkillForm(formData));
+  await updateSkill(getString(formData, "id"), {
+    ...parseSkillForm(formData),
+    code: getString(formData, "code")
+  });
   revalidatePath("/skills");
   revalidatePath("/members");
   revalidatePath("/roles");

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { skillInputSchema } from "@/modules/skills/domain/skill-schema";
+import {
+  createSkillInputSchema,
+  skillInputSchema
+} from "@/modules/skills/domain/skill-schema";
 
 describe("skill schemas", () => {
   it("accepts valid skill input", () => {
@@ -27,5 +30,18 @@ describe("skill schemas", () => {
         categoryId: "category-1"
       })
     ).toThrow();
+  });
+
+  it("does not require code when creating a skill", () => {
+    expect(
+      createSkillInputSchema.parse({
+        name: "TypeScript",
+        categoryId: "category-1",
+        isActive: true
+      })
+    ).toMatchObject({
+      name: "TypeScript",
+      categoryId: "category-1"
+    });
   });
 });

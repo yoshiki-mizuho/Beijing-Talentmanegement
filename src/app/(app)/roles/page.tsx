@@ -63,7 +63,7 @@ export default async function RolesPage() {
           const requirements = role.roleRequirements.map((requirement) => ({
             skillId: requirement.skillId,
             requiredLevel: requirement.requiredLevel,
-            isRequired: requirement.isRequired,
+            isRequired: true,
             skillName: requirement.skill.name
           }));
 
@@ -109,16 +109,32 @@ export default async function RolesPage() {
                           <p className="text-sm text-slate-600">
                             {requirement.skill.category.name} / 必要Lv.
                             {requirement.requiredLevel}
-                            {requirement.isRequired ? "" : " / 任意"}
                           </p>
                         </div>
-                        <Button type="submit" variant="ghost">
-                          削除
-                        </Button>
+                        <div className="flex flex-wrap gap-2">
+                          <select
+                            name="requiredLevel"
+                            defaultValue={requirement.requiredLevel}
+                            className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
+                            required
+                          >
+                            {skillLevels.map((level) => (
+                              <option key={level} value={level}>
+                                必要Lv.{level}
+                              </option>
+                            ))}
+                          </select>
+                          <Button type="submit" formAction={setRoleRequirementAction}>
+                            更新
+                          </Button>
+                          <Button type="submit" variant="ghost">
+                            削除
+                          </Button>
+                        </div>
                       </form>
                     ))}
                   </div>
-                  <form action={setRoleRequirementAction} className="mt-3 grid gap-3 md:grid-cols-[1fr_140px_auto_auto]">
+                  <form action={setRoleRequirementAction} className="mt-3 grid gap-3 md:grid-cols-[1fr_140px_auto]">
                     <input type="hidden" name="roleId" value={role.id} />
                     <select
                       name="skillId"
@@ -142,10 +158,6 @@ export default async function RolesPage() {
                         </option>
                       ))}
                     </select>
-                    <label className="flex items-center gap-2 text-sm text-slate-700">
-                      <input type="checkbox" name="isRequired" defaultChecked />
-                      必須
-                    </label>
                     <Button type="submit">要件設定</Button>
                   </form>
                 </div>

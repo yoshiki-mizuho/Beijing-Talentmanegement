@@ -44,7 +44,7 @@ export async function setRoleRequirementAction(formData: FormData) {
     roleId: getString(formData, "roleId"),
     skillId: getString(formData, "skillId"),
     requiredLevel: getNumber(formData, "requiredLevel"),
-    isRequired: formData.get("isRequired") === "on"
+    isRequired: true
   });
   revalidatePath("/roles");
 }

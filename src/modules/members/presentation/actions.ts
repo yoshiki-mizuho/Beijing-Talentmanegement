@@ -15,7 +15,7 @@ import {
 import {
   adminOnly,
   managerOrAdmin,
-  requireAuthenticatedMember,
+  requirePasswordReadyMember,
   requireRoles
 } from "@/server/auth/authorization";
 import { getNumber, getOptionalString, getString } from "@/shared/lib/form-data";
@@ -69,7 +69,7 @@ export async function removeMemberSkillAction(formData: FormData) {
 }
 
 export async function createSkillAssessmentAction(formData: FormData) {
-  const session = await requireAuthenticatedMember();
+  const session = await requirePasswordReadyMember();
 
   await createSkillAssessment({
     memberId: session.user.memberId,

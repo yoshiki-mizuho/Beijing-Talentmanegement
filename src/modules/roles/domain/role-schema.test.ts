@@ -29,4 +29,25 @@ describe("role schemas", () => {
       })
     ).toThrow();
   });
+
+  it("defaults role requirements to required", () => {
+    expect(
+      roleRequirementInputSchema.parse({
+        roleId: "role-1",
+        skillId: "skill-1",
+        requiredLevel: 3
+      }).isRequired
+    ).toBe(true);
+  });
+
+  it("rejects optional role requirements", () => {
+    expect(() =>
+      roleRequirementInputSchema.parse({
+        roleId: "role-1",
+        skillId: "skill-1",
+        requiredLevel: 3,
+        isRequired: false
+      })
+    ).toThrow();
+  });
 });

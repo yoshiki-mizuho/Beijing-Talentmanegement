@@ -2,7 +2,9 @@ import { listSkillCategories, listSkills } from "@/modules/skills/application/sk
 import {
   createSkillAction,
   createSkillCategoryAction,
+  deleteSkillCategoryAction,
   deactivateSkillAction,
+  updateSkillCategoryAction,
   updateSkillAction
 } from "@/modules/skills/presentation/actions";
 import type { InputHTMLAttributes, ReactNode } from "react";
@@ -31,9 +33,9 @@ export default async function SkillsPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>カテゴリ追加</CardTitle>
+            <CardTitle>カテゴリ管理</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
             <form action={createSkillCategoryAction} className="grid gap-3 md:grid-cols-[1fr_120px_auto]">
               <Field label="カテゴリ名" name="name" required />
               <Field label="表示順" name="displayOrder" type="number" defaultValue={0} min={0} required />
@@ -41,6 +43,40 @@ export default async function SkillsPage() {
                 <Button type="submit">追加</Button>
               </div>
             </form>
+            <div className="grid gap-2">
+              {categories.map((category) => (
+                <form
+                  key={category.id}
+                  action={updateSkillCategoryAction}
+                  className="grid gap-2 rounded-md border border-slate-200 p-3 md:grid-cols-[1fr_120px_auto_auto]"
+                >
+                  <input type="hidden" name="id" value={category.id} />
+                  <Input name="name" defaultValue={category.name} aria-label="カテゴリ名" required />
+                  <Input
+                    name="displayOrder"
+                    type="number"
+                    defaultValue={category.displayOrder}
+                    min={0}
+                    aria-label="表示順"
+                    required
+                  />
+                  <Button type="submit">更新</Button>
+                  <Button
+                    type="submit"
+                    formAction={deleteSkillCategoryAction}
+                    variant="secondary"
+                    disabled={category._count.skills > 0}
+                    title={
+                      category._count.skills > 0
+                        ? "配下スキルがあるカテゴリは削除できません"
+                        : undefined
+                    }
+                  >
+                    削除
+                  </Button>
+                </form>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
@@ -50,7 +86,6 @@ export default async function SkillsPage() {
           </CardHeader>
           <CardContent>
             <form action={createSkillAction} className="grid gap-3 md:grid-cols-2">
-              <Field label="コード" name="code" required />
               <Field label="スキル名" name="name" required />
               <Select label="カテゴリ" name="categoryId">
                 {categories.map((category) => (
@@ -84,7 +119,7 @@ export default async function SkillsPage() {
               className="grid gap-3 rounded-md border border-slate-200 p-3 lg:grid-cols-[120px_1fr_180px_1fr_80px_auto_auto]"
             >
               <input type="hidden" name="id" value={skill.id} />
-              <Input name="code" defaultValue={skill.code} aria-label="コード" required />
+              <Input name="code" value={skill.code} aria-label="コード" readOnly />
               <Input name="name" defaultValue={skill.name} aria-label="スキル名" required />
               <select
                 name="categoryId"

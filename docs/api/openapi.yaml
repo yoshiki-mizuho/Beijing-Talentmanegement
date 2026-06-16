@@ -25,6 +25,10 @@ paths:
       responses:
         "201":
           description: Member created.
+        "400":
+          description: Invalid member input.
+        "409":
+          description: User email is already linked to another member.
   /members/{memberId}:
     patch:
       summary: Update member
@@ -78,10 +82,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SkillInput"
+              $ref: "#/components/schemas/SkillCreateInput"
       responses:
         "201":
-          description: Skill created.
+          description: Skill created with server-generated code.
   /skills/{skillId}:
     patch:
       summary: Update skill
@@ -216,6 +220,73 @@ paths:
       responses:
         "204":
           description: Notification marked as read.
+  /skill-categories:
+    get:
+      summary: List skill categories
+      tags: [Skills]
+      responses:
+        "200":
+          description: Skill categories with skill counts.
+    post:
+      summary: Create skill category
+      tags: [Skills]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SkillCategoryInput"
+      responses:
+        "201":
+          description: Skill category created.
+  /skill-categories/{categoryId}:
+    patch:
+      summary: Update skill category
+      tags: [Skills]
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SkillCategoryInput"
+      responses:
+        "200":
+          description: Skill category updated.
+    delete:
+      summary: Delete empty skill category
+      tags: [Skills]
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Skill category deleted when it has no skills.
+        "409":
+          description: Skill category still has skills.
+  /account/password:
+    post:
+      summary: Change own password
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordChangeInput"
+      responses:
+        "204":
+          description: Password changed and password change requirement cleared.
+        "400":
+          description: Invalid password change input.
 components:
   parameters:
     MemberId:
@@ -295,6 +366,30 @@ components:
           maxLength: 1000
         isActive:
           type: boolean
+    SkillCreateInput:
+      type: object
+      required: [name, categoryId]
+      properties:
+        name:
+          type: string
+          maxLength: 120
+        categoryId:
+          type: string
+        description:
+          type: string
+          maxLength: 1000
+        isActive:
+          type: boolean
+    SkillCategoryInput:
+      type: object
+      required: [name, displayOrder]
+      properties:
+        name:
+          type: string
+          maxLength: 120
+        displayOrder:
+          type: integer
+          minimum: 0
     RoleInput:
       type: object
       required: [name]
@@ -309,14 +404,12 @@ components:
           type: boolean
     RoleRequirementInput:
       type: object
-      required: [skillId, requiredLevel, isRequired]
+      required: [skillId, requiredLevel]
       properties:
         skillId:
           type: string
         requiredLevel:
           $ref: "#/components/schemas/SkillLevel"
-        isRequired:
-          type: boolean
     SkillAssessmentInput:
       type: object
       required: [skillId, requestedLevel]
@@ -340,3 +433,15 @@ components:
         managerComment:
           type: string
           maxLength: 1000
+    PasswordChangeInput:
+      type: object
+      required: [currentPassword, newPassword, confirmPassword]
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+          minLength: 8
+        confirmPassword:
+          type: string
+          minLength: 8

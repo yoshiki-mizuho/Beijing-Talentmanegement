@@ -59,6 +59,7 @@ model User {
   emailVerified DateTime?
   image         String?
   passwordHash  String?
+  passwordChangeRequired Boolean @default(false)
   role          AuthRole  @default(MEMBER)
   memberId      String?   @unique
   member        Member?   @relation(fields: [memberId], references: [id])

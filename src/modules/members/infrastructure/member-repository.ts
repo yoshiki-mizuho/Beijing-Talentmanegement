@@ -1,15 +1,23 @@
 import {
+  AuthRole,
   NotificationType,
   Prisma,
   SkillSelfAssessmentStatus,
 } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
+import { INITIAL_PASSWORD } from "@/modules/auth/domain/password-schema";
 import type { MemberInput, MemberSkillInput } from "@/modules/members/domain/member-schema";
+import { assertUserCanLinkToMember } from "@/modules/members/domain/member-user-policy";
 import type {
   SkillAssessmentInput,
   SkillAssessmentReviewInput
 } from "@/modules/members/domain/skill-assessment-schema";
 import { prisma } from "@/server/db/prisma";
+
+async function hashInitialPassword() {
+  return bcrypt.hash(INITIAL_PASSWORD, 12);
+}
 
 export async function listDepartments() {
   return prisma.department.findMany({
@@ -42,7 +50,49 @@ export async function listMembers() {
 }
 
 export async function createMember(input: MemberInput) {
-  return prisma.member.create({ data: input });
+  return prisma.$transaction(async (tx) => {
+    const member = await tx.member.create({ data: input });
+    const existingUser = await tx.user.findUnique({
+      where: { email: input.email },
+      select: {
+        id: true,
+        passwordHash: true,
+        memberId: true
+      }
+    });
+
+    if (existingUser) {
+      assertUserCanLinkToMember(existingUser.memberId, member.id);
+
+      await tx.user.update({
+        where: { id: existingUser.id },
+        data: {
+          name: input.name,
+          memberId: member.id,
+          ...(existingUser.passwordHash
+            ? {}
+            : {
+                passwordHash: await hashInitialPassword(),
+                passwordChangeRequired: true
+              })
+        }
+      });
+      return member;
+    }
+
+    await tx.user.create({
+      data: {
+        email: input.email,
+        name: input.name,
+        passwordHash: await hashInitialPassword(),
+        passwordChangeRequired: true,
+        role: AuthRole.MEMBER,
+        memberId: member.id
+      }
+    });
+
+    return member;
+  });
 }
 
 export async function updateMember(id: string, input: MemberInput) {

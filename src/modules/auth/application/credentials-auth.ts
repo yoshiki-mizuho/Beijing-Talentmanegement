@@ -25,6 +25,7 @@ type LoginUser = {
   email: string;
   name: string | null;
   passwordHash: string | null;
+  passwordChangeRequired: boolean;
   role: AuthRole;
   memberId: string | null;
   member: { status: string } | null;
@@ -79,6 +80,7 @@ export const credentialsProvider = CredentialsProvider({
         email: true,
         name: true,
         passwordHash: true,
+        passwordChangeRequired: true,
         role: true,
         memberId: true,
         member: {
@@ -106,7 +108,8 @@ export const credentialsProvider = CredentialsProvider({
       email: user.email,
       name: user.name,
       role: user.role,
-      memberId: user.memberId
+      memberId: user.memberId,
+      passwordChangeRequired: user.passwordChangeRequired
     };
   }
 });

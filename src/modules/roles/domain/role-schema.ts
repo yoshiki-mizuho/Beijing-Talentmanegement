@@ -12,7 +12,7 @@ export const roleRequirementInputSchema = z.object({
   roleId: z.string().min(1),
   skillId: z.string().min(1),
   requiredLevel: z.number().int().min(MIN_SKILL_LEVEL).max(MAX_SKILL_LEVEL),
-  isRequired: z.boolean().default(true)
+  isRequired: z.literal(true).default(true)
 });
 
 export type RoleInput = z.infer<typeof roleInputSchema>;

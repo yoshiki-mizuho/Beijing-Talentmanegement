@@ -6,7 +6,10 @@ import { MAX_SKILL_LEVEL, MIN_SKILL_LEVEL } from "@/shared/domain/skill-level";
 export const memberInputSchema = z.object({
   employeeNo: z.string().min(1).max(32),
   name: z.string().min(1).max(120),
-  email: z.email().max(255),
+  email: z.preprocess(
+    (value) => (typeof value === "string" ? value.trim().toLowerCase() : value),
+    z.email().max(255)
+  ),
   departmentId: z.string().min(1),
   jobTitle: z.string().max(120).optional(),
   profile: z.string().max(1000).optional(),

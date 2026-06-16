@@ -22,6 +22,18 @@ describe("member schemas", () => {
     });
   });
 
+  it("normalizes member email for login user linkage", () => {
+    expect(
+      memberInputSchema.parse({
+        employeeNo: "TM0101",
+        name: "Email Normalized Member",
+        email: " Test.Member@Example.COM ",
+        departmentId: "department-1",
+        status: MemberStatus.ACTIVE
+      }).email
+    ).toBe("test.member@example.com");
+  });
+
   it("rejects invalid member skill levels", () => {
     expect(() =>
       memberSkillInputSchema.parse({

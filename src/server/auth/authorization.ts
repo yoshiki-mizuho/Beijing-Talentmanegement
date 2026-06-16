@@ -29,8 +29,18 @@ export async function requireAuthenticatedMember() {
   return session as MemberSession;
 }
 
-export async function requireRoles(allowedRoles: readonly AuthRole[]) {
+export async function requirePasswordReadyMember() {
   const session = await requireAuthenticatedMember();
+
+  if (session.user.passwordChangeRequired) {
+    throw new AuthorizationError("Password change is required.", 403);
+  }
+
+  return session;
+}
+
+export async function requireRoles(allowedRoles: readonly AuthRole[]) {
+  const session = await requirePasswordReadyMember();
 
   if (!allowedRoles.includes(session.user.role)) {
     throw new AuthorizationError("Forbidden.", 403);
@@ -43,7 +53,7 @@ export async function authorizeApi(allowedRoles?: readonly AuthRole[]) {
   try {
     const session = allowedRoles
       ? await requireRoles(allowedRoles)
-      : await requireAuthenticatedMember();
+      : await requirePasswordReadyMember();
 
     return { session };
   } catch (error) {
@@ -53,6 +63,20 @@ export async function authorizeApi(allowedRoles?: readonly AuthRole[]) {
           { error: error.status === 401 ? "Unauthorized" : "Forbidden" },
           { status: error.status }
         )
+      };
+    }
+
+    throw error;
+  }
+}
+
+export async function authorizePasswordChangeApi() {
+  try {
+    return { session: await requireAuthenticatedMember() };
+  } catch (error) {
+    if (error instanceof AuthorizationError) {
+      return {
+        response: NextResponse.json({ error: "Unauthorized" }, { status: 401 })
       };
     }
 

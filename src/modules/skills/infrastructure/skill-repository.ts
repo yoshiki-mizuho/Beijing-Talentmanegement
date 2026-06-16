@@ -1,5 +1,12 @@
-import type { SkillCategoryInput, SkillInput } from "@/modules/skills/domain/skill-schema";
+import type {
+  CreateSkillInput,
+  SkillCategoryInput,
+  SkillInput
+} from "@/modules/skills/domain/skill-schema";
+import { generateNextSkillCodeFromExistingCodes } from "@/modules/skills/domain/skill-code";
 import { prisma } from "@/server/db/prisma";
+
+const SKILL_CODE_PREFIX = "SKILL-";
 
 export async function listSkillCategories() {
   return prisma.skillCategory.findMany({
@@ -14,6 +21,27 @@ export async function listSkillCategories() {
 
 export async function createSkillCategory(input: SkillCategoryInput) {
   return prisma.skillCategory.create({ data: input });
+}
+
+export async function updateSkillCategory(id: string, input: SkillCategoryInput) {
+  return prisma.skillCategory.update({
+    where: { id },
+    data: input
+  });
+}
+
+export async function deleteSkillCategory(id: string) {
+  const skillCount = await prisma.skill.count({
+    where: { categoryId: id }
+  });
+
+  if (skillCount > 0) {
+    throw new Error("Cannot delete a category that still has skills.");
+  }
+
+  return prisma.skillCategory.delete({
+    where: { id }
+  });
 }
 
 export async function listSkills() {
@@ -31,8 +59,27 @@ export async function listSkills() {
   });
 }
 
-export async function createSkill(input: SkillInput) {
-  return prisma.skill.create({ data: input });
+async function generateNextSkillCode() {
+  const skills = await prisma.skill.findMany({
+    where: {
+      code: {
+        startsWith: SKILL_CODE_PREFIX
+      }
+    },
+    select: { code: true }
+  });
+  return generateNextSkillCodeFromExistingCodes(
+    skills.map((skill) => skill.code)
+  );
+}
+
+export async function createSkill(input: CreateSkillInput) {
+  return prisma.skill.create({
+    data: {
+      ...input,
+      code: await generateNextSkillCode()
+    }
+  });
 }
 
 export async function updateSkill(id: string, input: SkillInput) {
