@@ -10,6 +10,7 @@ export async function revalidateAuthToken(token: JWT, user?: User) {
   if (user) {
     token.role = user.role;
     token.memberId = user.memberId;
+    token.passwordChangeRequired = user.passwordChangeRequired;
     token.isActive = true;
     token.authCheckedAt = Math.floor(Date.now() / 1000);
     return token;
@@ -30,6 +31,7 @@ export async function revalidateAuthToken(token: JWT, user?: User) {
     select: {
       role: true,
       memberId: true,
+      passwordChangeRequired: true,
       member: {
         select: {
           status: true
@@ -48,12 +50,14 @@ export async function revalidateAuthToken(token: JWT, user?: User) {
     token.isActive = false;
     token.role = undefined;
     token.memberId = null;
+    token.passwordChangeRequired = false;
     return token;
   }
 
   token.isActive = true;
   token.role = freshUser.role;
   token.memberId = freshUser.memberId;
+  token.passwordChangeRequired = freshUser.passwordChangeRequired;
 
   return token;
 }
@@ -64,6 +68,7 @@ export function applyAuthTokenToSession(session: Session, token: JWT) {
     session.user.role = token.role ?? AuthRole.MEMBER;
     session.user.memberId = token.memberId;
     session.user.isActive = token.isActive === true;
+    session.user.passwordChangeRequired = token.passwordChangeRequired === true;
   }
 
   return session;

@@ -1,3 +1,9 @@
+workflow:
+  # Temporarily disable GitLab pipelines to avoid consuming credits while
+  # phase completion is verified locally.
+  rules:
+    - when: never
+
 stages:
   - validate
   - test

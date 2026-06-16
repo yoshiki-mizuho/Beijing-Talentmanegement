@@ -1,0 +1,447 @@
+openapi: 3.1.0
+info:
+  title: Talent Management Core Business API
+  version: 0.3.0
+  description: Phase3 core business API contract for members, skills, roles, skill assessments, and notifications.
+servers:
+  - url: /api
+paths:
+  /members:
+    get:
+      summary: List members
+      tags: [Members]
+      responses:
+        "200":
+          description: Members with departments and approved skills.
+    post:
+      summary: Create member
+      tags: [Members]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberInput"
+      responses:
+        "201":
+          description: Member created.
+        "400":
+          description: Invalid member input.
+        "409":
+          description: User email is already linked to another member.
+  /members/{memberId}:
+    patch:
+      summary: Update member
+      tags: [Members]
+      parameters:
+        - $ref: "#/components/parameters/MemberId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberInput"
+      responses:
+        "200":
+          description: Member updated.
+    delete:
+      summary: Deactivate member
+      tags: [Members]
+      parameters:
+        - $ref: "#/components/parameters/MemberId"
+      responses:
+        "204":
+          description: Member deactivated.
+  /members/{memberId}/skills:
+    put:
+      summary: Set approved member skill level
+      tags: [MemberSkills]
+      parameters:
+        - $ref: "#/components/parameters/MemberId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberSkillInput"
+      responses:
+        "200":
+          description: Member skill upserted.
+  /skills:
+    get:
+      summary: List skills
+      tags: [Skills]
+      responses:
+        "200":
+          description: Skills with categories.
+    post:
+      summary: Create skill
+      tags: [Skills]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SkillCreateInput"
+      responses:
+        "201":
+          description: Skill created with server-generated code.
+  /skills/{skillId}:
+    patch:
+      summary: Update skill
+      tags: [Skills]
+      parameters:
+        - $ref: "#/components/parameters/SkillId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SkillInput"
+      responses:
+        "200":
+          description: Skill updated.
+    delete:
+      summary: Deactivate skill
+      tags: [Skills]
+      parameters:
+        - $ref: "#/components/parameters/SkillId"
+      responses:
+        "204":
+          description: Skill deactivated.
+  /roles:
+    get:
+      summary: List roles
+      tags: [Roles]
+      responses:
+        "200":
+          description: Roles with requirements.
+    post:
+      summary: Create role
+      tags: [Roles]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoleInput"
+      responses:
+        "201":
+          description: Role created.
+  /roles/{roleId}/requirements:
+    put:
+      summary: Set role skill requirement
+      tags: [Roles]
+      parameters:
+        - $ref: "#/components/parameters/RoleId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoleRequirementInput"
+      responses:
+        "200":
+          description: Role requirement upserted.
+  /roles/{roleId}:
+    patch:
+      summary: Update role
+      tags: [Roles]
+      parameters:
+        - $ref: "#/components/parameters/RoleId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoleInput"
+      responses:
+        "200":
+          description: Role updated.
+    delete:
+      summary: Deactivate role
+      tags: [Roles]
+      parameters:
+        - $ref: "#/components/parameters/RoleId"
+      responses:
+        "204":
+          description: Role deactivated.
+  /skill-assessments:
+    get:
+      summary: List pending skill assessments
+      tags: [SkillAssessments]
+      responses:
+        "200":
+          description: Pending assessments for manager review.
+    post:
+      summary: Submit own skill assessment
+      tags: [SkillAssessments]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SkillAssessmentInput"
+      responses:
+        "201":
+          description: Assessment submitted and reviewer notifications created.
+  /skill-assessments/{assessmentId}/review:
+    post:
+      summary: Review skill assessment
+      tags: [SkillAssessments]
+      parameters:
+        - $ref: "#/components/parameters/AssessmentId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SkillAssessmentReviewInput"
+      responses:
+        "200":
+          description: Assessment reviewed, member skill updated when approved, and result notification created.
+  /notifications:
+    get:
+      summary: List own notifications
+      tags: [Notifications]
+      responses:
+        "200":
+          description: Notifications for the current member.
+  /notifications/{notificationId}/read:
+    post:
+      summary: Mark notification as read
+      tags: [Notifications]
+      parameters:
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Notification marked as read.
+  /skill-categories:
+    get:
+      summary: List skill categories
+      tags: [Skills]
+      responses:
+        "200":
+          description: Skill categories with skill counts.
+    post:
+      summary: Create skill category
+      tags: [Skills]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SkillCategoryInput"
+      responses:
+        "201":
+          description: Skill category created.
+  /skill-categories/{categoryId}:
+    patch:
+      summary: Update skill category
+      tags: [Skills]
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SkillCategoryInput"
+      responses:
+        "200":
+          description: Skill category updated.
+    delete:
+      summary: Delete empty skill category
+      tags: [Skills]
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Skill category deleted when it has no skills.
+        "409":
+          description: Skill category still has skills.
+  /account/password:
+    post:
+      summary: Change own password
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordChangeInput"
+      responses:
+        "204":
+          description: Password changed and password change requirement cleared.
+        "400":
+          description: Invalid password change input.
+components:
+  parameters:
+    MemberId:
+      name: memberId
+      in: path
+      required: true
+      schema:
+        type: string
+    SkillId:
+      name: skillId
+      in: path
+      required: true
+      schema:
+        type: string
+    RoleId:
+      name: roleId
+      in: path
+      required: true
+      schema:
+        type: string
+    AssessmentId:
+      name: assessmentId
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    SkillLevel:
+      type: integer
+      minimum: 1
+      maximum: 5
+    MemberInput:
+      type: object
+      required: [employeeNo, name, email, departmentId, status]
+      properties:
+        employeeNo:
+          type: string
+          maxLength: 32
+        name:
+          type: string
+          maxLength: 120
+        email:
+          type: string
+          format: email
+        departmentId:
+          type: string
+        jobTitle:
+          type: string
+          maxLength: 120
+        profile:
+          type: string
+          maxLength: 1000
+        status:
+          enum: [ACTIVE, INACTIVE, LEAVE]
+    MemberSkillInput:
+      type: object
+      required: [skillId, level]
+      properties:
+        skillId:
+          type: string
+        level:
+          $ref: "#/components/schemas/SkillLevel"
+    SkillInput:
+      type: object
+      required: [code, name, categoryId]
+      properties:
+        code:
+          type: string
+          maxLength: 32
+        name:
+          type: string
+          maxLength: 120
+        categoryId:
+          type: string
+        description:
+          type: string
+          maxLength: 1000
+        isActive:
+          type: boolean
+    SkillCreateInput:
+      type: object
+      required: [name, categoryId]
+      properties:
+        name:
+          type: string
+          maxLength: 120
+        categoryId:
+          type: string
+        description:
+          type: string
+          maxLength: 1000
+        isActive:
+          type: boolean
+    SkillCategoryInput:
+      type: object
+      required: [name, displayOrder]
+      properties:
+        name:
+          type: string
+          maxLength: 120
+        displayOrder:
+          type: integer
+          minimum: 0
+    RoleInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 1000
+        isActive:
+          type: boolean
+    RoleRequirementInput:
+      type: object
+      required: [skillId, requiredLevel]
+      properties:
+        skillId:
+          type: string
+        requiredLevel:
+          $ref: "#/components/schemas/SkillLevel"
+    SkillAssessmentInput:
+      type: object
+      required: [skillId, requestedLevel]
+      properties:
+        skillId:
+          type: string
+        requestedLevel:
+          $ref: "#/components/schemas/SkillLevel"
+        yearsOfExperience:
+          type: number
+          minimum: 0
+          maximum: 99.9
+    SkillAssessmentReviewInput:
+      type: object
+      required: [status]
+      properties:
+        status:
+          enum: [APPROVED, CORRECTED, REJECTED]
+        correctedLevel:
+          $ref: "#/components/schemas/SkillLevel"
+        managerComment:
+          type: string
+          maxLength: 1000
+    PasswordChangeInput:
+      type: object
+      required: [currentPassword, newPassword, confirmPassword]
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+          minLength: 8
+        confirmPassword:
+          type: string
+          minLength: 8

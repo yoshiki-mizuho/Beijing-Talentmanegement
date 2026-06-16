@@ -5,6 +5,7 @@ declare module "next-auth" {
   interface User {
     role: AuthRole;
     memberId: string | null;
+    passwordChangeRequired: boolean;
   }
 
   interface Session {
@@ -13,6 +14,7 @@ declare module "next-auth" {
       role: AuthRole;
       memberId: string | null;
       isActive: boolean;
+      passwordChangeRequired: boolean;
     } & DefaultSession["user"];
   }
 }
@@ -22,6 +24,7 @@ declare module "next-auth/jwt" {
     role?: AuthRole;
     memberId: string | null;
     isActive?: boolean;
+    passwordChangeRequired?: boolean;
     authCheckedAt?: number;
   }
 }

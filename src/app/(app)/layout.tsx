@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
+import type { Route } from "next";
 import type { ReactNode } from "react";
 
 import { SignOutButton } from "@/modules/auth/presentation/sign-out-button";
@@ -32,6 +34,12 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   if (!session) {
     redirect("/login");
+  }
+
+  const requestPath = (await headers()).get("x-pathname") ?? "";
+
+  if (session.user.passwordChangeRequired && requestPath !== "/account/password") {
+    redirect("/account/password" as Route);
   }
 
   return (
