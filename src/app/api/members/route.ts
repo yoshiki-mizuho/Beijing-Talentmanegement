@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { ZodError } from "zod";
 
 import {
   createMember,
@@ -7,14 +8,24 @@ import {
 import { MemberUserLinkError } from "@/modules/members/domain/member-user-policy";
 import { authorizeApi, managerOrAdmin } from "@/server/auth/authorization";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const auth = await authorizeApi();
 
   if ("response" in auth) {
     return auth.response;
   }
 
-  return NextResponse.json(await listMembers());
+  try {
+    return NextResponse.json(
+      await listMembers(Object.fromEntries(request.nextUrl.searchParams))
+    );
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json({ error: "Invalid member search query" }, { status: 400 });
+    }
+
+    throw error;
+  }
 }
 
 export async function POST(request: NextRequest) {

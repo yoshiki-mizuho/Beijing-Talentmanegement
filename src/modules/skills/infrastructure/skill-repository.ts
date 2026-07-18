@@ -4,6 +4,7 @@ import type {
   SkillInput
 } from "@/modules/skills/domain/skill-schema";
 import { generateNextSkillCodeFromExistingCodes } from "@/modules/skills/domain/skill-code";
+import type { SkillSearchInput } from "@/modules/skills/domain/skill-search";
 import { prisma } from "@/server/db/prisma";
 
 const SKILL_CODE_PREFIX = "SKILL-";
@@ -44,8 +45,21 @@ export async function deleteSkillCategory(id: string) {
   });
 }
 
-export async function listSkills() {
+export async function listSkills(input?: SkillSearchInput) {
   return prisma.skill.findMany({
+    where: {
+      ...(input?.q
+        ? {
+            OR: [
+              { code: { contains: input.q, mode: "insensitive" } },
+              { name: { contains: input.q, mode: "insensitive" } },
+              { description: { contains: input.q, mode: "insensitive" } }
+            ]
+          }
+        : {}),
+      ...(input?.categoryId ? { categoryId: input.categoryId } : {}),
+      ...(input?.isActive === undefined ? {} : { isActive: input.isActive })
+    },
     include: {
       category: true,
       _count: {

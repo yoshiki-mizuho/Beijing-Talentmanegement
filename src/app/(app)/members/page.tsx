@@ -3,6 +3,7 @@ import { Trash2 } from "lucide-react";
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
 
 import { listMembers, listDepartments } from "@/modules/members/application/member-service";
+import { MemberSearchTable } from "@/modules/members/presentation/member-search-table";
 import {
   createMemberAction,
   deactivateMemberAction,
@@ -11,6 +12,7 @@ import {
   updateMemberAction
 } from "@/modules/members/presentation/actions";
 import { listSkills } from "@/modules/skills/application/skill-service";
+import { listRoles } from "@/modules/roles/application/role-service";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { Input } from "@/shared/ui/input";
@@ -21,10 +23,11 @@ export const dynamic = "force-dynamic";
 const skillLevels = [1, 2, 3, 4, 5] as const;
 
 export default async function MembersPage() {
-  const [members, departments, skills] = await Promise.all([
+  const [members, departments, skills, roles] = await Promise.all([
     listMembers(),
     listDepartments(),
-    listSkills()
+    listSkills(),
+    listRoles()
   ]);
   const activeSkills = skills.filter((skill) => skill.isActive);
 
@@ -36,6 +39,20 @@ export default async function MembersPage() {
           メンバー情報と保有スキルを管理します。
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>検索・ロール保有状況</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <MemberSearchTable
+            initialMembers={members}
+            departments={departments}
+            skills={activeSkills}
+            roles={roles}
+          />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

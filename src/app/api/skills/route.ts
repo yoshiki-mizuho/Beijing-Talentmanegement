@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { ZodError } from "zod";
 
 import {
   createSkill,
@@ -6,14 +7,24 @@ import {
 } from "@/modules/skills/application/skill-service";
 import { adminOnly, authorizeApi } from "@/server/auth/authorization";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const auth = await authorizeApi();
 
   if ("response" in auth) {
     return auth.response;
   }
 
-  return NextResponse.json(await listSkills());
+  try {
+    return NextResponse.json(
+      await listSkills(Object.fromEntries(request.nextUrl.searchParams))
+    );
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json({ error: "Invalid skill search query" }, { status: 400 });
+    }
+
+    throw error;
+  }
 }
 
 export async function POST(request: NextRequest) {

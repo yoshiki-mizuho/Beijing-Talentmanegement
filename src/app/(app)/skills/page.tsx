@@ -7,6 +7,7 @@ import {
   updateSkillCategoryAction,
   updateSkillAction
 } from "@/modules/skills/presentation/actions";
+import { SkillSearchTable } from "@/modules/skills/presentation/skill-search-table";
 import type { InputHTMLAttributes, ReactNode } from "react";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
@@ -109,7 +110,16 @@ export default async function SkillsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>スキル一覧</CardTitle>
+          <CardTitle>スキル検索</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <SkillSearchTable initialSkills={skills} categories={categories} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>スキル編集</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {skills.map((skill) => (

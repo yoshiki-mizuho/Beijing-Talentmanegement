@@ -8,11 +8,13 @@ import bcrypt from "bcryptjs";
 
 import { INITIAL_PASSWORD } from "@/modules/auth/domain/password-schema";
 import type { MemberInput, MemberSkillInput } from "@/modules/members/domain/member-schema";
+import type { MemberSearchInput } from "@/modules/members/domain/member-search";
 import { assertUserCanLinkToMember } from "@/modules/members/domain/member-user-policy";
 import type {
   SkillAssessmentInput,
   SkillAssessmentReviewInput
 } from "@/modules/members/domain/skill-assessment-schema";
+import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
 import { prisma } from "@/server/db/prisma";
 
 async function hashInitialPassword() {
@@ -26,8 +28,32 @@ export async function listDepartments() {
   });
 }
 
-export async function listMembers() {
-  return prisma.member.findMany({
+export async function listMembers(input?: MemberSearchInput) {
+  const members = await prisma.member.findMany({
+    where: {
+      ...(input?.q
+        ? {
+            OR: [
+              { employeeNo: { contains: input.q, mode: "insensitive" } },
+              { name: { contains: input.q, mode: "insensitive" } },
+              { email: { contains: input.q, mode: "insensitive" } },
+              { jobTitle: { contains: input.q, mode: "insensitive" } }
+            ]
+          }
+        : {}),
+      ...(input?.departmentId ? { departmentId: input.departmentId } : {}),
+      ...(input?.status ? { status: input.status } : {}),
+      ...(input?.skillId || input?.minLevel
+        ? {
+            memberSkills: {
+              some: {
+                ...(input.skillId ? { skillId: input.skillId } : {}),
+                ...(input.minLevel ? { level: { gte: input.minLevel } } : {})
+              }
+            }
+          }
+        : {})
+    },
     include: {
       department: true,
       memberSkills: {
@@ -47,6 +73,37 @@ export async function listMembers() {
     },
     orderBy: { employeeNo: "asc" }
   });
+
+  if (!input?.roleId) {
+    return members;
+  }
+
+  const role = await prisma.role.findUnique({
+    where: { id: input.roleId },
+    include: {
+      roleRequirements: true
+    }
+  });
+
+  if (!role) {
+    return [];
+  }
+
+  const requirements = role.roleRequirements.map((requirement) => ({
+    skillId: requirement.skillId,
+    requiredLevel: requirement.requiredLevel,
+    isRequired: requirement.isRequired
+  }));
+
+  return members.filter((member) =>
+    evaluateRoleAchievement(
+      requirements,
+      member.memberSkills.map((memberSkill) => ({
+        skillId: memberSkill.skillId,
+        level: memberSkill.level
+      }))
+    ).achieved
+  );
 }
 
 export async function createMember(input: MemberInput) {

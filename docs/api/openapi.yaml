@@ -10,6 +10,39 @@ paths:
     get:
       summary: List members
       tags: [Members]
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search employee number, name, email, or job title.
+        - name: departmentId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: skillId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: minLevel
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/SkillLevel"
+        - name: roleId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Return members who satisfy the selected role.
+        - name: status
+          in: query
+          required: false
+          schema:
+            enum: [ACTIVE, INACTIVE, LEAVE]
       responses:
         "200":
           description: Members with departments and approved skills.
@@ -71,6 +104,23 @@ paths:
     get:
       summary: List skills
       tags: [Skills]
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search skill code, name, or description.
+        - name: categoryId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: isActive
+          in: query
+          required: false
+          schema:
+            type: boolean
       responses:
         "200":
           description: Skills with categories.
