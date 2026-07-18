@@ -4,6 +4,12 @@ import type {
   SkillInput
 } from "@/modules/skills/domain/skill-schema";
 import { generateNextSkillCodeFromExistingCodes } from "@/modules/skills/domain/skill-code";
+import {
+  SkillCategoryNotFoundError,
+  SkillCodeGenerationError,
+  SkillNameConflictError
+} from "@/modules/skills/domain/skill-errors";
+import type { SkillSearchInput } from "@/modules/skills/domain/skill-search";
 import { prisma } from "@/server/db/prisma";
 
 const SKILL_CODE_PREFIX = "SKILL-";
@@ -44,8 +50,21 @@ export async function deleteSkillCategory(id: string) {
   });
 }
 
-export async function listSkills() {
+export async function listSkills(input?: SkillSearchInput) {
   return prisma.skill.findMany({
+    where: {
+      ...(input?.q
+        ? {
+            OR: [
+              { code: { contains: input.q, mode: "insensitive" } },
+              { name: { contains: input.q, mode: "insensitive" } },
+              { description: { contains: input.q, mode: "insensitive" } }
+            ]
+          }
+        : {}),
+      ...(input?.categoryId ? { categoryId: input.categoryId } : {}),
+      ...(input?.isActive === undefined ? {} : { isActive: input.isActive })
+    },
     include: {
       category: true,
       _count: {
@@ -73,13 +92,54 @@ async function generateNextSkillCode() {
   );
 }
 
+function hasConstraintTarget(error: unknown, targetName: string) {
+  if (!error || typeof error !== "object" || !("meta" in error)) {
+    return false;
+  }
+
+  const target = (error as { meta?: { target?: unknown } }).meta?.target;
+  const targetText = Array.isArray(target) ? target.join(",") : String(target ?? "");
+  return targetText.toLowerCase().includes(targetName.toLowerCase());
+}
+
+function hasPrismaCode(error: unknown, code: string) {
+  return Boolean(
+    error &&
+      typeof error === "object" &&
+      "code" in error &&
+      (error as { code?: unknown }).code === code
+  );
+}
+
 export async function createSkill(input: CreateSkillInput) {
-  return prisma.skill.create({
-    data: {
-      ...input,
-      code: await generateNextSkillCode()
+  const maximumAttempts = 3;
+
+  for (let attempt = 0; attempt < maximumAttempts; attempt += 1) {
+    try {
+      return await prisma.skill.create({
+        data: {
+          ...input,
+          code: await generateNextSkillCode()
+        }
+      });
+    } catch (error) {
+      if (hasPrismaCode(error, "P2002") && hasConstraintTarget(error, "code")) {
+        continue;
+      }
+
+      if (hasPrismaCode(error, "P2002")) {
+        throw new SkillNameConflictError();
+      }
+
+      if (hasPrismaCode(error, "P2003")) {
+        throw new SkillCategoryNotFoundError();
+      }
+
+      throw error;
     }
-  });
+  }
+
+  throw new SkillCodeGenerationError();
 }
 
 export async function updateSkill(id: string, input: SkillInput) {

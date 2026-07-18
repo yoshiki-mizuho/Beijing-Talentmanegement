@@ -8,11 +8,14 @@ import bcrypt from "bcryptjs";
 
 import { INITIAL_PASSWORD } from "@/modules/auth/domain/password-schema";
 import type { MemberInput, MemberSkillInput } from "@/modules/members/domain/member-schema";
+import type { MemberSearchInput } from "@/modules/members/domain/member-search";
 import { assertUserCanLinkToMember } from "@/modules/members/domain/member-user-policy";
 import type {
+  SkillAssessmentBatchInput,
   SkillAssessmentInput,
   SkillAssessmentReviewInput
 } from "@/modules/members/domain/skill-assessment-schema";
+import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
 import { prisma } from "@/server/db/prisma";
 
 async function hashInitialPassword() {
@@ -26,8 +29,38 @@ export async function listDepartments() {
   });
 }
 
-export async function listMembers() {
-  return prisma.member.findMany({
+export function buildMemberSearchWhere(
+  input?: MemberSearchInput
+): Prisma.MemberWhereInput {
+  return {
+    ...(input?.q
+      ? {
+          OR: [
+            { employeeNo: { contains: input.q, mode: "insensitive" as const } },
+            { name: { contains: input.q, mode: "insensitive" as const } },
+            { email: { contains: input.q, mode: "insensitive" as const } },
+            { jobTitle: { contains: input.q, mode: "insensitive" as const } }
+          ]
+        }
+      : {}),
+    ...(input?.departmentId ? { departmentId: input.departmentId } : {}),
+    ...(input?.status ? { status: input.status } : {}),
+    ...(input?.skillId || input?.minLevel
+      ? {
+          memberSkills: {
+            some: {
+              ...(input.skillId ? { skillId: input.skillId } : {}),
+              ...(input.minLevel ? { level: { gte: input.minLevel } } : {})
+            }
+          }
+        }
+      : {})
+  };
+}
+
+export async function listMembers(input?: MemberSearchInput) {
+  const members = await prisma.member.findMany({
+    where: buildMemberSearchWhere(input),
     include: {
       department: true,
       memberSkills: {
@@ -47,6 +80,37 @@ export async function listMembers() {
     },
     orderBy: { employeeNo: "asc" }
   });
+
+  if (!input?.roleId) {
+    return members;
+  }
+
+  const role = await prisma.role.findUnique({
+    where: { id: input.roleId },
+    include: {
+      roleRequirements: true
+    }
+  });
+
+  if (!role) {
+    return [];
+  }
+
+  const requirements = role.roleRequirements.map((requirement) => ({
+    skillId: requirement.skillId,
+    requiredLevel: requirement.requiredLevel,
+    isRequired: requirement.isRequired
+  }));
+
+  return members.filter((member) =>
+    evaluateRoleAchievement(
+      requirements,
+      member.memberSkills.map((memberSkill) => ({
+        skillId: memberSkill.skillId,
+        level: memberSkill.level
+      }))
+    ).achieved
+  );
 }
 
 export async function createMember(input: MemberInput) {
@@ -176,47 +240,88 @@ export async function listPendingSkillAssessments() {
 }
 
 export async function createSkillAssessment(input: SkillAssessmentInput) {
+  const [assessment] = await createSkillAssessments({
+    memberId: input.memberId,
+    assessments: [{
+      skillId: input.skillId,
+      requestedLevel: input.requestedLevel,
+      yearsOfExperience: input.yearsOfExperience
+    }]
+  });
+
+  return assessment;
+}
+
+export async function createSkillAssessments(input: SkillAssessmentBatchInput) {
   return prisma.$transaction(async (tx) => {
-    const assessment = await tx.skillSelfAssessment.create({
-      data: {
-        memberId: input.memberId,
-        skillId: input.skillId,
-        requestedLevel: input.requestedLevel,
-        yearsOfExperience: input.yearsOfExperience
-          ? new Prisma.Decimal(input.yearsOfExperience)
-          : undefined
-      },
-      include: {
-        member: true,
-        skill: true
-      }
-    });
-    const reviewerMembers = await tx.user.findMany({
-      where: {
-        role: { in: ["ADMIN", "MANAGER"] },
-        memberId: { not: null }
-      },
-      select: { memberId: true }
-    });
+    const skillIds = input.assessments.map((assessment) => assessment.skillId);
+    const [member, skills, pendingAssessments, reviewerMembers] = await Promise.all([
+      tx.member.findUniqueOrThrow({
+        where: { id: input.memberId },
+        select: { name: true }
+      }),
+      tx.skill.findMany({
+        where: { id: { in: skillIds }, isActive: true },
+        select: { id: true, name: true }
+      }),
+      tx.skillSelfAssessment.findMany({
+        where: {
+          memberId: input.memberId,
+          skillId: { in: skillIds },
+          status: SkillSelfAssessmentStatus.PENDING
+        },
+        select: { skillId: true }
+      }),
+      tx.user.findMany({
+        where: {
+          role: { in: ["ADMIN", "MANAGER"] },
+          memberId: { not: null }
+        },
+        select: { memberId: true }
+      })
+    ]);
 
-    const notifications = reviewerMembers
-      .map((reviewer) => reviewer.memberId)
-      .filter((memberId): memberId is string => Boolean(memberId))
-      .map((recipientMemberId) => ({
-        recipientMemberId,
-        type: NotificationType.SKILL_ASSESSMENT_REQUESTED,
-        skillSelfAssessmentId: assessment.id,
-        title: "スキル申告の承認依頼",
-        body: `${assessment.member.name} が ${assessment.skill.name} Lv.${assessment.requestedLevel} を申告しました。`
-      }));
-
-    if (notifications.length > 0) {
-      await tx.notification.createMany({
-        data: notifications
-      });
+    if (skills.length !== skillIds.length) {
+      throw new Error("申請対象に存在しない、または無効なスキルが含まれています。");
+    }
+    if (pendingAssessments.length > 0) {
+      throw new Error("すでに承認待ちのスキルが含まれています。");
     }
 
-    return assessment;
+    const skillNames = new Map(skills.map((skill) => [skill.id, skill.name]));
+    const assessments = [];
+
+    for (const item of input.assessments) {
+      assessments.push(await tx.skillSelfAssessment.create({
+        data: {
+          memberId: input.memberId,
+          skillId: item.skillId,
+          requestedLevel: item.requestedLevel,
+          yearsOfExperience: item.yearsOfExperience === undefined
+            ? undefined
+            : new Prisma.Decimal(item.yearsOfExperience)
+        }
+      }));
+    }
+
+    const notifications = assessments.flatMap((assessment) =>
+      reviewerMembers
+        .map((reviewer) => reviewer.memberId)
+        .filter((memberId): memberId is string => Boolean(memberId))
+        .map((recipientMemberId) => ({
+          recipientMemberId,
+          type: NotificationType.SKILL_ASSESSMENT_REQUESTED,
+          skillSelfAssessmentId: assessment.id,
+          title: "スキル申告の承認依頼",
+          body: `${member.name} が ${skillNames.get(assessment.skillId)} Lv.${assessment.requestedLevel} を申告しました。`
+        }))
+    );
+
+    if (notifications.length > 0) {
+      await tx.notification.createMany({ data: notifications });
+    }
+
+    return assessments;
   });
 }
 

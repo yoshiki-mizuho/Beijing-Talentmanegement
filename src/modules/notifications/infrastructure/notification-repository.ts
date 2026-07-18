@@ -9,6 +9,24 @@ export async function listNotifications(memberId: string) {
   });
 }
 
+export async function countUnreadNotifications(memberId: string) {
+  return prisma.notification.count({
+    where: {
+      recipientMemberId: memberId,
+      status: NotificationStatus.UNREAD
+    }
+  });
+}
+
+export async function findNotification(id: string, memberId: string) {
+  return prisma.notification.findFirst({
+    where: {
+      id,
+      recipientMemberId: memberId
+    }
+  });
+}
+
 export async function markNotificationRead(id: string, memberId: string) {
   return prisma.notification.updateMany({
     where: {

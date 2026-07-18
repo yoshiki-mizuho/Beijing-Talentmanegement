@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import {
   createSkillAssessment,
+  createSkillAssessments,
   createMember,
   deactivateMember,
   removeMemberSkill,
@@ -84,6 +85,50 @@ export async function createSkillAssessmentAction(formData: FormData) {
   revalidatePath("/notifications");
 }
 
+type SkillAssessmentActionState = {
+  status: "idle" | "success" | "error";
+  message?: string;
+};
+
+export async function createSkillAssessmentsAction(
+  _previousState: SkillAssessmentActionState,
+  formData: FormData
+): Promise<SkillAssessmentActionState> {
+  const session = await requirePasswordReadyMember();
+
+  try {
+    const assessments = JSON.parse(getString(formData, "assessments")) as unknown;
+    const created = await createSkillAssessments({
+      memberId: session.user.memberId,
+      assessments
+    });
+
+    revalidatePath("/my/skills");
+    revalidatePath("/skill-approvals");
+    revalidatePath("/notifications");
+
+    return {
+      status: "success" as const,
+      message: `${created.length}件のスキルを申請しました。`
+    };
+  } catch (error) {
+    const knownMessages = [
+      "申請するスキルを1件以上追加してください。",
+      "一度に申請できるスキルは50件までです。",
+      "同じスキルを重複して申請することはできません。",
+      "申請対象に存在しない、または無効なスキルが含まれています。",
+      "すでに承認待ちのスキルが含まれています。"
+    ];
+    const message = error instanceof Error
+      ? knownMessages.find((knownMessage) => error.message.includes(knownMessage))
+      : undefined;
+
+    return {
+      status: "error" as const,
+      message: message ?? "申請内容を確認して、もう一度お試しください。"
+    };
+  }
+}
 export async function reviewSkillAssessmentAction(formData: FormData) {
   const session = await requireRoles(managerOrAdmin);
 

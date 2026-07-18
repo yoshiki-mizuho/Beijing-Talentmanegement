@@ -3,6 +3,10 @@ import {
   skillCategoryInputSchema,
   skillInputSchema
 } from "@/modules/skills/domain/skill-schema";
+import {
+  type SkillSearchInput,
+  skillSearchSchema
+} from "@/modules/skills/domain/skill-search";
 import * as skillRepository from "@/modules/skills/infrastructure/skill-repository";
 
 export function listSkillCategories() {
@@ -24,8 +28,10 @@ export function deleteSkillCategory(id: string) {
   return skillRepository.deleteSkillCategory(id);
 }
 
-export function listSkills() {
-  return skillRepository.listSkills();
+export function listSkills(input?: SkillSearchInput) {
+  return skillRepository.listSkills(
+    input ? skillSearchSchema.parse(input) : undefined
+  );
 }
 
 export function createSkill(input: unknown) {
