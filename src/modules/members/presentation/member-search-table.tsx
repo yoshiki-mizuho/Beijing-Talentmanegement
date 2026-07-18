@@ -7,14 +7,18 @@ import {
   useReactTable
 } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import { FilterX, UsersRound } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 
+import { buildMemberSearchParams, emptyMemberSearchFilters, hasMemberSearchFilters, type MemberSearchFilters } from "@/modules/members/presentation/member-search-filters";
 import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
+import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
+import { EmptyState } from "@/shared/ui/empty-state";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { QueryProvider } from "@/shared/ui/query-provider";
+import { Select } from "@/shared/ui/select";
 
 type MemberRow = {
   id: string;
@@ -68,24 +72,6 @@ type RoleOption = {
   }[];
 };
 
-type Filters = {
-  q: string;
-  departmentId: string;
-  skillId: string;
-  minLevel: string;
-  roleId: string;
-  status: string;
-};
-
-const emptyFilters: Filters = {
-  q: "",
-  departmentId: "",
-  skillId: "",
-  minLevel: "",
-  roleId: "",
-  status: ""
-};
-
 export function MemberSearchTable(props: {
   initialMembers: MemberRow[];
   departments: DepartmentOption[];
@@ -110,13 +96,15 @@ function MemberSearchTableInner({
   skills: SkillOption[];
   roles: RoleOption[];
 }) {
-  const [filters, setFilters] = useState<Filters>(emptyFilters);
+  const [filters, setFilters] = useState<MemberSearchFilters>(emptyMemberSearchFilters);
+  const hasActiveFilters = hasMemberSearchFilters(filters);
   const query = useQuery({
     queryKey: ["members", filters],
     queryFn: () => fetchMembers(filters),
-    initialData: initialMembers
+    initialData: hasActiveFilters ? undefined : initialMembers
   });
 
+  const members = query.data ?? [];
   const selectedRole = roles.find((role) => role.id === filters.roleId);
   const columns = useMemo<ColumnDef<MemberRow>[]>(
     () => [
@@ -195,15 +183,15 @@ function MemberSearchTableInner({
   );
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
-    data: query.data,
+    data: members,
     columns,
     getCoreRowModel: getCoreRowModel()
   });
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-        <div className="xl:col-span-2">
+    <div className="space-y-5">
+      <div className="grid gap-4 border-b border-[var(--border)] bg-[var(--surface-subtle)] p-4 md:grid-cols-2 xl:grid-cols-6">
+        <div className="md:col-span-2 xl:col-span-2">
           <Label htmlFor="member-search-q">キーワード</Label>
           <Input
             id="member-search-q"
@@ -211,7 +199,7 @@ function MemberSearchTableInner({
             onChange={(event) =>
               setFilters((current) => ({ ...current, q: event.target.value }))
             }
-            placeholder="氏名、社員番号、メール"
+            placeholder="氏名、社員番号、メール、役職"
             className="mt-1"
           />
         </div>
@@ -273,38 +261,53 @@ function MemberSearchTableInner({
         </SelectFilter>
         <SelectFilter
           id="member-search-status"
-          label="状態"
+          label="在籍状態"
           value={filters.status}
           onChange={(status) =>
             setFilters((current) => ({ ...current, status }))
           }
         >
-          <option value="ACTIVE">ACTIVE</option>
-          <option value="INACTIVE">INACTIVE</option>
-          <option value="LEAVE">LEAVE</option>
+          <option value="ACTIVE">在籍中</option>
+          <option value="INACTIVE">退職・無効</option>
+          <option value="LEAVE">休職中</option>
         </SelectFilter>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-slate-600">
-          {query.isFetching ? "更新中..." : `${query.data.length}件を表示`}
-        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm font-semibold text-[var(--foreground)]">
+            {query.isPending ? "検索中..." : `${members.length}件`}
+          </p>
+          {hasActiveFilters ? <Badge variant="primary">条件適用中</Badge> : null}
+          {query.isFetching && !query.isPending ? (
+            <span className="text-xs text-[var(--muted-foreground)]">更新中...</span>
+          ) : null}
+        </div>
         <Button
           type="button"
-          variant="secondary"
-          onClick={() => setFilters(emptyFilters)}
+          variant="ghost"
+          size="small"
+          disabled={!hasActiveFilters}
+          onClick={() => setFilters(emptyMemberSearchFilters)}
         >
-          <Search className="h-4 w-4" aria-hidden="true" />
-          条件クリア
+          <FilterX className="h-4 w-4" aria-hidden="true" />
+          リセット
         </Button>
       </div>
       {query.isError ? (
-        <p role="alert" className="text-sm text-red-700">
-          ?????????????????????????????????????
+        <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          メンバーの検索に失敗しました。時間をおいて再度お試しください。
         </p>
       ) : null}
-      <div className="overflow-x-auto rounded-md border border-slate-200">
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-50 text-left text-slate-600">
+      {!query.isPending && !query.isError && members.length === 0 ? (
+        <EmptyState
+          icon={UsersRound}
+          title="条件に一致するメンバーがいません"
+          description="検索条件を変更するか、リセットして一覧を確認してください。"
+        />
+      ) : null}
+      <div className={members.length === 0 ? "hidden" : "overflow-x-auto border border-[var(--border)]"} tabIndex={0} aria-label="メンバー検索結果">
+        <table className="min-w-[920px] divide-y divide-[var(--border)] text-sm">
+          <thead className="bg-[var(--surface-subtle)] text-left text-[var(--muted-foreground)]">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
@@ -320,7 +323,7 @@ function MemberSearchTableInner({
               </tr>
             ))}
           </thead>
-          <tbody className="divide-y divide-slate-100 bg-white">
+          <tbody className="divide-y divide-[var(--border)] bg-[var(--surface)]">
             {table.getRowModel().rows.map((row) => (
               <tr key={row.id}>
                 {row.getVisibleCells().map((cell) => (
@@ -353,27 +356,21 @@ function SelectFilter({
   return (
     <div>
       <Label htmlFor={id}>{label}</Label>
-      <select
+      <Select
         id={id}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-1 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm"
+        className="mt-1"
       >
         <option value="">すべて</option>
         {children}
-      </select>
+      </Select>
     </div>
   );
 }
 
-async function fetchMembers(filters: Filters) {
-  const searchParams = new URLSearchParams();
-
-  Object.entries(filters).forEach(([key, value]) => {
-    if (value) {
-      searchParams.set(key, value);
-    }
-  });
+async function fetchMembers(filters: MemberSearchFilters) {
+  const searchParams = buildMemberSearchParams(filters);
 
   const response = await fetch(`/api/members?${searchParams.toString()}`);
 

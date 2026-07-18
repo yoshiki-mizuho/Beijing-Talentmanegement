@@ -11,19 +11,19 @@
 | 画面 | パス案 | 主な利用者 | 初期リリース | 概要 |
 | --- | --- | --- | --- | --- |
 | ログイン | `/login` | 全ロール | 含める | Auth.jsによるログイン導線 |
-| ダッシュボード | `/dashboard` | 全ロール | 含める | メンバー数、スキル数、未設定、ロール達成状況 |
+| ダッシュボード | `/dashboard` | 全ロール | 含める | `admin`・`manager`は組織集計、`member`は本人のスキルと成長課題 |
 | 通知一覧 | `/notifications` | 全ロール | 含める | 承認依頼、承認結果、差し戻しの確認 |
-| メンバー一覧 | `/members` | 全ロール | 含める | 検索、部署フィルタ、スキル条件検索 |
-| メンバー詳細 | `/members/[id]` | 全ロール | 含める | 基本情報、保有スキル、ロール達成状況 |
+| メンバー一覧 | `/members` | `admin`、`manager` | 含める | 検索、部署フィルタ、スキル条件検索 |
+| メンバー詳細 | `/members/[id]` | `admin`、`manager` | 含める | 基本情報、保有スキル、ロール達成状況 |
 | メンバー編集 | `/members/[id]/edit` | `admin`、`manager` | 含める | 基本情報と所属の編集 |
 | 自分のスキル申告 | `/my/skills` | `member`、`manager`、`admin` | 含める | 自身のスキル、レベル、経験年数の申告 |
 | スキル承認 | `/skill-approvals` | `manager`、`admin` | 含める | 申告スキルの承認、補正承認、差し戻し |
-| スキル管理 | `/skills` | `admin`、`manager`、`member` | 含める | スキル一覧、カテゴリ、レベル説明 |
+| スキル管理 | `/skills` | `admin`、`manager` | 含める | スキル一覧、カテゴリ、レベル説明 |
 | スキル編集 | `/skills/[id]/edit` | `admin` | 含める | スキル定義の作成、更新、無効化 |
-| ロール管理 | `/roles` | 全ロール | 含める | ロール一覧、必要スキル、達成判定 |
+| ロール管理 | `/roles` | `admin`、`manager` | 含める | ロール一覧、必要スキル、達成判定 |
 | ロール編集 | `/roles/[id]/edit` | `admin` | 含める | ロールと必要スキル条件の編集 |
-| スキルマップ | `/skill-map` | 全ロール | 含める | メンバー x スキルのマトリクス |
-| CSV管理 | `/csv` | `admin`、`manager` | 含める | import/export、プレビュー、差分確認 |
+| スキルマップ | `/skill-map` | `admin`、`manager` | 含める | メンバー x スキルのマトリクス |
+| CSV管理 | `/csv` | `admin` | 含める | import/export、プレビュー、差分確認 |
 | 監査ログ | `/audit-logs` | `admin` | 含める | 操作履歴の検索、確認 |
 | AI評価 | `/ai-evaluation` | 未定 | 後続 | Phase 6で再設計 |
 

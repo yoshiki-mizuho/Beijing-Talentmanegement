@@ -17,6 +17,7 @@ import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
+import { PageHeader } from "@/shared/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -77,12 +78,11 @@ export default async function MembersPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-950">メンバー</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          メンバー情報と保有スキルを管理します。
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="People intelligence"
+        title="メンバー"
+        description="組織のメンバー情報、保有スキル、ロール充足状況を確認・管理します。"
+      />
 
       <Card>
         <CardHeader>
@@ -130,7 +130,7 @@ export default async function MembersPage() {
               <textarea
                 id="profile"
                 name="profile"
-                className="mt-1 min-h-20 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition-colors focus:border-cyan-700 focus:ring-2 focus:ring-cyan-700/20"
+                className="mt-1 min-h-20 w-full rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-2 text-sm outline-none transition-colors focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--ring)]/20"
               />
             </div>
             <div className="md:col-span-3">
@@ -175,7 +175,7 @@ export default async function MembersPage() {
                     id={`profile-${member.id}`}
                     name="profile"
                     defaultValue={member.profile ?? ""}
-                    className="mt-1 min-h-20 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition-colors focus:border-cyan-700 focus:ring-2 focus:ring-cyan-700/20"
+                    className="mt-1 min-h-20 w-full rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-2 text-sm outline-none transition-colors focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--ring)]/20"
                   />
                 </div>
                 <div className="flex gap-2 md:col-span-3">
@@ -216,7 +216,7 @@ export default async function MembersPage() {
                   <input type="hidden" name="memberId" value={member.id} />
                   <select
                     name="skillId"
-                    className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
+                    className="h-10 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-sm"
                     required
                   >
                     {activeSkills.map((skill) => (
@@ -227,7 +227,7 @@ export default async function MembersPage() {
                   </select>
                   <select
                     name="level"
-                    className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
+                    className="h-10 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-sm"
                     required
                   >
                     {skillLevels.map((level) => (

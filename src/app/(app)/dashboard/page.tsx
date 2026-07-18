@@ -9,10 +9,16 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
+import { AuthRole } from "@prisma/client";
+import { redirect } from "next/navigation";
 
 import { getDashboardSummary } from "@/modules/dashboard/application/dashboard-service";
+import { getMemberDashboard } from "@/modules/dashboard/application/member-dashboard-service";
 import { DashboardVisualizations } from "@/modules/dashboard/presentation/dashboard-visualizations";
 import { buildDashboardViewModel } from "@/modules/dashboard/presentation/dashboard-view-model";
+import { MemberDashboard } from "@/modules/dashboard/presentation/member-dashboard";
+import { buildMemberDashboardViewModel } from "@/modules/dashboard/presentation/member-dashboard-view-model";
+import { getCurrentSession } from "@/server/auth/session";
 import { Badge } from "@/shared/ui/badge";
 import { Metric } from "@/shared/ui/metric";
 import { PageHeader } from "@/shared/ui/page-header";
@@ -32,6 +38,24 @@ const signalTones = {
 } as const;
 
 export default async function DashboardPage() {
+  const session = await getCurrentSession();
+
+  if (session?.user.role === AuthRole.MEMBER) {
+    if (!session.user.memberId) {
+      redirect("/login");
+    }
+
+    const memberViewModel = buildMemberDashboardViewModel(
+      await getMemberDashboard(session.user.memberId)
+    );
+
+    if (!memberViewModel) {
+      redirect("/login");
+    }
+
+    return <MemberDashboard viewModel={memberViewModel} />;
+  }
+
   const summary = await getDashboardSummary();
   const viewModel = buildDashboardViewModel(summary);
   const metrics = [

@@ -4,10 +4,10 @@ import {
   createRole,
   listRoles
 } from "@/modules/roles/application/role-service";
-import { adminOnly, authorizeApi } from "@/server/auth/authorization";
+import { adminOnly, authorizeApi, managerOrAdmin } from "@/server/auth/authorization";
 
 export async function GET() {
-  const auth = await authorizeApi();
+  const auth = await authorizeApi(managerOrAdmin);
 
   if ("response" in auth) {
     return auth.response;

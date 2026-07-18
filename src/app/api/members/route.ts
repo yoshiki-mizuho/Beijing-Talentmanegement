@@ -9,7 +9,7 @@ import { MemberUserLinkError } from "@/modules/members/domain/member-user-policy
 import { authorizeApi, managerOrAdmin } from "@/server/auth/authorization";
 
 export async function GET(request: NextRequest) {
-  const auth = await authorizeApi();
+  const auth = await authorizeApi(managerOrAdmin);
 
   if ("response" in auth) {
     return auth.response;

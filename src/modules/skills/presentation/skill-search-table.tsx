@@ -6,14 +6,22 @@ import {
   getCoreRowModel,
   useReactTable
 } from "@tanstack/react-table";
-import { useQuery } from "@tanstack/react-query";
-import { RotateCcw } from "lucide-react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { ListFilter, RotateCcw, SearchX } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 
+import {
+  buildSkillSearchParams,
+  emptySkillSearchFilters,
+  type SkillSearchFilters
+} from "@/modules/skills/presentation/skill-search-params";
+import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
+import { EmptyState } from "@/shared/ui/empty-state";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { QueryProvider } from "@/shared/ui/query-provider";
+import { Select } from "@/shared/ui/select";
 
 type SkillRow = {
   id: string;
@@ -37,18 +45,6 @@ type CategoryOption = {
   name: string;
 };
 
-type Filters = {
-  q: string;
-  categoryId: string;
-  isActive: string;
-};
-
-const emptyFilters: Filters = {
-  q: "",
-  categoryId: "",
-  isActive: ""
-};
-
 export function SkillSearchTable(props: {
   initialSkills: SkillRow[];
   categories: CategoryOption[];
@@ -67,60 +63,93 @@ function SkillSearchTableInner({
   initialSkills: SkillRow[];
   categories: CategoryOption[];
 }) {
-  const [filters, setFilters] = useState<Filters>(emptyFilters);
+  const [filters, setFilters] = useState<SkillSearchFilters>(
+    emptySkillSearchFilters
+  );
+  const hasFilters = Object.values(filters).some(Boolean);
   const query = useQuery({
     queryKey: ["skills", filters],
     queryFn: () => fetchSkills(filters),
-    initialData: initialSkills
+    initialData: hasFilters ? undefined : initialSkills,
+    placeholderData: keepPreviousData
   });
+  const rows = query.data ?? [];
   const columns = useMemo<ColumnDef<SkillRow>[]>(
     () => [
       {
         accessorKey: "code",
-        header: "コード"
+        header: "コード",
+        cell: ({ row }) => (
+          <span className="font-mono text-xs text-[var(--muted-foreground)]">
+            {row.original.code}
+          </span>
+        )
       },
       {
         accessorKey: "name",
-        header: "スキル"
+        header: "スキル",
+        cell: ({ row }) => (
+          <span className="block max-w-56 break-words font-semibold text-[var(--foreground)]">
+            {row.original.name}
+          </span>
+        )
       },
       {
         accessorKey: "category.name",
         header: "カテゴリ",
-        cell: ({ row }) => row.original.category.name
+        cell: ({ row }) => (
+          <Badge variant="primary">{row.original.category.name}</Badge>
+        )
       },
       {
         accessorKey: "isActive",
         header: "状態",
-        cell: ({ row }) => (row.original.isActive ? "有効" : "無効")
+        cell: ({ row }) => (
+          <Badge variant={row.original.isActive ? "success" : "neutral"}>
+            {row.original.isActive ? "有効" : "無効"}
+          </Badge>
+        )
       },
       {
         id: "memberSkillCount",
         header: "保有人数",
-        cell: ({ row }) => `${row.original._count.memberSkills}人`
+        cell: ({ row }) => (
+          <span className="tabular-nums">{row.original._count.memberSkills}人</span>
+        )
       },
       {
         id: "roleRequirementCount",
         header: "ロール要件",
-        cell: ({ row }) => `${row.original._count.roleRequirements}件`
+        cell: ({ row }) => (
+          <span className="tabular-nums">
+            {row.original._count.roleRequirements}件
+          </span>
+        )
       },
       {
         accessorKey: "description",
         header: "説明",
-        cell: ({ row }) => row.original.description ?? ""
+        cell: ({ row }) => (
+          <span className="block min-w-48 max-w-96 break-words text-[var(--muted-foreground)]">
+            {row.original.description || "説明なし"}
+          </span>
+        )
       }
     ],
     []
   );
+
+  // TanStack Table owns mutable internal state that React Compiler cannot memoize.
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
-    data: query.data,
+    data: rows,
     columns,
     getCoreRowModel: getCoreRowModel()
   });
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 md:grid-cols-[1fr_220px_160px_auto]">
+      <div className="grid gap-3 border-y border-[var(--border)] bg-[var(--surface-subtle)] p-4 md:grid-cols-[minmax(14rem,1fr)_14rem_10rem_auto]">
         <div>
           <Label htmlFor="skill-search-q">キーワード</Label>
           <Input
@@ -130,7 +159,7 @@ function SkillSearchTableInner({
               setFilters((current) => ({ ...current, q: event.target.value }))
             }
             placeholder="コード、名称、説明"
-            className="mt-1"
+            className="mt-1 bg-[var(--surface)]"
           />
         </div>
         <SelectFilter
@@ -162,52 +191,81 @@ function SkillSearchTableInner({
           <Button
             type="button"
             variant="secondary"
-            onClick={() => setFilters(emptyFilters)}
+            className="w-full"
+            onClick={() => setFilters(emptySkillSearchFilters)}
+            disabled={!hasFilters}
           >
             <RotateCcw className="h-4 w-4" aria-hidden="true" />
-            クリア
+            条件をクリア
           </Button>
         </div>
       </div>
-      <p className="text-sm text-slate-600">
-        {query.isFetching ? "更新中..." : `${query.data.length}件を表示`}
-      </p>
-      {query.isError ? (
-        <p role="alert" className="text-sm text-red-700">
-          ????????????????????????????????????
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]" aria-live="polite">
+          <ListFilter className="h-4 w-4" aria-hidden="true" />
+          {query.isFetching ? "検索結果を更新中..." : `${rows.length}件を表示`}
         </p>
-      ) : null}
-      <div className="overflow-x-auto rounded-md border border-slate-200">
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-50 text-left text-slate-600">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <th key={header.id} className="whitespace-nowrap px-3 py-2 font-medium">
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-          <tbody className="divide-y divide-slate-100 bg-white">
-            {table.getRowModel().rows.map((row) => (
-              <tr key={row.id}>
-                {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="max-w-80 px-3 py-3 align-top text-slate-700">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {hasFilters ? <Badge variant="primary">条件適用中</Badge> : null}
       </div>
+
+      {query.isError ? (
+        <p
+          role="alert"
+          className="border-l-4 border-[var(--destructive)] bg-red-50 px-4 py-3 text-sm text-red-800"
+        >
+          スキルの検索に失敗しました。時間を置いて再度お試しください。
+        </p>
+      ) : rows.length === 0 && !query.isFetching ? (
+        <EmptyState
+          icon={SearchX}
+          title="条件に一致するスキルがありません"
+          description="キーワードやカテゴリ、状態を変更して再度検索してください。"
+        />
+      ) : (
+        <div
+          className="overflow-x-auto border-t border-[var(--border)]"
+          tabIndex={0}
+          aria-label="スキル検索結果。横方向にスクロールできます"
+        >
+          <table className="min-w-[900px] w-full text-sm">
+            <thead className="bg-[var(--surface-subtle)] text-left text-[var(--muted-foreground)]">
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <th
+                      key={header.id}
+                      scope="col"
+                      className="whitespace-nowrap px-3 py-3 font-medium"
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                    </th>
+                  ))}
+                </tr>
+              ))}
+            </thead>
+            <tbody className="divide-y divide-[var(--border)] bg-[var(--surface)]">
+              {table.getRowModel().rows.map((row) => (
+                <tr key={row.id} className="hover:bg-[var(--surface-subtle)]">
+                  {row.getVisibleCells().map((cell) => (
+                    <td
+                      key={cell.id}
+                      className="px-3 py-3 align-top text-[var(--foreground)]"
+                    >
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
@@ -228,29 +286,23 @@ function SelectFilter({
   return (
     <div>
       <Label htmlFor={id}>{label}</Label>
-      <select
+      <Select
         id={id}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-1 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm"
+        className="mt-1 bg-[var(--surface)]"
       >
         <option value="">すべて</option>
         {children}
-      </select>
+      </Select>
     </div>
   );
 }
 
-async function fetchSkills(filters: Filters) {
-  const searchParams = new URLSearchParams();
-
-  Object.entries(filters).forEach(([key, value]) => {
-    if (value) {
-      searchParams.set(key, value);
-    }
-  });
-
-  const response = await fetch(`/api/skills?${searchParams.toString()}`);
+async function fetchSkills(filters: SkillSearchFilters) {
+  const searchParams = buildSkillSearchParams(filters);
+  const queryString = searchParams.toString();
+  const response = await fetch(`/api/skills${queryString ? `?${queryString}` : ""}`);
 
   if (!response.ok) {
     throw new Error("Failed to fetch skills.");

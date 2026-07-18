@@ -4,6 +4,10 @@ import type { Route } from "next";
 import type { ReactNode } from "react";
 
 import { getCurrentSession } from "@/server/auth/session";
+import {
+  canAccessAppPath,
+  getUnauthorizedRedirectPath
+} from "@/shared/auth/app-access";
 import { AppShell } from "@/shared/ui/app-shell";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
@@ -17,6 +21,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   if (session.user.passwordChangeRequired && requestPath !== "/account/password") {
     redirect("/account/password" as Route);
+  }
+
+  if (!canAccessAppPath(session.user.role, requestPath)) {
+    redirect(getUnauthorizedRedirectPath() as Route);
   }
 
   return (

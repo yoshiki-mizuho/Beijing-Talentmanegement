@@ -1,18 +1,39 @@
+import {
+  Activity,
+  BookOpenCheck,
+  FolderTree,
+  Plus,
+  Save,
+  Sparkles,
+  UsersRound
+} from "lucide-react";
+import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
+
 import { listSkillCategories, listSkills } from "@/modules/skills/application/skill-service";
 import {
   createSkillAction,
   createSkillCategoryAction,
-  deleteSkillCategoryAction,
   deactivateSkillAction,
-  updateSkillCategoryAction,
-  updateSkillAction
+  deleteSkillCategoryAction,
+  updateSkillAction,
+  updateSkillCategoryAction
 } from "@/modules/skills/presentation/actions";
 import { SkillSearchTable } from "@/modules/skills/presentation/skill-search-table";
-import type { InputHTMLAttributes, ReactNode } from "react";
+import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "@/shared/ui/card";
+import { EmptyState } from "@/shared/ui/empty-state";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
+import { Metric } from "@/shared/ui/metric";
+import { PageHeader } from "@/shared/ui/page-header";
+import { Select } from "@/shared/ui/select";
 
 export const dynamic = "force-dynamic";
 
@@ -21,96 +42,217 @@ export default async function SkillsPage() {
     listSkillCategories(),
     listSkills()
   ]);
+  const activeSkillCount = skills.filter((skill) => skill.isActive).length;
+  const assignedMemberCount = skills.reduce(
+    (total, skill) => total + skill._count.memberSkills,
+    0
+  );
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-950">スキル管理</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          スキルカテゴリとスキルマスタを管理します。
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Skill Architecture"
+        title="スキル管理"
+        description="スキル体系とカテゴリを整備し、組織共通の評価基準を管理します。"
+      />
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <section
+        aria-label="スキル集計"
+        className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+      >
+        <Metric
+          label="登録スキル"
+          value={skills.length}
+          caption="有効・無効を含む"
+          icon={BookOpenCheck}
+          tone="teal"
+        />
+        <Metric
+          label="有効なスキル"
+          value={activeSkillCount}
+          caption={`全体の ${skills.length === 0 ? 0 : Math.round((activeSkillCount / skills.length) * 100)}%`}
+          icon={Activity}
+          tone="green"
+        />
+        <Metric
+          label="カテゴリ"
+          value={categories.length}
+          caption="表示順に整理"
+          icon={FolderTree}
+          tone="coral"
+        />
+        <Metric
+          label="メンバー設定数"
+          value={assignedMemberCount}
+          caption="スキル保有の延べ件数"
+          icon={UsersRound}
+          tone="amber"
+        />
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>カテゴリ管理</CardTitle>
+            <CardDescription>
+              分析や検索に使うカテゴリ名と表示順を設定します。
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <form action={createSkillCategoryAction} className="grid gap-3 md:grid-cols-[1fr_120px_auto]">
-              <Field label="カテゴリ名" name="name" required />
-              <Field label="表示順" name="displayOrder" type="number" defaultValue={0} min={0} required />
+          <CardContent className="space-y-5">
+            <form
+              action={createSkillCategoryAction}
+              className="grid gap-3 border-y border-[var(--border)] bg-[var(--surface-subtle)] p-4 sm:grid-cols-[minmax(0,1fr)_7rem_auto]"
+            >
+              <Field
+                id="new-category-name"
+                label="カテゴリ名"
+                name="name"
+                required
+              />
+              <Field
+                id="new-category-order"
+                label="表示順"
+                name="displayOrder"
+                type="number"
+                defaultValue={0}
+                min={0}
+                required
+              />
               <div className="self-end">
-                <Button type="submit">追加</Button>
+                <Button type="submit" className="w-full sm:w-auto">
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  追加
+                </Button>
               </div>
             </form>
-            <div className="grid gap-2">
-              {categories.map((category) => (
-                <form
-                  key={category.id}
-                  action={updateSkillCategoryAction}
-                  className="grid gap-2 rounded-md border border-slate-200 p-3 md:grid-cols-[1fr_120px_auto_auto]"
-                >
-                  <input type="hidden" name="id" value={category.id} />
-                  <Input name="name" defaultValue={category.name} aria-label="カテゴリ名" required />
-                  <Input
-                    name="displayOrder"
-                    type="number"
-                    defaultValue={category.displayOrder}
-                    min={0}
-                    aria-label="表示順"
-                    required
-                  />
-                  <Button type="submit">更新</Button>
-                  <Button
-                    type="submit"
-                    formAction={deleteSkillCategoryAction}
-                    variant="secondary"
-                    disabled={category._count.skills > 0}
-                    title={
-                      category._count.skills > 0
-                        ? "配下スキルがあるカテゴリは削除できません"
-                        : undefined
-                    }
+
+            {categories.length === 0 ? (
+              <EmptyState
+                icon={FolderTree}
+                title="カテゴリがありません"
+                description="最初のカテゴリを追加して、スキルを分類できる状態にしてください。"
+              />
+            ) : (
+              <div className="divide-y divide-[var(--border)] border-y border-[var(--border)]">
+                {categories.map((category) => (
+                  <form
+                    key={category.id}
+                    action={updateSkillCategoryAction}
+                    className="grid gap-3 py-4 sm:grid-cols-[minmax(0,1fr)_7rem_auto_auto] sm:items-end"
                   >
-                    削除
-                  </Button>
-                </form>
-              ))}
-            </div>
+                    <input type="hidden" name="id" value={category.id} />
+                    <Field
+                      id={`category-name-${category.id}`}
+                      label="カテゴリ名"
+                      name="name"
+                      defaultValue={category.name}
+                      required
+                    />
+                    <Field
+                      id={`category-order-${category.id}`}
+                      label="表示順"
+                      name="displayOrder"
+                      type="number"
+                      defaultValue={category.displayOrder}
+                      min={0}
+                      required
+                    />
+                    <Button type="submit" variant="secondary">
+                      <Save className="h-4 w-4" aria-hidden="true" />
+                      更新
+                    </Button>
+                    <Button
+                      type="submit"
+                      formAction={deleteSkillCategoryAction}
+                      variant="destructive"
+                      disabled={category._count.skills > 0}
+                      title={
+                        category._count.skills > 0
+                          ? "配下にスキルがあるカテゴリは削除できません"
+                          : "カテゴリを削除"
+                      }
+                    >
+                      削除
+                    </Button>
+                    <p className="text-xs text-[var(--muted-foreground)] sm:col-span-4">
+                      配下のスキル: {category._count.skills}件
+                    </p>
+                  </form>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>スキル追加</CardTitle>
+            <CardTitle>新しいスキル</CardTitle>
+            <CardDescription>
+              スキルコードは登録時に自動で採番されます。
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <form action={createSkillAction} className="grid gap-3 md:grid-cols-2">
-              <Field label="スキル名" name="name" required />
-              <Select label="カテゴリ" name="categoryId">
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </Select>
-              <Field label="説明" name="description" />
-              <label className="flex items-center gap-2 text-sm text-slate-700">
-                <input type="checkbox" name="isActive" defaultChecked />
-                有効
-              </label>
-              <div>
-                <Button type="submit">登録</Button>
-              </div>
-            </form>
+            {categories.length === 0 ? (
+              <EmptyState
+                icon={Sparkles}
+                title="先にカテゴリを登録してください"
+                description="スキルを追加するには、所属先となるカテゴリが必要です。"
+              />
+            ) : (
+              <form
+                action={createSkillAction}
+                className="grid gap-4 border-y border-[var(--border)] py-4 sm:grid-cols-2"
+              >
+                <Field
+                  id="new-skill-name"
+                  label="スキル名"
+                  name="name"
+                  required
+                />
+                <SelectField
+                  id="new-skill-category"
+                  label="カテゴリ"
+                  name="categoryId"
+                >
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </SelectField>
+                <Field
+                  id="new-skill-description"
+                  label="説明"
+                  name="description"
+                  className="sm:col-span-2"
+                />
+                <label className="flex min-h-10 items-center gap-2 text-sm font-medium text-[var(--foreground)]">
+                  <input
+                    type="checkbox"
+                    name="isActive"
+                    defaultChecked
+                    className="h-4 w-4 accent-[var(--primary)]"
+                  />
+                  登録後すぐに有効化する
+                </label>
+                <div className="flex items-center sm:justify-end">
+                  <Button type="submit" className="w-full sm:w-auto">
+                    <Plus className="h-4 w-4" aria-hidden="true" />
+                    スキルを登録
+                  </Button>
+                </div>
+              </form>
+            )}
           </CardContent>
         </Card>
-      </div>
+      </section>
 
       <Card>
         <CardHeader>
           <CardTitle>スキル検索</CardTitle>
+          <CardDescription>
+            キーワード、カテゴリ、状態を組み合わせて登録済みスキルを確認します。
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <SkillSearchTable initialSkills={skills} categories={categories} />
@@ -118,41 +260,96 @@ export default async function SkillsPage() {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>スキル編集</CardTitle>
+        <CardHeader className="flex-row items-start justify-between gap-4">
+          <div>
+            <CardTitle>スキル編集</CardTitle>
+            <CardDescription>
+              名称、カテゴリ、説明、公開状態をスキルごとに更新します。
+            </CardDescription>
+          </div>
+          <Badge variant="neutral">{skills.length}件</Badge>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {skills.map((skill) => (
-            <form
-              key={skill.id}
-              action={updateSkillAction}
-              className="grid gap-3 rounded-md border border-slate-200 p-3 lg:grid-cols-[120px_1fr_180px_1fr_80px_auto_auto]"
-            >
-              <input type="hidden" name="id" value={skill.id} />
-              <Input name="code" value={skill.code} aria-label="コード" readOnly />
-              <Input name="name" defaultValue={skill.name} aria-label="スキル名" required />
-              <select
-                name="categoryId"
-                defaultValue={skill.categoryId}
-                className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
-              >
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-              <Input name="description" defaultValue={skill.description ?? ""} aria-label="説明" />
-              <label className="flex items-center gap-2 text-sm text-slate-700">
-                <input type="checkbox" name="isActive" defaultChecked={skill.isActive} />
-                有効
-              </label>
-              <Button type="submit">更新</Button>
-              <Button type="submit" formAction={deactivateSkillAction} variant="secondary">
-                無効化
-              </Button>
-            </form>
-          ))}
+        <CardContent>
+          {skills.length === 0 ? (
+            <EmptyState
+              icon={BookOpenCheck}
+              title="編集できるスキルがありません"
+              description="スキルを登録すると、ここから詳細を更新できます。"
+            />
+          ) : (
+            <div className="divide-y divide-[var(--border)] border-y border-[var(--border)]">
+              {skills.map((skill) => (
+                <form
+                  key={skill.id}
+                  action={updateSkillAction}
+                  className="grid gap-3 py-5 md:grid-cols-2 xl:grid-cols-[8rem_minmax(10rem,1fr)_12rem_minmax(12rem,1.4fr)_7rem_auto_auto] xl:items-end"
+                >
+                  <input type="hidden" name="id" value={skill.id} />
+                  <Field
+                    id={`skill-code-${skill.id}`}
+                    label="コード"
+                    name="code"
+                    value={skill.code}
+                    readOnly
+                  />
+                  <Field
+                    id={`skill-name-${skill.id}`}
+                    label="スキル名"
+                    name="name"
+                    defaultValue={skill.name}
+                    required
+                  />
+                  <SelectField
+                    id={`skill-category-${skill.id}`}
+                    label="カテゴリ"
+                    name="categoryId"
+                    defaultValue={skill.categoryId}
+                  >
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </SelectField>
+                  <Field
+                    id={`skill-description-${skill.id}`}
+                    label="説明"
+                    name="description"
+                    defaultValue={skill.description ?? ""}
+                  />
+                  <label className="flex min-h-10 items-center gap-2 text-sm font-medium text-[var(--foreground)]">
+                    <input
+                      type="checkbox"
+                      name="isActive"
+                      defaultChecked={skill.isActive}
+                      className="h-4 w-4 accent-[var(--primary)]"
+                    />
+                    有効
+                  </label>
+                  <Button type="submit" variant="secondary">
+                    <Save className="h-4 w-4" aria-hidden="true" />
+                    更新
+                  </Button>
+                  <Button
+                    type="submit"
+                    formAction={deactivateSkillAction}
+                    variant="destructive"
+                    disabled={!skill.isActive}
+                  >
+                    無効化
+                  </Button>
+                  <div className="flex flex-wrap gap-2 text-xs text-[var(--muted-foreground)] md:col-span-2 xl:col-span-7">
+                    <span>保有メンバー {skill._count.memberSkills}人</span>
+                    <span aria-hidden="true">・</span>
+                    <span>ロール要件 {skill._count.roleRequirements}件</span>
+                    <Badge variant={skill.isActive ? "success" : "neutral"}>
+                      {skill.isActive ? "有効" : "無効"}
+                    </Badge>
+                  </div>
+                </form>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -160,40 +357,39 @@ export default async function SkillsPage() {
 }
 
 function Field({
+  id,
   label,
-  name,
+  className,
   ...props
 }: {
+  id: string;
   label: string;
-  name: string;
+  className?: string;
 } & InputHTMLAttributes<HTMLInputElement>) {
   return (
-    <div>
-      <Label htmlFor={name}>{label}</Label>
-      <Input id={name} name={name} className="mt-1 w-full" {...props} />
+    <div className={className}>
+      <Label htmlFor={id}>{label}</Label>
+      <Input id={id} className="mt-1 w-full" {...props} />
     </div>
   );
 }
 
-function Select({
+function SelectField({
+  id,
   label,
-  name,
-  children
+  children,
+  ...props
 }: {
+  id: string;
   label: string;
-  name: string;
   children: ReactNode;
-}) {
+} & Omit<SelectHTMLAttributes<HTMLSelectElement>, "id" | "children">) {
   return (
     <div>
-      <Label htmlFor={name}>{label}</Label>
-      <select
-        id={name}
-        name={name}
-        className="mt-1 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm"
-      >
+      <Label htmlFor={id}>{label}</Label>
+      <Select id={id} className="mt-1" {...props}>
         {children}
-      </select>
+      </Select>
     </div>
   );
 }

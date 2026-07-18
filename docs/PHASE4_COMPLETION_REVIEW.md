@@ -41,12 +41,20 @@ Phase 4の完了条件は、静的検証、実DB接続、認証済み画面ア�
 - ダッシュボードをKPI、ロール充足率、カテゴリ別スキル構成、要対応領域へ再構成し、既存集計値だけを可視化した。
 - 1440px、1024px、390pxで表示を確認し、ADMIN、MANAGER、MEMBERの既存権限と主要画面へのアクセスを再確認した。
 
+## デザイン刷新 第2チェックポイント
+
+- メンバー、スキル、スキルマップを共通UIとレスポンシブテーブルへ刷新した。
+- メンバー検索で初期データが15秒間fresh扱いとなり検索APIが実行されない問題を修正し、6条件の単独・複合検索を検証した。
+- ADMINは全画面、MANAGERはCSV・監査ログ以外、MEMBERはダッシュボード・自分のスキル・通知だけに画面と一覧APIを制限した。
+- MEMBERダッシュボードを本人の承認済みスキル、平均レベル、承認待ち、通知、目標ロールとのギャップ、次の行動に特化した。
+- Docker production build、3ロールの全画面アクセス、MEMBERの一覧API 403を確認した。
+
 ## 確認コマンド
 
 | コマンド | 結果 |
 | --- | --- |
 | `npm.cmd run typecheck` | OK |
-| `npm.cmd run test` | OK。14 files / 39 tests passed |
+| `npm.cmd run test` | OK。19 files / 62 tests passed |
 | `npm.cmd run lint` | OK |
 | `npm.cmd run build` | OK |
 | `npm.cmd run prisma:migrate:check` | OK。`prisma validate` とmigration差分なしを確認 |

@@ -21,42 +21,27 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { SignOutButton } from "@/modules/auth/presentation/sign-out-button";
+import {
+  getNavigationGroupsForRole,
+  isSameOrNestedPath,
+  type AppNavigationItem,
+  type AppRole
+} from "@/shared/auth/app-access";
 import { Badge } from "@/shared/ui/badge";
 import { Tooltip } from "@/shared/ui/tooltip";
 
-type NavigationItem = { href: Route; label: string; icon: LucideIcon };
-type NavigationGroup = { label: string; items: NavigationItem[] };
-
-const navigationGroups: NavigationGroup[] = [
-  {
-    label: "Overview",
-    items: [{ href: "/dashboard", label: "ダッシュボード", icon: BarChart3 }]
-  },
-  {
-    label: "People",
-    items: [
-      { href: "/members", label: "メンバー", icon: Users },
-      { href: "/skill-map", label: "スキルマップ", icon: Map },
-      { href: "/skills", label: "スキル管理", icon: Library },
-      { href: "/roles", label: "ロール管理", icon: Target }
-    ]
-  },
-  {
-    label: "Workflow",
-    items: [
-      { href: "/my/skills", label: "自分のスキル", icon: Sparkles },
-      { href: "/skill-approvals", label: "スキル承認", icon: ClipboardCheck },
-      { href: "/notifications", label: "通知", icon: Bell }
-    ]
-  },
-  {
-    label: "Operations",
-    items: [
-      { href: "/csv", label: "CSV", icon: FileSpreadsheet },
-      { href: "/audit-logs", label: "監査ログ", icon: ShieldCheck }
-    ]
-  }
-];
+const navigationIcons = {
+  dashboard: BarChart3,
+  members: Users,
+  skillMap: Map,
+  skills: Library,
+  roles: Target,
+  mySkills: Sparkles,
+  approvals: ClipboardCheck,
+  notifications: Bell,
+  csv: FileSpreadsheet,
+  auditLogs: ShieldCheck
+} satisfies Record<AppNavigationItem["icon"], LucideIcon>;
 
 const roleLabels: Record<string, string> = {
   ADMIN: "管理者",
@@ -68,13 +53,14 @@ export function AppShell({
   user,
   children
 }: {
-  user: { name?: string | null; role: string };
+  user: { name?: string | null; role: AppRole };
   children: ReactNode;
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const navigationGroups = getNavigationGroupsForRole(user.role);
   const items = navigationGroups.flatMap((group) => group.items);
-  const activeItem = items.find((item) => isActivePath(pathname, item.href));
+  const activeItem = items.find((item) => isSameOrNestedPath(pathname, item.href));
 
 
   useEffect(() => {
@@ -90,7 +76,7 @@ export function AppShell({
     <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] lg:grid lg:grid-cols-[248px_minmax(0,1fr)]">
       <aside className="hidden h-screen flex-col border-r border-white/10 bg-[var(--sidebar)] text-[var(--sidebar-foreground)] lg:sticky lg:top-0 lg:flex">
         <Brand />
-        <Navigation pathname={pathname} onNavigate={() => setMobileOpen(false)} />
+        <Navigation groups={navigationGroups} pathname={pathname} onNavigate={() => setMobileOpen(false)} />
         <div className="border-t border-white/10 p-4">
           <p className="truncate text-sm font-semibold">{user.name ?? "ユーザー"}</p>
           <p className="mt-1 text-xs text-[var(--sidebar-muted)]">
@@ -122,7 +108,7 @@ export function AppShell({
                 <X className="h-5 w-5" aria-hidden="true" />
               </button>
             </div>
-            <Navigation pathname={pathname} onNavigate={() => setMobileOpen(false)} />
+            <Navigation groups={navigationGroups} pathname={pathname} onNavigate={() => setMobileOpen(false)} />
           </aside>
         </div>
       ) : null}
@@ -187,10 +173,18 @@ function Brand() {
   );
 }
 
-function Navigation({ pathname, onNavigate }: { pathname: string; onNavigate: () => void }) {
+function Navigation({
+  groups,
+  pathname,
+  onNavigate
+}: {
+  groups: ReturnType<typeof getNavigationGroupsForRole>;
+  pathname: string;
+  onNavigate: () => void;
+}) {
   return (
     <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="メインナビゲーション">
-      {navigationGroups.map((group) => (
+      {groups.map((group) => (
         <div key={group.label} className="mb-5 last:mb-0">
           <p className="mb-1 px-3 text-[11px] font-semibold uppercase text-[var(--sidebar-muted)]">
             {group.label}
@@ -200,7 +194,7 @@ function Navigation({ pathname, onNavigate }: { pathname: string; onNavigate: ()
               <NavigationLink
                 key={item.href}
                 item={item}
-                active={isActivePath(pathname, item.href)}
+                active={isSameOrNestedPath(pathname, item.href)}
                 onNavigate={onNavigate}
               />
             ))}
@@ -216,14 +210,14 @@ function NavigationLink({
   active,
   onNavigate
 }: {
-  item: NavigationItem;
+  item: AppNavigationItem;
   active: boolean;
   onNavigate: () => void;
 }) {
-  const Icon = item.icon;
+  const Icon = navigationIcons[item.icon];
   return (
     <Link
-      href={item.href}
+      href={item.href as Route}
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={`flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${
@@ -239,7 +233,4 @@ function NavigationLink({
       ) : null}
     </Link>
   );
-}
-function isActivePath(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(`${href}/`);
 }
