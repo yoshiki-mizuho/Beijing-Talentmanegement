@@ -4,6 +4,10 @@ export function listNotifications(memberId: string) {
   return notificationRepository.listNotifications(memberId);
 }
 
+export function findNotification(id: string, memberId: string) {
+  return notificationRepository.findNotification(id, memberId);
+}
+
 export function markNotificationRead(id: string, memberId: string) {
   return notificationRepository.markNotificationRead(id, memberId);
 }

@@ -4,6 +4,7 @@ import {
   memberSearchSchema
 } from "@/modules/members/domain/member-search";
 import {
+  skillAssessmentBatchInputSchema,
   skillAssessmentInputSchema,
   skillAssessmentReviewInputSchema
 } from "@/modules/members/domain/skill-assessment-schema";
@@ -51,6 +52,11 @@ export function createSkillAssessment(input: unknown) {
   return memberRepository.createSkillAssessment(skillAssessmentInputSchema.parse(input));
 }
 
+export function createSkillAssessments(input: unknown) {
+  return memberRepository.createSkillAssessments(
+    skillAssessmentBatchInputSchema.parse(input)
+  );
+}
 export function reviewSkillAssessment(input: unknown) {
   return memberRepository.reviewSkillAssessment(
     skillAssessmentReviewInputSchema.parse(input)

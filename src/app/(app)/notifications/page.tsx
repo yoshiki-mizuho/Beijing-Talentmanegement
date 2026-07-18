@@ -1,11 +1,14 @@
-import { NotificationStatus } from "@prisma/client";
+import { Bell } from "lucide-react";
 import { redirect } from "next/navigation";
 
 import { listNotifications } from "@/modules/notifications/application/notification-service";
-import { markNotificationReadAction } from "@/modules/notifications/presentation/actions";
+import { confirmNotificationAction } from "@/modules/notifications/presentation/actions";
 import { getCurrentSession } from "@/server/auth/session";
+import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
+import { EmptyState } from "@/shared/ui/empty-state";
+import { PageHeader } from "@/shared/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -20,12 +23,11 @@ export default async function NotificationsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-950">通知</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          承認依頼と承認結果を確認します。
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Workflow"
+        title="通知"
+        description="申告依頼や申告結果を確認し、必要な対応画面へ進みます。"
+      />
 
       <Card>
         <CardHeader>
@@ -35,34 +37,39 @@ export default async function NotificationsPage() {
           {notifications.map((notification) => (
             <form
               key={notification.id}
-              action={markNotificationReadAction}
-              className="grid gap-2 rounded-md border border-slate-200 p-3 md:grid-cols-[1fr_auto]"
+              action={confirmNotificationAction}
+              className="grid gap-3 rounded-md border border-[var(--border)] p-4 md:grid-cols-[1fr_auto] md:items-center"
             >
               <input type="hidden" name="id" value={notification.id} />
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm font-medium text-slate-950">
+                  <p className="text-sm font-medium text-[var(--foreground)]">
                     {notification.title}
                   </p>
-                  <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
-                    {notification.status}
-                  </span>
+                  <Badge variant={notification.status === "UNREAD" ? "primary" : "neutral"}>
+                    {notification.status === "UNREAD" ? "未読" : "確認済み"}
+                  </Badge>
                 </div>
                 {notification.body && (
-                  <p className="mt-1 text-sm text-slate-600">{notification.body}</p>
+                  <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+                    {notification.body}
+                  </p>
                 )}
               </div>
               <Button
                 type="submit"
-                variant="secondary"
-                disabled={notification.status === NotificationStatus.READ}
+                variant={notification.status === "UNREAD" ? "primary" : "secondary"}
               >
-                既読
+                確認
               </Button>
             </form>
           ))}
           {notifications.length === 0 && (
-            <p className="text-sm text-slate-600">通知はありません。</p>
+            <EmptyState
+              icon={Bell}
+              title="通知はありません"
+              description="新しい申告依頼や申告結果が届くと、ここに表示されます。"
+            />
           )}
         </CardContent>
       </Card>

@@ -8,9 +8,11 @@ import {
 } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import { FilterX, UsersRound } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 
 import { buildMemberSearchParams, emptyMemberSearchFilters, hasMemberSearchFilters, type MemberSearchFilters } from "@/modules/members/presentation/member-search-filters";
+import { MemberDetailModal } from "@/modules/members/presentation/member-detail-modal";
+import type { DepartmentOption, MemberRow, RoleOption, SkillOption } from "@/modules/members/presentation/member-presentation-types";
 import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
@@ -19,58 +21,6 @@ import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { QueryProvider } from "@/shared/ui/query-provider";
 import { Select } from "@/shared/ui/select";
-
-type MemberRow = {
-  id: string;
-  employeeNo: string;
-  name: string;
-  email: string;
-  status: string;
-  jobTitle: string | null;
-  departmentId: string;
-  department: {
-    id: string;
-    name: string;
-  };
-  memberSkills: {
-    id: string;
-    skillId: string;
-    level: number;
-    skill: {
-      id: string;
-      name: string;
-      category: {
-        name: string;
-      };
-    };
-  }[];
-};
-
-type DepartmentOption = {
-  id: string;
-  name: string;
-};
-
-type SkillOption = {
-  id: string;
-  name: string;
-  category: {
-    name: string;
-  };
-};
-
-type RoleOption = {
-  id: string;
-  name: string;
-  roleRequirements: {
-    skillId: string;
-    requiredLevel: number;
-    isRequired: boolean;
-    skill: {
-      name: string;
-    };
-  }[];
-};
 
 export function MemberSearchTable(props: {
   initialMembers: MemberRow[];
@@ -97,6 +47,8 @@ function MemberSearchTableInner({
   roles: RoleOption[];
 }) {
   const [filters, setFilters] = useState<MemberSearchFilters>(emptyMemberSearchFilters);
+  const [selectedMember, setSelectedMember] = useState<MemberRow | null>(null);
+  const closeMemberDetail = useCallback(() => setSelectedMember(null), []);
   const hasActiveFilters = hasMemberSearchFilters(filters);
   const query = useQuery({
     queryKey: ["members", filters],
@@ -325,7 +277,21 @@ function MemberSearchTableInner({
           </thead>
           <tbody className="divide-y divide-[var(--border)] bg-[var(--surface)]">
             {table.getRowModel().rows.map((row) => (
-              <tr key={row.id}>
+              <tr
+                key={row.id}
+                tabIndex={0}
+                role="button"
+                aria-haspopup="dialog"
+                aria-label={`${row.original.name}の詳細を開く`}
+                className="cursor-pointer transition-colors hover:bg-[var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--ring)]"
+                onClick={() => setSelectedMember(row.original)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setSelectedMember(row.original);
+                  }
+                }}
+              >
                 {row.getVisibleCells().map((cell) => (
                   <td key={cell.id} className="max-w-72 px-3 py-3 align-top text-slate-700">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -336,6 +302,14 @@ function MemberSearchTableInner({
           </tbody>
         </table>
       </div>
+      {selectedMember ? (
+        <MemberDetailModal
+          member={selectedMember}
+          departments={departments}
+          skills={skills}
+          onClose={closeMemberDetail}
+        />
+      ) : null}
     </div>
   );
 }

@@ -1,20 +1,32 @@
+import { Award, ClipboardList } from "lucide-react";
 import { redirect } from "next/navigation";
 
 import {
   listMemberSkillAssessments,
   listMembers
 } from "@/modules/members/application/member-service";
-import { createSkillAssessmentAction } from "@/modules/members/presentation/actions";
+import { SkillAssessmentBatchForm } from "@/modules/members/presentation/skill-assessment-batch-form";
 import { listSkills } from "@/modules/skills/application/skill-service";
 import { getCurrentSession } from "@/server/auth/session";
-import { Button } from "@/shared/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
-import { Input } from "@/shared/ui/input";
-import { Label } from "@/shared/ui/label";
+import { Badge } from "@/shared/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "@/shared/ui/card";
+import { EmptyState } from "@/shared/ui/empty-state";
+import { PageHeader } from "@/shared/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
-const skillLevels = [1, 2, 3, 4, 5] as const;
+const statusLabels: Record<string, string> = {
+  PENDING: "承認待ち",
+  APPROVED: "承認済み",
+  CORRECTED: "補正承認",
+  REJECTED: "差し戻し"
+};
 
 export default async function MySkillsPage() {
   const session = await getCurrentSession();
@@ -29,69 +41,39 @@ export default async function MySkillsPage() {
     listSkills()
   ]);
   const currentMember = members.find((member) => member.id === session.user.memberId);
-  const activeSkills = skills.filter((skill) => skill.isActive);
+  const pendingSkillIds = new Set(
+    assessments
+      .filter((assessment) => assessment.status === "PENDING")
+      .map((assessment) => assessment.skillId)
+  );
+  const activeSkills = skills
+    .filter((skill) => skill.isActive && !pendingSkillIds.has(skill.id))
+    .map((skill) => ({
+      id: skill.id,
+      name: skill.name,
+      categoryName: skill.category.name
+    }));
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-950">自分のスキル申告</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          保有スキルを申告し、managerの承認を依頼します。
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Growth"
+        title="自分のスキル"
+        description="複数のスキルと現在のレベルを設定し、まとめて承認申請できます。"
+      />
 
       <Card>
         <CardHeader>
-          <CardTitle>新規申告</CardTitle>
+          <CardTitle>スキル一括申請</CardTitle>
+          <CardDescription>
+            スキルを追加してレベルを調整してください。承認待ちのスキルは選択肢から除外されます。
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={createSkillAssessmentAction} className="grid gap-3 md:grid-cols-[1fr_140px_160px_auto]">
-            <div>
-              <Label htmlFor="skillId">スキル</Label>
-              <select
-                id="skillId"
-                name="skillId"
-                className="mt-1 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm"
-                required
-              >
-                {activeSkills.map((skill) => (
-                  <option key={skill.id} value={skill.id}>
-                    {skill.category.name} / {skill.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <Label htmlFor="requestedLevel">申告Lv</Label>
-              <select
-                id="requestedLevel"
-                name="requestedLevel"
-                className="mt-1 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm"
-                required
-              >
-                {skillLevels.map((level) => (
-                  <option key={level} value={level}>
-                    Lv.{level}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <Label htmlFor="yearsOfExperience">経験年数</Label>
-              <Input
-                id="yearsOfExperience"
-                name="yearsOfExperience"
-                type="number"
-                step="0.1"
-                min="0"
-                max="99.9"
-                className="mt-1 w-full"
-              />
-            </div>
-            <div className="self-end">
-              <Button type="submit">申告</Button>
-            </div>
-          </form>
+          <SkillAssessmentBatchForm
+            key={Array.from(pendingSkillIds).sort().join(",")}
+            skills={activeSkills}
+          />
         </CardContent>
       </Card>
 
@@ -99,54 +81,73 @@ export default async function MySkillsPage() {
         <Card>
           <CardHeader>
             <CardTitle>承認済みスキル</CardTitle>
+            <CardDescription>現在の正式な保有スキルです。</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             {currentMember?.memberSkills.map((memberSkill) => (
-              <div key={memberSkill.id} className="rounded-md border border-slate-200 p-3">
-                <p className="text-sm font-medium text-slate-950">
-                  {memberSkill.skill.name}
-                </p>
-                <p className="text-sm text-slate-600">
-                  {memberSkill.skill.category.name} / Lv.{memberSkill.level}
-                </p>
+              <div
+                key={memberSkill.id}
+                className="flex items-center justify-between gap-3 border-b border-[var(--border)] py-3 last:border-b-0"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-[var(--foreground)]">
+                    {memberSkill.skill.name}
+                  </p>
+                  <p className="truncate text-xs text-[var(--muted-foreground)]">
+                    {memberSkill.skill.category.name}
+                  </p>
+                </div>
+                <Badge variant="success">Lv.{memberSkill.level}</Badge>
               </div>
             ))}
-            {currentMember?.memberSkills.length === 0 && (
-              <p className="text-sm text-slate-600">承認済みスキルはまだありません。</p>
-            )}
+            {currentMember?.memberSkills.length === 0 ? (
+              <EmptyState
+                icon={Award}
+                title="承認済みスキルはありません"
+                description="上の申請フォームから最初のスキルを申請してください。"
+              />
+            ) : null}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
             <CardTitle>申告履歴</CardTitle>
+            <CardDescription>これまでの申請と承認状況です。</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             {assessments.map((assessment) => (
-              <div key={assessment.id} className="rounded-md border border-slate-200 p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-medium text-slate-950">
+              <div
+                key={assessment.id}
+                className="border-b border-[var(--border)] py-3 last:border-b-0"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-[var(--foreground)]">
                       {assessment.skill.name}
                     </p>
-                    <p className="text-sm text-slate-600">
+                    <p className="text-xs text-[var(--muted-foreground)]">
                       {assessment.skill.category.name} / 申告Lv.{assessment.requestedLevel}
                     </p>
                   </div>
-                  <span className="rounded-md bg-slate-100 px-2 py-1 text-sm font-medium text-slate-700">
-                    {assessment.status}
-                  </span>
+                  <Badge variant={assessment.status === "REJECTED" ? "danger" : assessment.status === "PENDING" ? "warning" : "success"}>
+                    {statusLabels[assessment.status] ?? assessment.status}
+                  </Badge>
                 </div>
-                {assessment.managerComment && (
-                  <p className="mt-2 text-sm text-slate-600">
+                {assessment.managerComment ? (
+                  <p className="mt-2 text-sm text-[var(--muted-foreground)]">
                     コメント: {assessment.managerComment}
                   </p>
-                )}
+                ) : null}
               </div>
             ))}
-            {assessments.length === 0 && (
-              <p className="text-sm text-slate-600">申告履歴はまだありません。</p>
-            )}
+            {assessments.length === 0 ? (
+              <EmptyState
+                icon={ClipboardList}
+                title="申告履歴はありません"
+                description="申請を送信すると、ここで承認状況を確認できます。"
+              />
+            ) : null}
           </CardContent>
         </Card>
       </div>

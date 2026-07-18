@@ -12,11 +12,10 @@
 | --- | --- | --- | --- | --- |
 | ログイン | `/login` | 全ロール | 含める | Auth.jsによるログイン導線 |
 | ダッシュボード | `/dashboard` | 全ロール | 含める | `admin`・`manager`は組織集計、`member`は本人のスキルと成長課題 |
-| 通知一覧 | `/notifications` | 全ロール | 含める | 承認依頼、承認結果、差し戻しの確認 |
-| メンバー一覧 | `/members` | `admin`、`manager` | 含める | 検索、部署フィルタ、スキル条件検索 |
-| メンバー詳細 | `/members/[id]` | `admin`、`manager` | 含める | 基本情報、保有スキル、ロール達成状況 |
-| メンバー編集 | `/members/[id]/edit` | `admin`、`manager` | 含める | 基本情報と所属の編集 |
-| 自分のスキル申告 | `/my/skills` | `member`、`manager`、`admin` | 含める | 自身のスキル、レベル、経験年数の申告 |
+| 通知一覧 | `/notifications` | 全ロール | 含める | 通知を確認済みにし、承認依頼または申告結果の対応画面へ遷移 |
+| メンバー一覧 | `/members` | `admin`、`manager` | 含める | 検索、部署フィルタ、スキル条件検索、行選択による詳細モーダル表示 |
+| メンバー詳細 | `/members` のモーダル | `admin`、`manager` | 含める | 基本情報の編集、保有スキルの追加・削除 |
+| 自分のスキル申告 | `/my/skills` | `member`、`manager`、`admin` | 含める | 複数スキルの追加、スライダーによるレベル設定、一括申請 |
 | スキル承認 | `/skill-approvals` | `manager`、`admin` | 含める | 申告スキルの承認、補正承認、差し戻し |
 | スキル管理 | `/skills` | `admin`、`manager` | 含める | スキル一覧、カテゴリ、レベル説明 |
 | スキル編集 | `/skills/[id]/edit` | `admin` | 含める | スキル定義の作成、更新、無効化 |
@@ -37,8 +36,7 @@ flowchart TD
   App --> Dashboard[ダッシュボード]
   App --> Notifications[通知一覧]
   App --> Members[メンバー一覧]
-  Members --> MemberDetail[メンバー詳細]
-  MemberDetail --> MemberEdit[メンバー編集]
+  Members --> MemberDetail[メンバー詳細モーダル]
   App --> MySkills[自分のスキル申告]
   App --> SkillApprovals[スキル承認]
   App --> Skills[スキル管理]
@@ -117,7 +115,7 @@ flowchart TD
 flowchart TD
   Start[ログイン] --> Dashboard[自分のサマリー確認]
   Dashboard --> MySkills[自分のスキル一覧]
-  MySkills --> Submit[スキル/レベル/経験年数を申告]
+  MySkills --> Submit[複数スキルのレベルと経験年数を設定して一括申告]
   Submit --> NotifyManager[managerへ承認依頼通知]
   NotifyManager --> Wait[承認待ち]
   Wait --> Result{承認結果}
