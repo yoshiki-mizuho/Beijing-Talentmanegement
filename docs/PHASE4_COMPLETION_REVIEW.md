@@ -34,12 +34,19 @@ Phase 4の完了条件は、静的検証、実DB接続、認証済み画面ア�
 - `skill-map` モジュールにマトリクス集計と表示用テーブルを追加した。
 - ダッシュボード、スキルマップ、検索条件のユニットテストを追加した。
 
+## デザイン刷新 第1チェックポイント
+
+- 共通レイアウトを全高ナビゲーション、コンパクトヘッダー、レスポンシブなモバイルドロワーへ刷新した。
+- 明るいニュートラル背景、チャコール文字、ティールの主操作色と分析用の共通カラートークンを定義した。
+- ダッシュボードをKPI、ロール充足率、カテゴリ別スキル構成、要対応領域へ再構成し、既存集計値だけを可視化した。
+- 1440px、1024px、390pxで表示を確認し、ADMIN、MANAGER、MEMBERの既存権限と主要画面へのアクセスを再確認した。
+
 ## 確認コマンド
 
 | コマンド | 結果 |
 | --- | --- |
 | `npm.cmd run typecheck` | OK |
-| `npm.cmd run test` | OK。13 files / 38 tests passed |
+| `npm.cmd run test` | OK。14 files / 39 tests passed |
 | `npm.cmd run lint` | OK |
 | `npm.cmd run build` | OK |
 | `npm.cmd run prisma:migrate:check` | OK。`prisma validate` とmigration差分なしを確認 |

@@ -9,11 +9,15 @@ export function SignOutButton() {
   return (
     <Button
       type="button"
-      variant="secondary"
+      variant="ghost"
+      size="small"
+      className="px-2 sm:px-3"
       onClick={() => signOut({ callbackUrl: "/login" })}
+      aria-label="ログアウト"
+      title="ログアウト"
     >
       <LogOut className="h-4 w-4" aria-hidden="true" />
-      ログアウト
+      <span className="hidden sm:inline">ログアウト</span>
     </Button>
   );
 }

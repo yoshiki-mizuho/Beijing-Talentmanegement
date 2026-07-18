@@ -1,35 +1,46 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
-  --foreground: #111827;
+  --background: #f4f7f6;
+  --foreground: #17201e;
+  --surface: #ffffff;
+  --surface-subtle: #eef3f1;
   --card: #ffffff;
-  --card-foreground: #111827;
-  --border: #d9e2ec;
-  --muted: #eef2f7;
-  --muted-foreground: #5b677a;
-  --primary: #155e75;
+  --card-foreground: #17201e;
+  --border: #d7e0dd;
+  --border-strong: #bdcbc6;
+  --muted: #e8efed;
+  --muted-foreground: #60706b;
+  --primary: #0f766e;
+  --primary-hover: #115e59;
   --primary-foreground: #ffffff;
-  --destructive: #b91c1c;
+  --accent-coral: #d7624f;
+  --accent-amber: #bd7b19;
+  --accent-green: #3f8558;
+  --accent-blue: #397f9b;
+  --destructive: #b5413c;
   --destructive-foreground: #ffffff;
-  --ring: #0f766e;
+  --ring: #0d9488;
+  --sidebar: #182522;
+  --sidebar-foreground: #eef7f4;
+  --sidebar-muted: #9fb5ae;
 }
 
 * {
   box-sizing: border-box;
 }
 
-html {
+html,
+body {
   min-height: 100%;
 }
 
 body {
-  min-height: 100%;
   margin: 0;
   background: var(--background);
   color: var(--foreground);
   font-family:
-    Arial,
+    Inter,
     "Hiragino Sans",
     "Yu Gothic",
     Meiryo,
@@ -42,6 +53,21 @@ a {
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  outline-color: var(--ring);
+}
+
+::selection {
+  background: #bde9e3;
+  color: var(--foreground);
 }

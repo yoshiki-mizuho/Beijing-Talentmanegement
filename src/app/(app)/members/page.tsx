@@ -30,6 +30,50 @@ export default async function MembersPage() {
     listRoles()
   ]);
   const activeSkills = skills.filter((skill) => skill.isActive);
+  const memberRows = members.map((member) => ({
+    id: member.id,
+    employeeNo: member.employeeNo,
+    name: member.name,
+    email: member.email,
+    status: member.status,
+    jobTitle: member.jobTitle,
+    departmentId: member.departmentId,
+    department: {
+      id: member.department.id,
+      name: member.department.name
+    },
+    memberSkills: member.memberSkills.map((memberSkill) => ({
+      id: memberSkill.id,
+      skillId: memberSkill.skillId,
+      level: memberSkill.level,
+      skill: {
+        id: memberSkill.skill.id,
+        name: memberSkill.skill.name,
+        category: {
+          name: memberSkill.skill.category.name
+        }
+      }
+    }))
+  }));
+  const skillOptions = activeSkills.map((skill) => ({
+    id: skill.id,
+    name: skill.name,
+    category: {
+      name: skill.category.name
+    }
+  }));
+  const roleOptions = roles.map((role) => ({
+    id: role.id,
+    name: role.name,
+    roleRequirements: role.roleRequirements.map((requirement) => ({
+      skillId: requirement.skillId,
+      requiredLevel: requirement.requiredLevel,
+      isRequired: requirement.isRequired,
+      skill: {
+        name: requirement.skill.name
+      }
+    }))
+  }));
 
   return (
     <div className="space-y-6">
@@ -46,10 +90,10 @@ export default async function MembersPage() {
         </CardHeader>
         <CardContent>
           <MemberSearchTable
-            initialMembers={members}
+            initialMembers={memberRows}
             departments={departments}
-            skills={activeSkills}
-            roles={roles}
+            skills={skillOptions}
+            roles={roleOptions}
           />
         </CardContent>
       </Card>
