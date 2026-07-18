@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import type { Route } from "next";
 import type { ReactNode } from "react";
 
+import { countUnreadNotifications } from "@/modules/notifications/application/notification-service";
 import { getCurrentSession } from "@/server/auth/session";
 import {
   canAccessAppPath,
@@ -27,12 +28,17 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     redirect(getUnauthorizedRedirectPath() as Route);
   }
 
+  const unreadNotificationCount = session.user.memberId
+    ? await countUnreadNotifications(session.user.memberId)
+    : 0;
+
   return (
     <AppShell
       user={{
         name: session.user.name,
         role: session.user.role
       }}
+      unreadNotificationCount={unreadNotificationCount}
     >
       {children}
     </AppShell>

@@ -28,6 +28,7 @@ import {
   type AppRole
 } from "@/shared/auth/app-access";
 import { Badge } from "@/shared/ui/badge";
+import { NotificationIndicator } from "@/shared/ui/notification-indicator";
 import { Tooltip } from "@/shared/ui/tooltip";
 
 const navigationIcons = {
@@ -51,9 +52,11 @@ const roleLabels: Record<string, string> = {
 
 export function AppShell({
   user,
+  unreadNotificationCount,
   children
 }: {
   user: { name?: string | null; role: AppRole };
+  unreadNotificationCount: number;
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -138,15 +141,7 @@ export function AppShell({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Tooltip content="通知">
-              <Link
-                href="/notifications"
-                className="relative inline-flex h-9 w-9 items-center justify-center rounded-md text-[var(--muted-foreground)] hover:bg-[var(--surface-subtle)] hover:text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
-                aria-label="通知を開く"
-              >
-                <Bell className="h-4 w-4" aria-hidden="true" />
-              </Link>
-            </Tooltip>
+            <NotificationIndicator unreadCount={unreadNotificationCount} />
             <Badge className="hidden sm:inline-flex" variant="primary">
               {roleLabels[user.role] ?? user.role}
             </Badge>

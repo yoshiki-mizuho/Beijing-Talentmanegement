@@ -28,5 +28,6 @@ export async function confirmNotificationAction(formData: FormData) {
 
   await markNotificationRead(id, session.user.memberId);
   revalidatePath("/notifications");
+  revalidatePath("/", "layout");
   redirect(destination ?? "/notifications");
 }

@@ -29,32 +29,38 @@ export async function listDepartments() {
   });
 }
 
-export async function listMembers(input?: MemberSearchInput) {
-  const members = await prisma.member.findMany({
-    where: {
-      ...(input?.q
-        ? {
-            OR: [
-              { employeeNo: { contains: input.q, mode: "insensitive" } },
-              { name: { contains: input.q, mode: "insensitive" } },
-              { email: { contains: input.q, mode: "insensitive" } },
-              { jobTitle: { contains: input.q, mode: "insensitive" } }
-            ]
-          }
-        : {}),
-      ...(input?.departmentId ? { departmentId: input.departmentId } : {}),
-      ...(input?.status ? { status: input.status } : {}),
-      ...(input?.skillId || input?.minLevel
-        ? {
-            memberSkills: {
-              some: {
-                ...(input.skillId ? { skillId: input.skillId } : {}),
-                ...(input.minLevel ? { level: { gte: input.minLevel } } : {})
-              }
+export function buildMemberSearchWhere(
+  input?: MemberSearchInput
+): Prisma.MemberWhereInput {
+  return {
+    ...(input?.q
+      ? {
+          OR: [
+            { employeeNo: { contains: input.q, mode: "insensitive" as const } },
+            { name: { contains: input.q, mode: "insensitive" as const } },
+            { email: { contains: input.q, mode: "insensitive" as const } },
+            { jobTitle: { contains: input.q, mode: "insensitive" as const } }
+          ]
+        }
+      : {}),
+    ...(input?.departmentId ? { departmentId: input.departmentId } : {}),
+    ...(input?.status ? { status: input.status } : {}),
+    ...(input?.skillId || input?.minLevel
+      ? {
+          memberSkills: {
+            some: {
+              ...(input.skillId ? { skillId: input.skillId } : {}),
+              ...(input.minLevel ? { level: { gte: input.minLevel } } : {})
             }
           }
-        : {})
-    },
+        }
+      : {})
+  };
+}
+
+export async function listMembers(input?: MemberSearchInput) {
+  const members = await prisma.member.findMany({
+    where: buildMemberSearchWhere(input),
     include: {
       department: true,
       memberSkills: {

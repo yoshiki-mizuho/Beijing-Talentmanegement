@@ -6,9 +6,9 @@ import {
   getCoreRowModel,
   useReactTable
 } from "@tanstack/react-table";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { FilterX, UsersRound } from "lucide-react";
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { buildMemberSearchParams, emptyMemberSearchFilters, hasMemberSearchFilters, type MemberSearchFilters } from "@/modules/members/presentation/member-search-filters";
 import { MemberDetailModal } from "@/modules/members/presentation/member-detail-modal";
@@ -47,17 +47,36 @@ function MemberSearchTableInner({
   roles: RoleOption[];
 }) {
   const [filters, setFilters] = useState<MemberSearchFilters>(emptyMemberSearchFilters);
+  const [debouncedKeyword, setDebouncedKeyword] = useState(filters.q);
   const [selectedMember, setSelectedMember] = useState<MemberRow | null>(null);
   const closeMemberDetail = useCallback(() => setSelectedMember(null), []);
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedKeyword(filters.q.trim());
+    }, 300);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [filters.q]);
+
+  const appliedFilters = useMemo(
+    () => ({ ...filters, q: debouncedKeyword }),
+    [debouncedKeyword, filters]
+  );
+  const searchParams = useMemo(
+    () => buildMemberSearchParams(appliedFilters).toString(),
+    [appliedFilters]
+  );
   const hasActiveFilters = hasMemberSearchFilters(filters);
   const query = useQuery({
-    queryKey: ["members", filters],
-    queryFn: () => fetchMembers(filters),
-    initialData: hasActiveFilters ? undefined : initialMembers
+    queryKey: ["members", searchParams],
+    queryFn: ({ signal }) => fetchMembers(searchParams, signal),
+    initialData: searchParams ? undefined : initialMembers,
+    placeholderData: keepPreviousData,
+    refetchOnWindowFocus: false
   });
 
   const members = query.data ?? [];
-  const selectedRole = roles.find((role) => role.id === filters.roleId);
+  const selectedRole = roles.find((role) => role.id === appliedFilters.roleId);
   const columns = useMemo<ColumnDef<MemberRow>[]>(
     () => [
       {
@@ -343,10 +362,11 @@ function SelectFilter({
   );
 }
 
-async function fetchMembers(filters: MemberSearchFilters) {
-  const searchParams = buildMemberSearchParams(filters);
-
-  const response = await fetch(`/api/members?${searchParams.toString()}`);
+async function fetchMembers(searchParams: string, signal: AbortSignal) {
+  const response = await fetch(
+    searchParams ? `/api/members?${searchParams}` : "/api/members",
+    { signal }
+  );
 
   if (!response.ok) {
     throw new Error("Failed to fetch members.");

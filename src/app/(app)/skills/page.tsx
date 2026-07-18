@@ -18,6 +18,7 @@ import {
   updateSkillAction,
   updateSkillCategoryAction
 } from "@/modules/skills/presentation/actions";
+import { canManageSkillMaster } from "@/modules/skills/presentation/skill-permissions";
 import { SkillSearchTable } from "@/modules/skills/presentation/skill-search-table";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
@@ -34,10 +35,13 @@ import { Label } from "@/shared/ui/label";
 import { Metric } from "@/shared/ui/metric";
 import { PageHeader } from "@/shared/ui/page-header";
 import { Select } from "@/shared/ui/select";
+import { managerOrAdmin, requireRoles } from "@/server/auth/authorization";
 
 export const dynamic = "force-dynamic";
 
 export default async function SkillsPage() {
+  const session = await requireRoles(managerOrAdmin);
+  const canManageSkills = canManageSkillMaster(session.user.role);
   const [categories, skills] = await Promise.all([
     listSkillCategories(),
     listSkills()
@@ -90,7 +94,8 @@ export default async function SkillsPage() {
         />
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-2">
+      {canManageSkills ? (
+        <section className="grid gap-4 xl:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>カテゴリ管理</CardTitle>
@@ -245,7 +250,8 @@ export default async function SkillsPage() {
             )}
           </CardContent>
         </Card>
-      </section>
+        </section>
+      ) : null}
 
       <Card>
         <CardHeader>
@@ -259,10 +265,11 @@ export default async function SkillsPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="flex-row items-start justify-between gap-4">
-          <div>
-            <CardTitle>スキル編集</CardTitle>
+      {canManageSkills ? (
+        <Card>
+          <CardHeader className="flex-row items-start justify-between gap-4">
+            <div>
+              <CardTitle>スキル編集</CardTitle>
             <CardDescription>
               名称、カテゴリ、説明、公開状態をスキルごとに更新します。
             </CardDescription>
@@ -351,7 +358,8 @@ export default async function SkillsPage() {
             </div>
           )}
         </CardContent>
-      </Card>
+        </Card>
+      ) : null}
     </div>
   );
 }

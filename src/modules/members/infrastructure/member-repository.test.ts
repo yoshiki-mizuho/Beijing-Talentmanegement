@@ -16,7 +16,10 @@ vi.mock("@/server/db/prisma", () => ({
   }
 }));
 
-import { createSkillAssessments } from "@/modules/members/infrastructure/member-repository";
+import {
+  buildMemberSearchWhere,
+  createSkillAssessments
+} from "@/modules/members/infrastructure/member-repository";
 
 const transactionClient = {
   member: { findUniqueOrThrow: mocks.memberFindUniqueOrThrow },
@@ -95,5 +98,43 @@ describe("createSkillAssessments transaction boundary", () => {
 
     expect(mocks.transaction).toHaveBeenCalledTimes(1);
     expect(mocks.assessmentCreate).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("buildMemberSearchWhere", () => {
+  it("builds keyword and department conditions together", () => {
+    expect(
+      buildMemberSearchWhere({ q: "佐藤", departmentId: "department-1" })
+    ).toEqual({
+      OR: [
+        { employeeNo: { contains: "佐藤", mode: "insensitive" } },
+        { name: { contains: "佐藤", mode: "insensitive" } },
+        { email: { contains: "佐藤", mode: "insensitive" } },
+        { jobTitle: { contains: "佐藤", mode: "insensitive" } }
+      ],
+      departmentId: "department-1"
+    });
+  });
+
+  it("combines skill and minimum level in the same relation condition", () => {
+    expect(
+      buildMemberSearchWhere({
+        skillId: "skill-1",
+        minLevel: 3,
+        status: "ACTIVE"
+      })
+    ).toEqual({
+      status: "ACTIVE",
+      memberSkills: {
+        some: {
+          skillId: "skill-1",
+          level: { gte: 3 }
+        }
+      }
+    });
+  });
+
+  it("does not add conditions when no filter is supplied", () => {
+    expect(buildMemberSearchWhere()).toEqual({});
   });
 });
