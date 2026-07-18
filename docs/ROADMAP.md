@@ -13,6 +13,7 @@
 - 新システムでは `localStorage` を廃止し、`PostgreSQL + Prisma` を主なデータ永続化基盤とする。
 - CI/CDはGitLabリポジトリを前提に `GitLab CI/CD` を利用する。
 - デプロイは `Docker + Kubernetes` を想定する。
+- Phase 4完了後の限定共有デモは `Vercel + Neon` で公開する。本番基盤の想定とは分離して扱う。
 - 初期構成はモジュラーモノリス型Next.jsアプリケーションとする。
 
 ## アーキテクチャ方針
@@ -59,6 +60,7 @@
 | Phase 2 | アプリケーション基盤構築 | Next.js基盤、DB/ORM/Auth基盤、CI/CD、Docker/Kubernetes初期構成 |
 | Phase 3 | コア業務機能 | メンバー、スキル、ロール、スキル紐付け、ロール達成判定 |
 | Phase 4 | 可視化・検索・ダッシュボード | スキル検索、スキルマップ、統計ダッシュボード、一覧フィルタ |
+| Phase 4.5 | デモ公開 | Vercel公開、NeonデモDB、公開・migration・復旧手順 |
 | Phase 5 | CSV・監査・権限強化 | CSV import/export、監査ログ、RBAC適用 |
 | Phase 6 | AI評価機能 | AI評価、キャッシュ、再評価、利用ログ、フォールバック |
 | Phase 7 | 本番化・運用準備 | E2E、デプロイ、migration手順、監視、バックアップ、運用ドキュメント |

@@ -71,6 +71,12 @@ MVPでは、Next.js、TypeScript、Tailwind CSS、localStorage、Repositoryパ�
 | Security | GitLab SAST | GitLab標準のSASTテンプレートを継続利用する |
 | Registry | GitLab Container Registry | mainマージ後のイメージ保存先として利用する |
 
+### Phase 4完了時点のデモ環境
+
+限定共有のデモ環境に限り、Vercelをアプリケーション実行基盤、NeonをPostgreSQL基盤として利用します。GitLabの`main`だけをVercel Productionへ自動デプロイし、Preview Deploymentは無効化します。これはPhase 7で整備するDocker + Kubernetes本番構成を置き換えるものではありません。
+
+Vercelのアプリ実行時はNeonのpool接続を利用し、migrationと初回seedだけは作業端末からdirect接続で明示的に実行します。migrationやseedをVercelのbuildへ組み込まず、デモDBには架空データだけを保存します。
+
 ## 採用理由
 
 ### Next.js 16系 App Router
