@@ -27,7 +27,7 @@ export function NotificationIndicator({ unreadCount }: { unreadCount: number }) 
     <Tooltip content={accessibleLabel}>
       <Link
         href="/notifications"
-        className="relative inline-flex h-9 w-9 items-center justify-center rounded-md text-[var(--muted-foreground)] hover:bg-[var(--surface-subtle)] hover:text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+        className="relative inline-flex h-11 w-11 items-center justify-center rounded-md text-[var(--muted-foreground)] hover:bg-[var(--surface-subtle)] hover:text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
         aria-label={accessibleLabel}
       >
         <Bell className="h-4 w-4" aria-hidden="true" />

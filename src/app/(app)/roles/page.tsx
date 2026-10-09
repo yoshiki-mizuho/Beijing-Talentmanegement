@@ -17,14 +17,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { FormField, SelectField } from "@/shared/ui/form-field";
 import { PageHeader } from "@/shared/ui/page-header";
 import { SubmitButton } from "@/shared/ui/submit-button";
-import { managerOrAdmin, requireRoles } from "@/server/auth/authorization";
+import { managerOrAdmin, requirePageRoles } from "@/server/auth/authorization";
 
 export const dynamic = "force-dynamic";
 
 const skillLevels = [1, 2, 3, 4, 5] as const;
 
 export default async function RolesPage() {
-  const session = await requireRoles(managerOrAdmin);
+  const session = await requirePageRoles(managerOrAdmin);
   const canManage = canManageRoles(session.user.role);
   const [roles, skills, members] = await Promise.all([
     listRoles(),

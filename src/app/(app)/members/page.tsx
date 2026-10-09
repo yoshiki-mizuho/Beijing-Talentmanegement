@@ -10,12 +10,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { FormField, SelectField, TextareaField } from "@/shared/ui/form-field";
 import { PageHeader } from "@/shared/ui/page-header";
 import { SubmitButton } from "@/shared/ui/submit-button";
-import { managerOrAdmin, requireRoles } from "@/server/auth/authorization";
+import { managerOrAdmin, requirePageRoles } from "@/server/auth/authorization";
 
 export const dynamic = "force-dynamic";
 
 export default async function MembersPage() {
-  const session = await requireRoles(managerOrAdmin);
+  const session = await requirePageRoles(managerOrAdmin);
   const canDeactivateMembers = session.user.role === "ADMIN";
   const [members, departments, skills, roles] = await Promise.all([
     listMembers(),

@@ -5,13 +5,13 @@ import { signOut } from "next-auth/react";
 
 import { Button } from "@/shared/ui/button";
 
-export function SignOutButton() {
+export function SignOutButton({ className }: { className?: string }) {
   return (
     <Button
       type="button"
       variant="ghost"
       size="small"
-      className="px-2 sm:px-3"
+      className={className ?? "px-2 sm:px-3"}
       onClick={() => signOut({ callbackUrl: "/login" })}
       aria-label="ログアウト"
       title="ログアウト"
