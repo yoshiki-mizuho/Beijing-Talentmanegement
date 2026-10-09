@@ -14,7 +14,7 @@ export const changePasswordInputSchema = z
     if (input.newPassword !== input.confirmPassword) {
       context.addIssue({
         code: "custom",
-        message: "New password and confirmation must match.",
+        message: "新しいパスワードと確認入力が一致していません。",
         path: ["confirmPassword"]
       });
     }
@@ -22,7 +22,7 @@ export const changePasswordInputSchema = z
     if (input.currentPassword === input.newPassword) {
       context.addIssue({
         code: "custom",
-        message: "New password must be different from the current password.",
+        message: "新しいパスワードは現在のパスワードと異なるものを入力してください。",
         path: ["newPassword"]
       });
     }

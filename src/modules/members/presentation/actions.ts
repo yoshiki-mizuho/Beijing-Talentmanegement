@@ -19,6 +19,7 @@ import {
   requirePasswordReadyMember,
   requireRoles
 } from "@/server/auth/authorization";
+import { runAction, type ActionResult } from "@/shared/lib/action-result";
 import { getNumber, getOptionalString, getString } from "@/shared/lib/form-data";
 
 function parseMemberForm(formData: FormData) {
@@ -33,70 +34,72 @@ function parseMemberForm(formData: FormData) {
   };
 }
 
-export async function createMemberAction(formData: FormData) {
-  await requireRoles(managerOrAdmin);
-  await createMember(parseMemberForm(formData));
-  revalidatePath("/members");
+export async function createMemberAction(formData: FormData): Promise<ActionResult> {
+  return runAction(async () => {
+    await requireRoles(managerOrAdmin);
+    await createMember(parseMemberForm(formData));
+    revalidatePath("/members");
+  }, "メンバーを登録しました。初期認証情報を安全な経路で共有してください。");
 }
 
-export async function updateMemberAction(formData: FormData) {
-  await requireRoles(managerOrAdmin);
-  await updateMember(getString(formData, "id"), parseMemberForm(formData));
-  revalidatePath("/members");
+export async function updateMemberAction(formData: FormData): Promise<ActionResult> {
+  return runAction(async () => {
+    await requireRoles(managerOrAdmin);
+    await updateMember(getString(formData, "id"), parseMemberForm(formData));
+    revalidatePath("/members");
+  }, "メンバー情報を更新しました。");
 }
 
-export async function deactivateMemberAction(formData: FormData) {
-  await requireRoles(adminOnly);
-  await deactivateMember(getString(formData, "id"));
-  revalidatePath("/members");
+export async function deactivateMemberAction(formData: FormData): Promise<ActionResult> {
+  return runAction(async () => {
+    await requireRoles(adminOnly);
+    await deactivateMember(getString(formData, "id"));
+    revalidatePath("/members");
+  }, "メンバーを無効化しました。");
 }
 
-export async function setMemberSkillLevelAction(formData: FormData) {
-  await requireRoles(managerOrAdmin);
-  await setMemberSkillLevel({
-    memberId: getString(formData, "memberId"),
-    skillId: getString(formData, "skillId"),
-    level: getNumber(formData, "level")
-  });
-  revalidatePath("/members");
-  revalidatePath("/roles");
+export async function setMemberSkillLevelAction(formData: FormData): Promise<ActionResult> {
+  return runAction(async () => {
+    await requireRoles(managerOrAdmin);
+    await setMemberSkillLevel({
+      memberId: getString(formData, "memberId"),
+      skillId: getString(formData, "skillId"),
+      level: getNumber(formData, "level")
+    });
+    revalidatePath("/members");
+    revalidatePath("/roles");
+  }, "メンバーのスキルを設定しました。");
 }
 
-export async function removeMemberSkillAction(formData: FormData) {
-  await requireRoles(managerOrAdmin);
-  await removeMemberSkill(getString(formData, "memberId"), getString(formData, "skillId"));
-  revalidatePath("/members");
-  revalidatePath("/roles");
+export async function removeMemberSkillAction(formData: FormData): Promise<ActionResult> {
+  return runAction(async () => {
+    await requireRoles(managerOrAdmin);
+    await removeMemberSkill(getString(formData, "memberId"), getString(formData, "skillId"));
+    revalidatePath("/members");
+    revalidatePath("/roles");
+  }, "メンバーのスキルを削除しました。");
 }
 
-export async function createSkillAssessmentAction(formData: FormData) {
-  const session = await requirePasswordReadyMember();
-
-  await createSkillAssessment({
-    memberId: session.user.memberId,
-    skillId: getString(formData, "skillId"),
-    requestedLevel: getNumber(formData, "requestedLevel"),
-    yearsOfExperience: getOptionalString(formData, "yearsOfExperience")
-      ? getNumber(formData, "yearsOfExperience")
-      : undefined
-  });
-  revalidatePath("/my/skills");
-  revalidatePath("/skill-approvals");
-  revalidatePath("/notifications");
+export async function createSkillAssessmentAction(formData: FormData): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requirePasswordReadyMember();
+    await createSkillAssessment({
+      memberId: session.user.memberId,
+      skillId: getString(formData, "skillId"),
+      requestedLevel: getNumber(formData, "requestedLevel"),
+      yearsOfExperience: getOptionalString(formData, "yearsOfExperience")
+        ? getNumber(formData, "yearsOfExperience")
+        : undefined
+    });
+    revalidatePath("/my/skills");
+    revalidatePath("/skill-approvals");
+    revalidatePath("/notifications");
+  }, "スキルを申請しました。マネージャーの承認をお待ちください。");
 }
 
-type SkillAssessmentActionState = {
-  status: "idle" | "success" | "error";
-  message?: string;
-};
-
-export async function createSkillAssessmentsAction(
-  _previousState: SkillAssessmentActionState,
-  formData: FormData
-): Promise<SkillAssessmentActionState> {
-  const session = await requirePasswordReadyMember();
-
-  try {
+export async function createSkillAssessmentsAction(formData: FormData): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requirePasswordReadyMember();
     const assessments = JSON.parse(getString(formData, "assessments")) as unknown;
     const created = await createSkillAssessments({
       memberId: session.user.memberId,
@@ -106,44 +109,32 @@ export async function createSkillAssessmentsAction(
     revalidatePath("/my/skills");
     revalidatePath("/skill-approvals");
     revalidatePath("/notifications");
-
-    return {
-      status: "success" as const,
-      message: `${created.length}件のスキルを申請しました。`
-    };
-  } catch (error) {
-    const knownMessages = [
-      "申請するスキルを1件以上追加してください。",
-      "一度に申請できるスキルは50件までです。",
-      "同じスキルを重複して申請することはできません。",
-      "申請対象に存在しない、または無効なスキルが含まれています。",
-      "すでに承認待ちのスキルが含まれています。"
-    ];
-    const message = error instanceof Error
-      ? knownMessages.find((knownMessage) => error.message.includes(knownMessage))
-      : undefined;
-
-    return {
-      status: "error" as const,
-      message: message ?? "申請内容を確認して、もう一度お試しください。"
-    };
-  }
+    return created.length;
+  }, (count) => `${count}件のスキルを申請しました。マネージャーの承認をお待ちください。`);
 }
-export async function reviewSkillAssessmentAction(formData: FormData) {
-  const session = await requireRoles(managerOrAdmin);
+export async function reviewSkillAssessmentAction(formData: FormData): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requireRoles(managerOrAdmin);
+    const status = getString(formData, "status");
 
-  await reviewSkillAssessment({
-    assessmentId: getString(formData, "assessmentId"),
-    reviewerMemberId: session.user.memberId,
-    status: getString(formData, "status"),
-    correctedLevel: getOptionalString(formData, "correctedLevel")
-      ? getNumber(formData, "correctedLevel")
-      : undefined,
-    managerComment: getOptionalString(formData, "managerComment")
+    await reviewSkillAssessment({
+      assessmentId: getString(formData, "assessmentId"),
+      reviewerMemberId: session.user.memberId,
+      status,
+      correctedLevel: getOptionalString(formData, "correctedLevel")
+        ? getNumber(formData, "correctedLevel")
+        : undefined,
+      managerComment: getOptionalString(formData, "managerComment")
+    });
+    revalidatePath("/my/skills");
+    revalidatePath("/skill-approvals");
+    revalidatePath("/notifications");
+    revalidatePath("/members");
+    revalidatePath("/roles");
+    return status;
+  }, (status) => {
+    if (status === "REJECTED") return "スキル申請を差し戻しました。";
+    if (status === "CORRECTED") return "スキル申請を補正して承認しました。";
+    return "スキル申請を承認しました。";
   });
-  revalidatePath("/my/skills");
-  revalidatePath("/skill-approvals");
-  revalidatePath("/notifications");
-  revalidatePath("/members");
-  revalidatePath("/roles");
 }

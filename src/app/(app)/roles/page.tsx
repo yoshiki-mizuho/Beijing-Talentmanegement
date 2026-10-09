@@ -1,5 +1,3 @@
-import type { InputHTMLAttributes } from "react";
-
 import { listMembers } from "@/modules/members/application/member-service";
 import {
   evaluateMemberForRole,
@@ -14,10 +12,11 @@ import {
 } from "@/modules/roles/presentation/actions";
 import { canManageRoles } from "@/modules/roles/presentation/role-permissions";
 import { listSkills } from "@/modules/skills/application/skill-service";
-import { Button } from "@/shared/ui/button";
+import { ActionForm } from "@/shared/ui/action-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
-import { Input } from "@/shared/ui/input";
-import { Label } from "@/shared/ui/label";
+import { FormField, SelectField } from "@/shared/ui/form-field";
+import { PageHeader } from "@/shared/ui/page-header";
+import { SubmitButton } from "@/shared/ui/submit-button";
 import { managerOrAdmin, requireRoles } from "@/server/auth/authorization";
 
 export const dynamic = "force-dynamic";
@@ -36,12 +35,10 @@ export default async function RolesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-950">ロール管理</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          ロール要件を管理し、メンバーごとの達成状況を確認します。
-        </p>
-      </div>
+      <PageHeader
+        title="ロール管理"
+        description="ロール要件を管理し、メンバーごとの達成状況を確認します。"
+      />
 
       {canManage ? (
         <Card>
@@ -49,17 +46,17 @@ export default async function RolesPage() {
             <CardTitle>新規ロール</CardTitle>
           </CardHeader>
           <CardContent>
-            <form action={createRoleAction} className="grid gap-3 md:grid-cols-[1fr_2fr_auto_auto]">
-              <Field label="ロール名" name="name" required />
-              <Field label="説明" name="description" />
+            <ActionForm action={createRoleAction} className="grid gap-3 md:grid-cols-[1fr_2fr_auto_auto]">
+              <FormField id="new-role-name" label="ロール名" name="name" required />
+              <FormField id="new-role-description" label="説明" name="description" />
               <label className="flex items-end gap-2 pb-2 text-sm text-slate-700">
                 <input type="checkbox" name="isActive" defaultChecked />
                 有効
               </label>
               <div className="self-end">
-                <Button type="submit">登録</Button>
+                <SubmitButton pendingLabel="登録中…">登録</SubmitButton>
               </div>
-            </form>
+            </ActionForm>
           </CardContent>
         </Card>
       ) : null}
@@ -80,23 +77,50 @@ export default async function RolesPage() {
               </CardHeader>
               <CardContent className="space-y-5">
                 {canManage ? (
-                  <form action={updateRoleAction} className="grid gap-3 md:grid-cols-[1fr_2fr_auto_auto_auto]">
-                    <input type="hidden" name="id" value={role.id} />
-                    <Field label="ロール名" name="name" defaultValue={role.name} required />
-                    <Field label="説明" name="description" defaultValue={role.description ?? ""} />
-                    <label className="flex items-end gap-2 pb-2 text-sm text-slate-700">
-                      <input type="checkbox" name="isActive" defaultChecked={role.isActive} />
-                      有効
-                    </label>
-                    <div className="self-end">
-                      <Button type="submit">更新</Button>
-                    </div>
-                    <div className="self-end">
-                      <Button type="submit" formAction={deactivateRoleAction} variant="secondary">
+                  <div className="grid gap-3 md:grid-cols-[1fr_2fr_auto_auto_auto]">
+                    <ActionForm action={updateRoleAction} className="contents">
+                      <input type="hidden" name="id" value={role.id} />
+                      <FormField
+                        id={`role-name-${role.id}`}
+                        label="ロール名"
+                        name="name"
+                        defaultValue={role.name}
+                        required
+                      />
+                      <FormField
+                        id={`role-description-${role.id}`}
+                        label="説明"
+                        name="description"
+                        defaultValue={role.description ?? ""}
+                      />
+                      <label className="flex items-end gap-2 pb-2 text-sm text-slate-700">
+                        <input type="checkbox" name="isActive" defaultChecked={role.isActive} />
+                        有効
+                      </label>
+                      <div className="self-end">
+                        <SubmitButton pendingLabel="更新中…">更新</SubmitButton>
+                      </div>
+                    </ActionForm>
+                    <ActionForm
+                      action={deactivateRoleAction}
+                      className="self-end"
+                      confirm={{
+                        title: "ロールを無効化しますか",
+                        description: `「${role.name}」を無効化します。設定済みの要件は保持されます。`,
+                        confirmLabel: "無効化する",
+                        destructive: true
+                      }}
+                    >
+                      <input type="hidden" name="id" value={role.id} />
+                      <SubmitButton
+                        pendingLabel="無効化中…"
+                        variant="secondary"
+                        disabled={!role.isActive}
+                      >
                         無効化
-                      </Button>
-                    </div>
-                  </form>
+                      </SubmitButton>
+                    </ActionForm>
+                  </div>
                 ) : (
                   <div>
                     <p className="text-sm font-medium text-slate-950">{role.name}</p>
@@ -127,38 +151,54 @@ export default async function RolesPage() {
                           </p>
                         </div>
                         {canManage ? (
-                          <form action={removeRoleRequirementAction} className="flex flex-wrap gap-2">
-                            <input type="hidden" name="roleId" value={role.id} />
-                            <input type="hidden" name="skillId" value={requirement.skillId} />
-                            <select
-                              name="requiredLevel"
-                              defaultValue={requirement.requiredLevel}
-                              className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
-                              required
+                          <div className="flex flex-wrap items-end gap-2">
+                            <ActionForm action={setRoleRequirementAction} className="flex items-end gap-2">
+                              <input type="hidden" name="roleId" value={role.id} />
+                              <input type="hidden" name="skillId" value={requirement.skillId} />
+                              <SelectField
+                                id={`requirement-level-${requirement.id}`}
+                                label="必要レベル"
+                                labelClassName="sr-only"
+                                name="requiredLevel"
+                                defaultValue={requirement.requiredLevel}
+                                required
+                                className="w-32"
+                              >
+                                {skillLevels.map((level) => (
+                                  <option key={level} value={level}>
+                                    必要Lv.{level}
+                                  </option>
+                                ))}
+                              </SelectField>
+                              <SubmitButton pendingLabel="更新中…">更新</SubmitButton>
+                            </ActionForm>
+                            <ActionForm
+                              action={removeRoleRequirementAction}
+                              confirm={{
+                                title: "ロール要件を削除しますか",
+                                description: `「${requirement.skill.name}」を必要スキルから削除します。`,
+                                confirmLabel: "削除する",
+                                destructive: true
+                              }}
                             >
-                              {skillLevels.map((level) => (
-                                <option key={level} value={level}>
-                                  必要Lv.{level}
-                                </option>
-                              ))}
-                            </select>
-                            <Button type="submit" formAction={setRoleRequirementAction}>
-                              更新
-                            </Button>
-                            <Button type="submit" variant="ghost">
-                              削除
-                            </Button>
-                          </form>
+                              <input type="hidden" name="roleId" value={role.id} />
+                              <input type="hidden" name="skillId" value={requirement.skillId} />
+                              <SubmitButton pendingLabel="削除中…" variant="ghost">
+                                削除
+                              </SubmitButton>
+                            </ActionForm>
+                          </div>
                         ) : null}
                       </div>
                     ))}
                   </div>
                   {canManage ? (
-                    <form action={setRoleRequirementAction} className="mt-3 grid gap-3 md:grid-cols-[1fr_140px_auto]">
+                    <ActionForm action={setRoleRequirementAction} className="mt-3 grid gap-3 md:grid-cols-[1fr_140px_auto] md:items-end">
                       <input type="hidden" name="roleId" value={role.id} />
-                      <select
+                      <SelectField
+                        id={`new-requirement-skill-${role.id}`}
+                        label="スキル"
                         name="skillId"
-                        className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
                         required
                       >
                         {activeSkills.map((skill) => (
@@ -166,10 +206,11 @@ export default async function RolesPage() {
                             {skill.category.name} / {skill.name}
                           </option>
                         ))}
-                      </select>
-                      <select
+                      </SelectField>
+                      <SelectField
+                        id={`new-requirement-level-${role.id}`}
+                        label="必要レベル"
                         name="requiredLevel"
-                        className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
                         required
                       >
                         {skillLevels.map((level) => (
@@ -177,9 +218,9 @@ export default async function RolesPage() {
                             必要Lv.{level}
                           </option>
                         ))}
-                      </select>
-                      <Button type="submit">要件設定</Button>
-                    </form>
+                      </SelectField>
+                      <SubmitButton pendingLabel="設定中…">要件設定</SubmitButton>
+                    </ActionForm>
                   ) : null}
                 </div>
 
@@ -244,22 +285,6 @@ export default async function RolesPage() {
           );
         })}
       </div>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  name,
-  ...props
-}: {
-  label: string;
-  name: string;
-} & InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <div>
-      <Label htmlFor={name}>{label}</Label>
-      <Input id={name} name={name} className="mt-1 w-full" {...props} />
     </div>
   );
 }

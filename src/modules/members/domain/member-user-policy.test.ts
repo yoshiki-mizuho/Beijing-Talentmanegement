@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { assertUserCanLinkToMember } from "@/modules/members/domain/member-user-policy";
+import {
+  assertUserCanLinkToMember,
+  MemberUserLinkError
+} from "@/modules/members/domain/member-user-policy";
+import { UserFacingError } from "@/shared/lib/user-facing-error";
 
 describe("member user link policy", () => {
   it("allows linking an unlinked user", () => {
@@ -13,7 +17,13 @@ describe("member user link policy", () => {
 
   it("rejects linking a user already linked to another member", () => {
     expect(() => assertUserCanLinkToMember("member-1", "member-2")).toThrow(
-      "already linked to another member"
+      MemberUserLinkError
+    );
+    expect(() => assertUserCanLinkToMember("member-1", "member-2")).toThrow(
+      UserFacingError
+    );
+    expect(() => assertUserCanLinkToMember("member-1", "member-2")).toThrow(
+      "別のメンバーにすでに紐付いています"
     );
   });
 });

@@ -1,33 +1,28 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 
 import {
   findNotification,
   markNotificationRead
 } from "@/modules/notifications/application/notification-service";
-import { getNotificationDestination } from "@/modules/notifications/presentation/notification-destination";
 import { requirePasswordReadyMember } from "@/server/auth/authorization";
+import { runAction, type ActionResult } from "@/shared/lib/action-result";
 import { getString } from "@/shared/lib/form-data";
+import { UserFacingError } from "@/shared/lib/user-facing-error";
 
-export async function confirmNotificationAction(formData: FormData) {
-  const session = await requirePasswordReadyMember();
-  const id = getString(formData, "id");
-  const notification = await findNotification(id, session.user.memberId);
+export async function confirmNotificationAction(formData: FormData): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requirePasswordReadyMember();
+    const id = getString(formData, "id");
+    const notification = await findNotification(id, session.user.memberId);
 
-  if (!notification) {
-    redirect("/notifications");
-  }
+    if (!notification) {
+      throw new UserFacingError("通知が見つかりません。");
+    }
 
-  const destination = getNotificationDestination({
-    type: notification.type,
-    role: session.user.role,
-    skillSelfAssessmentId: notification.skillSelfAssessmentId
-  });
-
-  await markNotificationRead(id, session.user.memberId);
-  revalidatePath("/notifications");
-  revalidatePath("/", "layout");
-  redirect(destination ?? "/notifications");
+    await markNotificationRead(id, session.user.memberId);
+    revalidatePath("/notifications");
+    revalidatePath("/", "layout");
+  }, "通知を確認しました。");
 }

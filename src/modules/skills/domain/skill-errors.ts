@@ -1,20 +1,22 @@
-export class SkillNameConflictError extends Error {
+import { UserFacingError } from "@/shared/lib/user-facing-error";
+
+export class SkillNameConflictError extends UserFacingError {
   constructor() {
-    super("A skill with the same name already exists in this category.");
+    super("同じカテゴリに同名のスキルがすでに登録されています。");
     this.name = "SkillNameConflictError";
   }
 }
 
-export class SkillCategoryNotFoundError extends Error {
+export class SkillCategoryNotFoundError extends UserFacingError {
   constructor() {
-    super("The selected skill category does not exist.");
+    super("選択したスキルカテゴリが見つかりません。");
     this.name = "SkillCategoryNotFoundError";
   }
 }
 
-export class SkillCodeGenerationError extends Error {
+export class SkillCodeGenerationError extends UserFacingError {
   constructor() {
-    super("Could not allocate a unique skill code.");
+    super("一意なスキルコードを発行できませんでした。もう一度お試しください。");
     this.name = "SkillCodeGenerationError";
   }
 }

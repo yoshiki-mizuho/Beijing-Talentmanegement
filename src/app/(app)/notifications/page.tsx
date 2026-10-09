@@ -2,10 +2,10 @@ import { Bell } from "lucide-react";
 import { redirect } from "next/navigation";
 
 import { listNotifications } from "@/modules/notifications/application/notification-service";
-import { confirmNotificationAction } from "@/modules/notifications/presentation/actions";
+import { NotificationConfirmForm } from "@/modules/notifications/presentation/notification-confirm-form";
+import { getNotificationDestination } from "@/modules/notifications/presentation/notification-destination";
 import { getCurrentSession } from "@/server/auth/session";
 import { Badge } from "@/shared/ui/badge";
-import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { PageHeader } from "@/shared/ui/page-header";
@@ -24,7 +24,6 @@ export default async function NotificationsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Workflow"
         title="通知"
         description="申告依頼や申告結果を確認し、必要な対応画面へ進みます。"
       />
@@ -34,13 +33,20 @@ export default async function NotificationsPage() {
           <CardTitle>通知一覧</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          {notifications.map((notification) => (
-            <form
+          {notifications.map((notification) => {
+            const destination = getNotificationDestination({
+              type: notification.type,
+              role: session.user.role,
+              skillSelfAssessmentId: notification.skillSelfAssessmentId
+            });
+
+            return (
+            <NotificationConfirmForm
               key={notification.id}
-              action={confirmNotificationAction}
-              className="grid gap-3 rounded-md border border-[var(--border)] p-4 md:grid-cols-[1fr_auto] md:items-center"
+              id={notification.id}
+              destination={destination ?? "/notifications"}
+              unread={notification.status === "UNREAD"}
             >
-              <input type="hidden" name="id" value={notification.id} />
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-sm font-medium text-[var(--foreground)]">
@@ -56,14 +62,9 @@ export default async function NotificationsPage() {
                   </p>
                 )}
               </div>
-              <Button
-                type="submit"
-                variant={notification.status === "UNREAD" ? "primary" : "secondary"}
-              >
-                確認
-              </Button>
-            </form>
-          ))}
+            </NotificationConfirmForm>
+            );
+          })}
           {notifications.length === 0 && (
             <EmptyState
               icon={Bell}

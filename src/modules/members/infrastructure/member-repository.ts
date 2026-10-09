@@ -17,6 +17,7 @@ import type {
 } from "@/modules/members/domain/skill-assessment-schema";
 import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
 import { prisma } from "@/server/db/prisma";
+import { UserFacingError } from "@/shared/lib/user-facing-error";
 
 async function hashInitialPassword() {
   return bcrypt.hash(INITIAL_PASSWORD, 12);
@@ -282,10 +283,12 @@ export async function createSkillAssessments(input: SkillAssessmentBatchInput) {
     ]);
 
     if (skills.length !== skillIds.length) {
-      throw new Error("申請対象に存在しない、または無効なスキルが含まれています。");
+      throw new UserFacingError(
+        "申請対象に存在しない、または無効なスキルが含まれています。"
+      );
     }
     if (pendingAssessments.length > 0) {
-      throw new Error("すでに承認待ちのスキルが含まれています。");
+      throw new UserFacingError("すでに承認待ちのスキルが含まれています。");
     }
 
     const skillNames = new Map(skills.map((skill) => [skill.id, skill.name]));
@@ -336,7 +339,7 @@ export async function reviewSkillAssessment(input: SkillAssessmentReviewInput) {
     });
 
     if (assessment.status !== SkillSelfAssessmentStatus.PENDING) {
-      throw new Error("Only pending skill assessments can be reviewed.");
+      throw new UserFacingError("承認待ちのスキル申請のみ確認できます。");
     }
 
     const approvedLevel =

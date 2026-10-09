@@ -1,16 +1,15 @@
 import { MemberStatus } from "@prisma/client";
-import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
 
 import { listMembers, listDepartments } from "@/modules/members/application/member-service";
 import { MemberSearchTable } from "@/modules/members/presentation/member-search-table";
 import { createMemberAction } from "@/modules/members/presentation/actions";
 import { listSkills } from "@/modules/skills/application/skill-service";
 import { listRoles } from "@/modules/roles/application/role-service";
-import { Button } from "@/shared/ui/button";
+import { ActionForm } from "@/shared/ui/action-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
-import { Input } from "@/shared/ui/input";
-import { Label } from "@/shared/ui/label";
+import { FormField, SelectField, TextareaField } from "@/shared/ui/form-field";
 import { PageHeader } from "@/shared/ui/page-header";
+import { SubmitButton } from "@/shared/ui/submit-button";
 import { managerOrAdmin, requireRoles } from "@/server/auth/authorization";
 
 export const dynamic = "force-dynamic";
@@ -74,7 +73,6 @@ export default async function MembersPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="People intelligence"
         title="メンバー"
         description="組織のメンバー情報、保有スキル、ロール充足状況を確認・管理します。"
       />
@@ -102,81 +100,42 @@ export default async function MembersPage() {
           <p className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
             初回ログイン後にパスワード変更が必要です。初期認証情報は安全な経路で本人へ共有してください。
           </p>
-          <form action={createMemberAction} className="grid gap-3 md:grid-cols-3">
-            <Field label="社員番号" name="employeeNo" required />
-            <Field label="氏名" name="name" required />
-            <Field label="メール" name="email" type="email" required />
-            <Select label="部署" name="departmentId" required>
+          <ActionForm action={createMemberAction} className="grid gap-3 md:grid-cols-3">
+            <FormField id="new-member-employee-no" label="社員番号" name="employeeNo" required />
+            <FormField id="new-member-name" label="氏名" name="name" required />
+            <FormField id="new-member-email" label="メール" name="email" type="email" required />
+            <SelectField id="new-member-department" label="部署" name="departmentId" required>
               {departments.map((department) => (
                 <option key={department.id} value={department.id}>
                   {department.name}
                 </option>
               ))}
-            </Select>
-            <Field label="役職" name="jobTitle" />
-            <Select label="状態" name="status" defaultValue={MemberStatus.ACTIVE}>
+            </SelectField>
+            <FormField id="new-member-job-title" label="役職" name="jobTitle" />
+            <SelectField id="new-member-status" label="状態" name="status" defaultValue={MemberStatus.ACTIVE}>
               {Object.values(MemberStatus).map((status) => (
                 <option key={status} value={status}>
-                  {status}
+                  {status === MemberStatus.ACTIVE
+                    ? "在籍中"
+                    : status === MemberStatus.INACTIVE
+                      ? "退職・無効"
+                      : "休職中"}
                 </option>
               ))}
-            </Select>
+            </SelectField>
+            <TextareaField
+              id="new-member-profile"
+              label="プロフィール"
+              name="profile"
+              className="md:col-span-3"
+            />
             <div className="md:col-span-3">
-              <Label htmlFor="profile">プロフィール</Label>
-              <textarea
-                id="profile"
-                name="profile"
-                className="mt-1 min-h-20 w-full rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-2 text-sm outline-none transition-colors focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--ring)]/20"
-              />
+              <SubmitButton pendingLabel="登録中…">登録</SubmitButton>
             </div>
-            <div className="md:col-span-3">
-              <Button type="submit">登録</Button>
-            </div>
-          </form>
+          </ActionForm>
         </CardContent>
       </Card>
 
-    </div>
-  );
-}
-
-function Field({
-  label,
-  name,
-  ...props
-}: {
-  label: string;
-  name: string;
-} & InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <div>
-      <Label htmlFor={name}>{label}</Label>
-      <Input id={name} name={name} className="mt-1 w-full" {...props} />
-    </div>
-  );
-}
-
-function Select({
-  label,
-  name,
-  children,
-  ...props
-}: {
-  label: string;
-  name: string;
-  children: ReactNode;
-} & SelectHTMLAttributes<HTMLSelectElement>) {
-  return (
-    <div>
-      <Label htmlFor={name}>{label}</Label>
-      <select
-        id={name}
-        name={name}
-        className="mt-1 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm"
-        {...props}
-      >
-        {children}
-      </select>
     </div>
   );
 }

@@ -2,10 +2,11 @@ import { SkillSelfAssessmentStatus } from "@prisma/client";
 
 import { listPendingSkillAssessments } from "@/modules/members/application/member-service";
 import { reviewSkillAssessmentAction } from "@/modules/members/presentation/actions";
-import { Button } from "@/shared/ui/button";
+import { ActionForm, ConfirmSubmitButton } from "@/shared/ui/action-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
-import { Input } from "@/shared/ui/input";
-import { Label } from "@/shared/ui/label";
+import { FormField, SelectField } from "@/shared/ui/form-field";
+import { PageHeader } from "@/shared/ui/page-header";
+import { SubmitButton } from "@/shared/ui/submit-button";
 
 export const dynamic = "force-dynamic";
 
@@ -16,12 +17,10 @@ export default async function SkillApprovalsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-950">スキル承認</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          メンバーからのスキル申告を承認、補正承認、差し戻しします。
-        </p>
-      </div>
+      <PageHeader
+        title="スキル承認"
+        description="メンバーからのスキル申告を承認、補正承認、差し戻しします。"
+      />
 
       <div className="grid gap-4">
         {assessments.map((assessment) => (
@@ -36,7 +35,7 @@ export default async function SkillApprovalsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <form action={reviewSkillAssessmentAction} className="grid gap-3 md:grid-cols-[1fr_140px_2fr_auto_auto_auto]">
+              <ActionForm action={reviewSkillAssessmentAction} className="grid gap-3 md:grid-cols-[1fr_140px_2fr_auto_auto_auto] md:items-end">
                 <input type="hidden" name="assessmentId" value={assessment.id} />
                 <div>
                   <p className="text-sm font-medium text-slate-950">
@@ -47,29 +46,24 @@ export default async function SkillApprovalsPage() {
                     {assessment.member.jobTitle ?? "役職未設定"}
                   </p>
                 </div>
-                <div>
-                  <Label htmlFor={`corrected-${assessment.id}`}>補正Lv</Label>
-                  <select
+                <SelectField
                     id={`corrected-${assessment.id}`}
+                    label="補正レベル"
                     name="correctedLevel"
                     defaultValue={assessment.requestedLevel}
-                    className="mt-1 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm"
                   >
                     {skillLevels.map((level) => (
                       <option key={level} value={level}>
                         Lv.{level}
                       </option>
                     ))}
-                  </select>
-                </div>
-                <div>
-                  <Label htmlFor={`comment-${assessment.id}`}>コメント</Label>
-                  <Input
+                  </SelectField>
+                <FormField
                     id={`comment-${assessment.id}`}
+                    label="コメント（差し戻し時は必須）"
                     name="managerComment"
-                    className="mt-1 w-full"
-                  />
-                </div>
+                    description="差し戻す場合は、メンバーが次に取れる行動を具体的に記載してください。"
+                />
                 <ReviewButton status={SkillSelfAssessmentStatus.APPROVED}>
                   承認
                 </ReviewButton>
@@ -79,7 +73,7 @@ export default async function SkillApprovalsPage() {
                 <ReviewButton status={SkillSelfAssessmentStatus.REJECTED}>
                   差し戻し
                 </ReviewButton>
-              </form>
+              </ActionForm>
             </CardContent>
           </Card>
         ))}
@@ -102,9 +96,32 @@ function ReviewButton({
   status: SkillSelfAssessmentStatus;
   children: React.ReactNode;
 }) {
+  if (status === SkillSelfAssessmentStatus.REJECTED) {
+    return (
+      <ConfirmSubmitButton
+        name="status"
+        value={status}
+        pendingLabel="差し戻し中…"
+        variant="destructive"
+        confirm={{
+          title: "スキル申請を差し戻しますか",
+          description: "入力したコメントとともに申請を差し戻します。",
+          confirmLabel: "差し戻す",
+          destructive: true
+        }}
+      >
+        {children}
+      </ConfirmSubmitButton>
+    );
+  }
+
   return (
-    <Button type="submit" name="status" value={status}>
+    <SubmitButton
+      name="status"
+      value={status}
+      pendingLabel={status === SkillSelfAssessmentStatus.CORRECTED ? "補正承認中…" : "承認中…"}
+    >
       {children}
-    </Button>
+    </SubmitButton>
   );
 }
