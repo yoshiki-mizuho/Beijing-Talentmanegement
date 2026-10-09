@@ -67,5 +67,10 @@ build:
 sast:
   stage: security
 
+# The SAST analyzer image has no npm, so skip the default npm ci before_script.
+semgrep-sast:
+  inherit:
+    default: false
+
 include:
   - template: Security/SAST.gitlab-ci.yml
