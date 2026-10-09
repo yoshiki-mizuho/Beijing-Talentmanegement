@@ -1,13 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { SkillSelfAssessmentStatus } from "@prisma/client";
 
 const mocks = vi.hoisted(() => ({
   transaction: vi.fn(),
   memberFindUniqueOrThrow: vi.fn(),
   skillFindMany: vi.fn(),
   assessmentFindMany: vi.fn(),
+  assessmentFindUnique: vi.fn(),
   assessmentCreate: vi.fn(),
+  assessmentUpdate: vi.fn(),
   userFindMany: vi.fn(),
-  notificationCreateMany: vi.fn()
+  notificationCreateMany: vi.fn(),
+  notificationCreate: vi.fn(),
+  memberSkillFindUnique: vi.fn(),
+  memberSkillUpsert: vi.fn(),
+  skillLevelChangeCreate: vi.fn()
 }));
 
 vi.mock("@/server/db/prisma", () => ({
@@ -17,6 +24,7 @@ vi.mock("@/server/db/prisma", () => ({
 }));
 
 import {
+  approveSkillAssessments,
   buildMemberSearchWhere,
   createSkillAssessments
 } from "@/modules/members/infrastructure/member-repository";
@@ -26,10 +34,20 @@ const transactionClient = {
   skill: { findMany: mocks.skillFindMany },
   skillSelfAssessment: {
     findMany: mocks.assessmentFindMany,
+    findUnique: mocks.assessmentFindUnique,
+    update: mocks.assessmentUpdate,
     create: mocks.assessmentCreate
   },
   user: { findMany: mocks.userFindMany },
-  notification: { createMany: mocks.notificationCreateMany }
+  notification: {
+    createMany: mocks.notificationCreateMany,
+    create: mocks.notificationCreate
+  },
+  memberSkill: {
+    findUnique: mocks.memberSkillFindUnique,
+    upsert: mocks.memberSkillUpsert
+  },
+  skillLevelChange: { create: mocks.skillLevelChangeCreate }
 };
 
 describe("createSkillAssessments transaction boundary", () => {
@@ -98,6 +116,83 @@ describe("createSkillAssessments transaction boundary", () => {
 
     expect(mocks.transaction).toHaveBeenCalledTimes(1);
     expect(mocks.assessmentCreate).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("approveSkillAssessments transaction boundary", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.transaction.mockImplementation(async (callback) => callback(transactionClient));
+    mocks.assessmentFindUnique.mockImplementation(({ where: { id } }) =>
+      Promise.resolve({
+        id,
+        memberId: `member-${id}`,
+        skillId: `skill-${id}`,
+        requestedLevel: 3,
+        yearsOfExperience: null,
+        status: SkillSelfAssessmentStatus.PENDING,
+        member: { name: `申請者${id}`, managerId: "manager-1" },
+        skill: { name: `スキル${id}` }
+      })
+    );
+    mocks.memberSkillFindUnique.mockResolvedValue(null);
+    mocks.memberSkillUpsert.mockResolvedValue({});
+    mocks.skillLevelChangeCreate.mockResolvedValue({});
+    mocks.assessmentUpdate.mockImplementation(({ where: { id }, data }) =>
+      Promise.resolve({ id, ...data })
+    );
+    mocks.notificationCreate.mockResolvedValue({});
+  });
+
+  it("approves every selected assessment through one transaction", async () => {
+    const result = await approveSkillAssessments({
+      assessmentIds: ["assessment-1", "assessment-2"],
+      reviewerMemberId: "manager-1",
+      reviewerRole: "MANAGER"
+    });
+
+    expect(mocks.transaction).toHaveBeenCalledTimes(1);
+    expect(mocks.assessmentFindUnique).toHaveBeenCalledTimes(2);
+    expect(mocks.memberSkillUpsert).toHaveBeenCalledTimes(2);
+    expect(mocks.skillLevelChangeCreate).toHaveBeenCalledTimes(2);
+    expect(mocks.notificationCreate).toHaveBeenCalledTimes(2);
+    expect(result).toHaveLength(2);
+  });
+
+  it("identifies the out-of-scope assessment and rejects the transaction", async () => {
+    mocks.assessmentFindUnique
+      .mockResolvedValueOnce({
+        id: "assessment-1",
+        memberId: "member-1",
+        skillId: "skill-1",
+        requestedLevel: 3,
+        yearsOfExperience: null,
+        status: SkillSelfAssessmentStatus.PENDING,
+        member: { name: "申請者1", managerId: "manager-1" },
+        skill: { name: "スキル1" }
+      })
+      .mockResolvedValueOnce({
+        id: "assessment-2",
+        memberId: "member-2",
+        skillId: "skill-2",
+        requestedLevel: 4,
+        yearsOfExperience: null,
+        status: SkillSelfAssessmentStatus.PENDING,
+        member: { name: "申請者2", managerId: "other-manager" },
+        skill: { name: "スキル2" }
+      });
+
+    await expect(
+      approveSkillAssessments({
+        assessmentIds: ["assessment-1", "assessment-2"],
+        reviewerMemberId: "manager-1",
+        reviewerRole: "MANAGER"
+      })
+    ).rejects.toThrow(
+      "申請者2 / スキル2（申請ID: assessment-2）を承認する権限がありません。"
+    );
+
+    expect(mocks.transaction).toHaveBeenCalledTimes(1);
   });
 });
 

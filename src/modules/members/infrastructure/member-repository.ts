@@ -20,6 +20,7 @@ import { canReviewSkillAssessment } from "@/modules/members/domain/skill-assessm
 import { shouldRecordSkillLevelChange } from "@/modules/members/domain/skill-level-change-policy";
 import { assertUserCanLinkToMember } from "@/modules/members/domain/member-user-policy";
 import type {
+  SkillAssessmentApprovalBatchInput,
   SkillAssessmentBatchInput,
   SkillAssessmentInput,
   SkillAssessmentReviewInput
@@ -368,7 +369,24 @@ export async function listPendingSkillAssessments(
     include: {
       member: {
         include: {
-          department: true
+          department: true,
+          memberSkills: {
+            select: {
+              skillId: true,
+              level: true
+            }
+          },
+          targetRole: {
+            select: {
+              name: true,
+              roleRequirements: {
+                select: {
+                  skillId: true,
+                  requiredLevel: true
+                }
+              }
+            }
+          }
         }
       },
       skill: {
@@ -507,9 +525,11 @@ export async function createSkillAssessments(input: SkillAssessmentBatchInput) {
   });
 }
 
-export async function reviewSkillAssessment(input: SkillAssessmentReviewInput) {
-  return prisma.$transaction(async (tx) => {
-    const assessment = await tx.skillSelfAssessment.findUniqueOrThrow({
+async function reviewSkillAssessmentInTransaction(
+  tx: Prisma.TransactionClient,
+  input: SkillAssessmentReviewInput
+) {
+    const assessment = await tx.skillSelfAssessment.findUnique({
       where: { id: input.assessmentId },
       include: {
         member: true,
@@ -517,8 +537,18 @@ export async function reviewSkillAssessment(input: SkillAssessmentReviewInput) {
       }
     });
 
+    if (!assessment) {
+      throw new UserFacingError(
+        `申請（ID: ${input.assessmentId}）が見つかりません。`
+      );
+    }
+
+    const assessmentLabel = `${assessment.member.name} / ${assessment.skill.name}（申請ID: ${assessment.id}）`;
+
     if (assessment.status !== SkillSelfAssessmentStatus.PENDING) {
-      throw new UserFacingError("承認待ちのスキル申請のみ確認できます。");
+      throw new UserFacingError(
+        `${assessmentLabel}は承認待ちではありません。`
+      );
     }
 
     if (!canReviewSkillAssessment({
@@ -526,16 +556,24 @@ export async function reviewSkillAssessment(input: SkillAssessmentReviewInput) {
       reviewerMemberId: input.reviewerMemberId,
       applicantManagerId: assessment.member.managerId
     })) {
-      throw new UserFacingError("この申請を確認する権限がありません。");
+      throw new UserFacingError(
+        `${assessmentLabel}を承認する権限がありません。`
+      );
     }
 
+    const reviewStatus =
+      input.status === SkillSelfAssessmentStatus.CORRECTED &&
+      input.correctedLevel === assessment.requestedLevel
+        ? SkillSelfAssessmentStatus.APPROVED
+        : input.status;
+
     const approvedLevel =
-      input.status === SkillSelfAssessmentStatus.CORRECTED
+      reviewStatus === SkillSelfAssessmentStatus.CORRECTED
         ? input.correctedLevel
         : assessment.requestedLevel;
 
     const reviewedAt = new Date();
-    if (input.status !== SkillSelfAssessmentStatus.REJECTED && approvedLevel) {
+    if (reviewStatus !== SkillSelfAssessmentStatus.REJECTED && approvedLevel) {
       const currentMemberSkill = await tx.memberSkill.findUnique({
         where: {
           memberId_skillId: {
@@ -575,7 +613,7 @@ export async function reviewSkillAssessment(input: SkillAssessmentReviewInput) {
             skillId: assessment.skillId,
             fromLevel: currentMemberSkill?.level ?? null,
             toLevel: approvedLevel,
-            source: input.status === SkillSelfAssessmentStatus.CORRECTED
+            source: reviewStatus === SkillSelfAssessmentStatus.CORRECTED
               ? SkillLevelChangeSource.ASSESSMENT_CORRECTED
               : SkillLevelChangeSource.ASSESSMENT_APPROVED,
             skillSelfAssessmentId: assessment.id,
@@ -589,22 +627,22 @@ export async function reviewSkillAssessment(input: SkillAssessmentReviewInput) {
     const reviewedAssessment = await tx.skillSelfAssessment.update({
       where: { id: input.assessmentId },
       data: {
-        status: input.status,
+        status: reviewStatus,
         managerComment: input.managerComment,
         reviewedByMemberId: input.reviewerMemberId,
         reviewedAt
       }
     });
     const notificationType =
-      input.status === SkillSelfAssessmentStatus.APPROVED
+      reviewStatus === SkillSelfAssessmentStatus.APPROVED
         ? NotificationType.SKILL_ASSESSMENT_APPROVED
-        : input.status === SkillSelfAssessmentStatus.CORRECTED
+        : reviewStatus === SkillSelfAssessmentStatus.CORRECTED
           ? NotificationType.SKILL_ASSESSMENT_CORRECTED
           : NotificationType.SKILL_ASSESSMENT_REJECTED;
 
-    const resultBody = input.status === SkillSelfAssessmentStatus.APPROVED
+    const resultBody = reviewStatus === SkillSelfAssessmentStatus.APPROVED
       ? `${assessment.skill.name} Lv.${assessment.requestedLevel} の申告が承認されました。`
-      : input.status === SkillSelfAssessmentStatus.CORRECTED
+      : reviewStatus === SkillSelfAssessmentStatus.CORRECTED
         ? `${assessment.skill.name} の申告が Lv${approvedLevel} に補正して承認されました。`
         : `${assessment.skill.name} の申告が差し戻されました。`;
 
@@ -619,6 +657,32 @@ export async function reviewSkillAssessment(input: SkillAssessmentReviewInput) {
     });
 
     return reviewedAssessment;
+}
+
+export async function reviewSkillAssessment(input: SkillAssessmentReviewInput) {
+  return prisma.$transaction((tx) =>
+    reviewSkillAssessmentInTransaction(tx, input)
+  );
+}
+
+export async function approveSkillAssessments(
+  input: SkillAssessmentApprovalBatchInput
+) {
+  return prisma.$transaction(async (tx) => {
+    const approvedAssessments = [];
+
+    for (const assessmentId of input.assessmentIds) {
+      approvedAssessments.push(
+        await reviewSkillAssessmentInTransaction(tx, {
+          assessmentId,
+          reviewerMemberId: input.reviewerMemberId,
+          reviewerRole: input.reviewerRole,
+          status: SkillSelfAssessmentStatus.APPROVED
+        })
+      );
+    }
+
+    return approvedAssessments;
   });
 }
 

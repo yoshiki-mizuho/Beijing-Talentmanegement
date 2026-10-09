@@ -11,6 +11,7 @@ import {
   memberSearchSchema
 } from "@/modules/members/domain/member-search";
 import {
+  skillAssessmentApprovalBatchInputSchema,
   skillAssessmentBatchInputSchema,
   skillAssessmentInputSchema,
   skillAssessmentReviewInputSchema
@@ -103,6 +104,12 @@ export function createSkillAssessments(input: unknown) {
 export function reviewSkillAssessment(input: unknown) {
   return memberRepository.reviewSkillAssessment(
     skillAssessmentReviewInputSchema.parse(input)
+  );
+}
+
+export function approveSkillAssessments(input: unknown) {
+  return memberRepository.approveSkillAssessments(
+    skillAssessmentApprovalBatchInputSchema.parse(input)
   );
 }
 
