@@ -1,5 +1,10 @@
-import { DevPlaceholderPage } from "@/shared/ui/dev-placeholder-page";
+import { ComingSoonPage } from "@/shared/ui/coming-soon-page";
 
 export default function AuditLogsPage() {
-  return <DevPlaceholderPage title="監査ログ" phase="Phase5" />;
+  return (
+    <ComingSoonPage
+      title="監査ログ"
+      description="登録・更新・削除などの操作履歴を確認する機能を準備中です。"
+    />
+  );
 }

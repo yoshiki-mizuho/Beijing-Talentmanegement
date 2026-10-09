@@ -27,6 +27,7 @@ export function MemberSearchTable(props: {
   departments: DepartmentOption[];
   skills: SkillOption[];
   roles: RoleOption[];
+  canDeactivateMembers: boolean;
 }) {
   return (
     <QueryProvider>
@@ -39,12 +40,14 @@ function MemberSearchTableInner({
   initialMembers,
   departments,
   skills,
-  roles
+  roles,
+  canDeactivateMembers
 }: {
   initialMembers: MemberRow[];
   departments: DepartmentOption[];
   skills: SkillOption[];
   roles: RoleOption[];
+  canDeactivateMembers: boolean;
 }) {
   const [filters, setFilters] = useState<MemberSearchFilters>(emptyMemberSearchFilters);
   const [debouncedKeyword, setDebouncedKeyword] = useState(filters.q);
@@ -326,6 +329,7 @@ function MemberSearchTableInner({
           member={selectedMember}
           departments={departments}
           skills={skills}
+          canDeactivateMembers={canDeactivateMembers}
           onClose={closeMemberDetail}
         />
       ) : null}

@@ -11,10 +11,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { PageHeader } from "@/shared/ui/page-header";
+import { managerOrAdmin, requireRoles } from "@/server/auth/authorization";
 
 export const dynamic = "force-dynamic";
 
 export default async function MembersPage() {
+  const session = await requireRoles(managerOrAdmin);
+  const canDeactivateMembers = session.user.role === "ADMIN";
   const [members, departments, skills, roles] = await Promise.all([
     listMembers(),
     listDepartments(),
@@ -86,6 +89,7 @@ export default async function MembersPage() {
             departments={departments}
             skills={skillOptions}
             roles={roleOptions}
+            canDeactivateMembers={canDeactivateMembers}
           />
         </CardContent>
       </Card>
