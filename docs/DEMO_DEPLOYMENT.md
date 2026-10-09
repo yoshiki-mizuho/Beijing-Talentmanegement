@@ -33,8 +33,23 @@
 | `AUTH_URL` | Vercelで確定したProduction URL |
 | `AUTH_TRUST_HOST` | `true` |
 
-6. VercelのPreview環境でBranch Trackingを無効化する。`vercel.json`でも`"**": false`と`"main": true`により`main`以外を無効化していることを確認する。`"main": true`だけでは、指定していないブランチは有効のままになる。また`*`は`/`を含むブランチ名（`feature/xxx`等）に一致しないため`**`を使う。Previewには`DATABASE_URL`を登録しないため、Previewがビルドされると`prisma generate`が`PrismaConfigEnvError`で失敗する。
-7. 作業端末でdirect接続を一時的に`DATABASE_URL`へ設定し、次を順番に実行する。
+6. GitLabの **Settings → CI/CD → Variables** に次の変数を登録する。
+
+| 変数 | 設定値 | 属性 |
+| --- | --- | --- |
+| `NEON_DIRECT_URL` | Neonのdirect接続文字列からクエリ文字列（`?`以降）を除いた値 | Protected、Masked |
+| `DEMO_ADMIN_PASSWORD` | デモ管理者のパスワード | Protected、Masked |
+| `DEMO_MANAGER_PASSWORD` | デモマネージャーのパスワード | Protected、Masked |
+| `DEMO_MEMBER_PASSWORD` | デモメンバーのパスワード | Protected、Masked |
+
+各パスワードは12文字以上かつ相互に異なる値にする。GitLabのMasked変数に使えない文字（`?`、`&`、`=`、空白など）が含まれるとMaskedにできないため、マスクを外すのではなく値を見直す。`sslmode=require`等の接続オプションはジョブ内で付与する。パスワードに`$`を含める場合は、変数の **Expand variable reference** を無効にする。
+
+7. VercelのPreview環境でBranch Trackingを無効化する。`vercel.json`でも`"**": false`と`"main": true`により`main`以外を無効化していることを確認する。`"main": true`だけでは、指定していないブランチは有効のままになる。また`*`は`/`を含むブランチ名（`feature/xxx`等）に一致しないため`**`を使う。Previewには`DATABASE_URL`を登録しないため、Previewがビルドされると`prisma generate`が`PrismaConfigEnvError`で失敗する。
+8. 社内ネットワークではPostgreSQLプロトコル（5432番）が遮断されるため、migrationとseedはGitLab CIの手動起動専用ジョブで実行する。GitLabの **Build → Pipelines → Run pipeline** を開き、branchに`main`、変数`DEMO_DB_TASK`に`migrate`または`migrate_and_seed`を指定してパイプラインを実行する。初回構築では`migrate_and_seed`を指定し、`demo_db_migrate`に続いて`demo_db_seed`が実行される。
+
+seedにより各機能を確認するための架空の部署、スキル、ロール、メンバー、申告、通知が投入される。再実行しても既存のデモデータやユーザーのパスワードは上書きせず、TM0003に申告が1件でもあれば申告と通知は追加しない。認証情報は限定された共有経路で利用者へ渡す。
+
+社外ネットワークなど5432番が利用できる環境では、代替手順として作業端末からdirect接続してもよい。
 
 ```powershell
 $env:DATABASE_URL = "<Neon direct connection string>"
@@ -46,14 +61,12 @@ npm run db:seed
 Remove-Item Env:DATABASE_URL, Env:DEMO_ADMIN_PASSWORD, Env:DEMO_MANAGER_PASSWORD, Env:DEMO_MEMBER_PASSWORD
 ```
 
-各パスワードは12文字以上かつ相互に異なる値にする。seedにより各機能を確認するための架空の部署、スキル、ロール、メンバー、申告、通知が投入される。再実行しても既存のデモデータやユーザーのパスワードは上書きせず、TM0003に申告が1件でもあれば申告と通知は追加しない。認証情報は限定された共有経路で利用者へ渡す。
-
 ## リリース手順
 
 1. MRで`lint`、`typecheck`、`test`、`build`、migration checkが成功していることを確認する。
 2. schema変更がある場合、Neonの復元ポイントまたは論理バックアップを確保する。
-3. direct接続を一時的に`DATABASE_URL`へ設定し、`npm exec prisma migrate deploy`を手動実行する。Vercel buildからmigrationやseedは実行しない。
-4. レビュー済みMRを`main`へマージする。GitLabのpush mirrorでGitHubの`main`が更新され、Vercel Productionの自動デプロイが完了したことを確認する。同期されない場合は、GitLabのMirroring repositoriesでエラーとtokenの期限を確認し、**Update now** を実行する。
+3. レビュー済みMRを`main`へマージする。schema変更がある場合は、GitLabの **Build → Pipelines → Run pipeline** でbranchに`main`、変数`DEMO_DB_TASK`に`migrate`を指定してパイプラインを実行し、`demo_db_migrate`の成功を確認する。Vercel buildからmigrationやseedは実行しない。migrationはmerge後に実行するため、Vercelのデプロイとmigrationの間に新しいコードと古いschemaが並ぶ時間が生じる。schema変更は列やテーブルの追加など、旧schemaでも新コードが壊れない形にし、削除や型変更は別リリースに分ける。
+4. GitLabのpush mirrorでGitHubの`main`が更新され、Vercel Productionの自動デプロイが完了したことを確認する。同期されない場合は、GitLabのMirroring repositoriesでエラーとtokenの期限を確認し、**Update now** を実行する。
 5. `/login`、dashboard、members、skills、skill-mapを3ロールで確認し、CRUD後に再ログインして変更が保持されることを確認する。
 6. Vercel FunctionログでDB接続、認証URL、Prisma初期化エラーがないことを確認する。
 

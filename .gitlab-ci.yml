@@ -1,7 +1,8 @@
 workflow:
-  # Run pipelines only for Merge Requests to conserve GitLab CI credits.
+  # Run validation for Merge Requests and demo DB tasks only when explicitly started from the web UI.
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_PIPELINE_SOURCE == "web" && $CI_COMMIT_BRANCH == "main" && $DEMO_DB_TASK'
     - when: never
 
 stages:
@@ -9,6 +10,7 @@ stages:
   - test
   - build
   - security
+  - demo_db
 
 default:
   image: node:24-bookworm-slim
@@ -29,17 +31,24 @@ variables:
   AUTH_TRUST_HOST: "true"
   NEXT_TELEMETRY_DISABLED: "1"
 
+.mr_only:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
 lint:
+  extends: .mr_only
   stage: validate
   script:
     - npm run lint
 
 typecheck:
+  extends: .mr_only
   stage: validate
   script:
     - npm run typecheck
 
 migration_check:
+  extends: .mr_only
   stage: validate
   services:
     - name: postgres:17-alpine
@@ -54,12 +63,14 @@ migration_check:
     - npm run prisma:migrate:check
 
 test:
+  extends: .mr_only
   stage: test
   script:
     - npm run prisma:generate
     - npm run test
 
 build:
+  extends: .mr_only
   stage: build
   script:
     - npm run build
@@ -71,6 +82,50 @@ sast:
 semgrep-sast:
   inherit:
     default: false
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+demo_db_migrate:
+  stage: demo_db
+  resource_group: demo_db
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "web" && $CI_COMMIT_BRANCH == "main" && $DEMO_DB_TASK =~ /^(migrate|migrate_and_seed)$/'
+  script:
+    - |
+      if [ -z "${NEON_DIRECT_URL:-}" ]; then
+        echo "NEON_DIRECT_URL is not set."
+        exit 1
+      fi
+    - export DATABASE_URL="${NEON_DIRECT_URL}?sslmode=require&connect_timeout=30"
+    - npm exec prisma migrate status || true
+    - npm exec prisma migrate deploy
+
+demo_db_seed:
+  stage: demo_db
+  resource_group: demo_db
+  needs: [demo_db_migrate]
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "web" && $CI_COMMIT_BRANCH == "main" && $DEMO_DB_TASK == "migrate_and_seed"'
+  script:
+    - |
+      if [ -z "${NEON_DIRECT_URL:-}" ]; then
+        echo "NEON_DIRECT_URL is not set."
+        exit 1
+      fi
+      if [ -z "${DEMO_ADMIN_PASSWORD:-}" ]; then
+        echo "DEMO_ADMIN_PASSWORD is not set."
+        exit 1
+      fi
+      if [ -z "${DEMO_MANAGER_PASSWORD:-}" ]; then
+        echo "DEMO_MANAGER_PASSWORD is not set."
+        exit 1
+      fi
+      if [ -z "${DEMO_MEMBER_PASSWORD:-}" ]; then
+        echo "DEMO_MEMBER_PASSWORD is not set."
+        exit 1
+      fi
+    - export DATABASE_URL="${NEON_DIRECT_URL}?sslmode=require&connect_timeout=30"
+    - npm run db:seed
 
 include:
   - template: Security/SAST.gitlab-ci.yml
