@@ -29,11 +29,13 @@ export function MemberDetailModal({
   member,
   departments,
   skills,
+  canDeactivateMembers,
   onClose
 }: {
   member: MemberRow;
   departments: DepartmentOption[];
   skills: SkillOption[];
+  canDeactivateMembers: boolean;
   onClose: () => void;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -141,9 +143,11 @@ export function MemberDetailModal({
               </div>
               <div className="flex flex-wrap gap-2 md:col-span-3">
                 <Button type="submit">更新</Button>
-                <Button type="submit" formAction={deactivateMemberAction} variant="secondary">
-                  無効化
-                </Button>
+                {canDeactivateMembers ? (
+                  <Button type="submit" formAction={deactivateMemberAction} variant="secondary">
+                    無効化
+                  </Button>
+                ) : null}
               </div>
             </form>
           </section>
