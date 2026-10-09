@@ -40,5 +40,5 @@
 
 ## 現在の状態
 
-- Phase0〜Phase4.5は完了済み。デモ環境の運用手順は `docs/DEMO_DEPLOYMENT.md` を確認する。
-- 次の主対象はPhase5（CSV・監査・権限強化）。
+- Phase0〜Phase4.6は完了済み。デモ環境の運用手順は `docs/DEMO_DEPLOYMENT.md` を確認する。
+- 現在の主対象はPhase4.7（UI/UX改善と成長体験）。その後Phase5（CSV・監査・権限強化）に進む。
