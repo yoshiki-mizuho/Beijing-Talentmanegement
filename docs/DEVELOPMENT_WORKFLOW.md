@@ -111,6 +111,8 @@ DB migrationは、アプリケーション変更と同じMRでレビューしま
 - `docs/ARCHITECTURE.md`
 - `docs/DEVELOPMENT_WORKFLOW.md`
 - `docs/MVP_REVIEW.md`
+- `docs/AI_COLLABORATION.md`（Claude CodeとCodexの役割分担と開発ループ）
+- `docs/LOCAL_DEVELOPMENT.md`（ローカル開発環境の構築と検証コマンド）
 
 ## Phase 0での位置づけ
 
