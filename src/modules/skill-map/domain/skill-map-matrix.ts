@@ -3,6 +3,7 @@ export type SkillMapMember = {
   employeeNo: string;
   name: string;
   department: {
+    id: string;
     name: string;
   };
   memberSkills: {
@@ -16,9 +17,38 @@ export type SkillMapSkill = {
   code: string;
   name: string;
   category: {
+    id: string;
     name: string;
   };
 };
+
+export type SkillMapFilters = {
+  q?: string;
+  departmentId?: string;
+  categoryId?: string;
+};
+
+export function filterSkillMapData(
+  input: {
+    members: SkillMapMember[];
+    skills: SkillMapSkill[];
+  },
+  filters: SkillMapFilters
+) {
+  const keyword = filters.q?.trim().toLocaleLowerCase("ja") ?? "";
+
+  return {
+    members: input.members.filter((member) =>
+      (!filters.departmentId || member.department.id === filters.departmentId) &&
+      (!keyword ||
+        member.name.toLocaleLowerCase("ja").includes(keyword) ||
+        member.employeeNo.toLocaleLowerCase("ja").includes(keyword))
+    ),
+    skills: input.skills.filter(
+      (skill) => !filters.categoryId || skill.category.id === filters.categoryId
+    )
+  };
+}
 
 export function buildSkillMapMatrix(input: {
   members: SkillMapMember[];
