@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "next dev",
+    "verify": "node scripts/verify.mjs",
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint src prisma scripts next.config.ts vitest.config.ts prisma.config.ts",

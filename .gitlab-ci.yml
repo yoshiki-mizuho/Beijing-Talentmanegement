@@ -1,7 +1,7 @@
 workflow:
-  # Temporarily disable GitLab pipelines to avoid consuming credits while
-  # phase completion is verified locally.
+  # Run pipelines only for Merge Requests to conserve GitLab CI credits.
   rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - when: never
 
 stages:
@@ -22,6 +22,7 @@ default:
     - npm ci --cache .npm --prefer-offline
 
 variables:
+  AST_ENABLE_MR_PIPELINES: "true"
   DATABASE_URL: "postgresql://talent:talent_password@postgres:5432/talentmanagement?schema=public"
   AUTH_SECRET: "ci-replace-with-a-long-random-secret"
   AUTH_URL: "http://localhost:3000"

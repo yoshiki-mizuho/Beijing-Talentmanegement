@@ -60,11 +60,8 @@ flowchart LR
 - DB migration: <要 / 不要>
 
 ## 検証コマンド
-- npm.cmd run typecheck
-- npm.cmd run lint
-- npm.cmd run test
-- npm.cmd run build
-- npm.cmd run prisma:migrate:check（schemaを変更した場合）
+- npm.cmd run verify
+- npm.cmd run verify -- --skip=migrate（schemaを変更しない場合）
 
 ## 報告してほしいこと
 変更ファイル、実行したコマンドと結果（失敗も含む）、未対応事項、判断に迷った点
@@ -73,7 +70,7 @@ flowchart LR
 ## 完了の定義（Definition of Done）
 
 - タスク指示書の受け入れ条件をすべて満たしている。
-- typecheck、lint、test、buildがClaudeの手元で成功している。schemaを変更した場合はmigration checkも成功している。
+- `npm.cmd run verify` がClaudeの手元で成功している。schemaを変更しない場合は `-- --skip=migrate` を指定してよい。
 - 振る舞いを変えた業務ロジックにユニットテストがある。
 - 画面に影響する変更は、3ロールでの画面確認結果がMRに記載されている。
 - API仕様を変えた場合は `docs/api/openapi.yaml` を更新している。

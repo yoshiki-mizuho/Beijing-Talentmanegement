@@ -72,6 +72,8 @@ pushまたはMR作成前には、最新のremote変更を取り込むために `
 
 ## CI/CD方針
 
+GitLab CIのクレジットを節約するため、パイプラインはMerge Request時のみ実行します。`main` へのpushやブランチへのpushではパイプラインを作成しません。
+
 Merge Request時の必須チェックは以下とします。
 
 - `lint`

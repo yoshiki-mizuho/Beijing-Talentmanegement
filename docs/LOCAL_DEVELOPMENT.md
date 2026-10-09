@@ -35,13 +35,13 @@ Remove-Item Env:DEMO_ADMIN_PASSWORD, Env:DEMO_MANAGER_PASSWORD, Env:DEMO_MEMBER_
 
 ## 検証コマンド
 
+基本の品質ゲートは、以下の集約コマンドで順番に実行する。
+
 ```powershell
-npm.cmd run typecheck
-npm.cmd run lint
-npm.cmd run test
-npm.cmd run build
-npm.cmd run prisma:migrate:check
+npm.cmd run verify
 ```
+
+一部の手順を省略する場合は、`npm.cmd run verify -- --skip=build,migrate` のように手順名をカンマ区切りで指定する。手順名は `typecheck`、`lint`、`test`、`build`、`migrate` である。各手順は `npm.cmd run typecheck` などの個別コマンドでも引き続き実行できる。
 
 ## DBを作り直す
 
