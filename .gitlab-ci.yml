@@ -69,6 +69,34 @@ test:
     - npm run prisma:generate
     - npm run test
 
+e2e:
+  extends: .mr_only
+  stage: test
+  services:
+    - name: postgres:17-alpine
+      alias: postgres
+      variables:
+        POSTGRES_DB: talentmanagement
+        POSTGRES_USER: talent
+        POSTGRES_PASSWORD: talent_password
+  variables:
+    DEMO_ADMIN_PASSWORD: "ci-admin-password-47"
+    DEMO_MANAGER_PASSWORD: "ci-manager-password-58"
+    DEMO_MEMBER_PASSWORD: "ci-member-password-69"
+  script:
+    - npx playwright install --with-deps chromium
+    - npm run prisma:generate
+    - npm exec prisma migrate deploy
+    - npm run db:seed
+    - npm run build
+    - npm run test:e2e
+  artifacts:
+    when: on_failure
+    paths:
+      - playwright-report/
+      - test-results/
+    expire_in: 7 days
+
 build:
   extends: .mr_only
   stage: build

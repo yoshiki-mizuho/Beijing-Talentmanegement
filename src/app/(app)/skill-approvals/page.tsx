@@ -25,7 +25,11 @@ export default async function SkillApprovalsPage() {
 
       <div className="grid gap-4">
         {assessments.map((assessment) => (
-          <Card key={assessment.id}>
+          <Card
+            key={assessment.id}
+            role="group"
+            aria-label={`${assessment.member.name} / ${assessment.skill.name}の承認`}
+          >
             <CardHeader>
               <CardTitle>
                 {assessment.member.name} / {assessment.skill.name}

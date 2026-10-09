@@ -71,6 +71,7 @@ flowchart LR
 
 - タスク指示書の受け入れ条件をすべて満たしている。
 - `npm.cmd run verify` がClaudeの手元で成功している。schemaを変更しない場合は `-- --skip=migrate` を指定してよい。
+- 画面やフローに影響する変更では、E2E（`npm.cmd run test:e2e`）がClaudeの手元とCIで成功している。
 - 振る舞いを変えた業務ロジックにユニットテストがある。
 - 画面に影響する変更は、3ロールでの画面確認結果がMRに記載されている。
 - API仕様を変えた場合は `docs/api/openapi.yaml` を更新している。
@@ -86,5 +87,6 @@ Codexは `workspace-write` サンドボックス（`[windows] sandbox = "uneleva
 | typecheck、lint | 実行できる | Prismaのエンジン取得に必要なネットワークを許可済み |
 | test | 実行できない | ViteがWindowsのパス解決時に `net use` を起動するため |
 | build、migration check | 実行できない | Next.jsのビルドワーカーやPrisma CLIを子プロセスとして起動するため |
+| E2E | 実行できない | Next.jsサーバーとブラウザを子プロセスとして起動するため |
 
-権限を最大にする `danger-full-access` は使わず、test、build、migrationの検証はClaudeとCIが担う。
+権限を最大にする `danger-full-access` は使わず、test、build、migration、E2Eの検証はClaudeとCIが担う。

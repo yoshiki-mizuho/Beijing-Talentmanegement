@@ -12,9 +12,10 @@
     "verify": "node scripts/verify.mjs",
     "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "eslint src prisma scripts next.config.ts vitest.config.ts prisma.config.ts",
+    "lint": "eslint src prisma scripts e2e next.config.ts playwright.config.ts vitest.config.ts prisma.config.ts",
     "typecheck": "prisma generate && tsc --noEmit",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:migrate:check": "prisma validate && node scripts/check-migrations.mjs",
@@ -40,6 +41,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.0",
     "@tailwindcss/postcss": "^4.3.1",
     "@types/node": "^24.13.2",
     "@types/react": "^19.2.17",
