@@ -30,6 +30,12 @@ prisma/dev.db
 coverage/
 *.tsbuildinfo
 
+# playwright
+playwright-report/
+blob-report/
+test-results/
+playwright/.cache/
+
 # OS/editor
 Thumbs.db
 .vscode/

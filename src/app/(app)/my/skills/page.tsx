@@ -119,6 +119,8 @@ export default async function MySkillsPage() {
             {assessments.map((assessment) => (
               <div
                 key={assessment.id}
+                role="group"
+                aria-label={`${assessment.skill.name}の申告履歴`}
                 className="border-b border-[var(--border)] py-3 last:border-b-0"
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
