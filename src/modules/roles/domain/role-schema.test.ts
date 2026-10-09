@@ -40,14 +40,14 @@ describe("role schemas", () => {
     ).toBe(true);
   });
 
-  it("rejects optional role requirements", () => {
-    expect(() =>
+  it("accepts optional role requirements", () => {
+    expect(
       roleRequirementInputSchema.parse({
         roleId: "role-1",
         skillId: "skill-1",
         requiredLevel: 3,
         isRequired: false
-      })
-    ).toThrow();
+      }).isRequired
+    ).toBe(false);
   });
 });

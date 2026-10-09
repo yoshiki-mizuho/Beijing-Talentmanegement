@@ -48,11 +48,12 @@ export async function deactivateRoleAction(formData: FormData): Promise<ActionRe
 export async function setRoleRequirementAction(formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
     await requireRoles(adminOnly);
+    const isRequired = formData.get("isRequired");
     await setRoleRequirement({
       roleId: getString(formData, "roleId"),
       skillId: getString(formData, "skillId"),
       requiredLevel: getNumber(formData, "requiredLevel"),
-      isRequired: true
+      isRequired: isRequired === null ? true : isRequired === "true"
     });
     revalidatePath("/roles");
   }, "ロール要件を設定しました。");

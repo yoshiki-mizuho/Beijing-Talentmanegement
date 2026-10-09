@@ -1,29 +1,38 @@
 "use client";
 
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   type ColumnDef,
   flexRender,
   getCoreRowModel,
   useReactTable
 } from "@tanstack/react-table";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { ListFilter, RotateCcw, SearchX } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { ListFilter, Pencil, RotateCcw, SearchX } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 
+import {
+  deactivateSkillAction,
+  updateSkillAction
+} from "@/modules/skills/presentation/actions";
 import {
   buildSkillSearchParams,
   emptySkillSearchFilters,
   type SkillSearchFilters
 } from "@/modules/skills/presentation/skill-search-params";
+import { ActionForm, ConfirmSubmitButton } from "@/shared/ui/action-form";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
+import { Dialog } from "@/shared/ui/dialog";
 import { EmptyState } from "@/shared/ui/empty-state";
+import { FormField, SelectField, TextareaField } from "@/shared/ui/form-field";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { QueryProvider } from "@/shared/ui/query-provider";
 import { Select } from "@/shared/ui/select";
+import { SubmitButton } from "@/shared/ui/submit-button";
 
-type SkillRow = {
+export type SkillRow = {
   id: string;
   code: string;
   name: string;
@@ -48,6 +57,7 @@ type CategoryOption = {
 export function SkillSearchTable(props: {
   initialSkills: SkillRow[];
   categories: CategoryOption[];
+  canManage: boolean;
 }) {
   return (
     <QueryProvider>
@@ -58,14 +68,19 @@ export function SkillSearchTable(props: {
 
 function SkillSearchTableInner({
   initialSkills,
-  categories
+  categories,
+  canManage
 }: {
   initialSkills: SkillRow[];
   categories: CategoryOption[];
+  canManage: boolean;
 }) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const [filters, setFilters] = useState<SkillSearchFilters>(
     emptySkillSearchFilters
   );
+  const [editingSkill, setEditingSkill] = useState<SkillRow | null>(null);
   const hasFilters = Object.values(filters).some(Boolean);
   const query = useQuery({
     queryKey: ["skills", filters],
@@ -74,20 +89,16 @@ function SkillSearchTableInner({
     placeholderData: keepPreviousData
   });
   const rows = query.data ?? [];
-  const columns = useMemo<ColumnDef<SkillRow>[]>(
-    () => [
-      {
-        accessorKey: "code",
-        header: "コード",
-        cell: ({ row }) => (
-          <span className="font-mono text-xs text-[var(--muted-foreground)]">
-            {row.original.code}
-          </span>
-        )
-      },
+
+  useEffect(() => {
+    queryClient.setQueryData(["skills", emptySkillSearchFilters], initialSkills);
+  }, [initialSkills, queryClient]);
+
+  const columns = useMemo<ColumnDef<SkillRow>[]>(() => {
+    const definitions: ColumnDef<SkillRow>[] = [
       {
         accessorKey: "name",
-        header: "スキル",
+        header: "スキル名",
         cell: ({ row }) => (
           <span className="block max-w-56 break-words font-semibold text-[var(--foreground)]">
             {row.original.name}
@@ -102,12 +113,12 @@ function SkillSearchTableInner({
         )
       },
       {
-        accessorKey: "isActive",
-        header: "状態",
+        accessorKey: "description",
+        header: "説明",
         cell: ({ row }) => (
-          <Badge variant={row.original.isActive ? "success" : "neutral"}>
-            {row.original.isActive ? "有効" : "無効"}
-          </Badge>
+          <span className="block min-w-48 max-w-96 break-words text-[var(--muted-foreground)]">
+            {row.original.description || "説明なし"}
+          </span>
         )
       },
       {
@@ -118,26 +129,38 @@ function SkillSearchTableInner({
         )
       },
       {
-        id: "roleRequirementCount",
-        header: "ロール要件",
+        accessorKey: "isActive",
+        header: "状態",
         cell: ({ row }) => (
-          <span className="tabular-nums">
-            {row.original._count.roleRequirements}件
-          </span>
-        )
-      },
-      {
-        accessorKey: "description",
-        header: "説明",
-        cell: ({ row }) => (
-          <span className="block min-w-48 max-w-96 break-words text-[var(--muted-foreground)]">
-            {row.original.description || "説明なし"}
-          </span>
+          <Badge variant={row.original.isActive ? "success" : "neutral"}>
+            {row.original.isActive ? "有効" : "無効"}
+          </Badge>
         )
       }
-    ],
-    []
-  );
+    ];
+
+    if (canManage) {
+      definitions.push({
+        id: "actions",
+        header: "操作",
+        cell: ({ row }) => (
+          <Button
+            type="button"
+            variant="secondary"
+            size="small"
+            className="min-h-11"
+            onClick={() => setEditingSkill(row.original)}
+            aria-label={`${row.original.name}を編集`}
+          >
+            <Pencil className="h-4 w-4" aria-hidden="true" />
+            編集
+          </Button>
+        )
+      });
+    }
+
+    return definitions;
+  }, [canManage]);
 
   // TanStack Table owns mutable internal state that React Compiler cannot memoize.
   // eslint-disable-next-line react-hooks/incompatible-library
@@ -146,6 +169,12 @@ function SkillSearchTableInner({
     columns,
     getCoreRowModel: getCoreRowModel()
   });
+
+  function handleEditSuccess() {
+    setEditingSkill(null);
+    router.refresh();
+    void query.refetch();
+  }
 
   return (
     <div className="space-y-4">
@@ -158,7 +187,7 @@ function SkillSearchTableInner({
             onChange={(event) =>
               setFilters((current) => ({ ...current, q: event.target.value }))
             }
-            placeholder="コード、名称、説明"
+            placeholder="名称、説明"
             className="mt-1 bg-[var(--surface)]"
           />
         </div>
@@ -226,9 +255,9 @@ function SkillSearchTableInner({
         <div
           className="overflow-x-auto border-t border-[var(--border)]"
           tabIndex={0}
-          aria-label="スキル検索結果。横方向にスクロールできます"
+          aria-label="スキル一覧。横方向にスクロールできます"
         >
-          <table className="min-w-[900px] w-full text-sm">
+          <table className="w-full min-w-[780px] text-sm">
             <thead className="bg-[var(--surface-subtle)] text-left text-[var(--muted-foreground)]">
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
@@ -266,6 +295,93 @@ function SkillSearchTableInner({
           </table>
         </div>
       )}
+
+      {canManage && editingSkill ? (
+        <Dialog
+          open
+          onClose={() => setEditingSkill(null)}
+          title={`${editingSkill.name}を編集`}
+          description="スキルの名称、カテゴリ、説明、状態を更新します。"
+        >
+          <div className="space-y-5">
+            <ActionForm
+              action={updateSkillAction}
+              className="space-y-4"
+              onSuccess={handleEditSuccess}
+            >
+              <input type="hidden" name="id" value={editingSkill.id} />
+              <FormField
+                id={`edit-skill-code-${editingSkill.id}`}
+                label="スキルコード"
+                name="code"
+                value={editingSkill.code}
+                readOnly
+                description="スキルコードは変更できません。"
+              />
+              <FormField
+                id={`edit-skill-name-${editingSkill.id}`}
+                label="スキル名"
+                name="name"
+                defaultValue={editingSkill.name}
+                required
+              />
+              <SelectField
+                id={`edit-skill-category-${editingSkill.id}`}
+                label="カテゴリ"
+                name="categoryId"
+                defaultValue={editingSkill.categoryId}
+                required
+              >
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </SelectField>
+              <TextareaField
+                id={`edit-skill-description-${editingSkill.id}`}
+                label="説明"
+                name="description"
+                defaultValue={editingSkill.description ?? ""}
+              />
+              <label className="flex min-h-11 items-center gap-2 text-sm font-medium text-[var(--foreground)]">
+                <input
+                  type="checkbox"
+                  name="isActive"
+                  defaultChecked={editingSkill.isActive}
+                  className="h-4 w-4 accent-[var(--primary)]"
+                />
+                有効
+              </label>
+              <div className="flex justify-end">
+                <SubmitButton pendingLabel="保存中…">保存</SubmitButton>
+              </div>
+            </ActionForm>
+
+            <div className="border-t border-[var(--border)] pt-5">
+              <ActionForm
+                action={deactivateSkillAction}
+                onSuccess={handleEditSuccess}
+              >
+                <input type="hidden" name="id" value={editingSkill.id} />
+                <ConfirmSubmitButton
+                  pendingLabel="無効化中…"
+                  variant="destructive"
+                  disabled={!editingSkill.isActive}
+                  confirm={{
+                    title: "スキルを無効化しますか",
+                    description: `「${editingSkill.name}」を無効化します。既存の設定内容は保持されます。`,
+                    confirmLabel: "無効化する",
+                    destructive: true
+                  }}
+                >
+                  スキルを無効化
+                </ConfirmSubmitButton>
+              </ActionForm>
+            </div>
+          </div>
+        </Dialog>
+      ) : null}
     </div>
   );
 }

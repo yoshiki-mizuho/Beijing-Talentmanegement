@@ -51,12 +51,9 @@ export async function upsertRoleRequirement(input: RoleRequirementInput) {
     },
     update: {
       requiredLevel: input.requiredLevel,
-      isRequired: true
+      isRequired: input.isRequired
     },
-    create: {
-      ...input,
-      isRequired: true
-    }
+    create: input
   });
 }
 
