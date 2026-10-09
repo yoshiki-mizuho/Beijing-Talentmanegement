@@ -16,7 +16,9 @@ import {
   updateMemberManager,
   updateMemberTargetRole
 } from "@/modules/members/application/member-service";
+import { canUpdateMemberTargetRole } from "@/modules/members/domain/member-target-role-policy";
 import {
+  AuthorizationError,
   adminOnly,
   managerOrAdmin,
   requirePasswordReadyMember,
@@ -185,12 +187,23 @@ export async function updateMemberTargetRoleAction(
   formData: FormData
 ): Promise<ActionResult> {
   return runAction(async () => {
-    await requireRoles(adminOnly);
+    const session = await requirePasswordReadyMember();
+    const memberId = getString(formData, "memberId");
+    if (
+      !canUpdateMemberTargetRole(
+        session.user.role,
+        session.user.memberId,
+        memberId
+      )
+    ) {
+      throw new AuthorizationError("Forbidden.", 403);
+    }
     await updateMemberTargetRole({
-      memberId: getString(formData, "memberId"),
+      memberId,
       targetRoleId: getOptionalString(formData, "targetRoleId") ?? null
     });
     revalidatePath("/members");
     revalidatePath("/dashboard");
+    revalidatePath("/", "layout");
   }, "目標ロールを更新しました。");
 }

@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
-import { AuthRole } from "@prisma/client";
 import { redirect } from "next/navigation";
 
 import { getDashboardSummary } from "@/modules/dashboard/application/dashboard-service";
@@ -37,14 +36,51 @@ const signalTones = {
   blue: "bg-sky-50 text-[var(--accent-blue)]"
 } as const;
 
-export default async function DashboardPage() {
+type DashboardView = "personal" | "organization";
+
+// MANAGER と ADMIN は組織の表示を既定とし、個人の表示へ切り替えられる。
+// チーム表示（部下単位）は #8 でこの切り替えに追加する。
+function DashboardViewSwitch({ current }: { current: DashboardView }) {
+  const items: { view: DashboardView; label: string; href: Route }[] = [
+    { view: "personal", label: "個人", href: "/dashboard?view=personal" as Route },
+    { view: "organization", label: "組織", href: "/dashboard" as Route }
+  ];
+
+  return (
+    <nav aria-label="ダッシュボードの表示切り替え" className="flex justify-end">
+      <div className="inline-flex gap-1 rounded-xl bg-[var(--muted)] p-1">
+        {items.map((item) => (
+          <Link
+            key={item.view}
+            href={item.href}
+            aria-current={item.view === current ? "page" : undefined}
+            className={`inline-flex h-9 items-center rounded-lg px-4 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] ${
+              item.view === current
+                ? "bg-[var(--surface)] font-semibold text-[var(--foreground)] shadow-sm"
+                : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+            }`}
+          >
+            {item.label}
+          </Link>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+export default async function DashboardPage({
+  searchParams
+}: {
+  searchParams: Promise<{ view?: string }>;
+}) {
   const session = await getCurrentSession();
+  const { view } = await searchParams;
+  const isManagementRole =
+    session?.user.role === "ADMIN" || session?.user.role === "MANAGER";
+  const showPersonal =
+    Boolean(session?.user.memberId) && (!isManagementRole || view === "personal");
 
-  if (session?.user.role === AuthRole.MEMBER) {
-    if (!session.user.memberId) {
-      redirect("/login");
-    }
-
+  if (session?.user.memberId && showPersonal) {
     const memberViewModel = buildMemberDashboardViewModel(
       await getMemberDashboard(session.user.memberId)
     );
@@ -53,7 +89,14 @@ export default async function DashboardPage() {
       redirect("/login");
     }
 
-    return <MemberDashboard viewModel={memberViewModel} />;
+    return isManagementRole ? (
+      <div className="space-y-4">
+        <DashboardViewSwitch current="personal" />
+        <MemberDashboard viewModel={memberViewModel} />
+      </div>
+    ) : (
+      <MemberDashboard viewModel={memberViewModel} />
+    );
   }
 
   const summary = await getDashboardSummary();
@@ -91,6 +134,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {session?.user.memberId ? <DashboardViewSwitch current="organization" /> : null}
       <PageHeader
         title="ダッシュボード"
         description="人材とスキルの現在地を、登録データに基づいて俯瞰します。"

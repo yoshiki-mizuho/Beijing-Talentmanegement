@@ -1,125 +1,171 @@
+import { badgeDefinitions, badgeRarities } from "@/modules/growth/domain/badge-art";
+import {
+  calculateBadgeAchievements,
+  calculateCategoryAverages,
+  findPotentialMentors,
+  getMonthlyEncouragement,
+  getTokyoDateParts
+} from "@/modules/growth/domain/growth-insights";
+import type { MemberGrowthData } from "@/modules/growth/infrastructure/member-growth-repository";
 import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
-import type { MemberDashboardData } from "@/modules/dashboard/infrastructure/member-dashboard-repository";
 
-export function buildMemberDashboardViewModel(data: MemberDashboardData) {
-  if (!data.member) {
-    return null;
-  }
+export function buildMemberDashboardViewModel(
+  data: MemberGrowthData,
+  now: Date = new Date()
+) {
+  if (!data.member) return null;
 
   const skills = data.member.memberSkills.map((memberSkill) => ({
     id: memberSkill.skillId,
     name: memberSkill.skill.name,
+    categoryId: memberSkill.skill.category.id,
     categoryName: memberSkill.skill.category.name,
     level: memberSkill.level
   }));
-  const roleCandidates = data.roles
-    .filter((role) => role.roleRequirements.length > 0)
-    .map((role) => {
-      const evaluation = evaluateRoleAchievement(
-        role.roleRequirements.map((requirement) => ({
-          skillId: requirement.skillId,
-          skillName: requirement.skill.name,
-          requiredLevel: requirement.requiredLevel,
-          isRequired: requirement.isRequired
-        })),
-        skills.map((skill) => ({
-          skillId: skill.id,
-          skillName: skill.name,
-          level: skill.level
-        }))
-      );
-      const gaps = evaluation.missingRequirements.map((requirement) => {
-        const source = role.roleRequirements.find(
-          (candidate) => candidate.skillId === requirement.skillId
-        );
-        return {
-          skillId: requirement.skillId,
-          skillName: requirement.skillName ?? "未設定スキル",
-          categoryName: source?.skill.category.name ?? "未分類",
-          currentLevel: requirement.memberLevel,
-          requiredLevel: requirement.requiredLevel,
-          shortfall: requirement.requiredLevel - (requirement.memberLevel ?? 0)
-        };
-      });
-
-      return {
-        id: role.id,
-        name: role.name,
-        achievementRate: Math.round(evaluation.achievementRate * 100),
-        achieved: evaluation.achieved,
-        requiredSkillCount: role.roleRequirements.length,
-        satisfiedSkillCount: evaluation.satisfiedRequirements.length,
-        gaps,
-        totalShortfall: gaps.reduce((sum, gap) => sum + gap.shortfall, 0)
-      };
-    })
-    .sort(
-      (left, right) =>
-        right.achievementRate - left.achievementRate ||
-        left.totalShortfall - right.totalShortfall ||
-        left.name.localeCompare(right.name, "ja")
+  const targetRole = data.member.targetRole
+    ? buildTargetRole(data.member.targetRole, skills)
+    : null;
+  const achievements = calculateBadgeAchievements({
+    assessments: data.assessments,
+    memberSkills: data.member.memberSkills,
+    levelChanges: data.levelChanges,
+    targetRequirements: data.member.targetRole?.roleRequirements ?? [],
+    mentoredCheers: data.mentoredCheers
+  });
+  const achievementById = new Map(
+    achievements.map((achievement) => [achievement.id, achievement])
+  );
+  const currentSkillIds = new Set(skills.map((skill) => skill.id));
+  const nowParts = getTokyoDateParts(now);
+  const monthlyLevelUps = data.levelChanges.filter((change) => {
+    const parts = getTokyoDateParts(change.changedAt);
+    return (
+      change.source !== "BACKFILL" &&
+      (change.fromLevel === null || change.toLevel > change.fromLevel) &&
+      parts.year === nowParts.year &&
+      parts.month === nowParts.month
     );
-  const targetRole = roleCandidates[0] ?? null;
-  const averageLevel =
-    skills.length === 0
-      ? 0
-      : Math.round(
-          (skills.reduce((sum, skill) => sum + skill.level, 0) / skills.length) * 10
-        ) / 10;
-  const actions = [
-    ...(skills.length === 0
-      ? [
-          {
-            id: "register-skill",
-            title: "最初のスキルを申告する",
-            description: "現在の経験に合うスキルとレベルを登録しましょう。",
-            href: "/my/skills"
-          }
-        ]
-      : []),
-    ...(targetRole && targetRole.gaps.length > 0
-      ? [
-          {
-            id: "close-role-gap",
-            title: `${targetRole.name}に向けてスキルを伸ばす`,
-            description: `不足している必須スキルは${targetRole.gaps.length}件です。`,
-            href: "/my/skills"
-          }
-        ]
-      : []),
-    ...(data.pendingAssessmentCount > 0
-      ? [
-          {
-            id: "check-assessment",
-            title: "申告状況を確認する",
-            description: `${data.pendingAssessmentCount}件の申告が承認待ちです。`,
-            href: "/my/skills"
-          }
-        ]
-      : []),
-    ...(data.unreadNotificationCount > 0
-      ? [
-          {
-            id: "read-notifications",
-            title: "通知を確認する",
-            description: `${data.unreadNotificationCount}件の未読通知があります。`,
-            href: "/notifications"
-          }
-        ]
-      : [])
-  ];
+  }).length;
 
   return {
+    memberId: data.member.id,
     memberName: data.member.name,
-    skillCount: skills.length,
-    averageLevel,
-    pendingAssessmentCount: data.pendingAssessmentCount,
-    unreadNotificationCount: data.unreadNotificationCount,
-    skills: [...skills].sort(
-      (left, right) => right.level - left.level || left.name.localeCompare(right.name, "ja")
-    ),
+    encouragement: getMonthlyEncouragement(monthlyLevelUps),
     targetRole,
-    actions
+    roleOptions: data.roles,
+    badges: badgeDefinitions.map((definition) => ({
+      ...definition,
+      rarityLabel: badgeRarities[definition.rarity].label,
+      frameColor: badgeRarities[definition.rarity].frame,
+      backgroundColor: badgeRarities[definition.rarity].background,
+      earnedAt:
+        achievementById.get(definition.id)?.earnedAt?.toISOString() ?? null
+    })),
+    radar: calculateCategoryAverages(
+      data.categories,
+      skills.map((skill) => ({
+        categoryId: skill.categoryId,
+        level: skill.level
+      }))
+    ),
+    calendar: {
+      initialYear: nowParts.year,
+      initialMonth: nowParts.month - 1,
+      assessmentDates: data.assessments.map((assessment) =>
+        assessment.createdAt.toISOString()
+      ),
+      levelChanges: data.levelChanges.map((change) => ({
+        skillId: change.skillId,
+        fromLevel: change.fromLevel,
+        toLevel: change.toLevel,
+        source: change.source,
+        changedAt: change.changedAt.toISOString()
+      }))
+    },
+    timeline: [...data.levelChanges]
+      .filter(
+        (change) =>
+          change.source !== "BACKFILL" && currentSkillIds.has(change.skillId)
+      )
+      .sort((left, right) => right.changedAt.getTime() - left.changedAt.getTime())
+      .slice(0, 8)
+      .map((change) => ({
+        id: change.id,
+        skillName: change.skill.name,
+        categoryName: change.skill.category.name,
+        fromLevel: change.fromLevel,
+        toLevel: change.toLevel,
+        changedAt: change.changedAt.toISOString()
+      })),
+    mentors: findPotentialMentors({
+      memberId: data.member.id,
+      targetGaps: targetRole
+        ? targetRole.gaps.map((gap) => ({
+            skillId: gap.skillId,
+            skillName: gap.skillName
+          }))
+        : null,
+      memberSkills: skills.map((skill) => ({
+        skillId: skill.id,
+        skillName: skill.name,
+        level: skill.level
+      })),
+      candidates: data.mentorCandidates.map((candidate) => ({
+        id: candidate.id,
+        name: candidate.name,
+        jobTitle: candidate.jobTitle,
+        status: candidate.status,
+        skills: candidate.memberSkills.map((skill) => ({
+          skillId: skill.skillId,
+          skillName: skill.skill.name,
+          level: skill.level
+        }))
+      }))
+    })
+  };
+}
+
+function buildTargetRole(
+  role: NonNullable<NonNullable<MemberGrowthData["member"]>["targetRole"]>,
+  skills: Array<{ id: string; name: string; level: number; categoryName: string }>
+) {
+  const evaluation = evaluateRoleAchievement(
+    role.roleRequirements.map((requirement) => ({
+      skillId: requirement.skillId,
+      skillName: requirement.skill.name,
+      requiredLevel: requirement.requiredLevel,
+      isRequired: requirement.isRequired
+    })),
+    skills.map((skill) => ({
+      skillId: skill.id,
+      skillName: skill.name,
+      level: skill.level
+    }))
+  );
+  const gaps = evaluation.missingRequirements.map((requirement) => {
+    const source = role.roleRequirements.find(
+      (candidate) => candidate.skillId === requirement.skillId
+    );
+    return {
+      skillId: requirement.skillId,
+      skillName: requirement.skillName ?? "未設定スキル",
+      categoryName: source?.skill.category.name ?? "未分類",
+      currentLevel: requirement.memberLevel,
+      requiredLevel: requirement.requiredLevel
+    };
+  });
+
+  return {
+    id: role.id,
+    name: role.name,
+    achievementRate:
+      role.roleRequirements.length === 0
+        ? 0
+        : Math.round(evaluation.achievementRate * 100),
+    achieved: evaluation.achieved && role.roleRequirements.length > 0,
+    requiredSkillCount: role.roleRequirements.length,
+    satisfiedSkillCount: evaluation.satisfiedRequirements.length,
+    gaps
   };
 }
 
