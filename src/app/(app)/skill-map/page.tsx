@@ -5,11 +5,13 @@ import {
   TrendingUp,
   UsersRound
 } from "lucide-react";
+import Link from "next/link";
 
-import { getSkillMapMatrix } from "@/modules/skill-map/application/skill-map-service";
+import { getSkillMapPageData } from "@/modules/skill-map/application/skill-map-service";
 import { SkillMapTable } from "@/modules/skill-map/presentation/skill-map-table";
 import { buildSkillMapPresentation } from "@/modules/skill-map/presentation/skill-map-view-model";
 import { Badge } from "@/shared/ui/badge";
+import { Button } from "@/shared/ui/button";
 import {
   Card,
   CardContent,
@@ -18,22 +20,116 @@ import {
   CardTitle
 } from "@/shared/ui/card";
 import { EmptyState } from "@/shared/ui/empty-state";
+import { Input } from "@/shared/ui/input";
+import { Label } from "@/shared/ui/label";
 import { Metric } from "@/shared/ui/metric";
 import { PageHeader } from "@/shared/ui/page-header";
+import { Select } from "@/shared/ui/select";
 
 export const dynamic = "force-dynamic";
 
-export default async function SkillMapPage() {
-  const matrix = await getSkillMapMatrix();
+type SkillMapSearchParams = Promise<{
+  q?: string | string[];
+  department?: string | string[];
+  category?: string | string[];
+}>;
+
+export default async function SkillMapPage({
+  searchParams
+}: {
+  searchParams: SkillMapSearchParams;
+}) {
+  const params = await searchParams;
+  const filters = {
+    q: getSingleParam(params.q).trim(),
+    departmentId: getSingleParam(params.department),
+    categoryId: getSingleParam(params.category)
+  };
+  const { matrix, departments, categories } = await getSkillMapPageData(filters);
   const summary = buildSkillMapPresentation(matrix);
+  const hasFilters = Boolean(filters.q || filters.departmentId || filters.categoryId);
 
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="People Analytics"
+        eyebrow="分析"
         title="スキルマップ"
         description="メンバーとスキルの保有状況を横断し、組織の強みと育成余地を把握します。"
       />
+
+      <Card>
+        <CardContent className="pt-5">
+          <form
+            method="get"
+            action="/skill-map"
+            className="grid gap-4 bg-[var(--surface-subtle)] p-4 md:grid-cols-3 xl:grid-cols-[minmax(16rem,2fr)_minmax(10rem,1fr)_minmax(10rem,1fr)_auto] xl:items-end"
+          >
+            <div>
+              <Label htmlFor="skill-map-q">キーワード</Label>
+              <Input
+                id="skill-map-q"
+                name="q"
+                defaultValue={filters.q}
+                placeholder="氏名、社員番号"
+                className="mt-1 h-11 w-full"
+              />
+            </div>
+            <div>
+              <Label htmlFor="skill-map-department">部署</Label>
+              <Select
+                id="skill-map-department"
+                name="department"
+                defaultValue={filters.departmentId}
+                className="mt-1 h-11"
+              >
+                <option value="">すべて</option>
+                {departments.map((department) => (
+                  <option key={department.id} value={department.id}>
+                    {department.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="skill-map-category">カテゴリ</Label>
+              <Select
+                id="skill-map-category"
+                name="category"
+                defaultValue={filters.categoryId}
+                className="mt-1 h-11"
+              >
+                <option value="">すべて</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" className="min-h-11">絞り込む</Button>
+              {hasFilters ? (
+                <Link
+                  href="/skill-map"
+                  className="inline-flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-semibold text-[var(--muted-foreground)] hover:bg-[var(--surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                >
+                  リセット
+                </Link>
+              ) : (
+                <Button type="button" variant="ghost" className="min-h-11" disabled>
+                  リセット
+                </Button>
+              )}
+            </div>
+          </form>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="text-sm font-semibold text-[var(--foreground)]">
+              {summary.memberCount}人・{summary.skillCount}スキル
+            </span>
+            {hasFilters ? <Badge variant="primary">条件適用中</Badge> : null}
+          </div>
+        </CardContent>
+      </Card>
 
       <section
         aria-label="スキルマップ集計"
@@ -73,15 +169,17 @@ export default async function SkillMapPage() {
         <CardHeader>
           <CardTitle>メンバー × スキル</CardTitle>
           <CardDescription>
-            横にスクロールして各スキルを確認できます。未設定は「未設定」と表示します。
+            見出しを押すと並べ替えられます。横スクロール中も社員番号と氏名は固定されます。
           </CardDescription>
         </CardHeader>
         <CardContent>
           {matrix.rows.length === 0 || matrix.skills.length === 0 ? (
             <EmptyState
               icon={Grid3X3}
-              title="表示できるスキルマップがありません"
-              description="メンバーと有効なスキルが登録されると、ここに保有レベルが表示されます。"
+              title={hasFilters ? "条件に一致するデータがありません" : "表示できるスキルマップがありません"}
+              description={hasFilters
+                ? "検索条件を変更するか、リセットして一覧を確認してください。"
+                : "メンバーと有効なスキルが登録されると、ここに保有レベルが表示されます。"}
             />
           ) : (
             <SkillMapTable matrix={matrix} />
@@ -154,4 +252,8 @@ export default async function SkillMapPage() {
       </Card>
     </div>
   );
+}
+
+function getSingleParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
 }

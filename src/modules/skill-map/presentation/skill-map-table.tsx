@@ -2,14 +2,19 @@
 
 import {
   type ColumnDef,
+  type Header,
+  type SortingState,
   flexRender,
   getCoreRowModel,
+  getSortedRowModel,
   useReactTable
 } from "@tanstack/react-table";
-import { useMemo } from "react";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { useMemo, useState } from "react";
 
-import { Badge } from "@/shared/ui/badge";
 import { cn } from "@/shared/lib/utils";
+import { Badge } from "@/shared/ui/badge";
+import { getSkillLevelStyle } from "@/modules/skill-map/presentation/skill-level-style";
 
 type SkillMapMatrix = {
   skills: {
@@ -39,15 +44,8 @@ type SkillMapMatrix = {
 
 type SkillMapRow = SkillMapMatrix["rows"][number];
 
-const levelVariants = {
-  1: "neutral",
-  2: "primary",
-  3: "success",
-  4: "warning",
-  5: "danger"
-} as const;
-
 export function SkillMapTable({ matrix }: { matrix: SkillMapMatrix }) {
+  const [sorting, setSorting] = useState<SortingState>([]);
   const columns = useMemo<ColumnDef<SkillMapRow>[]>(
     () => [
       {
@@ -81,6 +79,9 @@ export function SkillMapTable({ matrix }: { matrix: SkillMapMatrix }) {
       },
       ...matrix.skills.map<ColumnDef<SkillMapRow>>((skill) => ({
         id: skill.id,
+        accessorFn: (row) =>
+          row.levels.find((item) => item.skillId === skill.id)?.level ?? undefined,
+        sortUndefined: "last",
         header: () => (
           <div className="w-32 whitespace-normal">
             <p className="break-words font-semibold text-[var(--foreground)]">
@@ -97,12 +98,15 @@ export function SkillMapTable({ matrix }: { matrix: SkillMapMatrix }) {
               ?.level ?? null;
 
           return level === null ? (
-            <Badge variant="neutral" aria-label={`${skill.name}は未設定`}>
-              未設定
-            </Badge>
+            <span
+              className="text-[var(--muted-foreground)]"
+              aria-label={`${skill.name}は未設定`}
+            >
+              —
+            </span>
           ) : (
             <Badge
-              variant={levelVariants[level as keyof typeof levelVariants] ?? "primary"}
+              style={getSkillLevelStyle(level) ?? undefined}
               aria-label={`${skill.name}はレベル${level}`}
               className="min-w-12 justify-center tabular-nums"
             >
@@ -120,63 +124,100 @@ export function SkillMapTable({ matrix }: { matrix: SkillMapMatrix }) {
   const table = useReactTable({
     data: matrix.rows,
     columns,
-    getCoreRowModel: getCoreRowModel()
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel()
   });
 
   return (
-    <div
-      className="overflow-x-auto border-t border-[var(--border)]"
-      tabIndex={0}
-      aria-label="メンバー別スキルマップ。横方向にスクロールできます"
-    >
-      <table className="min-w-max w-full text-sm">
-        <thead className="bg-[var(--surface-subtle)] text-left">
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
-              {headerGroup.headers.map((header, index) => (
-                <th
-                  key={header.id}
-                  scope="col"
-                  className={cn(
-                    "px-3 py-3 align-bottom font-medium text-[var(--muted-foreground)]",
-                    index === 0 &&
-                      "sticky left-0 z-20 w-28 min-w-28 max-w-28 bg-[var(--surface-subtle)]",
-                    index === 1 &&
-                      "sticky left-28 z-20 w-44 min-w-44 max-w-44 border-r border-[var(--border)] bg-[var(--surface-subtle)]"
-                  )}
-                >
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                </th>
-              ))}
-            </tr>
-          ))}
-        </thead>
-        <tbody className="divide-y divide-[var(--border)] bg-[var(--surface)]">
-          {table.getRowModel().rows.map((row) => (
-            <tr key={row.id} className="group hover:bg-[var(--surface-subtle)]">
-              {row.getVisibleCells().map((cell, index) => (
-                <td
-                  key={cell.id}
-                  className={cn(
-                    "px-3 py-3 align-middle",
-                    index === 0 &&
-                      "sticky left-0 z-10 bg-[var(--surface)] group-hover:bg-[var(--surface-subtle)]",
-                    index === 1 &&
-                      "sticky left-28 z-10 border-r border-[var(--border)] bg-[var(--surface)] group-hover:bg-[var(--surface-subtle)]"
-                  )}
-                >
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2" aria-label="スキルレベルの凡例">
+        <span className="text-xs font-medium text-[var(--muted-foreground)]">凡例</span>
+        {[1, 2, 3, 4, 5].map((level) => (
+          <Badge
+            key={level}
+            style={getSkillLevelStyle(level) ?? undefined}
+            className="min-w-12 justify-center tabular-nums"
+          >
+            Lv.{level}
+          </Badge>
+        ))}
+        <span className="text-xs text-[var(--muted-foreground)]">— 未設定</span>
+      </div>
+      <div
+        className="overflow-x-auto border-t border-[var(--border)]"
+        tabIndex={0}
+        aria-label="メンバー別スキルマップ。横方向にスクロールできます"
+      >
+        <table className="min-w-max w-full text-sm">
+          <thead className="bg-[var(--surface-subtle)] text-left">
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map((header, index) => (
+                  <th
+                    key={header.id}
+                    scope="col"
+                    aria-sort={getAriaSort(header)}
+                    className={cn(
+                      "px-3 py-3 align-bottom font-medium text-[var(--muted-foreground)]",
+                      index === 0 &&
+                        "sticky left-0 z-20 w-28 min-w-28 max-w-28 bg-[var(--surface-subtle)]",
+                      index === 1 &&
+                        "sticky left-28 z-20 w-44 min-w-44 max-w-44 border-r border-[var(--border)] bg-[var(--surface-subtle)]"
+                    )}
+                  >
+                    {header.isPlaceholder ? null : header.column.getCanSort() ? (
+                      <button
+                        type="button"
+                        onClick={header.column.getToggleSortingHandler()}
+                        className="flex min-h-11 w-full items-center gap-1 text-left font-inherit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                      >
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                        <SortIcon direction={header.column.getIsSorted()} />
+                      </button>
+                    ) : (
+                      flexRender(header.column.columnDef.header, header.getContext())
+                    )}
+                  </th>
+                ))}
+              </tr>
+            ))}
+          </thead>
+          <tbody className="divide-y divide-[var(--border)] bg-[var(--surface)]">
+            {table.getRowModel().rows.map((row) => (
+              <tr key={row.id} className="group hover:bg-[var(--surface-subtle)]">
+                {row.getVisibleCells().map((cell, index) => (
+                  <td
+                    key={cell.id}
+                    className={cn(
+                      "px-3 py-3 align-middle",
+                      index === 0 &&
+                        "sticky left-0 z-10 bg-[var(--surface)] group-hover:bg-[var(--surface-subtle)]",
+                      index === 1 &&
+                        "sticky left-28 z-10 border-r border-[var(--border)] bg-[var(--surface)] group-hover:bg-[var(--surface-subtle)]"
+                    )}
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
+}
+
+function SortIcon({ direction }: { direction: false | "asc" | "desc" }) {
+  const Icon = direction === "asc" ? ArrowUp : direction === "desc" ? ArrowDown : ArrowUpDown;
+
+  return <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />;
+}
+
+function getAriaSort(header: Header<SkillMapRow, unknown>) {
+  const direction = header.column.getIsSorted();
+
+  return direction === "asc" ? "ascending" : direction === "desc" ? "descending" : undefined;
 }

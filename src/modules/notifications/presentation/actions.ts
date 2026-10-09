@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import {
   findNotification,
+  markAllNotificationsRead,
   markNotificationRead
 } from "@/modules/notifications/application/notification-service";
 import { requirePasswordReadyMember } from "@/server/auth/authorization";
@@ -25,4 +26,14 @@ export async function confirmNotificationAction(formData: FormData): Promise<Act
     revalidatePath("/notifications");
     revalidatePath("/", "layout");
   }, "通知を確認しました。");
+}
+
+export async function markAllNotificationsReadAction(): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requirePasswordReadyMember();
+
+    await markAllNotificationsRead(session.user.memberId);
+    revalidatePath("/notifications");
+    revalidatePath("/", "layout");
+  }, "すべての通知を既読にしました。確認済みの通知は引き続き一覧で確認できます。");
 }
