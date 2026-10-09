@@ -31,7 +31,11 @@ test("メンバーのスキル申告をマネージャーが承認できる", as
     await level.fill("2");
     await expect(level).toHaveValue("2");
     await member.page.getByRole("button", { name: "一括申請", exact: true }).click();
-    // 申請成功後はフォームが再マウントされ成功メッセージが消えるため、申告履歴で結果を確認する。
+    await expect(
+      member.page.getByText(
+        "1件のスキルを申請しました。マネージャーの承認をお待ちください。"
+      )
+    ).toBeVisible();
 
     const pendingHistory = member.page.getByRole("group", {
       name: `${skillName}の申告履歴`
@@ -46,6 +50,8 @@ test("メンバーのスキル申告をマネージャーが承認できる", as
       });
       await expect(approval).toBeVisible();
       await approval.getByRole("button", { name: "承認", exact: true }).click();
+      await expect(manager.page.getByText("スキル申請を承認しました。"))
+        .toBeVisible();
       await expect(approval).toHaveCount(0);
     } finally {
       await manager.context.close();

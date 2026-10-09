@@ -1,6 +1,8 @@
-export class MemberUserLinkError extends Error {
+import { UserFacingError } from "@/shared/lib/user-facing-error";
+
+export class MemberUserLinkError extends UserFacingError {
   constructor() {
-    super("User with the same email is already linked to another member.");
+    super("同じメールアドレスのユーザーは、別のメンバーにすでに紐付いています。");
     this.name = "MemberUserLinkError";
   }
 }

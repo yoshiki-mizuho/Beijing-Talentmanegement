@@ -1,14 +1,16 @@
 "use client";
 
 import { ListPlus, Plus, Send, SlidersHorizontal, Trash2 } from "lucide-react";
-import { useActionState, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { createSkillAssessmentsAction } from "@/modules/members/presentation/actions";
+import { ActionForm } from "@/shared/ui/action-form";
 import { Button } from "@/shared/ui/button";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Select } from "@/shared/ui/select";
+import { SubmitButton } from "@/shared/ui/submit-button";
 
 type SkillOption = {
   id: string;
@@ -22,17 +24,9 @@ type AssessmentRow = {
   yearsOfExperience: string;
 };
 
-const initialState: Parameters<typeof createSkillAssessmentsAction>[0] = {
-  status: "idle"
-};
-
 export function SkillAssessmentBatchForm({ skills }: { skills: SkillOption[] }) {
   const [rows, setRows] = useState<AssessmentRow[]>([]);
   const [selectedSkillId, setSelectedSkillId] = useState(skills[0]?.id ?? "");
-  const [state, formAction, isPending] = useActionState(
-    createSkillAssessmentsAction,
-    initialState
-  );
   const selectedSkillIds = useMemo(
     () => new Set(rows.map((row) => row.skillId)),
     [rows]
@@ -76,7 +70,11 @@ export function SkillAssessmentBatchForm({ skills }: { skills: SkillOption[] }) 
   }));
 
   return (
-    <form action={formAction} className="space-y-5">
+    <ActionForm
+      action={createSkillAssessmentsAction}
+      className="space-y-5"
+      onSuccess={() => setRows([])}
+    >
       <input type="hidden" name="assessments" value={JSON.stringify(payload)} />
 
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
@@ -87,7 +85,7 @@ export function SkillAssessmentBatchForm({ skills }: { skills: SkillOption[] }) 
             value={selectedSkillId}
             onChange={(event) => setSelectedSkillId(event.target.value)}
             className="mt-1"
-            disabled={isPending || availableSkills.length === 0}
+            disabled={availableSkills.length === 0}
           >
             {availableSkills.length === 0 ? (
               <option value="">追加できるスキルはありません</option>
@@ -103,7 +101,7 @@ export function SkillAssessmentBatchForm({ skills }: { skills: SkillOption[] }) 
           type="button"
           variant="secondary"
           onClick={addSkill}
-          disabled={isPending || !selectedSkillId}
+          disabled={!selectedSkillId}
         >
           <Plus className="h-4 w-4" aria-hidden="true" />
           追加
@@ -129,7 +127,6 @@ export function SkillAssessmentBatchForm({ skills }: { skills: SkillOption[] }) 
               <fieldset
                 key={row.skillId}
                 className="grid gap-4 rounded-md border border-[var(--border)] bg-[var(--surface)] p-4 lg:grid-cols-[minmax(180px,0.8fr)_minmax(240px,1.4fr)_160px_auto] lg:items-end"
-                disabled={isPending}
               >
                 <legend className="sr-only">{skill?.name}の申請内容</legend>
                 <div className="min-w-0">
@@ -204,27 +201,16 @@ export function SkillAssessmentBatchForm({ skills }: { skills: SkillOption[] }) 
         </div>
       )}
 
-      {state.message ? (
-        <p
-          role={state.status === "error" ? "alert" : "status"}
-          className={state.status === "error"
-            ? "text-sm font-medium text-[var(--destructive)]"
-            : "text-sm font-medium text-[var(--success)]"}
-        >
-          {state.message}
-        </p>
-      ) : null}
-
       <div className="flex flex-col gap-3 border-t border-[var(--border)] pt-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
           <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
           {rows.length}件をまとめて申請
         </p>
-        <Button type="submit" disabled={isPending || rows.length === 0}>
+        <SubmitButton pendingLabel="一括申請中…" disabled={rows.length === 0}>
           <Send className="h-4 w-4" aria-hidden="true" />
-          {isPending ? "一括申請中..." : "一括申請"}
-        </Button>
+          一括申請
+        </SubmitButton>
       </div>
-    </form>
+    </ActionForm>
   );
 }

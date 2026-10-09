@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 
 import type { ChangePasswordInput } from "@/modules/auth/domain/password-schema";
 import { prisma } from "@/server/db/prisma";
+import { UserFacingError } from "@/shared/lib/user-facing-error";
 
 export async function changePassword(input: ChangePasswordInput) {
   const user = await prisma.user.findUnique({
@@ -13,7 +14,9 @@ export async function changePassword(input: ChangePasswordInput) {
   });
 
   if (!user?.passwordHash) {
-    throw new Error("Current password is not set.");
+    throw new UserFacingError(
+      "現在のパスワードが設定されていません。管理者にお問い合わせください。"
+    );
   }
 
   const isCurrentPasswordValid = await bcrypt.compare(
@@ -22,7 +25,7 @@ export async function changePassword(input: ChangePasswordInput) {
   );
 
   if (!isCurrentPasswordValid) {
-    throw new Error("Current password is invalid.");
+    throw new UserFacingError("現在のパスワードが正しくありません。");
   }
 
   const passwordHash = await bcrypt.hash(input.newPassword, 12);

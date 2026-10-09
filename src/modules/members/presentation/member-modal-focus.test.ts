@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getTrappedFocusIndex } from "@/modules/members/presentation/member-modal-focus";
+import { getTrappedFocusIndex } from "@/shared/ui/dialog";
 
 describe("getTrappedFocusIndex", () => {
   it("wraps forward focus from the last control to the first", () => {

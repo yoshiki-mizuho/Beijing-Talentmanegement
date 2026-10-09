@@ -11,6 +11,7 @@ import {
 } from "@/modules/skills/domain/skill-errors";
 import type { SkillSearchInput } from "@/modules/skills/domain/skill-search";
 import { prisma } from "@/server/db/prisma";
+import { UserFacingError } from "@/shared/lib/user-facing-error";
 
 const SKILL_CODE_PREFIX = "SKILL-";
 
@@ -42,7 +43,7 @@ export async function deleteSkillCategory(id: string) {
   });
 
   if (skillCount > 0) {
-    throw new Error("Cannot delete a category that still has skills.");
+    throw new UserFacingError("スキルが残っているカテゴリは削除できません。");
   }
 
   return prisma.skillCategory.delete({

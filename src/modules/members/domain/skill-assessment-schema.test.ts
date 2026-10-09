@@ -75,7 +75,8 @@ describe("skill assessment schemas", () => {
           assessmentId: "assessment-1",
           reviewerMemberId: "manager-1",
           status,
-          correctedLevel: 4
+          correctedLevel: 4,
+          managerComment: "確認しました。"
         }).status
       ).toBe(status);
     }
@@ -89,5 +90,15 @@ describe("skill assessment schemas", () => {
         status: SkillSelfAssessmentStatus.CORRECTED
       })
     ).toThrow();
+  });
+
+  it("requires a reason when rejecting an assessment", () => {
+    expect(() =>
+      skillAssessmentReviewInputSchema.parse({
+        assessmentId: "assessment-1",
+        reviewerMemberId: "manager-1",
+        status: SkillSelfAssessmentStatus.REJECTED
+      })
+    ).toThrow("差し戻す場合は理由を入力してください。");
   });
 });

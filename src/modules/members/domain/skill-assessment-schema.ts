@@ -47,8 +47,19 @@ export const skillAssessmentReviewInputSchema = z.object({
   ) {
     context.addIssue({
       code: "custom",
-      message: "correctedLevel is required when status is CORRECTED.",
+      message: "補正承認する場合は補正レベルを選択してください。",
       path: ["correctedLevel"]
+    });
+  }
+
+  if (
+    input.status === SkillSelfAssessmentStatus.REJECTED &&
+    !input.managerComment?.trim()
+  ) {
+    context.addIssue({
+      code: "custom",
+      message: "差し戻す場合は理由を入力してください。",
+      path: ["managerComment"]
     });
   }
 });
