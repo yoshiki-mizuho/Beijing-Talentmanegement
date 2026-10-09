@@ -125,6 +125,7 @@ demo_db_seed:
         exit 1
       fi
     - export DATABASE_URL="${NEON_DIRECT_URL}?sslmode=require&connect_timeout=30"
+    - npm run prisma:generate
     - npm run db:seed
 
 include:
