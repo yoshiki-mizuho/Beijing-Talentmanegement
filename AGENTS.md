@@ -40,6 +40,5 @@
 
 ## 現在の状態
 
-- Phase0〜Phase4は完了済み。
-- Phase4.5（Vercel + Neonデモ公開）が進行中。手順は `docs/DEMO_DEPLOYMENT.md` を確認する。
+- Phase0〜Phase4.5は完了済み。デモ環境の運用手順は `docs/DEMO_DEPLOYMENT.md` を確認する。
 - 次の主対象はPhase5（CSV・監査・権限強化）。
