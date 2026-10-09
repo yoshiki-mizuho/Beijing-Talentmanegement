@@ -74,6 +74,8 @@ pushまたはMR作成前には、最新のremote変更を取り込むために `
 
 GitLab CIのクレジットを節約するため、パイプラインはMerge Request時のみ実行します。`main` へのpushやブランチへのpushではパイプラインを作成しません。
 
+例外として、NeonデモDBのmigrationおよびseedは、GitLabのWeb画面から`main`を対象に変数`DEMO_DB_TASK`を指定して起動する手動パイプラインで実行します。このパイプラインではMerge Request向けのチェックは実行しません。
+
 Merge Request時の必須チェックは以下とします。
 
 - `lint`
