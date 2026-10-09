@@ -46,7 +46,10 @@ test("メンバーのスキル申告をマネージャーが承認できる", as
         name: `Member User / ${skillName}の承認`
       });
       await expect(approval).toBeVisible();
-      await approval.getByRole("button", { name: "承認", exact: true }).click();
+      await approval.getByRole("button", {
+        name: `Member Userの${skillName}を承認`,
+        exact: true
+      }).click();
       await expect(manager.page.getByText("スキル申請を承認しました。"))
         .toBeVisible();
       await expect(approval).toHaveCount(0);

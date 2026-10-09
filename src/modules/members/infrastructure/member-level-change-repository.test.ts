@@ -31,7 +31,7 @@ const transactionClient = {
   },
   skillLevelChange: { create: mocks.levelChangeCreate },
   skillSelfAssessment: {
-    findUniqueOrThrow: mocks.assessmentFind,
+    findUnique: mocks.assessmentFind,
     update: mocks.assessmentUpdate
   },
   notification: { create: mocks.notificationCreate }

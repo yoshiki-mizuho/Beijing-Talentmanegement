@@ -4,6 +4,7 @@ import { MemberStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 import {
+  approveSkillAssessments,
   createSkillAssessment,
   createSkillAssessments,
   createMember,
@@ -141,6 +142,29 @@ export async function reviewSkillAssessmentAction(formData: FormData): Promise<A
     if (status === "CORRECTED") return "スキル申請を補正して承認しました。";
     return "スキル申請を承認しました。";
   });
+}
+
+export async function approveSkillAssessmentsAction(
+  formData: FormData
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requireRoles(managerOrAdmin);
+    const assessmentIds = JSON.parse(
+      getString(formData, "assessmentIds")
+    ) as unknown;
+    const approved = await approveSkillAssessments({
+      assessmentIds,
+      reviewerMemberId: session.user.memberId,
+      reviewerRole: session.user.role
+    });
+
+    revalidatePath("/my/skills");
+    revalidatePath("/skill-approvals");
+    revalidatePath("/notifications");
+    revalidatePath("/members");
+    revalidatePath("/roles");
+    return approved.length;
+  }, (count) => `${count}件の申請を承認しました。`);
 }
 
 export async function updateMemberManagerAction(

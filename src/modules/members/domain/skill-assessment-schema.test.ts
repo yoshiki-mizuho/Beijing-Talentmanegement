@@ -2,6 +2,7 @@ import { SkillSelfAssessmentStatus } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 
 import {
+  skillAssessmentApprovalBatchInputSchema,
   skillAssessmentBatchInputSchema,
   skillAssessmentInputSchema,
   skillAssessmentReviewInputSchema
@@ -100,8 +101,47 @@ describe("skill assessment schemas", () => {
         assessmentId: "assessment-1",
         reviewerMemberId: "manager-1",
         reviewerRole: "MANAGER",
-        status: SkillSelfAssessmentStatus.REJECTED
+        status: SkillSelfAssessmentStatus.REJECTED,
+        managerComment: "   "
       })
     ).toThrow("差し戻す場合は理由を入力してください。");
+  });
+
+  it("accepts 1 to 50 unique assessment ids for batch approval", () => {
+    expect(
+      skillAssessmentApprovalBatchInputSchema.parse({
+        assessmentIds: ["assessment-1", "assessment-2"],
+        reviewerMemberId: "manager-1",
+        reviewerRole: "MANAGER"
+      }).assessmentIds
+    ).toEqual(["assessment-1", "assessment-2"]);
+  });
+
+  it("rejects empty, oversized, and duplicate batch approvals", () => {
+    const baseInput = {
+      reviewerMemberId: "manager-1",
+      reviewerRole: "MANAGER"
+    } as const;
+
+    expect(() =>
+      skillAssessmentApprovalBatchInputSchema.parse({
+        ...baseInput,
+        assessmentIds: []
+      })
+    ).toThrow("承認する申請を1件以上選択してください。");
+
+    expect(() =>
+      skillAssessmentApprovalBatchInputSchema.parse({
+        ...baseInput,
+        assessmentIds: Array.from({ length: 51 }, (_, index) => `assessment-${index}`)
+      })
+    ).toThrow("一度に承認できる申請は50件までです。");
+
+    expect(() =>
+      skillAssessmentApprovalBatchInputSchema.parse({
+        ...baseInput,
+        assessmentIds: ["assessment-1", "assessment-1"]
+      })
+    ).toThrow("同じ申請を重複して承認することはできません。");
   });
 });

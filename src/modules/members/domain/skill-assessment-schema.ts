@@ -65,8 +65,33 @@ export const skillAssessmentReviewInputSchema = z.object({
   }
 });
 
+export const skillAssessmentApprovalBatchInputSchema = z.object({
+  assessmentIds: z
+    .array(z.string().min(1))
+    .min(1, "承認する申請を1件以上選択してください。")
+    .max(50, "一度に承認できる申請は50件までです。"),
+  reviewerMemberId: z.string().min(1),
+  reviewerRole: z.enum(["ADMIN", "MANAGER"])
+}).superRefine((input, context) => {
+  const seenAssessmentIds = new Set<string>();
+
+  input.assessmentIds.forEach((assessmentId, index) => {
+    if (seenAssessmentIds.has(assessmentId)) {
+      context.addIssue({
+        code: "custom",
+        message: "同じ申請を重複して承認することはできません。",
+        path: ["assessmentIds", index]
+      });
+    }
+    seenAssessmentIds.add(assessmentId);
+  });
+});
+
 export type SkillAssessmentInput = z.infer<typeof skillAssessmentInputSchema>;
 export type SkillAssessmentBatchInput = z.infer<typeof skillAssessmentBatchInputSchema>;
 export type SkillAssessmentReviewInput = z.infer<
   typeof skillAssessmentReviewInputSchema
+>;
+export type SkillAssessmentApprovalBatchInput = z.infer<
+  typeof skillAssessmentApprovalBatchInputSchema
 >;
