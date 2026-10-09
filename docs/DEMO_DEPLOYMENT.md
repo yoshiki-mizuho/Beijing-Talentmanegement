@@ -4,12 +4,27 @@
 
 この環境はPhase 4完了後の限定共有デモです。操作データは永続保持しますが、実在人物の個人情報、顧客情報、機密情報は登録しません。Phase 7で予定するDocker + Kubernetes本番構成とは別環境です。
 
+個人プロジェクトとしてVercel Hobbyプランで運用します。社内利用の可能性が出た場合は、社内サーバへデプロイします。
+
+## リポジトリ構成
+
+- 開発の正はGitLab（`chosen-ryoiki-group/beijing/talentmanagement`）。Issue、MR、CIはすべてGitLabで行う。
+- GitLabグループのPrivateリポジトリはVercel Hobbyから接続できないため、個人のGitHub Privateリポジトリ（`yoshiki-mizuho/Beijing-Talentmanegement`）へミラーし、VercelはGitHubに接続する。
+- ミラーはGitLabのpush mirrorで自動同期し、protected branch（`main`）だけを対象にする。作業ブランチはGitHubへ送らない。
+- ローカルの`origin`はGitLabだけに設定し、GitHubへ直接pushしない。
+
 ## 初回構築
 
 1. Neonでデモ専用project、database、roleを作成し、主な利用者に近いリージョンを選ぶ。
 2. Neonの接続画面からpool接続文字列とdirect接続文字列を取得する。秘密値はリポジトリ、Issue、MRへ記載しない。
-3. GitLabリポジトリをVercelへImportし、Framework PresetをNext.js、Production Branchを`main`にする。GitHubなどのミラーには接続しない。GitLabでのmergeはミラーへ自動反映されず、Productionが更新されないため。
-4. VercelのProductionだけに次の環境変数を登録する。PreviewとDevelopmentには登録しない。
+3. GitHubのミラー先リポジトリがPrivateであることを確認する。GitLabの **Settings → Repository → Mirroring repositories** で次のpush mirrorを設定する。
+   - Git repository URL: `https://github.com/yoshiki-mizuho/Beijing-Talentmanegement.git`
+   - Mirror direction: Push
+   - Authentication: Username / Password。usernameにはGitHubのユーザー名を、passwordにはGitHubのfine-grained personal access tokenを指定する。tokenの対象はミラー先リポジトリだけにし、権限はContentsのRead and writeだけを付ける。有効期限を設定し、期限切れになる前に更新する。
+   - Mirror only protected branches: 有効
+   - 設定後に **Update now** を実行し、GitHubの`main`がGitLabの`main`と同じcommitになることを確認する。
+4. GitHubのミラー先リポジトリをVercelへImportし、Framework PresetをNext.js、Production Branchを`main`にする。
+5. VercelのProductionだけに次の環境変数を登録する。PreviewとDevelopmentには登録しない。
 
 | 変数 | 設定値 |
 | --- | --- |
@@ -18,8 +33,8 @@
 | `AUTH_URL` | Vercelで確定したProduction URL |
 | `AUTH_TRUST_HOST` | `true` |
 
-5. VercelのPreview環境でBranch Trackingを無効化する。`vercel.json`でも`"**": false`と`"main": true`により`main`以外を無効化していることを確認する。`"main": true`だけでは、指定していないブランチは有効のままになる。また`*`は`/`を含むブランチ名（`feature/xxx`等）に一致しないため`**`を使う。Previewには`DATABASE_URL`を登録しないため、Previewがビルドされると`prisma generate`が`PrismaConfigEnvError`で失敗する。
-6. 作業端末でdirect接続を一時的に`DATABASE_URL`へ設定し、次を順番に実行する。
+6. VercelのPreview環境でBranch Trackingを無効化する。`vercel.json`でも`"**": false`と`"main": true`により`main`以外を無効化していることを確認する。`"main": true`だけでは、指定していないブランチは有効のままになる。また`*`は`/`を含むブランチ名（`feature/xxx`等）に一致しないため`**`を使う。Previewには`DATABASE_URL`を登録しないため、Previewがビルドされると`prisma generate`が`PrismaConfigEnvError`で失敗する。
+7. 作業端末でdirect接続を一時的に`DATABASE_URL`へ設定し、次を順番に実行する。
 
 ```powershell
 $env:DATABASE_URL = "<Neon direct connection string>"
@@ -38,7 +53,7 @@ Remove-Item Env:DATABASE_URL, Env:DEMO_ADMIN_PASSWORD, Env:DEMO_MANAGER_PASSWORD
 1. MRで`lint`、`typecheck`、`test`、`build`、migration checkが成功していることを確認する。
 2. schema変更がある場合、Neonの復元ポイントまたは論理バックアップを確保する。
 3. direct接続を一時的に`DATABASE_URL`へ設定し、`npm exec prisma migrate deploy`を手動実行する。Vercel buildからmigrationやseedは実行しない。
-4. レビュー済みMRを`main`へマージし、Vercel Productionの自動デプロイ完了を確認する。
+4. レビュー済みMRを`main`へマージする。GitLabのpush mirrorでGitHubの`main`が更新され、Vercel Productionの自動デプロイが完了したことを確認する。同期されない場合は、GitLabのMirroring repositoriesでエラーとtokenの期限を確認し、**Update now** を実行する。
 5. `/login`、dashboard、members、skills、skill-mapを3ロールで確認し、CRUD後に再ログインして変更が保持されることを確認する。
 6. Vercel FunctionログでDB接続、認証URL、Prisma初期化エラーがないことを確認する。
 
