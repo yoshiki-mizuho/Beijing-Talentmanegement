@@ -8,7 +8,7 @@ export type SetupProgressInput = {
 export type SetupProgressItem = {
   id: "password" | "first-assessment" | "five-skills" | "target-role";
   label: string;
-  href: "/account/password" | "/my/skills" | "/dashboard";
+  href: "/account/password" | "/my/skills" | "/dashboard#target-role";
   completed: boolean;
 };
 
@@ -41,7 +41,7 @@ const setupItemDefinitions = [
   {
     id: "target-role",
     label: "目標ロールを設定",
-    href: "/dashboard",
+    href: "/dashboard#target-role",
     isCompleted: (input: SetupProgressInput) => input.hasTargetRole
   }
 ] as const;

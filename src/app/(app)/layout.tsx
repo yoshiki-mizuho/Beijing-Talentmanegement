@@ -9,6 +9,8 @@ import {
   countPendingSkillAssessments,
   hasMemberTargetRole
 } from "@/modules/members/application/member-service";
+import { getLevelUpCelebrations } from "@/modules/growth/application/growth-service";
+import { LevelUpCelebrationDialog } from "@/modules/growth/presentation/level-up-celebration-dialog";
 import { countUnreadNotifications } from "@/modules/notifications/application/notification-service";
 import { getCurrentSession } from "@/server/auth/session";
 import {
@@ -42,7 +44,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     assessmentCount,
     pendingApprovalCount,
     approvedSkillCount,
-    hasTargetRole
+    hasTargetRole,
+    levelUpCelebrations
   ] = await Promise.all([
     session.user.memberId
       ? countUnreadNotifications(session.user.memberId)
@@ -61,7 +64,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       : Promise.resolve(0),
     session.user.memberId
       ? hasMemberTargetRole(session.user.memberId)
-      : Promise.resolve(false)
+      : Promise.resolve(false),
+    session.user.memberId && !session.user.passwordChangeRequired
+      ? getLevelUpCelebrations(session.user.memberId)
+      : Promise.resolve([])
   ]);
   const setupProgress = session.user.memberId
     ? buildSetupProgress({
@@ -83,6 +89,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       setupProgress={setupProgress}
     >
       {children}
+      <LevelUpCelebrationDialog celebrations={levelUpCelebrations} />
     </AppShell>
   );
 }

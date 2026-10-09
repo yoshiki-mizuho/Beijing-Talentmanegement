@@ -58,7 +58,7 @@ describe("buildSetupProgress", () => {
     expect(progress.items.find((item) => item.id === "target-role")).toEqual({
       id: "target-role",
       label: "目標ロールを設定",
-      href: "/dashboard",
+      href: "/dashboard#target-role",
       completed: false
     });
   });
