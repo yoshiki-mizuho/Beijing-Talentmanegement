@@ -11,26 +11,23 @@ test("メンバーのスキル申告をマネージャーが承認できる", as
   try {
     await member.page.goto("/my/skills");
 
-    const skillSelect = member.page.getByLabel("追加するスキル");
-    await expect(skillSelect).toBeEnabled();
-    await skillSelect.selectOption({ index: 0 });
-    const selectedOptionText = await skillSelect.evaluate(
-      (element: HTMLSelectElement) => element.selectedOptions[0]?.textContent?.trim() ?? ""
-    );
-    const skillName = selectedOptionText.split(" / ").at(-1)?.trim();
+    const selectableLevel = member.page.locator(
+      '[role="group"][aria-label$="のレベル"] button:not(:disabled)[aria-pressed="false"]'
+    ).first();
+    await expect(selectableLevel).toBeVisible();
+    const levelGroup = selectableLevel.locator("..");
+    const groupName = await levelGroup.getAttribute("aria-label");
+    const skillName = groupName?.replace(/のレベル$/, "");
 
     if (!skillName) {
       throw new Error("申告可能なスキル名を取得できませんでした。");
     }
 
-    await member.page.getByRole("button", { name: "追加", exact: true }).click();
-    const application = member.page.getByRole("group", {
-      name: `${skillName}の申請内容`
-    });
-    const level = application.getByRole("slider", { name: "申告レベル" });
-    await level.fill("2");
-    await expect(level).toHaveValue("2");
-    await member.page.getByRole("button", { name: "一括申請", exact: true }).click();
+    await selectableLevel.click();
+    await expect(
+      member.page.getByText("1件のスキルを変更しています", { exact: true })
+    ).toBeVisible();
+    await member.page.getByRole("button", { name: "1件を申請", exact: true }).click();
     await expect(
       member.page.getByText(
         "1件のスキルを申請しました。マネージャーの承認をお待ちください。"

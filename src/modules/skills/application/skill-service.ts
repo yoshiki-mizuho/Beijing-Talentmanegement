@@ -13,6 +13,14 @@ export function listSkillCategories() {
   return skillRepository.listSkillCategories();
 }
 
+export function listSkillLevels() {
+  return skillRepository.listSkillLevels();
+}
+
+export function listActiveSkillsForSkillSheet() {
+  return skillRepository.listActiveSkillsForSkillSheet();
+}
+
 export function createSkillCategory(input: unknown) {
   return skillRepository.createSkillCategory(skillCategoryInputSchema.parse(input));
 }
