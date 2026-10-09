@@ -96,7 +96,7 @@ export default async function MembersPage() {
         </CardHeader>
         <CardContent>
           <p className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-            初期パスワードは password です。初回ログイン後にパスワード変更が必要です。
+            初回ログイン後にパスワード変更が必要です。初期認証情報は安全な経路で本人へ共有してください。
           </p>
           <form action={createMemberAction} className="grid gap-3 md:grid-cols-3">
             <Field label="社員番号" name="employeeNo" required />

@@ -4,6 +4,8 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, AuthRole, MemberStatus } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
+import { readDemoSeedPasswords } from "./seed-config";
+
 const prisma = new PrismaClient({
   adapter: new PrismaPg({
     connectionString: process.env.DATABASE_URL
@@ -39,7 +41,12 @@ const skillLevels = [
 ];
 
 async function main() {
-  const passwordHash = await bcrypt.hash("password", 12);
+  const demoPasswords = readDemoSeedPasswords();
+  const passwordHashes = {
+    ADMIN: await bcrypt.hash(demoPasswords.admin, 12),
+    MANAGER: await bcrypt.hash(demoPasswords.manager, 12),
+    MEMBER: await bcrypt.hash(demoPasswords.member, 12)
+  } satisfies Record<AuthRole, string>;
 
   await prisma.$transaction(async (tx) => {
     for (const level of skillLevels) {
@@ -128,7 +135,7 @@ async function main() {
         data: {
           email: memberInput.email,
           name: memberInput.name,
-          passwordHash,
+          passwordHash: passwordHashes[memberInput.role],
           role: memberInput.role,
           memberId: member.id
         }
