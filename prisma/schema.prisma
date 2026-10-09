@@ -25,11 +25,26 @@ enum SkillSelfAssessmentStatus {
   REJECTED
 }
 
+enum SkillLevelChangeSource {
+  ASSESSMENT_APPROVED
+  ASSESSMENT_CORRECTED
+  DIRECT_EDIT
+  BACKFILL
+}
+
+enum LevelUpReactionType {
+  CONGRATS
+  AMAZING
+  WANT_TO_LEARN
+}
+
 enum NotificationType {
   SKILL_ASSESSMENT_REQUESTED
   SKILL_ASSESSMENT_APPROVED
   SKILL_ASSESSMENT_CORRECTED
   SKILL_ASSESSMENT_REJECTED
+  LEVEL_UP_COMMENTED
+  CHEER_RECEIVED
 }
 
 enum NotificationStatus {
@@ -128,6 +143,11 @@ model Member {
   status                MemberStatus          @default(ACTIVE)
   jobTitle              String?
   profile               String?
+  managerId             String?
+  manager               Member?               @relation("MemberManager", fields: [managerId], references: [id])
+  reports               Member[]               @relation("MemberManager")
+  targetRoleId          String?
+  targetRole            Role?                  @relation("MemberTargetRole", fields: [targetRoleId], references: [id])
   users                 User[]
   memberSkills          MemberSkill[]         @relation("MemberSkills")
   approvedMemberSkills  MemberSkill[]         @relation("ApprovedMemberSkills")
@@ -135,11 +155,22 @@ model Member {
   reviewedAssessments   SkillSelfAssessment[] @relation("AssessmentReviewer")
   notifications         Notification[]        @relation("NotificationRecipient")
   auditLogs             AuditLog[]            @relation("AuditActor")
+  skillLevelChanges     SkillLevelChange[]     @relation("SkillLevelChangeMember")
+  changedSkillLevels    SkillLevelChange[]     @relation("SkillLevelChangeActor")
+  levelUpReactions      LevelUpReaction[]      @relation("LevelUpReactionMember")
+  levelUpComments       LevelUpComment[]       @relation("LevelUpCommentAuthor")
+  sentCheers            Cheer[]                @relation("CheerSender")
+  receivedCheers        Cheer[]                @relation("CheerRecipient")
+  mentoredCheers        Cheer[]                @relation("CheerMentor")
+  managedOneOnOneNotes  OneOnOneNote[]         @relation("OneOnOneNoteManager")
+  receivedOneOnOneNotes OneOnOneNote[]         @relation("OneOnOneNoteMember")
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
 
   @@index([departmentId])
   @@index([status])
+  @@index([managerId])
+  @@index([targetRoleId])
 }
 
 model SkillCategory {
@@ -162,6 +193,8 @@ model Skill {
   memberSkills    MemberSkill[]
   selfAssessments SkillSelfAssessment[]
   roleRequirements RoleRequirement[]
+  skillLevelChanges SkillLevelChange[]
+  cheers            Cheer[]
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
 
@@ -214,6 +247,7 @@ model SkillSelfAssessment {
   reviewedByMember   Member?                   @relation("AssessmentReviewer", fields: [reviewedByMemberId], references: [id])
   reviewedAt         DateTime?
   notifications      Notification[]
+  skillLevelChanges  SkillLevelChange[]
   createdAt          DateTime                  @default(now())
   updatedAt          DateTime                  @updatedAt
 
@@ -231,6 +265,10 @@ model Notification {
   status                NotificationStatus    @default(UNREAD)
   skillSelfAssessmentId String?
   skillSelfAssessment   SkillSelfAssessment?  @relation(fields: [skillSelfAssessmentId], references: [id])
+  skillLevelChangeId    String?
+  skillLevelChange      SkillLevelChange?      @relation(fields: [skillLevelChangeId], references: [id])
+  cheerId               String?
+  cheer                 Cheer?                 @relation(fields: [cheerId], references: [id])
   title                 String
   body                  String?
   createdAt             DateTime              @default(now())
@@ -238,6 +276,8 @@ model Notification {
 
   @@index([recipientMemberId, status])
   @@index([skillSelfAssessmentId])
+  @@index([skillLevelChangeId])
+  @@index([cheerId])
 }
 
 model Role {
@@ -246,8 +286,90 @@ model Role {
   description      String?
   isActive         Boolean           @default(true)
   roleRequirements RoleRequirement[]
+  targetMembers    Member[]          @relation("MemberTargetRole")
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
+}
+
+model SkillLevelChange {
+  id                    String                 @id @default(cuid())
+  memberId              String
+  member                Member                 @relation("SkillLevelChangeMember", fields: [memberId], references: [id])
+  skillId               String
+  skill                  Skill                  @relation(fields: [skillId], references: [id])
+  fromLevel             Int?
+  toLevel               Int
+  source                SkillLevelChangeSource
+  skillSelfAssessmentId String?
+  skillSelfAssessment   SkillSelfAssessment?   @relation(fields: [skillSelfAssessmentId], references: [id])
+  changedByMemberId     String?
+  changedByMember       Member?                @relation("SkillLevelChangeActor", fields: [changedByMemberId], references: [id])
+  changedAt             DateTime               @default(now())
+  createdAt             DateTime               @default(now())
+  reactions             LevelUpReaction[]
+  comments              LevelUpComment[]
+  notifications         Notification[]
+
+  @@index([memberId, changedAt])
+  @@index([changedAt])
+  @@index([skillSelfAssessmentId])
+}
+
+model LevelUpReaction {
+  id            String              @id @default(cuid())
+  levelChangeId String
+  levelChange   SkillLevelChange    @relation(fields: [levelChangeId], references: [id], onDelete: Cascade)
+  memberId      String
+  member        Member              @relation("LevelUpReactionMember", fields: [memberId], references: [id])
+  type          LevelUpReactionType
+  createdAt     DateTime            @default(now())
+
+  @@unique([levelChangeId, memberId, type])
+  @@index([memberId])
+}
+
+model LevelUpComment {
+  id             String           @id @default(cuid())
+  levelChangeId  String
+  levelChange    SkillLevelChange @relation(fields: [levelChangeId], references: [id], onDelete: Cascade)
+  authorMemberId String
+  authorMember   Member           @relation("LevelUpCommentAuthor", fields: [authorMemberId], references: [id])
+  body           String
+  createdAt      DateTime         @default(now())
+
+  @@index([levelChangeId, createdAt])
+}
+
+model Cheer {
+  id             String         @id @default(cuid())
+  fromMemberId   String
+  fromMember     Member         @relation("CheerSender", fields: [fromMemberId], references: [id])
+  toMemberId     String
+  toMember       Member         @relation("CheerRecipient", fields: [toMemberId], references: [id])
+  message        String
+  targetSkillId  String?
+  targetSkill    Skill?         @relation(fields: [targetSkillId], references: [id])
+  mentorMemberId String?
+  mentorMember   Member?        @relation("CheerMentor", fields: [mentorMemberId], references: [id])
+  createdAt      DateTime       @default(now())
+  notifications  Notification[]
+
+  @@index([toMemberId, createdAt])
+  @@index([mentorMemberId])
+}
+
+model OneOnOneNote {
+  id              String   @id @default(cuid())
+  managerMemberId String
+  managerMember   Member   @relation("OneOnOneNoteManager", fields: [managerMemberId], references: [id])
+  memberId        String
+  member          Member   @relation("OneOnOneNoteMember", fields: [memberId], references: [id])
+  body            String
+  discussedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([managerMemberId, memberId])
 }
 
 model RoleRequirement {

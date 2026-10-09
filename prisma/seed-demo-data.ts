@@ -322,6 +322,56 @@ export const demoSkillAssessments = [
   }
 ] as const;
 
+export const demoManagerAssignments = [
+  { employeeNo: "TM0003", managerEmployeeNo: "TM0002" },
+  { employeeNo: "TM0101", managerEmployeeNo: "TM0002" },
+  { employeeNo: "TM0102", managerEmployeeNo: "TM0002" },
+  { employeeNo: "TM0109", managerEmployeeNo: "TM0002" },
+  { employeeNo: "TM0103", managerEmployeeNo: "TM0001" },
+  { employeeNo: "TM0104", managerEmployeeNo: "TM0001" },
+  { employeeNo: "TM0105", managerEmployeeNo: "TM0001" },
+  { employeeNo: "TM0106", managerEmployeeNo: "TM0001" },
+  { employeeNo: "TM0107", managerEmployeeNo: "TM0001" },
+  { employeeNo: "TM0108", managerEmployeeNo: "TM0001" },
+  { employeeNo: "TM0110", managerEmployeeNo: "TM0001" },
+  { employeeNo: "TM0111", managerEmployeeNo: "TM0001" }
+] as const;
+
+export const demoTargetRoleAssignments = [
+  { employeeNo: "TM0003", roleName: "フロントエンドエンジニア" },
+  { employeeNo: "TM0101", roleName: "フロントエンドエンジニア" },
+  { employeeNo: "TM0103", roleName: "クラウドエンジニア" },
+  { employeeNo: "TM0104", roleName: "クラウドエンジニア" },
+  { employeeNo: "TM0107", roleName: "プロジェクトリーダー" }
+] as const;
+
+export const demoSkillLevelChanges = [
+  { employeeNo: "TM0003", skillCode: "DEMO-SKILL-001", fromLevel: 2, toLevel: 3, changedAt: "2026-08-08T09:00:00.000Z" },
+  { employeeNo: "TM0003", skillCode: "DEMO-SKILL-002", fromLevel: 2, toLevel: 3, changedAt: "2026-09-08T09:00:00.000Z" },
+  { employeeNo: "TM0003", skillCode: "DEMO-SKILL-005", fromLevel: 2, toLevel: 3, changedAt: "2026-10-08T09:00:00.000Z" },
+  { employeeNo: "TM0101", skillCode: "DEMO-SKILL-005", fromLevel: 4, toLevel: 5, changedAt: "2026-10-02T09:00:00.000Z" },
+  { employeeNo: "TM0102", skillCode: "DEMO-SKILL-004", fromLevel: 3, toLevel: 4, changedAt: "2026-08-25T09:00:00.000Z" },
+  { employeeNo: "TM0103", skillCode: "DEMO-SKILL-009", fromLevel: 4, toLevel: 5, changedAt: "2026-10-04T09:00:00.000Z" },
+  { employeeNo: "TM0104", skillCode: "DEMO-SKILL-010", fromLevel: 3, toLevel: 4, changedAt: "2026-09-12T09:00:00.000Z" },
+  { employeeNo: "TM0105", skillCode: "DEMO-SKILL-005", fromLevel: 3, toLevel: 4, changedAt: "2026-09-20T09:00:00.000Z" },
+  { employeeNo: "TM0106", skillCode: "DEMO-SKILL-017", fromLevel: 2, toLevel: 3, changedAt: "2026-08-28T09:00:00.000Z" },
+  { employeeNo: "TM0107", skillCode: "DEMO-SKILL-016", fromLevel: 4, toLevel: 5, changedAt: "2026-10-01T09:00:00.000Z" },
+  { employeeNo: "TM0108", skillCode: "DEMO-SKILL-016", fromLevel: 2, toLevel: 3, changedAt: "2026-09-16T09:00:00.000Z" },
+  { employeeNo: "TM0109", skillCode: "DEMO-SKILL-004", fromLevel: 2, toLevel: 3, changedAt: "2026-08-14T09:00:00.000Z" },
+  { employeeNo: "TM0110", skillCode: "DEMO-SKILL-013", fromLevel: 3, toLevel: 4, changedAt: "2026-10-06T09:00:00.000Z" }
+] as const;
+
+export const demoLevelUpReactions = [
+  { levelChangeEmployeeNo: "TM0003", skillCode: "DEMO-SKILL-005", memberEmployeeNo: "TM0002", type: "CONGRATS" },
+  { levelChangeEmployeeNo: "TM0003", skillCode: "DEMO-SKILL-005", memberEmployeeNo: "TM0001", type: "AMAZING" },
+  { levelChangeEmployeeNo: "TM0101", skillCode: "DEMO-SKILL-005", memberEmployeeNo: "TM0003", type: "WANT_TO_LEARN" }
+] as const;
+
+export const demoLevelUpComments = [
+  { levelChangeEmployeeNo: "TM0003", skillCode: "DEMO-SKILL-005", authorEmployeeNo: "TM0002", body: "着実な成長ですね。次の挑戦も応援しています！" },
+  { levelChangeEmployeeNo: "TM0101", skillCode: "DEMO-SKILL-005", authorEmployeeNo: "TM0001", body: "Lv.5到達おめでとうございます！" }
+] as const;
+
 export function buildSkillAssessmentRequestNotificationBody(
   memberName: string,
   skillName: string,

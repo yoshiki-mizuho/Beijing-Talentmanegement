@@ -2,13 +2,22 @@ import {
   AuthRole,
   NotificationType,
   Prisma,
+  SkillLevelChangeSource,
   SkillSelfAssessmentStatus,
 } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 import { INITIAL_PASSWORD } from "@/modules/auth/domain/password-schema";
-import type { MemberInput, MemberSkillInput } from "@/modules/members/domain/member-schema";
+import { createsManagerCycle } from "@/modules/members/domain/member-manager-policy";
+import type {
+  MemberInput,
+  MemberManagerInput,
+  MemberSkillInput,
+  MemberTargetRoleInput
+} from "@/modules/members/domain/member-schema";
 import type { MemberSearchInput } from "@/modules/members/domain/member-search";
+import { canReviewSkillAssessment } from "@/modules/members/domain/skill-assessment-policy";
+import { shouldRecordSkillLevelChange } from "@/modules/members/domain/skill-level-change-policy";
 import { assertUserCanLinkToMember } from "@/modules/members/domain/member-user-policy";
 import type {
   SkillAssessmentBatchInput,
@@ -27,6 +36,17 @@ export async function listDepartments() {
   return prisma.department.findMany({
     where: { isActive: true },
     orderBy: { name: "asc" }
+  });
+}
+
+export async function listManagerCandidates() {
+  return prisma.member.findMany({
+    where: {
+      status: "ACTIVE",
+      users: { some: { role: { in: [AuthRole.ADMIN, AuthRole.MANAGER] } } }
+    },
+    select: { id: true, name: true, employeeNo: true },
+    orderBy: { employeeNo: "asc" }
   });
 }
 
@@ -64,6 +84,8 @@ export async function listMembers(input?: MemberSearchInput) {
     where: buildMemberSearchWhere(input),
     include: {
       department: true,
+      manager: { select: { id: true, name: true } },
+      targetRole: { select: { id: true, name: true, isActive: true } },
       memberSkills: {
         include: {
           skill: {
@@ -175,23 +197,50 @@ export async function deactivateMember(id: string) {
 }
 
 export async function upsertMemberSkill(input: MemberSkillInput) {
-  return prisma.memberSkill.upsert({
-    where: {
-      memberId_skillId: {
-        memberId: input.memberId,
-        skillId: input.skillId
+  return prisma.$transaction(async (tx) => {
+    const current = await tx.memberSkill.findUnique({
+      where: {
+        memberId_skillId: {
+          memberId: input.memberId,
+          skillId: input.skillId
+        }
       }
-    },
-    update: {
-      level: input.level,
-      lastAssessedAt: new Date()
-    },
-    create: {
-      memberId: input.memberId,
-      skillId: input.skillId,
-      level: input.level,
-      lastAssessedAt: new Date()
+    });
+    const changedAt = new Date();
+    const memberSkill = await tx.memberSkill.upsert({
+      where: {
+        memberId_skillId: {
+          memberId: input.memberId,
+          skillId: input.skillId
+        }
+      },
+      update: {
+        level: input.level,
+        lastAssessedAt: changedAt
+      },
+      create: {
+        memberId: input.memberId,
+        skillId: input.skillId,
+        level: input.level,
+        lastAssessedAt: changedAt
+      }
+    });
+
+    if (shouldRecordSkillLevelChange(current?.level ?? null, input.level)) {
+      await tx.skillLevelChange.create({
+        data: {
+          memberId: input.memberId,
+          skillId: input.skillId,
+          fromLevel: current?.level ?? null,
+          toLevel: input.level,
+          source: SkillLevelChangeSource.DIRECT_EDIT,
+          changedByMemberId: input.changedByMemberId,
+          changedAt
+        }
+      });
     }
+
+    return memberSkill;
   });
 }
 
@@ -221,9 +270,31 @@ export async function listMemberSkillAssessments(memberId: string) {
   });
 }
 
-export async function listPendingSkillAssessments() {
+function pendingSkillAssessmentWhere(
+  reviewerRole: AuthRole,
+  reviewerMemberId: string
+): Prisma.SkillSelfAssessmentWhereInput {
+  return {
+    status: SkillSelfAssessmentStatus.PENDING,
+    ...(reviewerRole === AuthRole.ADMIN
+      ? {}
+      : {
+          member: {
+            OR: [
+              { managerId: reviewerMemberId },
+              { managerId: null }
+            ]
+          }
+        })
+  };
+}
+
+export async function listPendingSkillAssessments(
+  reviewerRole: AuthRole,
+  reviewerMemberId: string
+) {
   return prisma.skillSelfAssessment.findMany({
-    where: { status: SkillSelfAssessmentStatus.PENDING },
+    where: pendingSkillAssessmentWhere(reviewerRole, reviewerMemberId),
     include: {
       member: {
         include: {
@@ -238,6 +309,31 @@ export async function listPendingSkillAssessments() {
     },
     orderBy: { createdAt: "asc" }
   });
+}
+
+export function countPendingSkillAssessments(
+  reviewerRole: AuthRole,
+  reviewerMemberId: string
+) {
+  return prisma.skillSelfAssessment.count({
+    where: pendingSkillAssessmentWhere(reviewerRole, reviewerMemberId)
+  });
+}
+
+export function countMemberSkillAssessments(memberId: string) {
+  return prisma.skillSelfAssessment.count({ where: { memberId } });
+}
+
+export function countMemberSkills(memberId: string) {
+  return prisma.memberSkill.count({ where: { memberId } });
+}
+
+export async function hasMemberTargetRole(memberId: string) {
+  const member = await prisma.member.findUnique({
+    where: { id: memberId },
+    select: { targetRoleId: true }
+  });
+  return Boolean(member?.targetRoleId);
 }
 
 export async function createSkillAssessment(input: SkillAssessmentInput) {
@@ -256,11 +352,11 @@ export async function createSkillAssessment(input: SkillAssessmentInput) {
 export async function createSkillAssessments(input: SkillAssessmentBatchInput) {
   return prisma.$transaction(async (tx) => {
     const skillIds = input.assessments.map((assessment) => assessment.skillId);
-    const [member, skills, pendingAssessments, reviewerMembers] = await Promise.all([
-      tx.member.findUniqueOrThrow({
-        where: { id: input.memberId },
-        select: { name: true }
-      }),
+    const member = await tx.member.findUniqueOrThrow({
+      where: { id: input.memberId },
+      select: { name: true, managerId: true }
+    });
+    const [skills, pendingAssessments, reviewerMembers] = await Promise.all([
       tx.skill.findMany({
         where: { id: { in: skillIds }, isActive: true },
         select: { id: true, name: true }
@@ -274,10 +370,18 @@ export async function createSkillAssessments(input: SkillAssessmentBatchInput) {
         select: { skillId: true }
       }),
       tx.user.findMany({
-        where: {
-          role: { in: ["ADMIN", "MANAGER"] },
-          memberId: { not: null }
-        },
+        where: member.managerId
+          ? {
+              OR: [
+                { role: AuthRole.ADMIN },
+                { memberId: member.managerId }
+              ],
+              memberId: { not: null }
+            }
+          : {
+              role: { in: [AuthRole.ADMIN, AuthRole.MANAGER] },
+              memberId: { not: null }
+            },
         select: { memberId: true }
       })
     ]);
@@ -307,10 +411,15 @@ export async function createSkillAssessments(input: SkillAssessmentBatchInput) {
       }));
     }
 
+    const reviewerMemberIds = [
+      ...new Set(
+        reviewerMembers
+          .map((reviewer) => reviewer.memberId)
+          .filter((memberId): memberId is string => Boolean(memberId))
+      )
+    ];
     const notifications = assessments.flatMap((assessment) =>
-      reviewerMembers
-        .map((reviewer) => reviewer.memberId)
-        .filter((memberId): memberId is string => Boolean(memberId))
+      reviewerMemberIds
         .map((recipientMemberId) => ({
           recipientMemberId,
           type: NotificationType.SKILL_ASSESSMENT_REQUESTED,
@@ -342,12 +451,29 @@ export async function reviewSkillAssessment(input: SkillAssessmentReviewInput) {
       throw new UserFacingError("承認待ちのスキル申請のみ確認できます。");
     }
 
+    if (!canReviewSkillAssessment({
+      reviewerRole: input.reviewerRole,
+      reviewerMemberId: input.reviewerMemberId,
+      applicantManagerId: assessment.member.managerId
+    })) {
+      throw new UserFacingError("この申請を確認する権限がありません。");
+    }
+
     const approvedLevel =
       input.status === SkillSelfAssessmentStatus.CORRECTED
         ? input.correctedLevel
         : assessment.requestedLevel;
 
+    const reviewedAt = new Date();
     if (input.status !== SkillSelfAssessmentStatus.REJECTED && approvedLevel) {
+      const currentMemberSkill = await tx.memberSkill.findUnique({
+        where: {
+          memberId_skillId: {
+            memberId: assessment.memberId,
+            skillId: assessment.skillId
+          }
+        }
+      });
       await tx.memberSkill.upsert({
         where: {
           memberId_skillId: {
@@ -359,8 +485,8 @@ export async function reviewSkillAssessment(input: SkillAssessmentReviewInput) {
           level: approvedLevel,
           yearsOfExperience: assessment.yearsOfExperience,
           approvedByMemberId: input.reviewerMemberId,
-          approvedAt: new Date(),
-          lastAssessedAt: new Date()
+          approvedAt: reviewedAt,
+          lastAssessedAt: reviewedAt
         },
         create: {
           memberId: assessment.memberId,
@@ -368,20 +494,35 @@ export async function reviewSkillAssessment(input: SkillAssessmentReviewInput) {
           level: approvedLevel,
           yearsOfExperience: assessment.yearsOfExperience,
           approvedByMemberId: input.reviewerMemberId,
-          approvedAt: new Date(),
-          lastAssessedAt: new Date()
+          approvedAt: reviewedAt,
+          lastAssessedAt: reviewedAt
         }
       });
+      if (shouldRecordSkillLevelChange(currentMemberSkill?.level ?? null, approvedLevel)) {
+        await tx.skillLevelChange.create({
+          data: {
+            memberId: assessment.memberId,
+            skillId: assessment.skillId,
+            fromLevel: currentMemberSkill?.level ?? null,
+            toLevel: approvedLevel,
+            source: input.status === SkillSelfAssessmentStatus.CORRECTED
+              ? SkillLevelChangeSource.ASSESSMENT_CORRECTED
+              : SkillLevelChangeSource.ASSESSMENT_APPROVED,
+            skillSelfAssessmentId: assessment.id,
+            changedByMemberId: input.reviewerMemberId,
+            changedAt: reviewedAt
+          }
+        });
+      }
     }
 
     const reviewedAssessment = await tx.skillSelfAssessment.update({
       where: { id: input.assessmentId },
       data: {
-        requestedLevel: approvedLevel ?? assessment.requestedLevel,
         status: input.status,
         managerComment: input.managerComment,
         reviewedByMemberId: input.reviewerMemberId,
-        reviewedAt: new Date()
+        reviewedAt
       }
     });
     const notificationType =
@@ -391,16 +532,69 @@ export async function reviewSkillAssessment(input: SkillAssessmentReviewInput) {
           ? NotificationType.SKILL_ASSESSMENT_CORRECTED
           : NotificationType.SKILL_ASSESSMENT_REJECTED;
 
+    const resultBody = input.status === SkillSelfAssessmentStatus.APPROVED
+      ? `${assessment.skill.name} Lv.${assessment.requestedLevel} の申告が承認されました。`
+      : input.status === SkillSelfAssessmentStatus.CORRECTED
+        ? `${assessment.skill.name} の申告が Lv${approvedLevel} に補正して承認されました。`
+        : `${assessment.skill.name} の申告が差し戻されました。`;
+
     await tx.notification.create({
       data: {
         recipientMemberId: assessment.memberId,
         type: notificationType,
         skillSelfAssessmentId: assessment.id,
         title: "スキル申告の承認結果",
-        body: `${assessment.skill.name} の申告は ${input.status} になりました。`
+        body: resultBody
       }
     });
 
     return reviewedAssessment;
+  });
+}
+
+export async function updateMemberManager(input: MemberManagerInput) {
+  return prisma.$transaction(async (tx) => {
+    await tx.member.findUniqueOrThrow({ where: { id: input.memberId } });
+    if (input.managerId) {
+      const manager = await tx.member.findFirst({
+        where: {
+          id: input.managerId,
+          status: "ACTIVE",
+          users: {
+            some: { role: { in: [AuthRole.ADMIN, AuthRole.MANAGER] } }
+          }
+        },
+        select: { id: true }
+      });
+      if (!manager) {
+        throw new UserFacingError("上司には在籍中のマネージャーまたは管理者を指定してください。");
+      }
+    }
+    const assignments = await tx.member.findMany({
+      select: { id: true, managerId: true }
+    });
+    if (createsManagerCycle(input.memberId, input.managerId, assignments)) {
+      throw new UserFacingError("自分自身または循環する上司関係は設定できません。");
+    }
+    return tx.member.update({
+      where: { id: input.memberId },
+      data: { managerId: input.managerId }
+    });
+  });
+}
+
+export async function updateMemberTargetRole(input: MemberTargetRoleInput) {
+  if (input.targetRoleId) {
+    const role = await prisma.role.findFirst({
+      where: { id: input.targetRoleId, isActive: true },
+      select: { id: true }
+    });
+    if (!role) {
+      throw new UserFacingError("目標ロールには有効なロールを指定してください。");
+    }
+  }
+  return prisma.member.update({
+    where: { id: input.memberId },
+    data: { targetRoleId: input.targetRoleId }
   });
 }

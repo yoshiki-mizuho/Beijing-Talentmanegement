@@ -11,6 +11,10 @@ export type MemberRow = {
     id: string;
     name: string;
   };
+  managerId: string | null;
+  manager: { id: string; name: string } | null;
+  targetRoleId: string | null;
+  targetRole: { id: string; name: string; isActive: boolean } | null;
   memberSkills: {
     id: string;
     skillId: string;
@@ -23,6 +27,17 @@ export type MemberRow = {
       };
     };
   }[];
+};
+
+export type ManagerOption = {
+  id: string;
+  employeeNo: string;
+  name: string;
+};
+
+export type TargetRoleOption = {
+  id: string;
+  name: string;
 };
 
 export type DepartmentOption = {

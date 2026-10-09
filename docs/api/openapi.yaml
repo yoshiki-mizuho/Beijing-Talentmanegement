@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: TalentHub Core Business API
-  version: 0.3.0
+  version: 0.4.0
   description: Phase3 core business API contract for members, skills, roles, skill assessments, and notifications.
 servers:
   - url: /api
@@ -45,7 +45,7 @@ paths:
             enum: [ACTIVE, INACTIVE, LEAVE]
       responses:
         "200":
-          description: Members with departments and approved skills.
+          description: Members with departments, approved skills, managers, and target roles.
     post:
       summary: Create member
       tags: [Members]
@@ -99,7 +99,7 @@ paths:
               $ref: "#/components/schemas/MemberSkillInput"
       responses:
         "200":
-          description: Member skill upserted.
+          description: Member skill upserted and a level change recorded when the level changed.
   /skills:
     get:
       summary: List skills
@@ -222,7 +222,7 @@ paths:
       tags: [SkillAssessments]
       responses:
         "200":
-          description: Pending assessments for manager review.
+          description: All pending assessments for admins; direct-report and manager-unassigned assessments for managers.
     post:
       summary: Submit own skill assessment
       tags: [SkillAssessments]
@@ -234,7 +234,7 @@ paths:
               $ref: "#/components/schemas/SkillAssessmentInput"
       responses:
         "201":
-          description: Assessment submitted and reviewer notifications created.
+          description: Assessment submitted. The assigned manager and all admins are notified, or all managers and admins when no manager is assigned.
   /skill-assessments/{assessmentId}/review:
     post:
       summary: Review skill assessment
@@ -249,7 +249,9 @@ paths:
               $ref: "#/components/schemas/SkillAssessmentReviewInput"
       responses:
         "200":
-          description: Assessment reviewed, member skill updated when approved, and result notification created.
+          description: Assessment reviewed within the reviewer's scope, member skill and level-change history updated when the level changed, and a Japanese result notification created.
+        "403":
+          description: Manager is outside the applicant's review scope.
   /notifications:
     get:
       summary: List own notifications

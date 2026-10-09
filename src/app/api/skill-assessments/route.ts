@@ -13,7 +13,10 @@ export async function GET() {
     return auth.response;
   }
 
-  return NextResponse.json(await listPendingSkillAssessments());
+  return NextResponse.json(await listPendingSkillAssessments(
+    auth.session.user.role,
+    auth.session.user.memberId
+  ));
 }
 
 export async function POST(request: NextRequest) {

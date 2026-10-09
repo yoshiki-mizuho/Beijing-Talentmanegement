@@ -2,6 +2,7 @@ import { SkillSelfAssessmentStatus } from "@prisma/client";
 
 import { listPendingSkillAssessments } from "@/modules/members/application/member-service";
 import { reviewSkillAssessmentAction } from "@/modules/members/presentation/actions";
+import { managerOrAdmin, requirePageRoles } from "@/server/auth/authorization";
 import { ActionForm, ConfirmSubmitButton } from "@/shared/ui/action-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { FormField, SelectField } from "@/shared/ui/form-field";
@@ -13,7 +14,11 @@ export const dynamic = "force-dynamic";
 const skillLevels = [1, 2, 3, 4, 5] as const;
 
 export default async function SkillApprovalsPage() {
-  const assessments = await listPendingSkillAssessments();
+  const session = await requirePageRoles(managerOrAdmin);
+  const assessments = await listPendingSkillAssessments(
+    session.user.role,
+    session.user.memberId
+  );
 
   return (
     <div className="space-y-6">

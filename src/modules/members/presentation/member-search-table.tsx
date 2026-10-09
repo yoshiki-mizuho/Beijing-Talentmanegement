@@ -12,7 +12,14 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 
 import { buildMemberSearchParams, emptyMemberSearchFilters, hasMemberSearchFilters, type MemberSearchFilters } from "@/modules/members/presentation/member-search-filters";
 import { MemberDetailModal } from "@/modules/members/presentation/member-detail-modal";
-import type { DepartmentOption, MemberRow, RoleOption, SkillOption } from "@/modules/members/presentation/member-presentation-types";
+import type {
+  DepartmentOption,
+  ManagerOption,
+  MemberRow,
+  RoleOption,
+  SkillOption,
+  TargetRoleOption
+} from "@/modules/members/presentation/member-presentation-types";
 import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
@@ -27,7 +34,10 @@ export function MemberSearchTable(props: {
   departments: DepartmentOption[];
   skills: SkillOption[];
   roles: RoleOption[];
+  managerCandidates: ManagerOption[];
+  targetRoles: TargetRoleOption[];
   canDeactivateMembers: boolean;
+  canEditGrowthSettings: boolean;
 }) {
   return (
     <QueryProvider>
@@ -41,13 +51,19 @@ function MemberSearchTableInner({
   departments,
   skills,
   roles,
-  canDeactivateMembers
+  managerCandidates,
+  targetRoles,
+  canDeactivateMembers,
+  canEditGrowthSettings
 }: {
   initialMembers: MemberRow[];
   departments: DepartmentOption[];
   skills: SkillOption[];
   roles: RoleOption[];
+  managerCandidates: ManagerOption[];
+  targetRoles: TargetRoleOption[];
   canDeactivateMembers: boolean;
+  canEditGrowthSettings: boolean;
 }) {
   const [filters, setFilters] = useState<MemberSearchFilters>(emptyMemberSearchFilters);
   const [debouncedKeyword, setDebouncedKeyword] = useState(filters.q);
@@ -329,7 +345,10 @@ function MemberSearchTableInner({
           member={selectedMember}
           departments={departments}
           skills={skills}
+          managerCandidates={managerCandidates}
+          targetRoles={targetRoles}
           canDeactivateMembers={canDeactivateMembers}
+          canEditGrowthSettings={canEditGrowthSettings}
           onClose={closeMemberDetail}
         />
       ) : null}

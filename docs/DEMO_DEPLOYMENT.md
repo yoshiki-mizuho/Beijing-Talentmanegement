@@ -47,7 +47,7 @@
 7. VercelのPreview環境でBranch Trackingを無効化する。`vercel.json`でも`"**": false`と`"main": true`により`main`以外を無効化していることを確認する。`"main": true`だけでは、指定していないブランチは有効のままになる。また`*`は`/`を含むブランチ名（`feature/xxx`等）に一致しないため`**`を使う。Previewには`DATABASE_URL`を登録しないため、Previewがビルドされると`prisma generate`が`PrismaConfigEnvError`で失敗する。
 8. 社内ネットワークではPostgreSQLプロトコル（5432番）が遮断されるため、migrationとseedはGitLab CIの手動起動専用ジョブで実行する。GitLabの **Build → Pipelines → Run pipeline** を開き、branchに`main`、変数`DEMO_DB_TASK`に`migrate`または`migrate_and_seed`を指定してパイプラインを実行する。初回構築では`migrate_and_seed`を指定し、`demo_db_migrate`に続いて`demo_db_seed`が実行される。
 
-seedにより各機能を確認するための架空の部署、スキル、ロール、メンバー、申告、通知が投入される。再実行しても既存のデモデータやユーザーのパスワードは上書きせず、TM0003に申告が1件でもあれば申告と通知は追加しない。認証情報は限定された共有経路で利用者へ渡す。
+seedにより各機能を確認するための架空の部署、スキル、ロール、メンバー、申告、通知が投入される。再実行しても既存のデモデータやユーザーのパスワードは上書きせず、TM0003に申告が1件でもあれば申告と通知は追加しない。既存環境でレベル変更履歴がmigrationによる埋め戻しだけのデモメンバーは、定義済みスキルの埋め戻し履歴をデモ用の成長履歴へ置き換える。承認・直接編集による履歴があるメンバーには触れない。認証情報は限定された共有経路で利用者へ渡す。
 
 社外ネットワークなど5432番が利用できる環境では、代替手順として作業端末からdirect接続してもよい。
 

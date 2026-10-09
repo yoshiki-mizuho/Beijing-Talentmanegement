@@ -1,4 +1,11 @@
-import { memberInputSchema, memberSkillInputSchema } from "@/modules/members/domain/member-schema";
+import type { AuthRole } from "@prisma/client";
+
+import {
+  memberInputSchema,
+  memberManagerInputSchema,
+  memberSkillInputSchema,
+  memberTargetRoleInputSchema
+} from "@/modules/members/domain/member-schema";
 import {
   type MemberSearchInput,
   memberSearchSchema
@@ -12,6 +19,10 @@ import * as memberRepository from "@/modules/members/infrastructure/member-repos
 
 export function listDepartments() {
   return memberRepository.listDepartments();
+}
+
+export function listManagerCandidates() {
+  return memberRepository.listManagerCandidates();
 }
 
 export function listMembers(input?: MemberSearchInput) {
@@ -44,8 +55,36 @@ export function listMemberSkillAssessments(memberId: string) {
   return memberRepository.listMemberSkillAssessments(memberId);
 }
 
-export function listPendingSkillAssessments() {
-  return memberRepository.listPendingSkillAssessments();
+export function listPendingSkillAssessments(
+  reviewerRole: AuthRole,
+  reviewerMemberId: string
+) {
+  return memberRepository.listPendingSkillAssessments(
+    reviewerRole,
+    reviewerMemberId
+  );
+}
+
+export function countPendingSkillAssessments(
+  reviewerRole: AuthRole,
+  reviewerMemberId: string
+) {
+  return memberRepository.countPendingSkillAssessments(
+    reviewerRole,
+    reviewerMemberId
+  );
+}
+
+export function countMemberSkillAssessments(memberId: string) {
+  return memberRepository.countMemberSkillAssessments(memberId);
+}
+
+export function countMemberSkills(memberId: string) {
+  return memberRepository.countMemberSkills(memberId);
+}
+
+export function hasMemberTargetRole(memberId: string) {
+  return memberRepository.hasMemberTargetRole(memberId);
 }
 
 export function createSkillAssessment(input: unknown) {
@@ -60,5 +99,17 @@ export function createSkillAssessments(input: unknown) {
 export function reviewSkillAssessment(input: unknown) {
   return memberRepository.reviewSkillAssessment(
     skillAssessmentReviewInputSchema.parse(input)
+  );
+}
+
+export function updateMemberManager(input: unknown) {
+  return memberRepository.updateMemberManager(
+    memberManagerInputSchema.parse(input)
+  );
+}
+
+export function updateMemberTargetRole(input: unknown) {
+  return memberRepository.updateMemberTargetRole(
+    memberTargetRoleInputSchema.parse(input)
   );
 }

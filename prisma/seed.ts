@@ -5,8 +5,10 @@ import {
   Prisma,
   PrismaClient,
   AuthRole,
+  LevelUpReactionType,
   MemberStatus,
   NotificationType,
+  SkillLevelChangeSource,
   SkillSelfAssessmentStatus
 } from "@prisma/client";
 import bcrypt from "bcryptjs";
@@ -16,11 +18,16 @@ import {
   buildSkillAssessmentRequestNotificationBody,
   demoDepartments,
   demoMembers,
+  demoManagerAssignments,
   demoMemberSkills,
+  demoLevelUpComments,
+  demoLevelUpReactions,
   demoRoles,
+  demoSkillLevelChanges,
   demoSkillAssessments,
   demoSkillCategories,
   demoSkills,
+  demoTargetRoleAssignments,
   existingDemoMemberEmployeeNos
 } from "./seed-demo-data";
 
@@ -318,6 +325,35 @@ async function main() {
     const memberNamesByEmployeeNo = new Map(
       members.map((member) => [member.employeeNo, member.name])
     );
+
+    for (const assignment of demoManagerAssignments) {
+      await tx.member.updateMany({
+        where: {
+          id: requireId(memberIdsByEmployeeNo, assignment.employeeNo, "Member"),
+          managerId: null
+        },
+        data: {
+          managerId: requireId(
+            memberIdsByEmployeeNo,
+            assignment.managerEmployeeNo,
+            "Manager member"
+          )
+        }
+      });
+    }
+
+    for (const assignment of demoTargetRoleAssignments) {
+      await tx.member.updateMany({
+        where: {
+          id: requireId(memberIdsByEmployeeNo, assignment.employeeNo, "Member"),
+          targetRoleId: null
+        },
+        data: {
+          targetRoleId: requireId(roleIdsByName, assignment.roleName, "Role")
+        }
+      });
+    }
+
     const approvingMemberId = requireId(
       memberIdsByEmployeeNo,
       "TM0002",
@@ -356,6 +392,154 @@ async function main() {
       });
     }
 
+    const levelChangeEmployeeNos = [
+      ...new Set(demoSkillLevelChanges.map((change) => change.employeeNo))
+    ];
+    const membersWithDemoHistoryCreated = new Set<string>();
+    for (const employeeNo of levelChangeEmployeeNos) {
+      const memberId = requireId(memberIdsByEmployeeNo, employeeNo, "Member");
+      const existingNonBackfillLevelChange = await tx.skillLevelChange.findFirst({
+        where: {
+          memberId,
+          source: { not: SkillLevelChangeSource.BACKFILL }
+        },
+        select: { id: true }
+      });
+      if (existingNonBackfillLevelChange) {
+        continue;
+      }
+
+      const demoChanges = demoSkillLevelChanges.filter(
+        (candidate) => candidate.employeeNo === employeeNo
+      );
+      const demoSkillIds = demoChanges.map((change) =>
+        requireId(skillIdsByCode, change.skillCode, "Skill")
+      );
+      await tx.skillLevelChange.deleteMany({
+        where: {
+          memberId,
+          skillId: { in: demoSkillIds },
+          source: SkillLevelChangeSource.BACKFILL
+        }
+      });
+
+      const managerEmployeeNo = demoManagerAssignments.find(
+        (assignment) => assignment.employeeNo === employeeNo
+      )?.managerEmployeeNo;
+      if (!managerEmployeeNo) {
+        throw new Error(`Manager not found for demo level changes: ${employeeNo}`);
+      }
+      const changedByMemberId = requireId(
+        memberIdsByEmployeeNo,
+        managerEmployeeNo,
+        "Manager member"
+      );
+
+      for (const change of demoChanges) {
+        await tx.skillLevelChange.create({
+          data: {
+            memberId,
+            skillId: requireId(skillIdsByCode, change.skillCode, "Skill"),
+            fromLevel: change.fromLevel,
+            toLevel: change.toLevel,
+            source: SkillLevelChangeSource.ASSESSMENT_APPROVED,
+            changedByMemberId,
+            changedAt: new Date(change.changedAt)
+          }
+        });
+      }
+      membersWithDemoHistoryCreated.add(memberId);
+    }
+
+    for (const reaction of demoLevelUpReactions) {
+      const levelChangeMemberId = requireId(
+        memberIdsByEmployeeNo,
+        reaction.levelChangeEmployeeNo,
+        "Member"
+      );
+      if (!membersWithDemoHistoryCreated.has(levelChangeMemberId)) {
+        continue;
+      }
+      const levelChange = await tx.skillLevelChange.findFirst({
+        where: {
+          memberId: levelChangeMemberId,
+          skillId: requireId(skillIdsByCode, reaction.skillCode, "Skill")
+        },
+        orderBy: { changedAt: "desc" },
+        select: { id: true }
+      });
+      if (!levelChange) {
+        continue;
+      }
+      await tx.levelUpReaction.upsert({
+        where: {
+          levelChangeId_memberId_type: {
+            levelChangeId: levelChange.id,
+            memberId: requireId(
+              memberIdsByEmployeeNo,
+              reaction.memberEmployeeNo,
+              "Reaction member"
+            ),
+            type: reaction.type as LevelUpReactionType
+          }
+        },
+        update: {},
+        create: {
+          levelChangeId: levelChange.id,
+          memberId: requireId(
+            memberIdsByEmployeeNo,
+            reaction.memberEmployeeNo,
+            "Reaction member"
+          ),
+          type: reaction.type as LevelUpReactionType
+        }
+      });
+    }
+
+    for (const comment of demoLevelUpComments) {
+      const levelChangeMemberId = requireId(
+        memberIdsByEmployeeNo,
+        comment.levelChangeEmployeeNo,
+        "Member"
+      );
+      if (!membersWithDemoHistoryCreated.has(levelChangeMemberId)) {
+        continue;
+      }
+      const levelChange = await tx.skillLevelChange.findFirst({
+        where: {
+          memberId: levelChangeMemberId,
+          skillId: requireId(skillIdsByCode, comment.skillCode, "Skill")
+        },
+        orderBy: { changedAt: "desc" },
+        select: { id: true }
+      });
+      if (!levelChange) {
+        continue;
+      }
+      const authorMemberId = requireId(
+        memberIdsByEmployeeNo,
+        comment.authorEmployeeNo,
+        "Comment author"
+      );
+      const existingComment = await tx.levelUpComment.findFirst({
+        where: {
+          levelChangeId: levelChange.id,
+          authorMemberId,
+          body: comment.body
+        },
+        select: { id: true }
+      });
+      if (!existingComment) {
+        await tx.levelUpComment.create({
+          data: {
+            levelChangeId: levelChange.id,
+            authorMemberId,
+            body: comment.body
+          }
+        });
+      }
+    }
+
     const assessmentMemberId = requireId(
       memberIdsByEmployeeNo,
       "TM0003",
@@ -367,11 +551,23 @@ async function main() {
     });
 
     if (!existingAssessment) {
+      const assessmentMember = await tx.member.findUniqueOrThrow({
+        where: { id: assessmentMemberId },
+        select: { managerId: true }
+      });
       const reviewerUsers = await tx.user.findMany({
-        where: {
-          role: { in: [AuthRole.ADMIN, AuthRole.MANAGER] },
-          memberId: { not: null }
-        },
+        where: assessmentMember.managerId
+          ? {
+              OR: [
+                { role: AuthRole.ADMIN },
+                { memberId: assessmentMember.managerId }
+              ],
+              memberId: { not: null }
+            }
+          : {
+              role: { in: [AuthRole.ADMIN, AuthRole.MANAGER] },
+              memberId: { not: null }
+            },
         select: { memberId: true }
       });
       const recipientMemberIds = reviewerUsers
