@@ -74,6 +74,7 @@ describe("skill assessment schemas", () => {
         skillAssessmentReviewInputSchema.parse({
           assessmentId: "assessment-1",
           reviewerMemberId: "manager-1",
+          reviewerRole: "MANAGER",
           status,
           correctedLevel: 4,
           managerComment: "確認しました。"
@@ -87,6 +88,7 @@ describe("skill assessment schemas", () => {
       skillAssessmentReviewInputSchema.parse({
         assessmentId: "assessment-1",
         reviewerMemberId: "manager-1",
+        reviewerRole: "MANAGER",
         status: SkillSelfAssessmentStatus.CORRECTED
       })
     ).toThrow();
@@ -97,6 +99,7 @@ describe("skill assessment schemas", () => {
       skillAssessmentReviewInputSchema.parse({
         assessmentId: "assessment-1",
         reviewerMemberId: "manager-1",
+        reviewerRole: "MANAGER",
         status: SkillSelfAssessmentStatus.REJECTED
       })
     ).toThrow("差し戻す場合は理由を入力してください。");

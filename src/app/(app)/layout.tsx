@@ -4,9 +4,10 @@ import type { Route } from "next";
 import type { ReactNode } from "react";
 
 import {
-  listMemberSkillAssessments,
-  listMembers,
-  listPendingSkillAssessments
+  countMemberSkillAssessments,
+  countMemberSkills,
+  countPendingSkillAssessments,
+  hasMemberTargetRole
 } from "@/modules/members/application/member-service";
 import { countUnreadNotifications } from "@/modules/notifications/application/notification-service";
 import { getCurrentSession } from "@/server/auth/session";
@@ -38,29 +39,36 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     session.user.role === "ADMIN" || session.user.role === "MANAGER";
   const [
     unreadNotificationCount,
-    memberAssessments,
-    pendingAssessments,
-    members
+    assessmentCount,
+    pendingApprovalCount,
+    approvedSkillCount,
+    hasTargetRole
   ] = await Promise.all([
     session.user.memberId
       ? countUnreadNotifications(session.user.memberId)
       : Promise.resolve(0),
     session.user.memberId
-      ? listMemberSkillAssessments(session.user.memberId)
-      : Promise.resolve([]),
-    isManagementRole ? listPendingSkillAssessments() : Promise.resolve([]),
+      ? countMemberSkillAssessments(session.user.memberId)
+      : Promise.resolve(0),
+    isManagementRole
+      ? countPendingSkillAssessments(
+          session.user.role as "ADMIN" | "MANAGER",
+          session.user.memberId!
+        )
+      : Promise.resolve(0),
     session.user.memberId
-      ? listMembers(session.user.email ? { q: session.user.email } : undefined)
-      : Promise.resolve([])
+      ? countMemberSkills(session.user.memberId)
+      : Promise.resolve(0),
+    session.user.memberId
+      ? hasMemberTargetRole(session.user.memberId)
+      : Promise.resolve(false)
   ]);
-  const approvedSkillCount =
-    members.find((member) => member.id === session.user.memberId)?.memberSkills
-      .length ?? 0;
   const setupProgress = session.user.memberId
     ? buildSetupProgress({
         passwordChangeRequired: session.user.passwordChangeRequired,
-        assessmentCount: memberAssessments.length,
-        approvedSkillCount
+        assessmentCount,
+        approvedSkillCount,
+        hasTargetRole
       })
     : null;
 
@@ -71,7 +79,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         role: session.user.role
       }}
       unreadNotificationCount={unreadNotificationCount}
-      pendingApprovalCount={pendingAssessments.length}
+      pendingApprovalCount={pendingApprovalCount}
       setupProgress={setupProgress}
     >
       {children}

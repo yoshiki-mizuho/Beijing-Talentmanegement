@@ -16,5 +16,9 @@ export async function PUT(request: NextRequest, context: MemberSkillContext) {
 
   const { memberId } = await context.params;
   const body = await request.json();
-  return NextResponse.json(await setMemberSkillLevel({ ...body, memberId }));
+  return NextResponse.json(await setMemberSkillLevel({
+    ...body,
+    memberId,
+    changedByMemberId: auth.session.user.memberId
+  }));
 }

@@ -11,7 +11,9 @@ import {
   removeMemberSkill,
   reviewSkillAssessment,
   setMemberSkillLevel,
-  updateMember
+  updateMember,
+  updateMemberManager,
+  updateMemberTargetRole
 } from "@/modules/members/application/member-service";
 import {
   adminOnly,
@@ -60,11 +62,12 @@ export async function deactivateMemberAction(formData: FormData): Promise<Action
 
 export async function setMemberSkillLevelAction(formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    await requireRoles(managerOrAdmin);
+    const session = await requireRoles(managerOrAdmin);
     await setMemberSkillLevel({
       memberId: getString(formData, "memberId"),
       skillId: getString(formData, "skillId"),
-      level: getNumber(formData, "level")
+      level: getNumber(formData, "level"),
+      changedByMemberId: session.user.memberId
     });
     revalidatePath("/members");
     revalidatePath("/roles");
@@ -120,6 +123,7 @@ export async function reviewSkillAssessmentAction(formData: FormData): Promise<A
     await reviewSkillAssessment({
       assessmentId: getString(formData, "assessmentId"),
       reviewerMemberId: session.user.memberId,
+      reviewerRole: session.user.role,
       status,
       correctedLevel: getOptionalString(formData, "correctedLevel")
         ? getNumber(formData, "correctedLevel")
@@ -137,4 +141,32 @@ export async function reviewSkillAssessmentAction(formData: FormData): Promise<A
     if (status === "CORRECTED") return "スキル申請を補正して承認しました。";
     return "スキル申請を承認しました。";
   });
+}
+
+export async function updateMemberManagerAction(
+  formData: FormData
+): Promise<ActionResult> {
+  return runAction(async () => {
+    await requireRoles(adminOnly);
+    await updateMemberManager({
+      memberId: getString(formData, "memberId"),
+      managerId: getOptionalString(formData, "managerId") ?? null
+    });
+    revalidatePath("/members");
+    revalidatePath("/skill-approvals");
+  }, "上司を更新しました。");
+}
+
+export async function updateMemberTargetRoleAction(
+  formData: FormData
+): Promise<ActionResult> {
+  return runAction(async () => {
+    await requireRoles(adminOnly);
+    await updateMemberTargetRole({
+      memberId: getString(formData, "memberId"),
+      targetRoleId: getOptionalString(formData, "targetRoleId") ?? null
+    });
+    revalidatePath("/members");
+    revalidatePath("/dashboard");
+  }, "目標ロールを更新しました。");
 }

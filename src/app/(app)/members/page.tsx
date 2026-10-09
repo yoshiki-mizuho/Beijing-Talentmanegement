@@ -1,6 +1,10 @@
 import { MemberStatus } from "@prisma/client";
 
-import { listMembers, listDepartments } from "@/modules/members/application/member-service";
+import {
+  listDepartments,
+  listManagerCandidates,
+  listMembers
+} from "@/modules/members/application/member-service";
 import { MemberSearchTable } from "@/modules/members/presentation/member-search-table";
 import { createMemberAction } from "@/modules/members/presentation/actions";
 import { listSkills } from "@/modules/skills/application/skill-service";
@@ -17,11 +21,13 @@ export const dynamic = "force-dynamic";
 export default async function MembersPage() {
   const session = await requirePageRoles(managerOrAdmin);
   const canDeactivateMembers = session.user.role === "ADMIN";
-  const [members, departments, skills, roles] = await Promise.all([
+  const canEditGrowthSettings = session.user.role === "ADMIN";
+  const [members, departments, skills, roles, managerCandidates] = await Promise.all([
     listMembers(),
     listDepartments(),
     listSkills(),
-    listRoles()
+    listRoles(),
+    listManagerCandidates()
   ]);
   const activeSkills = skills.filter((skill) => skill.isActive);
   const memberRows = members.map((member) => ({
@@ -37,6 +43,10 @@ export default async function MembersPage() {
       id: member.department.id,
       name: member.department.name
     },
+    managerId: member.managerId,
+    manager: member.manager,
+    targetRoleId: member.targetRoleId,
+    targetRole: member.targetRole,
     memberSkills: member.memberSkills.map((memberSkill) => ({
       id: memberSkill.id,
       skillId: memberSkill.skillId,
@@ -69,6 +79,9 @@ export default async function MembersPage() {
       }
     }))
   }));
+  const targetRoleOptions = roles
+    .filter((role) => role.isActive)
+    .map((role) => ({ id: role.id, name: role.name }));
 
   return (
     <div className="space-y-6">
@@ -87,7 +100,10 @@ export default async function MembersPage() {
             departments={departments}
             skills={skillOptions}
             roles={roleOptions}
+            managerCandidates={managerCandidates}
+            targetRoles={targetRoleOptions}
             canDeactivateMembers={canDeactivateMembers}
+            canEditGrowthSettings={canEditGrowthSettings}
           />
         </CardContent>
       </Card>

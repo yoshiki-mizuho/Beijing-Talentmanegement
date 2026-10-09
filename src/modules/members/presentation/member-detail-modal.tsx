@@ -6,12 +6,16 @@ import {
   deactivateMemberAction,
   removeMemberSkillAction,
   setMemberSkillLevelAction,
-  updateMemberAction
+  updateMemberAction,
+  updateMemberManagerAction,
+  updateMemberTargetRoleAction
 } from "@/modules/members/presentation/actions";
 import type {
   DepartmentOption,
+  ManagerOption,
   MemberRow,
-  SkillOption
+  SkillOption,
+  TargetRoleOption
 } from "@/modules/members/presentation/member-presentation-types";
 import { ActionForm } from "@/shared/ui/action-form";
 import { Dialog } from "@/shared/ui/dialog";
@@ -25,13 +29,19 @@ export function MemberDetailModal({
   member,
   departments,
   skills,
+  managerCandidates,
+  targetRoles,
   canDeactivateMembers,
+  canEditGrowthSettings,
   onClose
 }: {
   member: MemberRow;
   departments: DepartmentOption[];
   skills: SkillOption[];
+  managerCandidates: ManagerOption[];
+  targetRoles: TargetRoleOption[];
   canDeactivateMembers: boolean;
+  canEditGrowthSettings: boolean;
   onClose: () => void;
 }) {
   const titleId = `member-detail-${member.id}`;
@@ -139,6 +149,65 @@ export function MemberDetailModal({
                 </SubmitButton>
               </ActionForm>
             ) : null}
+            {canEditGrowthSettings ? (
+              <>
+                <ActionForm
+                  action={updateMemberManagerAction}
+                  className="grid gap-3 md:col-span-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end"
+                >
+                  <input type="hidden" name="memberId" value={member.id} />
+                  <SelectField
+                    id={`member-manager-${member.id}`}
+                    label="上司"
+                    name="managerId"
+                    defaultValue={member.managerId ?? ""}
+                  >
+                    <option value="">未設定</option>
+                    {managerCandidates
+                      .filter((candidate) => candidate.id !== member.id)
+                      .map((candidate) => (
+                        <option key={candidate.id} value={candidate.id}>
+                          {candidate.employeeNo} / {candidate.name}
+                        </option>
+                      ))}
+                  </SelectField>
+                  <SubmitButton pendingLabel="更新中…">上司を更新</SubmitButton>
+                </ActionForm>
+                <ActionForm
+                  action={updateMemberTargetRoleAction}
+                  className="grid gap-3 md:col-span-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end"
+                >
+                  <input type="hidden" name="memberId" value={member.id} />
+                  <SelectField
+                    id={`member-target-role-${member.id}`}
+                    label="目標ロール"
+                    name="targetRoleId"
+                    defaultValue={member.targetRoleId ?? ""}
+                  >
+                    <option value="">未設定</option>
+                    {targetRoles.map((role) => (
+                      <option key={role.id} value={role.id}>{role.name}</option>
+                    ))}
+                  </SelectField>
+                  <SubmitButton pendingLabel="更新中…">目標ロールを更新</SubmitButton>
+                </ActionForm>
+              </>
+            ) : (
+              <dl className="grid gap-3 md:col-span-3 md:grid-cols-2">
+                <div className="rounded-md bg-[var(--surface-subtle)] px-3 py-2">
+                  <dt className="text-xs text-[var(--muted-foreground)]">上司</dt>
+                  <dd className="text-sm font-medium text-[var(--foreground)]">
+                    {member.manager?.name ?? "未設定"}
+                  </dd>
+                </div>
+                <div className="rounded-md bg-[var(--surface-subtle)] px-3 py-2">
+                  <dt className="text-xs text-[var(--muted-foreground)]">目標ロール</dt>
+                  <dd className="text-sm font-medium text-[var(--foreground)]">
+                    {member.targetRole?.name ?? "未設定"}
+                  </dd>
+                </div>
+              </dl>
+            )}
           </div>
         </section>
 

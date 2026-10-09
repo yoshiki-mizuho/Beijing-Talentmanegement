@@ -19,8 +19,21 @@ export const memberInputSchema = z.object({
 export const memberSkillInputSchema = z.object({
   memberId: z.string().min(1),
   skillId: z.string().min(1),
-  level: z.number().int().min(MIN_SKILL_LEVEL).max(MAX_SKILL_LEVEL)
+  level: z.number().int().min(MIN_SKILL_LEVEL).max(MAX_SKILL_LEVEL),
+  changedByMemberId: z.string().min(1)
+});
+
+export const memberManagerInputSchema = z.object({
+  memberId: z.string().min(1),
+  managerId: z.string().min(1).nullable()
+});
+
+export const memberTargetRoleInputSchema = z.object({
+  memberId: z.string().min(1),
+  targetRoleId: z.string().min(1).nullable()
 });
 
 export type MemberInput = z.infer<typeof memberInputSchema>;
 export type MemberSkillInput = z.infer<typeof memberSkillInputSchema>;
+export type MemberManagerInput = z.infer<typeof memberManagerInputSchema>;
+export type MemberTargetRoleInput = z.infer<typeof memberTargetRoleInputSchema>;

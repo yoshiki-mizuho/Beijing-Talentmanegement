@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import {
   demoMemberSkills,
+  demoManagerAssignments,
   demoMembers,
   demoRoles,
   demoSkillAssessments,
+  demoSkillLevelChanges,
   demoSkillCategories,
   demoSkills,
+  demoTargetRoleAssignments,
   existingDemoMemberEmployeeNos
 } from "./seed-demo-data";
 
@@ -82,5 +85,91 @@ describe("demo seed data", () => {
     expect(
       demoMembers.every((member) => member.email.endsWith("@example.com"))
     ).toBe(true);
+  });
+
+  it("assigns valid managers without self-reference or cycles", () => {
+    const employeeNos = new Set([
+      ...existingDemoMemberEmployeeNos,
+      ...demoMembers.map((member) => member.employeeNo)
+    ]);
+    const managerByEmployeeNo = new Map<string, string>(
+      demoManagerAssignments.map((assignment) => [
+        assignment.employeeNo,
+        assignment.managerEmployeeNo
+      ])
+    );
+
+    for (const assignment of demoManagerAssignments) {
+      expect(employeeNos.has(assignment.employeeNo)).toBe(true);
+      expect(employeeNos.has(assignment.managerEmployeeNo)).toBe(true);
+      expect(assignment.employeeNo).not.toBe(assignment.managerEmployeeNo);
+
+      const visited = new Set<string>();
+      let managerEmployeeNo: string | undefined = assignment.managerEmployeeNo;
+      while (managerEmployeeNo) {
+        expect(managerEmployeeNo).not.toBe(assignment.employeeNo);
+        if (visited.has(managerEmployeeNo)) break;
+        visited.add(managerEmployeeNo);
+        managerEmployeeNo = managerByEmployeeNo.get(managerEmployeeNo);
+      }
+    }
+  });
+
+  it("keeps some target roles unset and only references defined roles", () => {
+    const roleNames = new Set(demoRoles.map((role) => role.name));
+    const assignedEmployeeNos = new Set<string>(
+      demoTargetRoleAssignments.map((assignment) => assignment.employeeNo)
+    );
+
+    expect(demoTargetRoleAssignments.every((assignment) =>
+      roleNames.has(assignment.roleName)
+    )).toBe(true);
+    expect(demoMembers.some((member) =>
+      !assignedEmployeeNos.has(member.employeeNo)
+    )).toBe(true);
+  });
+
+  it("matches every skill history's latest level to MemberSkill", () => {
+    const memberSkillLevelByKey = new Map(
+      demoMemberSkills.map((memberSkill) => [
+        `${memberSkill.employeeNo}:${memberSkill.skillCode}`,
+        memberSkill.level
+      ])
+    );
+    const latestByKey = new Map<string, (typeof demoSkillLevelChanges)[number]>();
+
+    for (const change of demoSkillLevelChanges) {
+      const key = `${change.employeeNo}:${change.skillCode}`;
+      const current = latestByKey.get(key);
+      if (!current || current.changedAt < change.changedAt) {
+        latestByKey.set(key, change);
+      }
+    }
+
+    for (const [key, change] of latestByKey) {
+      expect(memberSkillLevelByKey.get(key)).toBe(change.toLevel);
+      expect(change.fromLevel).not.toBe(change.toLevel);
+    }
+  });
+
+  it("assigns a manager to every member with demo skill history", () => {
+    const managerEmployeeNoByMember = new Map(
+      demoManagerAssignments.map((assignment) => [
+        assignment.employeeNo,
+        assignment.managerEmployeeNo
+      ])
+    );
+
+    for (const change of demoSkillLevelChanges) {
+      expect(managerEmployeeNoByMember.get(change.employeeNo)).toBeTruthy();
+    }
+  });
+
+  it("gives Member User a level-up in three consecutive months", () => {
+    const months = demoSkillLevelChanges
+      .filter((change) => change.employeeNo === "TM0003")
+      .map((change) => change.changedAt.slice(0, 7));
+
+    expect(months).toEqual(["2026-08", "2026-09", "2026-10"]);
   });
 });

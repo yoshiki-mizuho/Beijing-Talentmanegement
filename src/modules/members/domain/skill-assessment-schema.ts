@@ -33,6 +33,7 @@ export const skillAssessmentBatchInputSchema = z.object({
 export const skillAssessmentReviewInputSchema = z.object({
   assessmentId: z.string().min(1),
   reviewerMemberId: z.string().min(1),
+  reviewerRole: z.enum(["ADMIN", "MANAGER"]),
   status: z.enum([
     SkillSelfAssessmentStatus.APPROVED,
     SkillSelfAssessmentStatus.CORRECTED,
