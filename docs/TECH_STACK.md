@@ -36,7 +36,7 @@ MVPでは、Next.js、TypeScript、Tailwind CSS、localStorage、Repositoryパ�
 | Database | PostgreSQL | メンバー、スキル、ロール、評価履歴、監査ログなどのリレーション管理に利用する |
 | ORM | Prisma | 型安全なDBアクセス、マイグレーション、スキーマ管理を行う |
 | Validation | Zod | フォーム、API入力、CSV importの検証を共通化する |
-| Authentication | Auth.js | 企業IdP連携を見据えて認証を抽象化する |
+| Authentication | NextAuth v4（Auth.js） | 企業IdP連携を見据えて認証を抽象化する。企業IdP確定時にBetter Auth等への移行を判断する |
 
 ### Frontend Utilities
 
@@ -87,9 +87,16 @@ MVPがNext.js App Routerで構成されているため、画面構成やルー�
 
 タレントマネジメントでは、メンバー、部署、スキル、ロール、案件、アサイン、評価履歴など、関係性のあるデータが中心になります。PostgreSQLを主DBとし、Prismaでスキーマ、マイグレーション、型安全なDBアクセスを管理します。
 
-### Auth.js
+### NextAuth v4（Auth.js）
 
-企業向けシステムでは認証方式が後から変わる可能性があります。Auth.jsを利用し、Microsoft Entra ID、Google、Keycloak、GitLabなどのIdP連携に備えます。初期権限は `admin`、`manager`、`member` 程度から開始し、将来的に部署や組織単位のRBACへ拡張できる形にします。
+企業向けシステムでは認証方式が後から変わる可能性があります。NextAuth v4（`next-auth` 4.x、Auth.jsの旧称）を利用し、Microsoft Entra ID、Google、Keycloak、GitLabなどのIdP連携に備えます。初期権限は `admin`、`manager`、`member` 程度から開始し、将来的に部署や組織単位のRBACへ拡張できる形にします。
+
+2025年9月以降、Auth.jsはBetter Authチームの管理下でセキュリティ修正のみのメンテナンスモードとなり、v5は2026年10月時点でもbetaのままです。そのため、v5へは移行せず、v4系の最新パッチを適用し続けます。
+
+- 認証ライブラリへの依存は `src/server/auth/` と `src/modules/auth/` に閉じ込め、画面、API、業務ロジックは `getCurrentSession()` などの自前の境界を経由してセッションを参照する。
+- RBACは自前のセッション型とロール判定の上に実装し、next-authの型や関数に直接依存させない。
+- 利用する企業IdPが確定した時点で、Better Authなどの活発に保守されているライブラリへの移行を判断する。判断材料は、IdP連携の要件、移行コスト（ユーザー、アカウント、セッションのテーブル構造とパスワードハッシュの扱い）、ライブラリの保守状況とする。
+- `next-auth` のセキュリティアドバイザリを確認し、v4系のパッチは速やかに適用する。
 
 ### Zod + React Hook Form
 

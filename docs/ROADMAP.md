@@ -275,7 +275,7 @@ MVPのAI評価機能を、本番運用しやすい形へ再設計します。
 - 期間見積もり。
 - 担当者。
 - GitLab Issue番号。
-- 利用する企業IdP。
+- 利用する企業IdP。確定した時点で、NextAuth v4から移行するかを判断する（`docs/TECH_STACK.md` の「NextAuth v4（Auth.js）」を参照）。
 - PostgreSQLの運用方式。
 - Kubernetes環境構成。
 - AI評価をPhase 6で同期処理として始めるか、初期から非同期ジョブ化するか。
