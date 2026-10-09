@@ -270,6 +270,76 @@ export async function listMemberSkillAssessments(memberId: string) {
   });
 }
 
+export async function getMemberSkillSheetContext(memberId: string) {
+  const [member, pendingAssessments, assessmentHistory] = await Promise.all([
+    prisma.member.findUniqueOrThrow({
+      where: { id: memberId },
+      select: {
+        memberSkills: {
+          select: {
+            skillId: true,
+            level: true
+          }
+        },
+        targetRole: {
+          select: {
+            name: true,
+            roleRequirements: {
+              select: {
+                skillId: true,
+                requiredLevel: true
+              }
+            }
+          }
+        }
+      }
+    }),
+    prisma.skillSelfAssessment.findMany({
+      where: {
+        memberId,
+        status: SkillSelfAssessmentStatus.PENDING
+      },
+      select: {
+        skillId: true,
+        requestedLevel: true
+      }
+    }),
+    prisma.skillSelfAssessment.findMany({
+      where: { memberId },
+      select: {
+        id: true,
+        requestedLevel: true,
+        status: true,
+        managerComment: true,
+        createdAt: true,
+        skill: {
+          select: {
+            name: true,
+            category: {
+              select: { name: true }
+            }
+          }
+        },
+        skillLevelChanges: {
+          select: { toLevel: true },
+          orderBy: { changedAt: "desc" },
+          take: 1
+        }
+      },
+      orderBy: { createdAt: "desc" },
+      take: 10
+    })
+  ]);
+
+  return {
+    memberSkills: member.memberSkills,
+    targetRoleName: member.targetRole?.name ?? null,
+    targetRequirements: member.targetRole?.roleRequirements ?? [],
+    pendingAssessments,
+    assessmentHistory
+  };
+}
+
 function pendingSkillAssessmentWhere(
   reviewerRole: AuthRole,
   reviewerMemberId: string

@@ -26,6 +26,30 @@ export async function listSkillCategories() {
   });
 }
 
+export async function listSkillLevels() {
+  return prisma.skillLevel.findMany({
+    orderBy: { level: "asc" }
+  });
+}
+
+export async function listActiveSkillsForSkillSheet() {
+  return prisma.skill.findMany({
+    where: { isActive: true },
+    select: {
+      id: true,
+      name: true,
+      category: {
+        select: {
+          id: true,
+          name: true,
+          displayOrder: true
+        }
+      }
+    },
+    orderBy: [{ category: { displayOrder: "asc" } }, { name: "asc" }]
+  });
+}
+
 export async function createSkillCategory(input: SkillCategoryInput) {
   return prisma.skillCategory.create({ data: input });
 }

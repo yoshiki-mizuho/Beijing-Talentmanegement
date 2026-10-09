@@ -55,6 +55,10 @@ export function listMemberSkillAssessments(memberId: string) {
   return memberRepository.listMemberSkillAssessments(memberId);
 }
 
+export function getMemberSkillSheetContext(memberId: string) {
+  return memberRepository.getMemberSkillSheetContext(memberId);
+}
+
 export function listPendingSkillAssessments(
   reviewerRole: AuthRole,
   reviewerMemberId: string
