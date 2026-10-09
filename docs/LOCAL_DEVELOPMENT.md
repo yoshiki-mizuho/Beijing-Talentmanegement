@@ -18,7 +18,7 @@
 
 `CREATEDB` は、Prismaのmigration差分確認でshadow databaseを作るために必要。
 
-3. `.env.example` を `.env` にコピーする。
+3. `.env.example` を `.env` にコピーする。`.env` の `DEMO_ADMIN_PASSWORD`、`DEMO_MANAGER_PASSWORD`、`DEMO_MEMBER_PASSWORD` にローカル専用の値（12文字以上、相互に異なる）を設定しておくと、seedが自動で読み込むため、次の手順の環境変数の設定を省略できる。`.env` はGit管理外であり、コミットしない。
 4. 依存関係をインストールし、migrationとseedを実行する。seedのパスワードはローカル専用の値を指定し、コミットしない。
 
 ```powershell
@@ -32,6 +32,8 @@ Remove-Item Env:DEMO_ADMIN_PASSWORD, Env:DEMO_MANAGER_PASSWORD, Env:DEMO_MEMBER_
 ```
 
 5. `npm.cmd run dev` で起動し、`http://localhost:3000/login` から `admin@example.com`、`manager@example.com`、`member@example.com` でログインする。
+
+Claude Code では、`local-dev` スキル（`.claude/skills/local-dev/`）に「ローカルで起動して」などと依頼すると、PostgreSQLの確認、migration、seed、開発サーバーの起動までをまとめて実行できる。
 
 ## 検証コマンド
 
