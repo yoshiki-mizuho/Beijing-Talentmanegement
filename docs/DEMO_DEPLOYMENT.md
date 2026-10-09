@@ -8,7 +8,7 @@
 
 1. Neonでデモ専用project、database、roleを作成し、主な利用者に近いリージョンを選ぶ。
 2. Neonの接続画面からpool接続文字列とdirect接続文字列を取得する。秘密値はリポジトリ、Issue、MRへ記載しない。
-3. GitLabリポジトリをVercelへImportし、Framework PresetをNext.js、Production Branchを`main`にする。
+3. GitLabリポジトリをVercelへImportし、Framework PresetをNext.js、Production Branchを`main`にする。GitHubなどのミラーには接続しない。GitLabでのmergeはミラーへ自動反映されず、Productionが更新されないため。
 4. VercelのProductionだけに次の環境変数を登録する。PreviewとDevelopmentには登録しない。
 
 | 変数 | 設定値 |
@@ -18,7 +18,7 @@
 | `AUTH_URL` | Vercelで確定したProduction URL |
 | `AUTH_TRUST_HOST` | `true` |
 
-5. VercelのPreview環境でBranch Trackingを無効化する。`vercel.json`でも`main`以外を無効化していることを確認する。
+5. VercelのPreview環境でBranch Trackingを無効化する。`vercel.json`でも`"**": false`と`"main": true`により`main`以外を無効化していることを確認する。`"main": true`だけでは、指定していないブランチは有効のままになる。また`*`は`/`を含むブランチ名（`feature/xxx`等）に一致しないため`**`を使う。Previewには`DATABASE_URL`を登録しないため、Previewがビルドされると`prisma generate`が`PrismaConfigEnvError`で失敗する。
 6. 作業端末でdirect接続を一時的に`DATABASE_URL`へ設定し、次を順番に実行する。
 
 ```powershell
