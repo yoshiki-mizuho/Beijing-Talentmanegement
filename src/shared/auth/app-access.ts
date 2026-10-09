@@ -32,13 +32,13 @@ const adminOnly = ["ADMIN"] as const satisfies readonly AppRole[];
 
 export const appNavigationGroups: readonly AppNavigationGroup[] = [
   {
-    label: "Overview",
+    label: "概要",
     items: [
       { href: "/dashboard", label: "ダッシュボード", icon: "dashboard", allowedRoles: allRoles }
     ]
   },
   {
-    label: "People",
+    label: "人材・スキル",
     items: [
       { href: "/members", label: "メンバー", icon: "members", allowedRoles: managementRoles },
       { href: "/skill-map", label: "スキルマップ", icon: "skillMap", allowedRoles: managementRoles },
@@ -47,7 +47,7 @@ export const appNavigationGroups: readonly AppNavigationGroup[] = [
     ]
   },
   {
-    label: "Workflow",
+    label: "申請・通知",
     items: [
       { href: "/my/skills", label: "自分のスキル", icon: "mySkills", allowedRoles: allRoles },
       { href: "/skill-approvals", label: "スキル承認", icon: "approvals", allowedRoles: managementRoles },
@@ -55,7 +55,7 @@ export const appNavigationGroups: readonly AppNavigationGroup[] = [
     ]
   },
   {
-    label: "Operations",
+    label: "運用",
     items: [
       { href: "/csv", label: "CSV", icon: "csv", allowedRoles: adminOnly },
       { href: "/audit-logs", label: "監査ログ", icon: "auditLogs", allowedRoles: adminOnly }

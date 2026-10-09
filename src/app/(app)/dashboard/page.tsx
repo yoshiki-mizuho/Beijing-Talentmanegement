@@ -92,7 +92,6 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="People Intelligence"
         title="ダッシュボード"
         description="人材とスキルの現在地を、登録データに基づいて俯瞰します。"
       />

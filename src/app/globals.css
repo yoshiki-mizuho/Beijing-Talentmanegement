@@ -1,16 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f4f7f6;
-  --foreground: #17201e;
+  --background: #f4f6f5;
+  --foreground: #1e2a2a;
   --surface: #ffffff;
   --surface-subtle: #eef3f1;
+  --primary-subtle: #e6f4f1;
   --card: #ffffff;
-  --card-foreground: #17201e;
-  --border: #d7e0dd;
+  --card-foreground: #1e2a2a;
+  --border: #e3e8e6;
   --border-strong: #bdcbc6;
   --muted: #e8efed;
-  --muted-foreground: #60706b;
+  --muted-foreground: #5b6b6a;
   --primary: #0f766e;
   --primary-hover: #115e59;
   --primary-foreground: #ffffff;
@@ -21,9 +22,6 @@
   --destructive: #b5413c;
   --destructive-foreground: #ffffff;
   --ring: #0d9488;
-  --sidebar: #182522;
-  --sidebar-foreground: #eef7f4;
-  --sidebar-muted: #9fb5ae;
 }
 
 * {
@@ -40,6 +38,7 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family:
+    "Noto Sans JP",
     Inter,
     "Hiragino Sans",
     "Yu Gothic",

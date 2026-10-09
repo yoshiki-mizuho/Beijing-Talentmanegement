@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: Talent Management Core Business API
+  title: TalentHub Core Business API
   version: 0.3.0
   description: Phase3 core business API contract for members, skills, roles, skill assessments, and notifications.
 servers:

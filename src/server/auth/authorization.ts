@@ -1,4 +1,5 @@
 import { AuthRole } from "@prisma/client";
+import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
 
 import { getCurrentSession } from "@/server/auth/session";
@@ -47,6 +48,24 @@ export async function requireRoles(allowedRoles: readonly AuthRole[]) {
   }
 
   return session;
+}
+
+export async function requirePageRoles(allowedRoles: readonly AuthRole[]) {
+  const session = await getCurrentSession();
+
+  if (!session?.user.memberId) {
+    redirect("/login");
+  }
+
+  if (session.user.passwordChangeRequired) {
+    redirect("/account/password");
+  }
+
+  if (!allowedRoles.includes(session.user.role)) {
+    redirect("/dashboard");
+  }
+
+  return session as MemberSession;
 }
 
 export async function authorizeApi(allowedRoles?: readonly AuthRole[]) {

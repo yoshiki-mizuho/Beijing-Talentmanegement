@@ -14,7 +14,7 @@ export default async function LoginPage() {
     <main className="grid min-h-screen place-items-center bg-slate-50 px-4 py-10">
       <section className="w-full max-w-md">
         <div className="mb-6">
-          <p className="text-sm font-medium text-cyan-800">Talent Management</p>
+          <p className="text-sm font-medium text-[var(--primary)]">TalentHub</p>
           <h1 className="mt-2 text-3xl font-semibold text-slate-950">
             ログイン
           </h1>

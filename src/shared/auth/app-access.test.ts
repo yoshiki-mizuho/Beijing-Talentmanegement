@@ -45,6 +45,15 @@ describe("application route access", () => {
     }
   );
 
+  it("ナビゲーショングループ名を日本語で返す", () => {
+    expect(getNavigationGroupsForRole("ADMIN").map((group) => group.label)).toEqual([
+      "概要",
+      "人材・スキル",
+      "申請・通知",
+      "運用"
+    ]);
+  });
+
   it("ADMINは定義済み画面と新規画面へアクセスできる", () => {
     expect(canAccessAppPath("ADMIN", "/audit-logs")).toBe(true);
     expect(canAccessAppPath("ADMIN", "/future-screen")).toBe(true);

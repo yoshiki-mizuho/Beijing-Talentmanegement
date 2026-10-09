@@ -33,12 +33,12 @@ import { FormField, SelectField } from "@/shared/ui/form-field";
 import { Metric } from "@/shared/ui/metric";
 import { PageHeader } from "@/shared/ui/page-header";
 import { SubmitButton } from "@/shared/ui/submit-button";
-import { managerOrAdmin, requireRoles } from "@/server/auth/authorization";
+import { managerOrAdmin, requirePageRoles } from "@/server/auth/authorization";
 
 export const dynamic = "force-dynamic";
 
 export default async function SkillsPage() {
-  const session = await requireRoles(managerOrAdmin);
+  const session = await requirePageRoles(managerOrAdmin);
   const canManageSkills = canManageSkillMaster(session.user.role);
   const [categories, skills] = await Promise.all([
     listSkillCategories(),
