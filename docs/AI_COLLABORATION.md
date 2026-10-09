@@ -60,8 +60,8 @@ flowchart LR
 - DB migration: <要 / 不要>
 
 ## 検証コマンド
-- npm.cmd run verify
-- npm.cmd run verify -- --skip=migrate（schemaを変更しない場合）
+- npm.cmd run verify -- --skip=test,build,migrate（Codexのサンドボックス内で実行できる範囲）
+- test、build、migrationの検証はClaudeが実行する
 
 ## 報告してほしいこと
 変更ファイル、実行したコマンドと結果（失敗も含む）、未対応事項、判断に迷った点
@@ -75,3 +75,16 @@ flowchart LR
 - 画面に影響する変更は、3ロールでの画面確認結果がMRに記載されている。
 - API仕様を変えた場合は `docs/api/openapi.yaml` を更新している。
 - 設計判断や運用ルールの変更は、関連ドキュメントに反映されている。
+- MRのCIパイプラインが成功している。
+
+## Codex実行環境の制約（Windows）
+
+Codexは `workspace-write` サンドボックス（`[windows] sandbox = "unelevated"`、`[sandbox_workspace_write] network_access = true`）で動作する。この環境では子プロセスの起動が拒否される（`spawn EPERM`）ため、Codexが実行できる検証には制限がある。
+
+| 検証 | Codex | 理由 |
+| --- | --- | --- |
+| typecheck、lint | 実行できる | Prismaのエンジン取得に必要なネットワークを許可済み |
+| test | 実行できない | ViteがWindowsのパス解決時に `net use` を起動するため |
+| build、migration check | 実行できない | Next.jsのビルドワーカーやPrisma CLIを子プロセスとして起動するため |
+
+権限を最大にする `danger-full-access` は使わず、test、build、migrationの検証はClaudeとCIが担う。
