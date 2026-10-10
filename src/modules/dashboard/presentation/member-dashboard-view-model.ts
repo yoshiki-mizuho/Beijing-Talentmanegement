@@ -121,7 +121,18 @@ export function buildMemberDashboardViewModel(
           level: skill.level
         }))
       }))
-    })
+    }),
+    cheers: data.receivedCheers.map((cheer) => ({
+      id: cheer.id,
+      senderName: cheer.fromMember.name,
+      message: cheer.message,
+      createdAt: cheer.createdAt.toISOString(),
+      mentor: cheer.mentorMember && cheer.targetSkill ? {
+        name: cheer.mentorMember.name,
+        skillName: cheer.targetSkill.name,
+        level: cheer.mentorMember.memberSkills.find((skill) => skill.skillId === cheer.targetSkill?.id)?.level ?? null
+      } : null
+    }))
   };
 }
 

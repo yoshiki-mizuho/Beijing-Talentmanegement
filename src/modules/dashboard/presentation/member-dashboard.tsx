@@ -1,4 +1,4 @@
-import { Award, CalendarDays, History, PartyPopper, Radar, Users } from "lucide-react";
+import { Award, CalendarDays, Heart, History, PartyPopper, Radar, Users } from "lucide-react";
 
 import type { MemberDashboardViewModel } from "@/modules/dashboard/presentation/member-dashboard-view-model";
 import { BadgeGrid } from "@/modules/growth/presentation/badge-grid";
@@ -24,6 +24,24 @@ export function MemberDashboard({
       />
 
       <TargetRoleCard viewModel={viewModel} />
+
+      {viewModel.cheers.length > 0 ? (
+        <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]" aria-labelledby="cheers-heading">
+          <div className="p-5"><SectionHeading id="cheers-heading" icon={Heart} title="応援が届いています" /></div>
+          <ul className="divide-y divide-[var(--border)] border-t border-[var(--border)] px-5">
+            {viewModel.cheers.map((cheer) => (
+              <li key={cheer.id} className="flex gap-3 py-4">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[var(--primary-subtle)] text-sm font-bold text-[var(--primary)]" aria-hidden="true">{Array.from(cheer.senderName)[0]}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2"><p className="text-sm font-semibold">{cheer.senderName}さんが応援しています</p><time className="text-xs text-[var(--muted-foreground)]">{formatShortDate(cheer.createdAt)}</time></div>
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-6">{cheer.message}</p>
+                  {cheer.mentor ? <p className="mt-2 text-xs font-medium text-[var(--primary)]">{cheer.mentor.name}さん（{cheer.mentor.skillName} Lv{cheer.mentor.level ?? "-"}）に相談してみよう</p> : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5" aria-labelledby="badges-heading">
         <SectionHeading id="badges-heading" icon={Award} title="達成バッジ" description="これまでの成長の節目を振り返れます。" />
@@ -101,13 +119,13 @@ export function MemberDashboard({
   );
 }
 
-function SectionHeading({ id, icon: Icon, title, description }: { id: string; icon: typeof Award; title: string; description: string }) {
+function SectionHeading({ id, icon: Icon, title, description }: { id: string; icon: typeof Award; title: string; description?: string }) {
   return (
     <div className="flex items-start gap-3">
       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[var(--primary-subtle)] text-[var(--primary)]"><Icon className="h-4 w-4" aria-hidden="true" /></span>
       <div>
         <h2 id={id} className="text-sm font-semibold">{title}</h2>
-        <p className="mt-1 text-xs leading-5 text-[var(--muted-foreground)]">{description}</p>
+        {description ? <p className="mt-1 text-xs leading-5 text-[var(--muted-foreground)]">{description}</p> : null}
       </div>
     </div>
   );

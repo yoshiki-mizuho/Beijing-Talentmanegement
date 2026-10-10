@@ -206,6 +206,52 @@ export function createCheer(input: CheerInput) {
   });
 }
 
+export function getCheerAccessContext(toMemberId: string) {
+  return prisma.member.findUnique({
+    where: { id: toMemberId },
+    select: {
+      id: true,
+      managerId: true
+    }
+  });
+}
+
+export function getMentorForCheer(mentorMemberId: string, targetSkillId?: string | null) {
+  return prisma.member.findUnique({
+    where: { id: mentorMemberId },
+    select: {
+      id: true,
+      status: true,
+      memberSkills: targetSkillId ? {
+        where: { skillId: targetSkillId, level: { gte: 4 } },
+        select: { id: true }
+      } : false
+    }
+  });
+}
+
+export function listSkillMentorCandidates(skillIds: string[]) {
+  return prisma.memberSkill.findMany({
+    where: {
+      skillId: { in: skillIds },
+      level: { gte: 4 },
+      member: { status: MemberStatus.ACTIVE }
+    },
+    select: {
+      skillId: true,
+      level: true,
+      member: { select: { id: true, name: true, status: true } }
+    }
+  });
+}
+
+export function getOneOnOneMember(memberId: string) {
+  return prisma.member.findUnique({
+    where: { id: memberId },
+    select: { id: true, managerId: true }
+  });
+}
+
 export function createOneOnOneNote(input: OneOnOneNoteInput) {
   return prisma.oneOnOneNote.create({ data: input });
 }

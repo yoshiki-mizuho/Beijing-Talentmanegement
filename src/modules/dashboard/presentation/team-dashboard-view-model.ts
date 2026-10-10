@@ -8,6 +8,7 @@ import {
   shiftDashboardMonth
 } from "@/modules/dashboard/domain/team-dashboard";
 import type { TeamDashboardResult } from "@/modules/dashboard/application/team-dashboard-service";
+import { buildCheerMessage, selectMentorCandidates } from "@/modules/growth/domain/cheer-and-one-on-one";
 
 const millisecondsPerDay = 86_400_000;
 
@@ -47,8 +48,26 @@ export function buildTeamDashboardViewModel(data: TeamDashboardResult) {
       achieved: data.members.filter(hasAchievedTargetRole).length,
       targetSet: data.members.filter((member) => member.targetRole !== null).length
     },
-    almostThere: findAlmostThereMembers(data.members),
-    inactiveMembers: findInactiveMembers(data.members, data.now),
+    almostThere: findAlmostThereMembers(data.members).map((item) => ({
+      ...item,
+      message: buildCheerMessage({
+        memberName: item.memberName,
+        roleName: item.roleName,
+        skillName: item.skillName,
+        requiredLevel: item.requiredLevel
+      }),
+      cheered: data.recentCheers.some((cheer) => cheer.toMemberId === item.memberId),
+      mentorCandidates: selectMentorCandidates(
+        data.mentorSkills
+          .filter((candidate) => candidate.skillId === item.skillId)
+          .map((candidate) => ({ ...candidate.member, level: candidate.level })),
+        [data.manager.id, item.memberId]
+      )
+    })),
+    inactiveMembers: findInactiveMembers(data.members, data.now).map((item) => ({
+      ...item,
+      noteAdded: data.openOneOnOneMemberIds.includes(item.memberId)
+    })),
     feed: data.feed.map((item) => ({
       ...item,
       changedAt: item.changedAt.toISOString(),

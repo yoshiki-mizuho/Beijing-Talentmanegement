@@ -88,6 +88,7 @@ export function findAlmostThereMembers(members: TeamMemberSnapshot[]) {
       memberId: member.id,
       memberName: member.name,
       roleName: member.targetRole.name,
+      skillId: gap.skillId,
       skillName: gap.skillName,
       currentLevel: levels.get(gap.skillId) ?? 0,
       requiredLevel: gap.requiredLevel,

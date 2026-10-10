@@ -1,3 +1,5 @@
+"use client";
+
 import {
   ArrowLeft,
   ArrowRight,
@@ -12,13 +14,25 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
+import { useState } from "react";
 
 import type { TeamDashboardViewModel } from "@/modules/dashboard/presentation/team-dashboard-view-model";
+import { createCheerAction, createOneOnOneNoteAction } from "@/modules/growth/presentation/actions";
 import { LevelUpFeed } from "@/modules/growth/presentation/level-up-feed";
 import { cn } from "@/shared/lib/utils";
+import { ActionForm } from "@/shared/ui/action-form";
+import { Button } from "@/shared/ui/button";
+import { Dialog } from "@/shared/ui/dialog";
 import { EmptyState } from "@/shared/ui/empty-state";
+import { Label } from "@/shared/ui/label";
+import { Select } from "@/shared/ui/select";
+import { SubmitButton } from "@/shared/ui/submit-button";
 
 export function TeamDashboard({ viewModel }: { viewModel: TeamDashboardViewModel }) {
+  const [cheerTarget, setCheerTarget] = useState<TeamDashboardViewModel["almostThere"][number] | null>(null);
+  const [cheeredIds, setCheeredIds] = useState(() => new Set(viewModel.almostThere.filter((item) => item.cheered).map((item) => item.memberId)));
+  const [noteTarget, setNoteTarget] = useState<TeamDashboardViewModel["inactiveMembers"][number] | null>(null);
+  const [notedIds, setNotedIds] = useState(() => new Set(viewModel.inactiveMembers.filter((item) => item.noteAdded).map((item) => item.memberId)));
   if (viewModel.memberCount === 0) {
     return (
       <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
@@ -113,7 +127,12 @@ export function TeamDashboard({ viewModel }: { viewModel: TeamDashboardViewModel
                       {item.skillName}　Lv{item.currentLevel} → 必要 Lv{item.requiredLevel}{item.pending ? "（申請中）" : ""}
                     </p>
                   </div>
-                  <Link href="/members" className="inline-flex min-h-11 shrink-0 items-center text-sm font-semibold text-[var(--primary)] hover:underline">一覧で確認</Link>
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                    <Button type="button" aria-label={`${item.memberName}を${cheeredIds.has(item.memberId) ? "応援しました" : "応援する"}`} variant={cheeredIds.has(item.memberId) ? "secondary" : "primary"} onClick={() => setCheerTarget(item)}>
+                      {cheeredIds.has(item.memberId) ? "応援しました" : "応援する"}
+                    </Button>
+                    <Link href="/members" className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--primary)] hover:underline">一覧で確認</Link>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -126,12 +145,17 @@ export function TeamDashboard({ viewModel }: { viewModel: TeamDashboardViewModel
           {viewModel.inactiveMembers.length > 0 ? (
             <ul className="divide-y divide-[var(--border)] border-t border-[var(--border)]">
               {viewModel.inactiveMembers.map((item) => (
-                <li key={item.memberId} className="px-5 py-4">
-                  <p className="text-sm font-semibold">{item.memberName}</p>
-                  <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-                    最後の更新：{formatLongDate(item.lastUpdatedAt)}（{item.daysAgo}日前）
-                    {item.targetRoleUnset ? "・目標ロール未設定" : ""}
-                  </p>
+                <li key={item.memberId} className="flex items-center justify-between gap-3 px-5 py-4">
+                  <div>
+                    <p className="text-sm font-semibold">{item.memberName}</p>
+                    <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+                      最後の更新：{formatLongDate(item.lastUpdatedAt)}（{item.daysAgo}日前）
+                      {item.targetRoleUnset ? "・目標ロール未設定" : ""}
+                    </p>
+                  </div>
+                  <Button type="button" variant="secondary" onClick={() => setNoteTarget(item)}>
+                    {notedIds.has(item.memberId) ? "1on1 メモに追加済み" : "1on1 メモに追加"}
+                  </Button>
                 </li>
               ))}
             </ul>
@@ -172,7 +196,66 @@ export function TeamDashboard({ viewModel }: { viewModel: TeamDashboardViewModel
           <EmptyState icon={Target} title="不足している必須スキルはありません" description="設定済みの目標ロールに向けた必須要件を、チーム全員が満たしています。" />
         )}
       </TeamSection>
+      {cheerTarget ? (
+        <CheerDialog target={cheerTarget} onClose={() => setCheerTarget(null)} onSuccess={() => {
+          setCheeredIds((current) => new Set(current).add(cheerTarget.memberId));
+          setCheerTarget(null);
+        }} />
+      ) : null}
+      {noteTarget ? (
+        <OneOnOneQuickDialog target={noteTarget} onClose={() => setNoteTarget(null)} onSuccess={() => {
+          setNotedIds((current) => new Set(current).add(noteTarget.memberId));
+          setNoteTarget(null);
+        }} />
+      ) : null}
     </div>
+  );
+}
+
+function CheerDialog({ target, onClose, onSuccess }: {
+  target: TeamDashboardViewModel["almostThere"][number];
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [message, setMessage] = useState(target.message);
+  return (
+    <Dialog open onClose={onClose} title="応援する">
+      <ActionForm action={createCheerAction} className="space-y-4" onSuccess={onSuccess}>
+        <input type="hidden" name="toMemberId" value={target.memberId} />
+        <input type="hidden" name="targetSkillId" value={target.skillId} />
+        <div><Label>宛先</Label><p className="mt-1 text-sm font-semibold">{target.memberName}</p></div>
+        <div>
+          <Label htmlFor={`cheer-message-${target.memberId}`}>メッセージ</Label>
+          <textarea id={`cheer-message-${target.memberId}`} name="message" required maxLength={500} value={message} onChange={(event) => setMessage(event.target.value)} className="mt-1 min-h-32 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm" />
+          <p className="mt-1 text-right text-xs text-[var(--muted-foreground)]">残り {500 - message.length}文字</p>
+        </div>
+        <div>
+          <Label htmlFor={`mentor-${target.memberId}`}>教えてもらえそうな人（任意）</Label>
+          <Select id={`mentor-${target.memberId}`} name="mentorMemberId" defaultValue="" className="mt-1">
+            <option value="">選ばない</option>
+            {target.mentorCandidates.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.name}（Lv{candidate.level}）</option>)}
+          </Select>
+        </div>
+        <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={onClose}>キャンセル</Button><SubmitButton pendingLabel="送信中…">送信する</SubmitButton></div>
+      </ActionForm>
+    </Dialog>
+  );
+}
+
+function OneOnOneQuickDialog({ target, onClose, onSuccess }: {
+  target: TeamDashboardViewModel["inactiveMembers"][number];
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [body, setBody] = useState(`最近のスキル更新について（${target.daysAgo}日更新なし）`);
+  return (
+    <Dialog open onClose={onClose} title="1on1 メモに追加" className="max-w-md">
+      <ActionForm action={createOneOnOneNoteAction} className="space-y-4" onSuccess={onSuccess}>
+        <input type="hidden" name="memberId" value={target.memberId} />
+        <div><Label htmlFor={`quick-note-${target.memberId}`}>メモ</Label><textarea id={`quick-note-${target.memberId}`} name="body" required maxLength={500} value={body} onChange={(event) => setBody(event.target.value)} className="mt-1 min-h-28 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm" /><p className="mt-1 text-right text-xs text-[var(--muted-foreground)]">残り {500 - body.length}文字</p></div>
+        <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={onClose}>キャンセル</Button><SubmitButton pendingLabel="追加中…">追加する</SubmitButton></div>
+      </ActionForm>
+    </Dialog>
   );
 }
 

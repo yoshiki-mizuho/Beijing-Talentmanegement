@@ -260,9 +260,12 @@ export const demoMemberSkills = [
   { employeeNo: "TM0002", skillCode: "DEMO-SKILL-017", level: 5, yearsOfExperience: 7 },
   { employeeNo: "TM0002", skillCode: "DEMO-SKILL-018", level: 4, yearsOfExperience: 5 },
   { employeeNo: "TM0003", skillCode: "DEMO-SKILL-001", level: 3, yearsOfExperience: 3 },
-  { employeeNo: "TM0003", skillCode: "DEMO-SKILL-002", level: 3, yearsOfExperience: 2.5 },
-  { employeeNo: "TM0003", skillCode: "DEMO-SKILL-005", level: 3, yearsOfExperience: 2 },
+  { employeeNo: "TM0003", skillCode: "DEMO-SKILL-002", level: 4, yearsOfExperience: 2.5 },
+  { employeeNo: "TM0003", skillCode: "DEMO-SKILL-005", level: 4, yearsOfExperience: 2 },
+  { employeeNo: "TM0003", skillCode: "DEMO-SKILL-006", level: 2, yearsOfExperience: 1 },
   { employeeNo: "TM0003", skillCode: "DEMO-SKILL-013", level: 2, yearsOfExperience: 1.5 },
+  { employeeNo: "TM0102", skillCode: "DEMO-SKILL-002", level: 4, yearsOfExperience: 4 },
+  { employeeNo: "TM0102", skillCode: "DEMO-SKILL-005", level: 4, yearsOfExperience: 3 },
   { employeeNo: "TM0101", skillCode: "DEMO-SKILL-001", level: 4, yearsOfExperience: 5 },
   { employeeNo: "TM0101", skillCode: "DEMO-SKILL-002", level: 4, yearsOfExperience: 4 },
   { employeeNo: "TM0101", skillCode: "DEMO-SKILL-005", level: 5, yearsOfExperience: 5 },
@@ -339,6 +342,7 @@ export const demoManagerAssignments = [
 
 export const demoTargetRoleAssignments = [
   { employeeNo: "TM0003", roleName: "フロントエンドエンジニア" },
+  { employeeNo: "TM0102", roleName: "フロントエンドエンジニア" },
   { employeeNo: "TM0101", roleName: "フロントエンドエンジニア" },
   { employeeNo: "TM0103", roleName: "クラウドエンジニア" },
   { employeeNo: "TM0104", roleName: "クラウドエンジニア" },
@@ -347,8 +351,8 @@ export const demoTargetRoleAssignments = [
 
 export const demoSkillLevelChanges = [
   { employeeNo: "TM0003", skillCode: "DEMO-SKILL-001", fromLevel: 2, toLevel: 3, changedAt: "2026-08-08T09:00:00.000Z" },
-  { employeeNo: "TM0003", skillCode: "DEMO-SKILL-002", fromLevel: 2, toLevel: 3, changedAt: "2026-09-08T09:00:00.000Z" },
-  { employeeNo: "TM0003", skillCode: "DEMO-SKILL-005", fromLevel: 2, toLevel: 3, changedAt: "2026-10-08T09:00:00.000Z" },
+  { employeeNo: "TM0003", skillCode: "DEMO-SKILL-002", fromLevel: 3, toLevel: 4, changedAt: "2026-09-08T09:00:00.000Z" },
+  { employeeNo: "TM0003", skillCode: "DEMO-SKILL-005", fromLevel: 3, toLevel: 4, changedAt: "2026-10-08T09:00:00.000Z" },
   { employeeNo: "TM0101", skillCode: "DEMO-SKILL-005", fromLevel: 4, toLevel: 5, changedAt: "2026-10-02T09:00:00.000Z" },
   { employeeNo: "TM0102", skillCode: "DEMO-SKILL-004", fromLevel: 3, toLevel: 4, changedAt: "2026-08-25T09:00:00.000Z" },
   { employeeNo: "TM0103", skillCode: "DEMO-SKILL-009", fromLevel: 4, toLevel: 5, changedAt: "2026-10-04T09:00:00.000Z" },

@@ -7,7 +7,7 @@ import {
 import { prisma } from "@/server/db/prisma";
 
 export async function getMemberGrowthData(memberId: string) {
-  const [member, roles, categories, assessments, levelChanges, mentoredCheers, mentorCandidates, levelDefinitions] =
+  const [member, roles, categories, assessments, levelChanges, mentoredCheers, receivedCheers, mentorCandidates, levelDefinitions] =
     await Promise.all([
       prisma.member.findUnique({
         where: { id: memberId },
@@ -88,6 +88,24 @@ export async function getMemberGrowthData(memberId: string) {
         select: { toMemberId: true, createdAt: true },
         orderBy: { createdAt: "asc" }
       }),
+      prisma.cheer.findMany({
+        where: { toMemberId: memberId },
+        select: {
+          id: true,
+          message: true,
+          createdAt: true,
+          fromMember: { select: { name: true } },
+          targetSkill: { select: { id: true, name: true } },
+          mentorMember: {
+            select: {
+              name: true,
+              memberSkills: { select: { skillId: true, level: true } }
+            }
+          }
+        },
+        orderBy: { createdAt: "desc" },
+        take: 3
+      }),
       prisma.member.findMany({
         where: { status: MemberStatus.ACTIVE, id: { not: memberId } },
         select: {
@@ -119,6 +137,7 @@ export async function getMemberGrowthData(memberId: string) {
     assessments,
     levelChanges,
     mentoredCheers,
+    receivedCheers,
     mentorCandidates,
     levelDefinitions
   };
