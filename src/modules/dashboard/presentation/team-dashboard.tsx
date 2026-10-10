@@ -33,6 +33,7 @@ export function TeamDashboard({ viewModel }: { viewModel: TeamDashboardViewModel
   const [cheeredIds, setCheeredIds] = useState(() => new Set(viewModel.almostThere.filter((item) => item.cheered).map((item) => item.memberId)));
   const [noteTarget, setNoteTarget] = useState<TeamDashboardViewModel["inactiveMembers"][number] | null>(null);
   const [notedIds, setNotedIds] = useState(() => new Set(viewModel.inactiveMembers.filter((item) => item.noteAdded).map((item) => item.memberId)));
+  const [showAllLevelUps, setShowAllLevelUps] = useState(false);
   if (viewModel.memberCount === 0) {
     return (
       <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
@@ -165,14 +166,22 @@ export function TeamDashboard({ viewModel }: { viewModel: TeamDashboardViewModel
         </TeamSection>
       </div>
 
-      <section id="team-level-ups" className="scroll-mt-20 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]" aria-labelledby="team-level-ups-heading">
-        <SectionHeader icon={PartyPopper} id="team-level-ups-heading" title="チームのレベルアップ" description={`${viewModel.month.label}の前進を、新しい順に表示します。`} />
-        <div className="border-t border-[var(--border)]">
-          <LevelUpFeed items={viewModel.feed} viewer={{ memberId: viewModel.manager.id, memberName: viewModel.manager.name }} />
-        </div>
-      </section>
+      <div className="grid gap-5 lg:grid-cols-3 lg:items-start">
+        <section id="team-level-ups" className="scroll-mt-20 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] lg:col-span-2" aria-labelledby="team-level-ups-heading">
+          <SectionHeader icon={PartyPopper} id="team-level-ups-heading" title="チームのレベルアップ" description={`${viewModel.month.label}の前進を、新しい順に表示します。`} />
+          <div className="border-t border-[var(--border)]">
+            <LevelUpFeed items={showAllLevelUps ? viewModel.feed : viewModel.feed.slice(0, 5)} viewer={{ memberId: viewModel.manager.id, memberName: viewModel.manager.name }} />
+          </div>
+          {viewModel.feed.length > 5 ? (
+            <div className="border-t border-[var(--border)] p-3 text-center">
+              <Button type="button" variant="secondary" onClick={() => setShowAllLevelUps((current) => !current)}>
+                {showAllLevelUps ? "閉じる" : "もっと見る"}
+              </Button>
+            </div>
+          ) : null}
+        </section>
 
-      <TeamSection icon={Target} id="missing-heading" title="チームで不足しているスキル" description="部下の目標ロールに必要なスキルを、未達の人数で集計しています。">
+        <TeamSection icon={Target} id="missing-heading" title="チームで不足しているスキル" description="部下の目標ロールに必要なスキルを、未達の人数で集計しています。">
         {viewModel.missingSkills.length > 0 ? (
           <div className="border-t border-[var(--border)] p-5">
             <ul className="space-y-4">
@@ -195,7 +204,8 @@ export function TeamDashboard({ viewModel }: { viewModel: TeamDashboardViewModel
         ) : (
           <EmptyState icon={Target} title="不足している必須スキルはありません" description="設定済みの目標ロールに向けた必須要件を、チーム全員が満たしています。" />
         )}
-      </TeamSection>
+        </TeamSection>
+      </div>
       {cheerTarget ? (
         <CheerDialog target={cheerTarget} onClose={() => setCheerTarget(null)} onSuccess={() => {
           setCheeredIds((current) => new Set(current).add(cheerTarget.memberId));

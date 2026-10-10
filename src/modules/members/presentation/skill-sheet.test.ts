@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildSkillSheetRows,
+  filterSkillSheetRows,
   getNextSkillSheetLevel,
   getSkillLevelDefinitionText,
   getSkillSheetRowStatus,
@@ -44,7 +45,6 @@ describe("skill sheet display logic", () => {
       targetLevel: null
     });
     expect(getSkillSheetRowStatus(rows[1])).toEqual([
-      "現在 Lv3",
       "承認待ち（申請 Lv4）",
       "目標ロールで Lv4 が必要"
     ]);
@@ -59,13 +59,34 @@ describe("skill sheet display logic", () => {
     expect(isSkillSheetRowChanged(null, null)).toBe(false);
   });
 
-  it("describes the selected level and its change", () => {
+  it("shows only the selected level definition", () => {
     expect(
       getSkillLevelDefinitionText(3, 4, "自律して実務を進められる")
-    ).toBe("Lv3 → Lv4：自律して実務を進められる");
+    ).toBe("自律して実務を進められる");
     expect(getSkillLevelDefinitionText(null, 1, "基礎を理解している")).toBe(
-      "未保有 → Lv1：基礎を理解している"
+      "基礎を理解している"
     );
+    expect(getSkillLevelDefinitionText(null, null, undefined)).toBe("");
+    expect(getSkillLevelDefinitionText(2, null, undefined)).toBe("");
+    expect(getSkillLevelDefinitionText(2, 3, undefined)).toBe("レベル定義が登録されていません。");
+  });
+
+  it("combines keyword, status, and category filters", () => {
+    const rows = buildSkillSheetRows({
+      skills: [
+        { id: "react", name: "React", category: { id: "front", name: "フロント", displayOrder: 1 } },
+        { id: "sql", name: "SQL", category: { id: "data", name: "データ", displayOrder: 2 } }
+      ],
+      memberSkills: [{ skillId: "react", level: 2 }],
+      pendingAssessments: [],
+      targetRequirements: []
+    });
+    expect(filterSkillSheetRows(rows, {
+      query: "sql",
+      filter: "unowned",
+      categoryId: "data",
+      changedSkillIds: new Set()
+    }).map((row) => row.skillId)).toEqual(["sql"]);
   });
 });
 

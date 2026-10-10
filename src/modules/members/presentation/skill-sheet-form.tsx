@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { createSkillAssessmentsAction } from "@/modules/members/presentation/actions";
 import {
   getNextSkillSheetLevel,
+  filterSkillSheetRows,
   getSkillLevelDefinitionText,
   getSkillSheetRowStatus,
   type SkillSheetRow
@@ -16,6 +17,7 @@ import { Button } from "@/shared/ui/button";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
+import { SelectField } from "@/shared/ui/form-field";
 import { SubmitButton } from "@/shared/ui/submit-button";
 
 type SkillSheetFilter = "all" | "unowned" | "changed";
@@ -37,6 +39,7 @@ export function SkillSheetForm({
 }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<SkillSheetFilter>("all");
+  const [categoryId, setCategoryId] = useState("all");
   const [selectedLevels, setSelectedLevels] = useState<Record<string, number>>(
     {}
   );
@@ -44,7 +47,6 @@ export function SkillSheetForm({
     () => new Map(levels.map((level) => [level.level, level.description])),
     [levels]
   );
-  const normalizedQuery = query.trim().toLocaleLowerCase("ja");
   const changedSkillIds = useMemo(
     () => new Set(Object.keys(selectedLevels)),
     [selectedLevels]
@@ -53,19 +55,15 @@ export function SkillSheetForm({
 
   const filteredRows = useMemo(
     () =>
-      rows.filter((row) => {
-        const matchesQuery =
-          normalizedQuery.length === 0 ||
-          row.skillName.toLocaleLowerCase("ja").includes(normalizedQuery);
-        const matchesFilter =
-          filter === "all" ||
-          (filter === "unowned" && row.currentLevel === null) ||
-          (filter === "changed" && changedSkillIds.has(row.skillId));
-
-        return matchesQuery && matchesFilter;
-      }),
-    [changedSkillIds, filter, normalizedQuery, rows]
+      filterSkillSheetRows(rows, { query, filter, categoryId, changedSkillIds }),
+    [categoryId, changedSkillIds, filter, query, rows]
   );
+
+  const categoryOptions = useMemo(() => {
+    const options = new Map<string, string>();
+    rows.forEach((row) => options.set(row.categoryId, row.categoryName));
+    return [...options].map(([id, name]) => ({ id, name }));
+  }, [rows]);
 
   const categories = useMemo(() => {
     const grouped = new Map<
@@ -130,7 +128,7 @@ export function SkillSheetForm({
         {encouragement}
       </p>
 
-      <div className="grid gap-4 md:grid-cols-[minmax(240px,1fr)_auto] md:items-end">
+      <div className="grid gap-4 md:grid-cols-[minmax(240px,1fr)_minmax(180px,0.6fr)_auto] md:items-end">
         <div>
           <Label htmlFor="skill-sheet-search">スキルを検索</Label>
           <div className="relative mt-1">
@@ -148,6 +146,18 @@ export function SkillSheetForm({
             />
           </div>
         </div>
+
+        <SelectField
+          id="skill-sheet-category"
+          label="カテゴリ"
+          value={categoryId}
+          onChange={(event) => setCategoryId(event.target.value)}
+        >
+          <option value="all">すべてのカテゴリ</option>
+          {categoryOptions.map((category) => (
+            <option key={category.id} value={category.id}>{category.name}</option>
+          ))}
+        </SelectField>
 
         <div>
           <span className="mb-1 block text-sm font-medium text-[var(--foreground)]">
@@ -258,18 +268,18 @@ export function SkillSheetForm({
                                 type="button"
                                 disabled={row.pendingLevel !== null}
                                 aria-pressed={isSelected}
-                                aria-label={`${row.skillName} レベル${level}`}
+                                aria-label={`Lv${level}`}
                                 onClick={() => selectLevel(row, level)}
                                 className={cn(
                                   "h-11 w-11 rounded-md border text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
                                   isRequested
                                     ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--primary-foreground)]"
                                     : isCurrent
-                                      ? "border-[var(--primary)] bg-[var(--primary-subtle)] text-[var(--primary)]"
+                                      ? "border-2 border-[var(--primary)] bg-[var(--primary-subtle)] font-bold text-[var(--primary)] ring-2 ring-[var(--ring)]/30"
                                       : "border-[var(--border-strong)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-subtle)]"
                                 )}
                               >
-                                Lv{level}
+                                {level}
                               </button>
                             );
                           })}

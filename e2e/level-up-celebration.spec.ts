@@ -21,7 +21,7 @@ test("承認後のレベルアップ演出は閉じると再表示されない",
     const manager = await openLoggedInContext(browser, credentials.MANAGER);
     try {
       await manager.page.goto("/skill-approvals");
-      const approval = manager.page.getByRole("group", {
+      const approval = manager.page.getByRole("listitem", {
         name: `Member User / ${selection.skillName}の承認`
       });
       await expect(approval).toBeVisible();

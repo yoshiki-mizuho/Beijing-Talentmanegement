@@ -82,7 +82,6 @@ export function buildSkillSheetRows({
 
 export function getSkillSheetRowStatus(row: SkillSheetRow): string[] {
   return [
-    row.currentLevel === null ? "未保有" : `現在 Lv${row.currentLevel}`,
     ...(row.pendingLevel === null
       ? []
       : [`承認待ち（申請 Lv${row.pendingLevel}）`]),
@@ -112,23 +111,34 @@ export function getNextSkillSheetLevel(
 }
 
 export function getSkillLevelDefinitionText(
-  currentLevel: number | null,
+  _currentLevel: number | null,
   selectedLevel: number | null,
   description: string | undefined
 ) {
-  const displayedLevel = selectedLevel ?? currentLevel;
+  if (selectedLevel === null) return "";
+  return description ?? "レベル定義が登録されていません。";
+}
 
-  if (displayedLevel === null) {
-    return "レベルを選ぶと、定義を確認できます。";
+export function filterSkillSheetRows(
+  rows: ReadonlyArray<SkillSheetRow>,
+  options: {
+    query: string;
+    filter: "all" | "unowned" | "changed";
+    categoryId: string;
+    changedSkillIds: ReadonlySet<string>;
   }
-
-  const definition = description ?? "レベル定義が登録されていません。";
-  if (isSkillSheetRowChanged(currentLevel, selectedLevel)) {
-    const from = currentLevel === null ? "未保有" : `Lv${currentLevel}`;
-    return `${from} → Lv${selectedLevel}：${definition}`;
-  }
-
-  return `Lv${displayedLevel}：${definition}`;
+) {
+  const normalizedQuery = options.query.trim().toLocaleLowerCase("ja");
+  return rows.filter((row) => {
+    const matchesQuery = normalizedQuery.length === 0 ||
+      row.skillName.toLocaleLowerCase("ja").includes(normalizedQuery);
+    const matchesFilter = options.filter === "all" ||
+      (options.filter === "unowned" && row.currentLevel === null) ||
+      (options.filter === "changed" && options.changedSkillIds.has(row.skillId));
+    const matchesCategory = options.categoryId === "all" ||
+      row.categoryId === options.categoryId;
+    return matchesQuery && matchesFilter && matchesCategory;
+  });
 }
 
 export function selectSkillSheetEncouragement(

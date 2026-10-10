@@ -42,7 +42,7 @@ test("メンバーのスキル申告をマネージャーが承認できる", as
     const manager = await openLoggedInContext(browser, credentials.MANAGER);
     try {
       await manager.page.goto("/skill-approvals");
-      const approval = manager.page.getByRole("group", {
+      const approval = manager.page.getByRole("listitem", {
         name: `Member User / ${skillName}の承認`
       });
       await expect(approval).toBeVisible();

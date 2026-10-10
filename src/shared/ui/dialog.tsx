@@ -23,6 +23,7 @@ export function Dialog({
   eyebrow,
   children,
   footer,
+  headerActions,
   className,
   closeOnBackdrop = true
 }: {
@@ -33,6 +34,7 @@ export function Dialog({
   eyebrow?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
+  headerActions?: ReactNode;
   className?: string;
   closeOnBackdrop?: boolean;
 }) {
@@ -129,16 +131,19 @@ export function Dialog({
               </p>
             ) : null}
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-11 w-11"
-            onClick={onClose}
-            aria-label="ダイアログを閉じる"
-          >
-            <X className="h-5 w-5" aria-hidden="true" />
-          </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            {headerActions}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-11 w-11"
+              onClick={onClose}
+              aria-label="ダイアログを閉じる"
+            >
+              <X className="h-5 w-5" aria-hidden="true" />
+            </Button>
+          </div>
         </header>
         <div className="p-4 sm:p-6">{children}</div>
         {footer ? (

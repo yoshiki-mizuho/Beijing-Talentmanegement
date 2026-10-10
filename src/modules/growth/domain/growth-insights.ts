@@ -149,6 +149,16 @@ export type GrowthCalendarDay = {
   levelUpCount: number;
 };
 
+export type GrowthCalendarDayKind = "none" | "assessment" | "level-up";
+
+export function getGrowthCalendarDayKind(
+  day: Pick<GrowthCalendarDay, "assessmentCount" | "levelUpCount">
+): GrowthCalendarDayKind {
+  if (day.levelUpCount > 0) return "level-up";
+  if (day.assessmentCount > 0) return "assessment";
+  return "none";
+}
+
 export function buildGrowthCalendar(input: {
   year: number;
   month: number;

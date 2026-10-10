@@ -3,7 +3,8 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { buildGrowthCalendar } from "@/modules/growth/domain/growth-insights";
+import { buildGrowthCalendar, getGrowthCalendarDayKind } from "@/modules/growth/domain/growth-insights";
+import { cn } from "@/shared/lib/utils";
 import type { MemberDashboardViewModel } from "@/modules/dashboard/presentation/member-dashboard-view-model";
 
 const weekdayLabels = ["日", "月", "火", "水", "木", "金", "土"];
@@ -61,30 +62,34 @@ export function GrowthCalendar({
       </div>
       <div className="grid grid-cols-7 gap-1" role="grid" aria-label={`${visible.year}年${visible.month + 1}月の成長カレンダー`}>
         {days.map((day, index) => {
+          const kind = getGrowthCalendarDayKind(day);
+          const contents = [
+            day.levelUpCount > 0 ? "レベルアップ" : null,
+            day.assessmentCount > 0 ? "申請" : null
+          ].filter(Boolean).join("、");
           const label = day.day === null
             ? ""
-            : `${visible.month + 1}月${day.day}日、申請${day.assessmentCount}件、レベルアップ${day.levelUpCount}件`;
+            : `${visible.month + 1}月${day.day}日${contents ? ` ${contents}` : ""}`;
           return (
             <div
               key={day.dateKey ?? `blank-${index}`}
               role="gridcell"
               aria-label={label || undefined}
-              className={`relative grid aspect-square min-h-10 place-items-center rounded-md text-xs ${day.day === null ? "" : "border border-[var(--border)]"}`}
+              className={cn(
+                "grid aspect-square min-h-10 place-items-center rounded-md text-xs",
+                day.day !== null && "border border-[var(--border)]",
+                kind === "assessment" && "border-teal-200 bg-teal-100 text-teal-950",
+                kind === "level-up" && "border-[var(--primary)] bg-[var(--primary)] font-semibold text-white"
+              )}
             >
               {day.day}
-              {day.assessmentCount > 0 ? (
-                <span className="absolute bottom-1 left-1 h-2 w-2 rounded-full bg-teal-200" aria-hidden="true" />
-              ) : null}
-              {day.levelUpCount > 0 ? (
-                <span className="absolute bottom-1 right-1 h-2 w-2 rounded-full bg-[var(--primary)]" aria-hidden="true" />
-              ) : null}
             </div>
           );
         })}
       </div>
       <div className="mt-3 flex flex-wrap gap-4 text-xs text-[var(--muted-foreground)]">
-        <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-teal-200" />申請した日</span>
-        <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[var(--primary)]" />レベルアップした日</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-4 w-4 rounded border border-teal-200 bg-teal-100" />申請した日</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-4 w-4 rounded border border-[var(--primary)] bg-[var(--primary)]" />レベルアップした日</span>
       </div>
     </div>
   );
