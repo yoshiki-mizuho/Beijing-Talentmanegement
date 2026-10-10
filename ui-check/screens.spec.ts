@@ -15,6 +15,13 @@ const capture = async (page: Page, role: DemoRole, name: string) => {
 };
 
 test.describe("UI check", () => {
+  test("ログイン", async ({ page }) => {
+    await page.goto("/login");
+    await page.waitForLoadState("networkidle");
+    await page.getByRole("heading", { name: "ログイン", level: 1 }).waitFor();
+    await page.screenshot({ path: "test-results/ui-check/login.png", fullPage: true });
+  });
+
   test("ADMIN", async ({ page }) => {
     test.skip(!enabled("ADMIN")); await login(page, credentials.ADMIN);
     await page.goto("/dashboard"); await capture(page, "ADMIN", "dashboard");

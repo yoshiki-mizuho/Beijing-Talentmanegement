@@ -4,8 +4,8 @@ import type { DemoCredential } from "./credentials";
 
 export async function login(page: Page, credential: DemoCredential) {
   await page.goto("/login");
-  await page.getByLabel("メールアドレス").fill(credential.email);
-  await page.getByLabel("パスワード").fill(credential.password);
+  await page.getByLabel("メールアドレス", { exact: true }).fill(credential.email);
+  await page.getByLabel("パスワード", { exact: true }).fill(credential.password);
   await page.getByRole("button", { name: "ログイン", exact: true }).click();
   await expect(page).toHaveURL(/\/dashboard(?:\?.*)?$/);
 }
