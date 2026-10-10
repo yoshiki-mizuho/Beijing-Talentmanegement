@@ -350,6 +350,18 @@ export const demoTargetRoleAssignments = [
 ] as const;
 
 export const demoSkillLevelChanges = [
+  { employeeNo: "TM0101", skillCode: "DEMO-SKILL-001", fromLevel: null, toLevel: 1, changedAt: "2021-10-01T09:00:00.000Z" },
+  { employeeNo: "TM0101", skillCode: "DEMO-SKILL-005", fromLevel: null, toLevel: 2, changedAt: "2021-10-01T09:00:00.000Z" },
+  { employeeNo: "TM0101", skillCode: "DEMO-SKILL-001", fromLevel: 1, toLevel: 3, changedAt: "2023-10-01T09:00:00.000Z" },
+  { employeeNo: "TM0101", skillCode: "DEMO-SKILL-005", fromLevel: 2, toLevel: 3, changedAt: "2023-10-01T09:00:00.000Z" },
+  { employeeNo: "TM0101", skillCode: "DEMO-SKILL-001", fromLevel: 3, toLevel: 4, changedAt: "2025-10-01T09:00:00.000Z" },
+  { employeeNo: "TM0101", skillCode: "DEMO-SKILL-005", fromLevel: 3, toLevel: 4, changedAt: "2025-10-01T09:00:00.000Z" },
+  { employeeNo: "TM0103", skillCode: "DEMO-SKILL-009", fromLevel: null, toLevel: 2, changedAt: "2021-10-03T09:00:00.000Z" },
+  { employeeNo: "TM0103", skillCode: "DEMO-SKILL-011", fromLevel: null, toLevel: 2, changedAt: "2021-10-03T09:00:00.000Z" },
+  { employeeNo: "TM0103", skillCode: "DEMO-SKILL-009", fromLevel: 2, toLevel: 3, changedAt: "2023-10-03T09:00:00.000Z" },
+  { employeeNo: "TM0103", skillCode: "DEMO-SKILL-011", fromLevel: 2, toLevel: 4, changedAt: "2023-10-03T09:00:00.000Z" },
+  { employeeNo: "TM0103", skillCode: "DEMO-SKILL-009", fromLevel: 3, toLevel: 4, changedAt: "2025-10-03T09:00:00.000Z" },
+  { employeeNo: "TM0103", skillCode: "DEMO-SKILL-011", fromLevel: 4, toLevel: 5, changedAt: "2025-10-03T09:00:00.000Z" },
   { employeeNo: "TM0003", skillCode: "DEMO-SKILL-001", fromLevel: 2, toLevel: 3, changedAt: "2026-08-08T09:00:00.000Z" },
   { employeeNo: "TM0003", skillCode: "DEMO-SKILL-002", fromLevel: 3, toLevel: 4, changedAt: "2026-09-08T09:00:00.000Z" },
   { employeeNo: "TM0003", skillCode: "DEMO-SKILL-005", fromLevel: 3, toLevel: 4, changedAt: "2026-10-08T09:00:00.000Z" },

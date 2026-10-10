@@ -10,6 +10,7 @@ import {
 const expectedNavigation = {
   ADMIN: [
     "/dashboard",
+    "/explore",
     "/members",
     "/skill-map",
     "/skills",
@@ -22,6 +23,7 @@ const expectedNavigation = {
   ],
   MANAGER: [
     "/dashboard",
+    "/explore",
     "/members",
     "/skill-map",
     "/skills",
@@ -30,7 +32,7 @@ const expectedNavigation = {
     "/skill-approvals",
     "/notifications"
   ],
-  MEMBER: ["/dashboard", "/my/skills", "/notifications"]
+  MEMBER: ["/dashboard", "/explore", "/my/skills", "/notifications"]
 } satisfies Record<AppRole, string[]>;
 
 describe("application route access", () => {
@@ -67,6 +69,8 @@ describe("application route access", () => {
 
   it("MEMBERはダッシュボード、自分のスキル、通知だけへアクセスできる", () => {
     expect(canAccessAppPath("MEMBER", "/dashboard")).toBe(true);
+    expect(canAccessAppPath("MEMBER", "/explore")).toBe(true);
+    expect(canAccessAppPath("MEMBER", "/people/member-id")).toBe(true);
     expect(canAccessAppPath("MEMBER", "/my/skills/history")).toBe(true);
     expect(canAccessAppPath("MEMBER", "/notifications")).toBe(true);
     expect(canAccessAppPath("MEMBER", "/members")).toBe(false);

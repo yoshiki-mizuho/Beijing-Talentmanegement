@@ -82,7 +82,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     <AppShell
       user={{
         name: session.user.name,
-        role: session.user.role
+        role: session.user.role,
+        memberId: session.user.memberId!
       }}
       unreadNotificationCount={unreadNotificationCount}
       pendingApprovalCount={pendingApprovalCount}

@@ -5,6 +5,7 @@ export type AppRole = (typeof appRoles)[number];
 type NavigationIcon =
   | "dashboard"
   | "members"
+  | "explore"
   | "skillMap"
   | "skills"
   | "roles"
@@ -40,6 +41,7 @@ export const appNavigationGroups: readonly AppNavigationGroup[] = [
   {
     label: "人材・スキル",
     items: [
+      { href: "/explore", label: "探す", icon: "explore", allowedRoles: allRoles },
       { href: "/members", label: "メンバー", icon: "members", allowedRoles: managementRoles },
       { href: "/skill-map", label: "スキルマップ", icon: "skillMap", allowedRoles: managementRoles },
       { href: "/skills", label: "スキル管理", icon: "skills", allowedRoles: managementRoles },
@@ -64,7 +66,8 @@ export const appNavigationGroups: readonly AppNavigationGroup[] = [
 ] as const;
 
 const nonNavigationRoutes: readonly Pick<AppNavigationItem, "href" | "allowedRoles">[] = [
-  { href: "/account/password", allowedRoles: allRoles }
+  { href: "/account/password", allowedRoles: allRoles },
+  { href: "/people", allowedRoles: allRoles }
 ];
 const appRouteRules: readonly Pick<AppNavigationItem, "href" | "allowedRoles">[] = [
   ...appNavigationGroups.flatMap((group) => group.items),

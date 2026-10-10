@@ -8,6 +8,8 @@ import {
   Star
 } from "lucide-react";
 import { useState } from "react";
+import Link from "next/link";
+import type { Route } from "next";
 import { toast } from "sonner";
 
 import type { LevelUpFeedItem } from "@/modules/growth/application/growth-service";
@@ -144,7 +146,7 @@ function FeedItem({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <p className="text-sm text-[var(--foreground)]">
-              <span className="font-semibold">{initialItem.memberName} さん</span>
+              <Link href={`/people/${initialItem.memberId}` as Route} className="font-semibold hover:text-[var(--primary)] hover:underline">{initialItem.memberName} さん</Link>
               が <span className="font-semibold">{initialItem.skillName}</span> を <span className="font-semibold">Lv{initialItem.toLevel}</span> に
             </p>
             <time className="shrink-0 text-xs text-[var(--muted-foreground)]" dateTime={initialItem.changedAt}>

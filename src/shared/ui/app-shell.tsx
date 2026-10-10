@@ -6,6 +6,7 @@ import {
   Check,
   ChevronDown,
   ClipboardCheck,
+  Compass,
   FileSpreadsheet,
   KeyRound,
   Library,
@@ -45,7 +46,8 @@ const navigationIcons = {
   approvals: ClipboardCheck,
   notifications: Bell,
   csv: FileSpreadsheet,
-  auditLogs: ShieldCheck
+  auditLogs: ShieldCheck,
+  explore: Compass
 } satisfies Record<AppNavigationItem["icon"], LucideIcon>;
 
 const roleLabels: Record<AppRole, string> = {
@@ -55,7 +57,7 @@ const roleLabels: Record<AppRole, string> = {
 };
 
 type AppShellProps = {
-  user: { name?: string | null; role: AppRole };
+  user: { name?: string | null; role: AppRole; memberId: string };
   unreadNotificationCount: number;
   pendingApprovalCount: number;
   setupProgress: SetupProgress | null;
@@ -360,6 +362,13 @@ function AccountMenu({ user }: { user: AppShellProps["user"] }) {
           <p className="truncate text-sm font-semibold">{name}</p>
           <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">{roleLabels[user.role]}</p>
         </div>
+        <Link
+          href={`/people/${user.memberId}` as Route}
+          className="mt-1 flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium hover:bg-[var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+        >
+          <Sparkles className="h-4 w-4 text-[var(--muted-foreground)]" aria-hidden="true" />
+          スキルプロフィール
+        </Link>
         <Link
           href="/account/password"
           className="mt-1 flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium hover:bg-[var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"

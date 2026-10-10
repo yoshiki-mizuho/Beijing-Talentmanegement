@@ -2,6 +2,8 @@
 
 import { Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
+import Link from "next/link";
+import type { Route } from "next";
 
 import {
   createOneOnOneNoteAction,
@@ -105,6 +107,7 @@ export function MemberDetailModal({
       title={`${member.name}の詳細`}
       className="max-w-4xl"
     >
+      <Link href={`/people/${member.id}` as Route} className="mb-4 inline-flex min-h-11 items-center text-sm font-semibold text-[var(--primary)] hover:underline">プロフィールを見る</Link>
       <div
         role="tablist"
         aria-label={`${member.name}の詳細項目`}
