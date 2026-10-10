@@ -6,12 +6,16 @@ import {
   getCoreRowModel,
   useReactTable
 } from "@tanstack/react-table";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FilterX, UsersRound } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { buildMemberSearchParams, emptyMemberSearchFilters, hasMemberSearchFilters, type MemberSearchFilters } from "@/modules/members/presentation/member-search-filters";
 import { MemberDetailModal } from "@/modules/members/presentation/member-detail-modal";
+import {
+  getMemberStatusLabel,
+  summarizeMemberSkills
+} from "@/modules/members/presentation/member-display";
 import type {
   DepartmentOption,
   ManagerOption,
@@ -28,6 +32,7 @@ import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { QueryProvider } from "@/shared/ui/query-provider";
 import { Select } from "@/shared/ui/select";
+import { Tooltip } from "@/shared/ui/tooltip";
 
 export function MemberSearchTable(props: {
   initialMembers: MemberRow[];
@@ -65,10 +70,16 @@ function MemberSearchTableInner({
   canDeactivateMembers: boolean;
   canEditGrowthSettings: boolean;
 }) {
+  const queryClient = useQueryClient();
   const [filters, setFilters] = useState<MemberSearchFilters>(emptyMemberSearchFilters);
   const [debouncedKeyword, setDebouncedKeyword] = useState(filters.q);
-  const [selectedMember, setSelectedMember] = useState<MemberRow | null>(null);
-  const closeMemberDetail = useCallback(() => setSelectedMember(null), []);
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+  const closeMemberDetail = useCallback(() => setSelectedMemberId(null), []);
+
+  useEffect(() => {
+    queryClient.setQueryData(["members", ""], initialMembers);
+  }, [initialMembers, queryClient]);
+
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       setDebouncedKeyword(filters.q.trim());
@@ -95,6 +106,11 @@ function MemberSearchTableInner({
   });
 
   const members = query.data ?? [];
+  const selectedMember =
+    members.find((member) => member.id === selectedMemberId) ?? null;
+  const refreshMembers = useCallback(() => {
+    void query.refetch();
+  }, [query]);
   const selectedRole = roles.find((role) => role.id === appliedFilters.roleId);
   const columns = useMemo<ColumnDef<MemberRow>[]>(
     () => [
@@ -104,7 +120,22 @@ function MemberSearchTableInner({
       },
       {
         accessorKey: "name",
-        header: "氏名"
+        header: "氏名",
+        cell: ({ row }) => (
+          <Button
+            type="button"
+            variant="ghost"
+            className="h-auto min-h-11 justify-start px-0 text-left text-[var(--foreground)]"
+            aria-haspopup="dialog"
+            aria-label={`${row.original.name}の詳細を開く`}
+            onClick={(event) => {
+              event.stopPropagation();
+              setSelectedMemberId(row.original.id);
+            }}
+          >
+            {row.original.name}
+          </Button>
+        )
       },
       {
         accessorKey: "department.name",
@@ -119,13 +150,16 @@ function MemberSearchTableInner({
       {
         accessorKey: "memberSkills",
         header: "スキル",
-        cell: ({ row }) =>
-          row.original.memberSkills.length === 0
-            ? "未設定"
-            : row.original.memberSkills
-                .slice(0, 3)
-                .map((memberSkill) => `${memberSkill.skill.name} Lv.${memberSkill.level}`)
-                .join(" / ")
+        cell: ({ row }) => <MemberSkillsCell member={row.original} />
+      },
+      {
+        accessorKey: "status",
+        header: "状態",
+        cell: ({ row }) => (
+          <Badge variant={row.original.status === "ACTIVE" ? "success" : "neutral"}>
+            {getMemberStatusLabel(row.original.status)}
+          </Badge>
+        )
       },
       {
         id: "roleStatus",
@@ -317,18 +351,8 @@ function MemberSearchTableInner({
             {table.getRowModel().rows.map((row) => (
               <tr
                 key={row.id}
-                tabIndex={0}
-                role="button"
-                aria-haspopup="dialog"
-                aria-label={`${row.original.name}の詳細を開く`}
-                className="cursor-pointer transition-colors hover:bg-[var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--ring)]"
-                onClick={() => setSelectedMember(row.original)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    setSelectedMember(row.original);
-                  }
-                }}
+                className="cursor-pointer transition-colors hover:bg-[var(--surface-subtle)]"
+                onClick={() => setSelectedMemberId(row.original.id)}
               >
                 {row.getVisibleCells().map((cell) => (
                   <td key={cell.id} className="max-w-72 px-3 py-3 align-top text-slate-700">
@@ -350,7 +374,44 @@ function MemberSearchTableInner({
           canDeactivateMembers={canDeactivateMembers}
           canEditGrowthSettings={canEditGrowthSettings}
           onClose={closeMemberDetail}
+          onMemberChanged={refreshMembers}
         />
+      ) : null}
+    </div>
+  );
+}
+
+function MemberSkillsCell({ member }: { member: MemberRow }) {
+  const { visibleSkills, hiddenSkills } = summarizeMemberSkills(
+    member.memberSkills
+  );
+
+  if (visibleSkills.length === 0) return "未設定";
+
+  const hiddenSkillSummary = hiddenSkills
+    .map(
+      (memberSkill) =>
+        `${memberSkill.skill.name} Lv.${memberSkill.level}`
+    )
+    .join(" / ");
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {visibleSkills.map((memberSkill) => (
+        <Badge key={memberSkill.id} variant="primary">
+          {memberSkill.skill.name} Lv.{memberSkill.level}
+        </Badge>
+      ))}
+      {hiddenSkills.length > 0 ? (
+        <Tooltip content={hiddenSkillSummary}>
+          <Badge
+            tabIndex={0}
+            aria-label={`ほか${hiddenSkills.length}件: ${hiddenSkillSummary}`}
+            className="cursor-help focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+          >
+            +{hiddenSkills.length}
+          </Badge>
+        </Tooltip>
       ) : null}
     </div>
   );

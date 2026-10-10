@@ -41,8 +41,19 @@ function parseMemberForm(formData: FormData) {
 
 export async function createMemberAction(formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    await requireRoles(managerOrAdmin);
-    await createMember(parseMemberForm(formData));
+    const session = await requireRoles(managerOrAdmin);
+    const member = await createMember(parseMemberForm(formData));
+
+    if (session.user.role === "ADMIN") {
+      await updateMemberManager({
+        memberId: member.id,
+        managerId: getOptionalString(formData, "managerId") ?? null
+      });
+      await updateMemberTargetRole({
+        memberId: member.id,
+        targetRoleId: getOptionalString(formData, "targetRoleId") ?? null
+      });
+    }
     revalidatePath("/members");
   }, "メンバーを登録しました。初期認証情報を安全な経路で共有してください。");
 }
