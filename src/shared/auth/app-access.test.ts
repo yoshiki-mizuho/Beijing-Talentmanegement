@@ -10,36 +10,36 @@ import {
 const expectedNavigation = {
   ADMIN: [
     "/dashboard",
+    "/my/skills",
     "/explore",
+    "/people/member-admin",
+    "/skill-approvals",
     "/members",
     "/skill-map",
     "/skills",
     "/roles",
-    "/my/skills",
-    "/skill-approvals",
-    "/notifications",
     "/csv",
     "/audit-logs"
   ],
   MANAGER: [
     "/dashboard",
+    "/my/skills",
     "/explore",
+    "/people/member-manager",
+    "/skill-approvals",
     "/members",
     "/skill-map",
     "/skills",
-    "/roles",
-    "/my/skills",
-    "/skill-approvals",
-    "/notifications"
+    "/roles"
   ],
-  MEMBER: ["/dashboard", "/explore", "/my/skills", "/notifications"]
+  MEMBER: ["/dashboard", "/my/skills", "/explore", "/people/member-member"]
 } satisfies Record<AppRole, string[]>;
 
 describe("application route access", () => {
   it.each(Object.entries(expectedNavigation) as [AppRole, string[]][])(
     "%sのナビゲーションを許可画面に限定する",
     (role, expected) => {
-      const hrefs = getNavigationGroupsForRole(role).flatMap((group) =>
+      const hrefs = getNavigationGroupsForRole(role, `member-${role.toLowerCase()}`).flatMap((group) =>
         group.items.map((item) => item.href)
       );
 
@@ -48,11 +48,11 @@ describe("application route access", () => {
   );
 
   it("ナビゲーショングループ名を日本語で返す", () => {
-    expect(getNavigationGroupsForRole("ADMIN").map((group) => group.label)).toEqual([
+    expect(getNavigationGroupsForRole("ADMIN", "member-admin").map((group) => group.label)).toEqual([
       "概要",
-      "人材・スキル",
-      "申請・通知",
-      "運用"
+      "メンバーの機能",
+      "マネージャーの機能",
+      "管理者の機能"
     ]);
   });
 
@@ -67,7 +67,7 @@ describe("application route access", () => {
     expect(canAccessAppPath("MANAGER", "/audit-logs/2026")).toBe(false);
   });
 
-  it("MEMBERはダッシュボード、自分のスキル、通知だけへアクセスできる", () => {
+  it("MEMBERはメンバー向け画面へアクセスでき、管理画面へアクセスできない", () => {
     expect(canAccessAppPath("MEMBER", "/dashboard")).toBe(true);
     expect(canAccessAppPath("MEMBER", "/explore")).toBe(true);
     expect(canAccessAppPath("MEMBER", "/people/member-id")).toBe(true);

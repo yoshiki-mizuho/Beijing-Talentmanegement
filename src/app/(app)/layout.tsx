@@ -11,7 +11,10 @@ import {
 } from "@/modules/members/application/member-service";
 import { getLevelUpCelebrations } from "@/modules/growth/application/growth-service";
 import { LevelUpCelebrationDialog } from "@/modules/growth/presentation/level-up-celebration-dialog";
-import { countUnreadNotifications } from "@/modules/notifications/application/notification-service";
+import {
+  countUnreadNotifications,
+  listLatestUnreadNotifications
+} from "@/modules/notifications/application/notification-service";
 import { getCurrentSession } from "@/server/auth/session";
 import {
   canAccessAppPath,
@@ -41,6 +44,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     session.user.role === "ADMIN" || session.user.role === "MANAGER";
   const [
     unreadNotificationCount,
+    latestUnreadNotifications,
     assessmentCount,
     pendingApprovalCount,
     approvedSkillCount,
@@ -50,6 +54,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     session.user.memberId
       ? countUnreadNotifications(session.user.memberId)
       : Promise.resolve(0),
+    session.user.memberId
+      ? listLatestUnreadNotifications(session.user.memberId)
+      : Promise.resolve([]),
     session.user.memberId
       ? countMemberSkillAssessments(session.user.memberId)
       : Promise.resolve(0),
@@ -86,6 +93,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         memberId: session.user.memberId!
       }}
       unreadNotificationCount={unreadNotificationCount}
+      latestUnreadNotifications={latestUnreadNotifications}
       pendingApprovalCount={pendingApprovalCount}
       setupProgress={setupProgress}
     >

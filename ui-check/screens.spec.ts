@@ -25,6 +25,7 @@ test.describe("UI check", () => {
   test("MANAGER", async ({ page }) => {
     test.skip(!enabled("MANAGER")); await login(page, credentials.MANAGER);
     await page.goto("/dashboard"); await capture(page, "MANAGER", "dashboard-team");
+    await page.getByLabel(/通知を開く/).click(); await capture(page, "MANAGER", "header-notifications");
     const cheer = page.getByRole("button", { name: /応援する|応援しました/ }).first();
     if (await cheer.count()) { await cheer.click(); await capture(page, "MANAGER", "cheer-dialog"); }
     await page.goto("/members"); await page.getByRole("button", { name: "Member Userの詳細を開く" }).click();
@@ -35,6 +36,7 @@ test.describe("UI check", () => {
   test("MEMBER", async ({ page }) => {
     test.skip(!enabled("MEMBER")); await login(page, credentials.MEMBER);
     await page.goto("/dashboard"); await capture(page, "MEMBER", "dashboard");
+    await page.getByLabel(/通知を開く/).click(); await capture(page, "MEMBER", "header-notifications");
     await page.goto("/explore"); await capture(page, "MEMBER", "explore");
     await page.getByLabel("アカウントメニューを開く").click(); await page.getByRole("link", { name: "スキルプロフィール" }).click(); await page.waitForURL("**/people/**"); await capture(page, "MEMBER", "skill-profile");
     await page.goto("/explore"); await page.getByRole("link", { name: /デモメンバー01/ }).first().click(); await page.waitForURL("**/people/**"); await capture(page, "MEMBER", "other-profile");

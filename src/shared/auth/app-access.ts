@@ -10,8 +10,8 @@ type NavigationIcon =
   | "skills"
   | "roles"
   | "mySkills"
+  | "profile"
   | "approvals"
-  | "notifications"
   | "csv"
   | "auditLogs";
 
@@ -39,9 +39,17 @@ export const appNavigationGroups: readonly AppNavigationGroup[] = [
     ]
   },
   {
-    label: "人材・スキル",
+    label: "メンバーの機能",
     items: [
+      { href: "/my/skills", label: "自分のスキル", icon: "mySkills", allowedRoles: allRoles },
       { href: "/explore", label: "探す", icon: "explore", allowedRoles: allRoles },
+      { href: "/people/:memberId", label: "プロフィール", icon: "profile", allowedRoles: allRoles }
+    ]
+  },
+  {
+    label: "マネージャーの機能",
+    items: [
+      { href: "/skill-approvals", label: "スキル承認", icon: "approvals", allowedRoles: managementRoles },
       { href: "/members", label: "メンバー", icon: "members", allowedRoles: managementRoles },
       { href: "/skill-map", label: "スキルマップ", icon: "skillMap", allowedRoles: managementRoles },
       { href: "/skills", label: "スキル管理", icon: "skills", allowedRoles: managementRoles },
@@ -49,15 +57,7 @@ export const appNavigationGroups: readonly AppNavigationGroup[] = [
     ]
   },
   {
-    label: "申請・通知",
-    items: [
-      { href: "/my/skills", label: "自分のスキル", icon: "mySkills", allowedRoles: allRoles },
-      { href: "/skill-approvals", label: "スキル承認", icon: "approvals", allowedRoles: managementRoles },
-      { href: "/notifications", label: "通知", icon: "notifications", allowedRoles: allRoles }
-    ]
-  },
-  {
-    label: "運用",
+    label: "管理者の機能",
     items: [
       { href: "/csv", label: "CSV", icon: "csv", allowedRoles: adminOnly },
       { href: "/audit-logs", label: "監査ログ", icon: "auditLogs", allowedRoles: adminOnly }
@@ -67,16 +67,22 @@ export const appNavigationGroups: readonly AppNavigationGroup[] = [
 
 const nonNavigationRoutes: readonly Pick<AppNavigationItem, "href" | "allowedRoles">[] = [
   { href: "/account/password", allowedRoles: allRoles },
-  { href: "/people", allowedRoles: allRoles }
+  { href: "/people", allowedRoles: allRoles },
+  { href: "/notifications", allowedRoles: allRoles }
 ];
 const appRouteRules: readonly Pick<AppNavigationItem, "href" | "allowedRoles">[] = [
   ...appNavigationGroups.flatMap((group) => group.items),
   ...nonNavigationRoutes
 ];
 
-export function getNavigationGroupsForRole(role: AppRole): AppNavigationGroup[] {
+export function getNavigationGroupsForRole(role: AppRole, memberId: string): AppNavigationGroup[] {
   return appNavigationGroups.flatMap((group) => {
-    const items = group.items.filter((item) => item.allowedRoles.includes(role));
+    const items = group.items
+      .filter((item) => item.allowedRoles.includes(role))
+      .map((item) => ({
+        ...item,
+        href: item.href.replace(":memberId", encodeURIComponent(memberId))
+      }));
     return items.length > 0 ? [{ label: group.label, items }] : [];
   });
 }

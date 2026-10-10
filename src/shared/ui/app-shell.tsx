@@ -1,8 +1,9 @@
 "use client";
 
+import type { Notification } from "@prisma/client";
+
 import {
   BarChart3,
-  Bell,
   Check,
   ChevronDown,
   ClipboardCheck,
@@ -16,6 +17,7 @@ import {
   ShieldCheck,
   Sparkles,
   Target,
+  UserRound,
   Users,
   X,
   type LucideIcon
@@ -44,7 +46,7 @@ const navigationIcons = {
   roles: Target,
   mySkills: Sparkles,
   approvals: ClipboardCheck,
-  notifications: Bell,
+  profile: UserRound,
   csv: FileSpreadsheet,
   auditLogs: ShieldCheck,
   explore: Compass
@@ -59,6 +61,7 @@ const roleLabels: Record<AppRole, string> = {
 type AppShellProps = {
   user: { name?: string | null; role: AppRole; memberId: string };
   unreadNotificationCount: number;
+  latestUnreadNotifications: Notification[];
   pendingApprovalCount: number;
   setupProgress: SetupProgress | null;
   children: ReactNode;
@@ -67,13 +70,14 @@ type AppShellProps = {
 export function AppShell({
   user,
   unreadNotificationCount,
+  latestUnreadNotifications,
   pendingApprovalCount,
   setupProgress,
   children
 }: AppShellProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const navigationGroups = getNavigationGroupsForRole(user.role);
+  const navigationGroups = getNavigationGroupsForRole(user.role, user.memberId);
   const drawerRef = useRef<HTMLElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -143,7 +147,11 @@ export function AppShell({
             </div>
           ) : null}
           <PrimaryAction role={user.role} pendingApprovalCount={pendingApprovalCount} />
-          <NotificationIndicator unreadCount={unreadNotificationCount} />
+          <NotificationIndicator
+            unreadCount={unreadNotificationCount}
+            notifications={latestUnreadNotifications}
+            role={user.role}
+          />
           <AccountMenu user={user} />
         </div>
       </header>
@@ -237,7 +245,7 @@ function PrimaryAction({
       title={label}
       className={`inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 ${
         isMember || hasPendingApprovals
-          ? "bg-[var(--primary)] text-[var(--primary-foreground)] hover:bg-[var(--primary-hover)]"
+          ? "bg-[var(--primary)] !text-[var(--primary-foreground)] hover:bg-[var(--primary-hover)]"
           : "border border-[var(--border-strong)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-subtle)]"
       }`}
     >
