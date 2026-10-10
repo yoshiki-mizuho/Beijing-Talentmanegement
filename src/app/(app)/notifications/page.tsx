@@ -47,9 +47,9 @@ export default async function NotificationsPage({
       />
 
       <Card>
-        <CardHeader className="flex-row flex-wrap items-center justify-between gap-3">
-          <div className="space-y-3">
-            <CardTitle>通知一覧</CardTitle>
+        <CardHeader className="space-y-3">
+          <CardTitle>通知一覧</CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <nav aria-label="通知の絞り込み" className="flex items-center gap-2">
               <NotificationFilterLink href="/notifications" active={!unreadOnly}>
                 すべて
@@ -59,16 +59,16 @@ export default async function NotificationsPage({
                 {unreadCount > 0 ? <span className="tabular-nums">{unreadCount}</span> : null}
               </NotificationFilterLink>
             </nav>
+            <ActionForm action={markAllNotificationsReadAction}>
+              <SubmitButton
+                variant="secondary"
+                pendingLabel="既読にしています…"
+                disabled={unreadCount === 0}
+              >
+                すべて既読にする
+              </SubmitButton>
+            </ActionForm>
           </div>
-          <ActionForm action={markAllNotificationsReadAction}>
-            <SubmitButton
-              variant="secondary"
-              pendingLabel="既読にしています…"
-              disabled={unreadCount === 0}
-            >
-              すべて既読にする
-            </SubmitButton>
-          </ActionForm>
         </CardHeader>
         <CardContent className="space-y-2">
           {notifications.map((notification) => {

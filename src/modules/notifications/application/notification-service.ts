@@ -8,6 +8,10 @@ export function countUnreadNotifications(memberId: string) {
   return notificationRepository.countUnreadNotifications(memberId);
 }
 
+export function listLatestUnreadNotifications(memberId: string, limit = 5) {
+  return notificationRepository.listLatestUnreadNotifications(memberId, limit);
+}
+
 export function findNotification(id: string, memberId: string) {
   return notificationRepository.findNotification(id, memberId);
 }

@@ -1,4 +1,4 @@
-import { NotificationType } from "@prisma/client";
+import type { NotificationType } from "@prisma/client";
 
 import {
   canAccessAppPath,
@@ -24,12 +24,12 @@ export function getNotificationDestination({
 
   let destination: NotificationDestination | null = null;
 
-  if (type === NotificationType.SKILL_ASSESSMENT_REQUESTED) {
+  if (type === "SKILL_ASSESSMENT_REQUESTED") {
     destination = "/skill-approvals";
   } else if (
-    type === NotificationType.SKILL_ASSESSMENT_APPROVED ||
-    type === NotificationType.SKILL_ASSESSMENT_CORRECTED ||
-    type === NotificationType.SKILL_ASSESSMENT_REJECTED
+    type === "SKILL_ASSESSMENT_APPROVED" ||
+    type === "SKILL_ASSESSMENT_CORRECTED" ||
+    type === "SKILL_ASSESSMENT_REJECTED"
   ) {
     destination = "/my/skills";
   }
