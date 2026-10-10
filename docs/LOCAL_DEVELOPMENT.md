@@ -66,6 +66,10 @@ Remove-Item Env:DEMO_ADMIN_PASSWORD, Env:DEMO_MANAGER_PASSWORD, Env:DEMO_MEMBER_
 
 E2Eテストはスキル申告と承認を行い、ローカルDBのデータを変更する。共有DBでは実行せず、使い捨て可能なローカルDBを使用する。
 
+## 画面確認
+
+`.env` の `DEMO_ADMIN_PASSWORD`、`DEMO_MANAGER_PASSWORD`、`DEMO_MEMBER_PASSWORD` を使い、`npm.cmd run ui:check` で3ロールの主要画面を撮影する。`$env:UI_CHECK_ONLY = "MANAGER"` のように指定すると対象ロールを絞れる。スクリーンショットは `test-results/ui-check/` に保存され、Git管理には含まれない。
+
 ## DBを作り直す
 
 DBの状態が壊れた場合は、`npm.cmd exec -- prisma migrate reset` で作り直してからseedを再実行する。ローカルDBの中身は使い捨てとして扱い、共有したいデータはseedに反映する。

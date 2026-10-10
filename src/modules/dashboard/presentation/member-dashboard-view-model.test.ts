@@ -27,6 +27,7 @@ function fixture(overrides: Partial<MemberGrowthData> = {}): MemberGrowthData {
     assessments: [],
     levelChanges: [],
     mentoredCheers: [],
+    receivedCheers: [],
     mentorCandidates: [],
     levelDefinitions: [],
     ...overrides

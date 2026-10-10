@@ -43,6 +43,7 @@ export function MemberSearchTable(props: {
   targetRoles: TargetRoleOption[];
   canDeactivateMembers: boolean;
   canEditGrowthSettings: boolean;
+  viewerMemberId: string;
 }) {
   return (
     <QueryProvider>
@@ -59,7 +60,8 @@ function MemberSearchTableInner({
   managerCandidates,
   targetRoles,
   canDeactivateMembers,
-  canEditGrowthSettings
+  canEditGrowthSettings,
+  viewerMemberId
 }: {
   initialMembers: MemberRow[];
   departments: DepartmentOption[];
@@ -69,6 +71,7 @@ function MemberSearchTableInner({
   targetRoles: TargetRoleOption[];
   canDeactivateMembers: boolean;
   canEditGrowthSettings: boolean;
+  viewerMemberId: string;
 }) {
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState<MemberSearchFilters>(emptyMemberSearchFilters);
@@ -373,6 +376,7 @@ function MemberSearchTableInner({
           targetRoles={targetRoles}
           canDeactivateMembers={canDeactivateMembers}
           canEditGrowthSettings={canEditGrowthSettings}
+          viewerMemberId={viewerMemberId}
           onClose={closeMemberDetail}
           onMemberChanged={refreshMembers}
         />

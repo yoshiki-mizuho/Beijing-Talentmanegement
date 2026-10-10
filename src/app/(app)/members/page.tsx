@@ -107,6 +107,7 @@ export default async function MembersPage() {
             targetRoles={targetRoleOptions}
             canDeactivateMembers={canDeactivateMembers}
             canEditGrowthSettings={canEditGrowthSettings}
+            viewerMemberId={session.user.memberId}
           />
         </CardContent>
       </Card>

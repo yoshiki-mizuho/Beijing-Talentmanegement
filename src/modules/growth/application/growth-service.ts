@@ -67,19 +67,40 @@ export function getLevelUpFeed(input: {
   return growthRepository.listLevelUpFeed({ ...input, limit: input.limit ?? 10 });
 }
 
-export function createCheer(input: unknown) {
-  return growthRepository.createCheer(cheerInputSchema.parse(input));
+export async function createCheer(
+  input: unknown,
+  viewer: { memberId: string; role: AuthRole }
+) {
+  const parsed = cheerInputSchema.omit({ fromMemberId: true }).parse(input);
+  if (parsed.toMemberId === viewer.memberId) {
+    throw new AuthorizationError("自分自身には応援を送れません。", 403);
+  }
+  const target = await growthRepository.getCheerAccessContext(parsed.toMemberId);
+  if (!target || (viewer.role !== "ADMIN" && target.managerId !== viewer.memberId)) {
+    throw new AuthorizationError("このメンバーに応援を送る権限がありません。", 403);
+  }
+  if (parsed.mentorMemberId) {
+    const mentor = await growthRepository.getMentorForCheer(parsed.mentorMemberId, parsed.targetSkillId);
+    if (!mentor || mentor.status !== "ACTIVE" || mentor.id === viewer.memberId || mentor.id === parsed.toMemberId || (parsed.targetSkillId && mentor.memberSkills.length === 0)) {
+      throw new AuthorizationError("紹介するメンバーを選び直してください。", 403);
+    }
+  }
+  return growthRepository.createCheer({ ...parsed, fromMemberId: viewer.memberId });
 }
 
-export function createOneOnOneNote(input: unknown) {
-  return growthRepository.createOneOnOneNote(
-    oneOnOneNoteInputSchema.parse(input)
-  );
+export async function createOneOnOneNote(input: unknown, managerMemberId: string) {
+  const parsed = oneOnOneNoteInputSchema.omit({ managerMemberId: true }).parse(input);
+  const member = await growthRepository.getOneOnOneMember(parsed.memberId);
+  if (!member || member.managerId !== managerMemberId) {
+    throw new AuthorizationError("このメンバーの1on1メモを追加する権限がありません。", 403);
+  }
+  return growthRepository.createOneOnOneNote({ ...parsed, managerMemberId });
 }
 
-export function updateOneOnOneNote(input: unknown) {
+export function updateOneOnOneNote(input: unknown, managerMemberId: string) {
+  const parsed = oneOnOneNoteUpdateInputSchema.omit({ managerMemberId: true }).parse(input);
   return growthRepository.updateOneOnOneNote(
-    oneOnOneNoteUpdateInputSchema.parse(input)
+    { ...parsed, managerMemberId }
   );
 }
 
@@ -99,6 +120,10 @@ export function toggleOneOnOneNoteDiscussed(
 
 export function getMemberGrowthData(memberId: string) {
   return fetchMemberGrowthData(memberId);
+}
+
+export function listSkillMentorCandidates(skillIds: string[]) {
+  return growthRepository.listSkillMentorCandidates(skillIds);
 }
 
 export async function getLevelUpCelebrations(memberId: string) {

@@ -1,5 +1,6 @@
 import {
   aggregateMissingSkills,
+  findAlmostThereMembers,
   parseDashboardMonth,
   type TeamMemberSnapshot
 } from "@/modules/dashboard/domain/team-dashboard";
@@ -8,7 +9,7 @@ import {
   getTeamDashboardData,
   isPendingAssessment
 } from "@/modules/dashboard/infrastructure/team-dashboard-repository";
-import { getLevelUpFeed } from "@/modules/growth/application/growth-service";
+import { getLevelUpFeed, listSkillMentorCandidates } from "@/modules/growth/application/growth-service";
 
 export async function getTeamDashboard(
   managerMemberId: string,
@@ -42,7 +43,8 @@ export async function getTeamDashboard(
   }));
   const memberIds = members.map((member) => member.id);
   const topMissingSkill = aggregateMissingSkills(members)[0];
-  const [feed, topMissingSkillExpertCount] = await Promise.all([
+  const almostThere = findAlmostThereMembers(members);
+  const [feed, topMissingSkillExpertCount, mentorSkills] = await Promise.all([
     getLevelUpFeed({
       memberIds,
       viewerMemberId: managerMemberId,
@@ -50,7 +52,8 @@ export async function getTeamDashboard(
       end: month.end,
       limit: 10
     }),
-    topMissingSkill ? countSkillExperts(topMissingSkill.skillId) : Promise.resolve(0)
+    topMissingSkill ? countSkillExperts(topMissingSkill.skillId) : Promise.resolve(0),
+    listSkillMentorCandidates([...new Set(almostThere.map((item) => item.skillId))])
   ]);
 
   return {
@@ -73,6 +76,11 @@ export async function getTeamDashboard(
     ),
     feed,
     topMissingSkillExpertCount,
+    mentorSkills,
+    recentCheers: data.sentCheers.filter((cheer) =>
+      cheer.createdAt >= new Date(now.getTime() - 30 * 86_400_000)
+    ),
+    openOneOnOneMemberIds: [...new Set(data.managedOneOnOneNotes.map((note) => note.memberId))],
     now
   };
 }

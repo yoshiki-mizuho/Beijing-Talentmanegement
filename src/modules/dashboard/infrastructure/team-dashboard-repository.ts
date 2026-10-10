@@ -9,6 +9,14 @@ export function getTeamDashboardData(managerMemberId: string) {
       id: true,
       name: true,
       department: { select: { name: true } },
+      sentCheers: {
+        select: { toMemberId: true, createdAt: true },
+        orderBy: { createdAt: "desc" }
+      },
+      managedOneOnOneNotes: {
+        where: { discussedAt: null },
+        select: { memberId: true }
+      },
       reports: {
         where: { status: MemberStatus.ACTIVE },
         select: {
