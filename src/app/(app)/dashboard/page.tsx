@@ -13,10 +13,14 @@ import { redirect } from "next/navigation";
 
 import { getDashboardSummary } from "@/modules/dashboard/application/dashboard-service";
 import { getMemberDashboard } from "@/modules/dashboard/application/member-dashboard-service";
+import { getTeamDashboard } from "@/modules/dashboard/application/team-dashboard-service";
 import { DashboardVisualizations } from "@/modules/dashboard/presentation/dashboard-visualizations";
 import { buildDashboardViewModel } from "@/modules/dashboard/presentation/dashboard-view-model";
 import { MemberDashboard } from "@/modules/dashboard/presentation/member-dashboard";
 import { buildMemberDashboardViewModel } from "@/modules/dashboard/presentation/member-dashboard-view-model";
+import { TeamDashboard } from "@/modules/dashboard/presentation/team-dashboard";
+import { buildTeamDashboardViewModel } from "@/modules/dashboard/presentation/team-dashboard-view-model";
+import { getDepartmentLevelUpFeed } from "@/modules/growth/application/growth-service";
 import { getCurrentSession } from "@/server/auth/session";
 import { Badge } from "@/shared/ui/badge";
 import { Metric } from "@/shared/ui/metric";
@@ -36,14 +40,13 @@ const signalTones = {
   blue: "bg-sky-50 text-[var(--accent-blue)]"
 } as const;
 
-type DashboardView = "personal" | "organization";
+type DashboardView = "personal" | "team" | "organization";
 
-// MANAGER と ADMIN は組織の表示を既定とし、個人の表示へ切り替えられる。
-// チーム表示（部下単位）は #8 でこの切り替えに追加する。
 function DashboardViewSwitch({ current }: { current: DashboardView }) {
   const items: { view: DashboardView; label: string; href: Route }[] = [
     { view: "personal", label: "個人", href: "/dashboard?view=personal" as Route },
-    { view: "organization", label: "組織", href: "/dashboard" as Route }
+    { view: "team", label: "チーム", href: "/dashboard?view=team" as Route },
+    { view: "organization", label: "組織", href: "/dashboard?view=organization" as Route }
   ];
 
   return (
@@ -54,7 +57,7 @@ function DashboardViewSwitch({ current }: { current: DashboardView }) {
             key={item.view}
             href={item.href}
             aria-current={item.view === current ? "page" : undefined}
-            className={`inline-flex h-9 items-center rounded-lg px-4 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] ${
+            className={`inline-flex h-11 items-center rounded-lg px-4 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] ${
               item.view === current
                 ? "bg-[var(--surface)] font-semibold text-[var(--foreground)] shadow-sm"
                 : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
@@ -71,19 +74,20 @@ function DashboardViewSwitch({ current }: { current: DashboardView }) {
 export default async function DashboardPage({
   searchParams
 }: {
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{ view?: string; month?: string }>;
 }) {
   const session = await getCurrentSession();
-  const { view } = await searchParams;
+  const { view, month } = await searchParams;
   const isManagementRole =
     session?.user.role === "ADMIN" || session?.user.role === "MANAGER";
-  const showPersonal =
-    Boolean(session?.user.memberId) && (!isManagementRole || view === "personal");
+  const showPersonal = Boolean(session?.user.memberId) && (!isManagementRole || view === "personal");
 
   if (session?.user.memberId && showPersonal) {
-    const memberViewModel = buildMemberDashboardViewModel(
-      await getMemberDashboard(session.user.memberId)
-    );
+    const [memberDashboard, departmentFeed] = await Promise.all([
+      getMemberDashboard(session.user.memberId),
+      getDepartmentLevelUpFeed(session.user.memberId, 5)
+    ]);
+    const memberViewModel = buildMemberDashboardViewModel(memberDashboard);
 
     if (!memberViewModel) {
       redirect("/login");
@@ -92,11 +96,31 @@ export default async function DashboardPage({
     return isManagementRole ? (
       <div className="space-y-4">
         <DashboardViewSwitch current="personal" />
-        <MemberDashboard viewModel={memberViewModel} />
+        <MemberDashboard
+          viewModel={memberViewModel}
+          levelUpFeed={serializeFeed(departmentFeed)}
+        />
       </div>
     ) : (
-      <MemberDashboard viewModel={memberViewModel} />
+      <MemberDashboard
+        viewModel={memberViewModel}
+        levelUpFeed={serializeFeed(departmentFeed)}
+      />
     );
+  }
+
+  if (session?.user.memberId && isManagementRole && view !== "organization") {
+    const teamDashboard = await getTeamDashboard(session.user.memberId, month);
+    if (!teamDashboard) redirect("/login");
+
+    if (view === "team" || teamDashboard.members.length > 0) {
+      return (
+        <div className="space-y-4">
+          <DashboardViewSwitch current="team" />
+          <TeamDashboard viewModel={buildTeamDashboardViewModel(teamDashboard)} />
+        </div>
+      );
+    }
   }
 
   const summary = await getDashboardSummary();
@@ -194,4 +218,17 @@ export default async function DashboardPage({
       </section>
     </div>
   );
+}
+
+function serializeFeed(
+  items: Awaited<ReturnType<typeof getDepartmentLevelUpFeed>>
+) {
+  return items.map((item) => ({
+    ...item,
+    changedAt: item.changedAt.toISOString(),
+    comments: item.comments.map((comment) => ({
+      ...comment,
+      createdAt: comment.createdAt.toISOString()
+    }))
+  }));
 }

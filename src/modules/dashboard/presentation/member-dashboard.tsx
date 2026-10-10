@@ -1,17 +1,20 @@
-import { Award, CalendarDays, History, Radar, Users } from "lucide-react";
+import { Award, CalendarDays, History, PartyPopper, Radar, Users } from "lucide-react";
 
 import type { MemberDashboardViewModel } from "@/modules/dashboard/presentation/member-dashboard-view-model";
 import { BadgeGrid } from "@/modules/growth/presentation/badge-grid";
 import { GrowthCalendar } from "@/modules/growth/presentation/growth-calendar";
 import { GrowthRadarChart } from "@/modules/growth/presentation/growth-radar-chart";
 import { TargetRoleCard } from "@/modules/growth/presentation/target-role-card";
+import { LevelUpFeed, type SerializableFeedItem } from "@/modules/growth/presentation/level-up-feed";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { PageHeader } from "@/shared/ui/page-header";
 
 export function MemberDashboard({
-  viewModel
+  viewModel,
+  levelUpFeed
 }: {
   viewModel: MemberDashboardViewModel;
+  levelUpFeed: SerializableFeedItem[];
 }) {
   return (
     <div className="space-y-5">
@@ -77,6 +80,23 @@ export function MemberDashboard({
           )}
         </section>
       </div>
+
+      <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]" aria-labelledby="department-level-ups-heading">
+        <div className="p-5">
+          <SectionHeading
+            id="department-level-ups-heading"
+            icon={PartyPopper}
+            title="チームのレベルアップ"
+            description="同じ部署の仲間の、最近の成長をお祝いできます。"
+          />
+        </div>
+        <div className="border-t border-[var(--border)]">
+          <LevelUpFeed
+            items={levelUpFeed}
+            viewer={{ memberId: viewModel.memberId, memberName: viewModel.memberName }}
+          />
+        </div>
+      </section>
     </div>
   );
 }
