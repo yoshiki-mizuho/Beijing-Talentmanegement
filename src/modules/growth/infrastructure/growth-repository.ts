@@ -1,4 +1,4 @@
-import { NotificationType } from "@prisma/client";
+import { AuthRole, MemberStatus, NotificationType, Prisma } from "@prisma/client";
 
 import type {
   CheerInput,
@@ -24,6 +24,32 @@ export function removeLevelUpReaction(input: LevelUpReactionInput) {
   return prisma.levelUpReaction.deleteMany({ where: input });
 }
 
+export async function getLevelUpInteractionAccess(
+  levelChangeId: string,
+  viewerMemberId: string,
+  viewerRole: AuthRole
+) {
+  const [levelChange, viewer] = await Promise.all([
+    prisma.skillLevelChange.findUnique({
+      where: { id: levelChangeId },
+      select: {
+        memberId: true,
+        member: { select: { managerId: true, departmentId: true } }
+      }
+    }),
+    prisma.member.findUnique({
+      where: { id: viewerMemberId },
+      select: { departmentId: true, status: true }
+    })
+  ]);
+  if (!levelChange || !viewer || viewer.status !== MemberStatus.ACTIVE) return null;
+  const canView =
+    viewerRole === AuthRole.ADMIN ||
+    levelChange.member.managerId === viewerMemberId ||
+    levelChange.member.departmentId === viewer.departmentId;
+  return canView ? { ownerMemberId: levelChange.memberId } : null;
+}
+
 export function createLevelUpComment(input: LevelUpCommentInput) {
   return prisma.$transaction(async (tx) => {
     const levelChange = await tx.skillLevelChange.findUniqueOrThrow({
@@ -46,6 +72,122 @@ export function createLevelUpComment(input: LevelUpCommentInput) {
 
     return comment;
   });
+}
+
+type FeedReactionRow = {
+  type: "CONGRATS" | "AMAZING" | "WANT_TO_LEARN";
+  count: number;
+  reactedByViewer: boolean;
+};
+
+type FeedCommentRow = {
+  id: string;
+  authorMemberId: string;
+  authorName: string;
+  body: string;
+  createdAt: string;
+};
+
+type LevelUpFeedRow = {
+  id: string;
+  memberId: string;
+  memberName: string;
+  skillName: string;
+  toLevel: number;
+  changedAt: Date;
+  reactions: FeedReactionRow[] | null;
+  comments: FeedCommentRow[] | null;
+};
+
+export async function listLevelUpFeed(input: {
+  memberIds: string[];
+  viewerMemberId: string;
+  start?: Date;
+  end?: Date;
+  limit: number;
+}) {
+  if (input.memberIds.length === 0) return [];
+  const startCondition = input.start
+    ? Prisma.sql`AND change."changedAt" >= ${input.start}`
+    : Prisma.empty;
+  const endCondition = input.end
+    ? Prisma.sql`AND change."changedAt" < ${input.end}`
+    : Prisma.empty;
+  const rows = await prisma.$queryRaw<LevelUpFeedRow[]>(Prisma.sql`
+    SELECT
+      change.id,
+      change."memberId",
+      member.name AS "memberName",
+      skill.name AS "skillName",
+      change."toLevel",
+      change."changedAt",
+      COALESCE(reaction_data.reactions, '[]'::jsonb) AS reactions,
+      COALESCE(comment_data.comments, '[]'::jsonb) AS comments
+    FROM "SkillLevelChange" change
+    JOIN "Member" member ON member.id = change."memberId"
+    JOIN "Skill" skill ON skill.id = change."skillId"
+    LEFT JOIN LATERAL (
+      SELECT jsonb_agg(
+        jsonb_build_object(
+          'type', grouped.type,
+          'count', grouped.count,
+          'reactedByViewer', grouped."reactedByViewer"
+        ) ORDER BY grouped.type
+      ) AS reactions
+      FROM (
+        SELECT
+          reaction.type,
+          COUNT(*)::int AS count,
+          BOOL_OR(reaction."memberId" = ${input.viewerMemberId}) AS "reactedByViewer"
+        FROM "LevelUpReaction" reaction
+        WHERE reaction."levelChangeId" = change.id
+        GROUP BY reaction.type
+      ) grouped
+    ) reaction_data ON TRUE
+    LEFT JOIN LATERAL (
+      SELECT jsonb_agg(
+        jsonb_build_object(
+          'id', comment.id,
+          'authorMemberId', comment."authorMemberId",
+          'authorName', author.name,
+          'body', comment.body,
+          'createdAt', comment."createdAt"
+        ) ORDER BY comment."createdAt"
+      ) AS comments
+      FROM "LevelUpComment" comment
+      JOIN "Member" author ON author.id = comment."authorMemberId"
+      WHERE comment."levelChangeId" = change.id
+    ) comment_data ON TRUE
+    WHERE change."memberId" IN (${Prisma.join(input.memberIds)})
+      AND change.source <> 'BACKFILL'::"SkillLevelChangeSource"
+      AND (change."fromLevel" IS NULL OR change."toLevel" > change."fromLevel")
+      ${startCondition}
+      ${endCondition}
+    ORDER BY change."changedAt" DESC, change.id DESC
+    LIMIT ${input.limit}
+  `);
+
+  return rows.map((row) => ({
+    ...row,
+    reactions: row.reactions ?? [],
+    comments: (row.comments ?? []).map((comment) => ({
+      ...comment,
+      createdAt: new Date(comment.createdAt)
+    }))
+  }));
+}
+
+export async function listDepartmentMemberIds(memberId: string) {
+  const member = await prisma.member.findUnique({
+    where: { id: memberId },
+    select: { departmentId: true }
+  });
+  if (!member) return [];
+  const members = await prisma.member.findMany({
+    where: { departmentId: member.departmentId, status: MemberStatus.ACTIVE },
+    select: { id: true }
+  });
+  return members.map((candidate) => candidate.id);
 }
 
 export function createCheer(input: CheerInput) {

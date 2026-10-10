@@ -1,3 +1,6 @@
+import type { AuthRole } from "@prisma/client";
+
+import { badgeDefinitions } from "@/modules/growth/domain/badge-art";
 import {
   cheerInputSchema,
   levelUpCommentInputSchema,
@@ -5,33 +8,63 @@ import {
   oneOnOneNoteInputSchema,
   oneOnOneNoteUpdateInputSchema
 } from "@/modules/growth/domain/growth-schema";
-import {
-  calculateBadgeAchievements
-} from "@/modules/growth/domain/growth-insights";
-import { badgeDefinitions } from "@/modules/growth/domain/badge-art";
+import { calculateBadgeAchievements } from "@/modules/growth/domain/growth-insights";
 import * as growthRepository from "@/modules/growth/infrastructure/growth-repository";
 import {
   getMemberGrowthData as fetchMemberGrowthData,
   listUnreadLevelUpNotifications
 } from "@/modules/growth/infrastructure/member-growth-repository";
 import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
+import { AuthorizationError } from "@/server/auth/authorization";
+import { UserFacingError } from "@/shared/lib/user-facing-error";
 
-export function addLevelUpReaction(input: unknown) {
-  return growthRepository.addLevelUpReaction(
-    levelUpReactionInputSchema.parse(input)
-  );
+export async function addLevelUpReaction(
+  input: unknown,
+  viewer: { memberId: string; role: AuthRole }
+) {
+  const parsed = levelUpReactionInputSchema.parse(input);
+  await assertLevelUpInteractionAccess(parsed.levelChangeId, viewer, true);
+  return growthRepository.addLevelUpReaction(parsed);
 }
 
-export function removeLevelUpReaction(input: unknown) {
-  return growthRepository.removeLevelUpReaction(
-    levelUpReactionInputSchema.parse(input)
-  );
+export async function removeLevelUpReaction(
+  input: unknown,
+  viewer: { memberId: string; role: AuthRole }
+) {
+  const parsed = levelUpReactionInputSchema.parse(input);
+  await assertLevelUpInteractionAccess(parsed.levelChangeId, viewer, true);
+  return growthRepository.removeLevelUpReaction(parsed);
 }
 
-export function createLevelUpComment(input: unknown) {
-  return growthRepository.createLevelUpComment(
-    levelUpCommentInputSchema.parse(input)
-  );
+export async function createLevelUpComment(
+  input: unknown,
+  viewer: { memberId: string; role: AuthRole }
+) {
+  const parsed = levelUpCommentInputSchema.parse(input);
+  await assertLevelUpInteractionAccess(parsed.levelChangeId, viewer, false);
+  return growthRepository.createLevelUpComment(parsed);
+}
+
+export async function getDepartmentLevelUpFeed(
+  viewerMemberId: string,
+  limit = 5
+) {
+  const memberIds = await growthRepository.listDepartmentMemberIds(viewerMemberId);
+  return growthRepository.listLevelUpFeed({
+    memberIds,
+    viewerMemberId,
+    limit
+  });
+}
+
+export function getLevelUpFeed(input: {
+  memberIds: string[];
+  viewerMemberId: string;
+  start: Date;
+  end: Date;
+  limit?: number;
+}) {
+  return growthRepository.listLevelUpFeed({ ...input, limit: input.limit ?? 10 });
 }
 
 export function createCheer(input: unknown) {
@@ -164,4 +197,26 @@ function buildTargetProgress(
 
 export type LevelUpCelebration = Awaited<
   ReturnType<typeof getLevelUpCelebrations>
+>[number];
+
+async function assertLevelUpInteractionAccess(
+  levelChangeId: string,
+  viewer: { memberId: string; role: AuthRole },
+  disallowOwner: boolean
+) {
+  const access = await growthRepository.getLevelUpInteractionAccess(
+    levelChangeId,
+    viewer.memberId,
+    viewer.role
+  );
+  if (!access) {
+    throw new AuthorizationError("このレベルアップを操作する権限がありません。", 403);
+  }
+  if (disallowOwner && access.ownerMemberId === viewer.memberId) {
+    throw new UserFacingError("自分のレベルアップにはリアクションできません。");
+  }
+}
+
+export type LevelUpFeedItem = Awaited<
+  ReturnType<typeof growthRepository.listLevelUpFeed>
 >[number];
