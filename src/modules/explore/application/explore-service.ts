@@ -132,12 +132,13 @@ export async function getSkillProfile(viewer: ProfileViewer, memberId: string, n
     changes,
     historyPoints.map((point) => point.at)
   );
-  const snapshots = restored.map((snapshot, index, all) => ({
+  const markedSnapshots = restored.map((snapshot, index, all) => ({
     yearsAgo: historyPoints.find((point) => point.at.getTime() === snapshot.at.getTime())!.yearsAgo,
     at: snapshot.at.toISOString(),
     skills: markSnapshotChanges(snapshot, all[index - 1]),
     roles: achievedRoleNames(snapshot.skills, roleDefinitions)
   }));
+  const snapshots = orderSkillHistorySnapshots(markedSnapshots);
   const badgeAchievements = calculateBadgeAchievements({
     assessments: member.selfAssessments,
     memberSkills: member.memberSkills,
@@ -190,6 +191,12 @@ export async function getSkillProfile(viewer: ProfileViewer, memberId: string, n
     snapshots,
     chatUrl
   };
+}
+
+export function orderSkillHistorySnapshots<T extends { yearsAgo: number }>(
+  snapshots: ReadonlyArray<T>
+) {
+  return [...snapshots].sort((left, right) => left.yearsAgo - right.yearsAgo);
 }
 
 export function setProfileVisibility(memberId: string, isPublic: boolean) {

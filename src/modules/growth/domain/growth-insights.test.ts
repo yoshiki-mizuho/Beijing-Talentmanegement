@@ -5,6 +5,7 @@ import {
   calculateBadgeAchievements,
   calculateCategoryAverages,
   findPotentialMentors,
+  getGrowthCalendarDayKind,
   getMonthlyEncouragement
 } from "@/modules/growth/domain/growth-insights";
 
@@ -67,6 +68,12 @@ describe("growth insights", () => {
     });
     expect(days[0]?.day).toBeNull();
     expect(days.find((day) => day.day === 8)).toMatchObject({ assessmentCount: 2, levelUpCount: 1 });
+  });
+
+  it("成長カレンダーの塗りはレベルアップを申請より優先する", () => {
+    expect(getGrowthCalendarDayKind({ assessmentCount: 0, levelUpCount: 0 })).toBe("none");
+    expect(getGrowthCalendarDayKind({ assessmentCount: 1, levelUpCount: 0 })).toBe("assessment");
+    expect(getGrowthCalendarDayKind({ assessmentCount: 1, levelUpCount: 1 })).toBe("level-up");
   });
 
   it("カテゴリ平均は保有スキルだけで計算し、保有なしを0にする", () => {

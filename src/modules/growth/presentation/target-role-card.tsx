@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import type { MemberDashboardViewModel } from "@/modules/dashboard/presentation/member-dashboard-view-model";
+import { DashboardSectionHeading } from "@/modules/dashboard/presentation/dashboard-section-heading";
 import { updateMemberTargetRoleAction } from "@/modules/members/presentation/actions";
 import { ActionForm } from "@/shared/ui/action-form";
 import { Button } from "@/shared/ui/button";
@@ -18,13 +19,14 @@ export function TargetRoleCard({ viewModel }: { viewModel: MemberDashboardViewMo
   const dashOffset = circumference * (1 - (role?.achievementRate ?? 0) / 100);
 
   return (
-    <section id="target-role" className="scroll-mt-20 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
-      <div className="flex items-start justify-between gap-3 border-b border-[var(--border)] px-5 py-4">
-        <div>
-          <h2 className="text-sm font-semibold">目標ロール</h2>
-          <p className="mt-1 text-xs text-[var(--muted-foreground)]">目指す姿までの現在地を確認できます。</p>
-        </div>
-        <Target className="h-5 w-5 text-[var(--primary)]" aria-hidden="true" />
+    <section id="target-role" className="h-full scroll-mt-20 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
+      <div className="border-b border-[var(--border)] px-5 py-4 xl:px-4">
+        <DashboardSectionHeading
+          id="target-role-heading"
+          icon={Target}
+          title="目標ロール"
+          description="目指す姿までの現在地を確認できます。"
+        />
       </div>
       <div className="p-5">
         {role && !editing ? (
