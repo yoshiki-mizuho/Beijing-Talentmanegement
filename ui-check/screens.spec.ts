@@ -10,7 +10,7 @@ const enabled = (role: DemoRole) => !selectedRole || selectedRole === role;
 // 読み込み中の表示（スケルトン）を撮らないよう、通信が落ち着き見出しが出るまで待つ
 const capture = async (page: Page, role: DemoRole, name: string) => {
   await page.waitForLoadState("networkidle");
-  await page.getByRole("heading").first().waitFor();
+  await page.getByRole("heading", { level: 1 }).first().waitFor();
   await page.screenshot({ path: `test-results/ui-check/${role}-${name}.png`, fullPage: true });
 };
 
@@ -29,11 +29,15 @@ test.describe("UI check", () => {
     if (await cheer.count()) { await cheer.click(); await capture(page, "MANAGER", "cheer-dialog"); }
     await page.goto("/members"); await page.getByRole("button", { name: "Member Userの詳細を開く" }).click();
     await page.getByRole("tab", { name: "1on1 メモ" }).click(); await capture(page, "MANAGER", "member-one-on-one");
+    await page.getByRole("link", { name: "プロフィールを見る" }).click(); await page.waitForURL("**/people/**"); await capture(page, "MANAGER", "subordinate-profile");
     await page.goto("/skill-approvals"); await capture(page, "MANAGER", "skill-approvals");
   });
   test("MEMBER", async ({ page }) => {
     test.skip(!enabled("MEMBER")); await login(page, credentials.MEMBER);
     await page.goto("/dashboard"); await capture(page, "MEMBER", "dashboard");
+    await page.goto("/explore"); await capture(page, "MEMBER", "explore");
+    await page.getByLabel("アカウントメニューを開く").click(); await page.getByRole("link", { name: "スキルプロフィール" }).click(); await page.waitForURL("**/people/**"); await capture(page, "MEMBER", "skill-profile");
+    await page.goto("/explore"); await page.getByRole("link", { name: /デモメンバー01/ }).first().click(); await page.waitForURL("**/people/**"); await capture(page, "MEMBER", "other-profile");
     await page.goto("/my/skills"); await capture(page, "MEMBER", "my-skills");
     await page.goto("/notifications"); await capture(page, "MEMBER", "notifications");
   });

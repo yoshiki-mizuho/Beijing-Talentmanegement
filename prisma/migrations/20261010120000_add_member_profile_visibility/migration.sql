@@ -1,0 +1,1 @@
+ALTER TABLE "Member" ADD COLUMN "isProfilePublic" BOOLEAN NOT NULL DEFAULT true;

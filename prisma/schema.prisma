@@ -143,6 +143,7 @@ model Member {
   status                MemberStatus          @default(ACTIVE)
   jobTitle              String?
   profile               String?
+  isProfilePublic       Boolean               @default(true)
   managerId             String?
   manager               Member?               @relation("MemberManager", fields: [managerId], references: [id])
   reports               Member[]               @relation("MemberManager")

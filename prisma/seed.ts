@@ -398,30 +398,9 @@ async function main() {
     const membersWithDemoHistoryCreated = new Set<string>();
     for (const employeeNo of levelChangeEmployeeNos) {
       const memberId = requireId(memberIdsByEmployeeNo, employeeNo, "Member");
-      const existingNonBackfillLevelChange = await tx.skillLevelChange.findFirst({
-        where: {
-          memberId,
-          source: { not: SkillLevelChangeSource.BACKFILL }
-        },
-        select: { id: true }
-      });
-      if (existingNonBackfillLevelChange) {
-        continue;
-      }
-
       const demoChanges = demoSkillLevelChanges.filter(
         (candidate) => candidate.employeeNo === employeeNo
       );
-      const demoSkillIds = demoChanges.map((change) =>
-        requireId(skillIdsByCode, change.skillCode, "Skill")
-      );
-      await tx.skillLevelChange.deleteMany({
-        where: {
-          memberId,
-          skillId: { in: demoSkillIds },
-          source: SkillLevelChangeSource.BACKFILL
-        }
-      });
 
       const managerEmployeeNo = demoManagerAssignments.find(
         (assignment) => assignment.employeeNo === employeeNo
@@ -436,19 +415,26 @@ async function main() {
       );
 
       for (const change of demoChanges) {
+        const skillId = requireId(skillIdsByCode, change.skillCode, "Skill");
+        const changedAt = new Date(change.changedAt);
+        const existing = await tx.skillLevelChange.findFirst({
+          where: { memberId, skillId, changedAt },
+          select: { id: true }
+        });
+        if (existing) continue;
         await tx.skillLevelChange.create({
           data: {
             memberId,
-            skillId: requireId(skillIdsByCode, change.skillCode, "Skill"),
+            skillId,
             fromLevel: change.fromLevel,
             toLevel: change.toLevel,
             source: SkillLevelChangeSource.ASSESSMENT_APPROVED,
             changedByMemberId,
-            changedAt: new Date(change.changedAt)
+            changedAt
           }
         });
+        membersWithDemoHistoryCreated.add(memberId);
       }
-      membersWithDemoHistoryCreated.add(memberId);
     }
 
     for (const reaction of demoLevelUpReactions) {
