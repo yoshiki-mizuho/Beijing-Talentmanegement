@@ -26,9 +26,10 @@ export function listManagerCandidates() {
   return memberRepository.listManagerCandidates();
 }
 
-export function listMembers(input?: MemberSearchInput) {
+export function listMembers(input?: MemberSearchInput, memberIds?: string[]) {
   return memberRepository.listMembers(
-    input ? memberSearchSchema.parse(input) : undefined
+    input ? memberSearchSchema.parse(input) : undefined,
+    memberIds
   );
 }
 
