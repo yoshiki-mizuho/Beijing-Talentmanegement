@@ -17,6 +17,7 @@ import {
   updateMemberTargetRole
 } from "@/modules/members/application/member-service";
 import { canUpdateMemberTargetRole } from "@/modules/members/domain/member-target-role-policy";
+import { getMemberScope, memberIsInScope } from "@/modules/members/application/member-scope";
 import {
   AuthorizationError,
   adminOnly,
@@ -60,8 +61,11 @@ export async function createMemberAction(formData: FormData): Promise<ActionResu
 
 export async function updateMemberAction(formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    await requireRoles(managerOrAdmin);
-    await updateMember(getString(formData, "id"), parseMemberForm(formData));
+    const session = await requireRoles(managerOrAdmin);
+    const memberId = getString(formData, "id");
+    const scope = await getMemberScope(session.user.role, session.user.memberId);
+    if (!memberIsInScope(scope, memberId)) throw new AuthorizationError("このメンバーを操作する権限がありません。", 403);
+    await updateMember(memberId, parseMemberForm(formData));
     revalidatePath("/members");
   }, "メンバー情報を更新しました。");
 }
@@ -77,8 +81,11 @@ export async function deactivateMemberAction(formData: FormData): Promise<Action
 export async function setMemberSkillLevelAction(formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
     const session = await requireRoles(managerOrAdmin);
+    const memberId = getString(formData, "memberId");
+    const scope = await getMemberScope(session.user.role, session.user.memberId);
+    if (!memberIsInScope(scope, memberId)) throw new AuthorizationError("このメンバーを操作する権限がありません。", 403);
     await setMemberSkillLevel({
-      memberId: getString(formData, "memberId"),
+      memberId,
       skillId: getString(formData, "skillId"),
       level: getNumber(formData, "level"),
       changedByMemberId: session.user.memberId
@@ -90,8 +97,11 @@ export async function setMemberSkillLevelAction(formData: FormData): Promise<Act
 
 export async function removeMemberSkillAction(formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    await requireRoles(managerOrAdmin);
-    await removeMemberSkill(getString(formData, "memberId"), getString(formData, "skillId"));
+    const session = await requireRoles(managerOrAdmin);
+    const memberId = getString(formData, "memberId");
+    const scope = await getMemberScope(session.user.role, session.user.memberId);
+    if (!memberIsInScope(scope, memberId)) throw new AuthorizationError("このメンバーを操作する権限がありません。", 403);
+    await removeMemberSkill(memberId, getString(formData, "skillId"));
     revalidatePath("/members");
     revalidatePath("/roles");
   }, "メンバーのスキルを削除しました。");
@@ -207,7 +217,7 @@ export async function updateMemberTargetRoleAction(
         memberId
       )
     ) {
-      throw new AuthorizationError("Forbidden.", 403);
+      throw new AuthorizationError("このメンバーを操作する権限がありません。", 403);
     }
     await updateMemberTargetRole({
       memberId,

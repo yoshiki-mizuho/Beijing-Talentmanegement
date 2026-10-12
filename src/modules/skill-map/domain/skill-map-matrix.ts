@@ -1,96 +1,76 @@
-export type SkillMapMember = {
+export type SkillMapSource = {
   id: string;
-  employeeNo: string;
   name: string;
-  department: {
+  category: { id: string; name: string };
+  holders: {
     id: string;
     name: string;
-  };
-  memberSkills: {
-    skillId: string;
+    jobTitle: string | null;
     level: number;
+  }[];
+  changes: {
+    memberId: string;
+    changedAt: Date;
+    source: string;
+    fromLevel: number | null;
+    toLevel: number;
   }[];
 };
 
-export type SkillMapSkill = {
-  id: string;
-  code: string;
-  name: string;
-  category: {
-    id: string;
-    name: string;
-  };
-};
-
-export type SkillMapFilters = {
-  q?: string;
-  departmentId?: string;
-  categoryId?: string;
-};
-
-export function filterSkillMapData(
-  input: {
-    members: SkillMapMember[];
-    skills: SkillMapSkill[];
-  },
-  filters: SkillMapFilters
-) {
-  const keyword = filters.q?.trim().toLocaleLowerCase("ja") ?? "";
-
-  return {
-    members: input.members.filter((member) =>
-      (!filters.departmentId || member.department.id === filters.departmentId) &&
-      (!keyword ||
-        member.name.toLocaleLowerCase("ja").includes(keyword) ||
-        member.employeeNo.toLocaleLowerCase("ja").includes(keyword))
-    ),
-    skills: input.skills.filter(
-      (skill) => !filters.categoryId || skill.category.id === filters.categoryId
-    )
-  };
+export function buildSkillMap(input: { skills: SkillMapSource[]; now: Date }) {
+  const boundary = new Date(input.now.getTime() - 90 * 86400000);
+  const ranked = input.skills
+    .filter((skill) => skill.holders.length >= 2)
+    .map((skill) => ({
+      id: skill.id,
+      average: average(skill.holders.map((item) => item.level)),
+    }))
+    .sort((a, b) => b.average - a.average);
+  const rankById = new Map(ranked.map((item, index) => [item.id, index + 1]));
+  const totalRanked = ranked.length;
+  return input.skills
+    .map((skill) => {
+      const averageLevel = average(skill.holders.map((item) => item.level));
+      const rank = rankById.get(skill.id) ?? null;
+      const strength =
+        rank === null || totalRanked === 0
+          ? 1
+          : Math.max(
+              1,
+              5 -
+                Math.floor(
+                  (rank - 1) / Math.max(1, Math.ceil(totalRanked / 5)),
+                ),
+            );
+      const growthCount = skill.changes.filter(
+        (item) =>
+          item.changedAt >= boundary &&
+          item.source !== "BACKFILL" &&
+          item.toLevel > (item.fromLevel ?? 0),
+      ).length;
+      return {
+        ...skill,
+        holderCount: skill.holders.length,
+        averageLevel,
+        rank,
+        totalRanked,
+        strength,
+        growthCount,
+        levelCounts: [5, 4, 3, 2, 1].map((level) => ({
+          level,
+          count: skill.holders.filter((item) => item.level === level).length,
+        })),
+      };
+    })
+    .sort(
+      (a, b) =>
+        (a.rank ?? Number.MAX_SAFE_INTEGER) -
+          (b.rank ?? Number.MAX_SAFE_INTEGER) || b.holderCount - a.holderCount,
+    );
 }
 
-export function buildSkillMapMatrix(input: {
-  members: SkillMapMember[];
-  skills: SkillMapSkill[];
-}) {
-  const rows = input.members.map((member) => {
-    const levelBySkillId = new Map(
-      member.memberSkills.map((memberSkill) => [
-        memberSkill.skillId,
-        memberSkill.level
-      ])
-    );
-
-    return {
-      memberId: member.id,
-      employeeNo: member.employeeNo,
-      memberName: member.name,
-      departmentName: member.department.name,
-      levels: input.skills.map((skill) => ({
-        skillId: skill.id,
-        level: levelBySkillId.get(skill.id) ?? null
-      }))
-    };
-  });
-  const skillSummaries = input.skills.map((skill) => {
-    const levels = rows
-      .map((row) => row.levels.find((level) => level.skillId === skill.id)?.level)
-      .filter((level): level is number => typeof level === "number");
-
-    return {
-      skillId: skill.id,
-      holderCount: levels.length,
-      averageLevel:
-        levels.length === 0
-          ? null
-          : levels.reduce((sum, level) => sum + level, 0) / levels.length
-    };
-  });
-
-  return {
-    skills: input.skills,
-    rows,
-    skillSummaries
-  };
+function average(values: number[]) {
+  return values.length
+    ? values.reduce((sum, value) => sum + value, 0) / values.length
+    : 0;
 }

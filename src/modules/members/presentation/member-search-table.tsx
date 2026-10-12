@@ -49,6 +49,7 @@ type Props = {
   canDeactivateMembers: boolean;
   canEditGrowthSettings: boolean;
   viewerMemberId: string;
+  scopeName: string;
 };
 
 export function MemberSearchTable(props: Props) {
@@ -68,7 +69,8 @@ function MemberSearchTableInner({
   targetRoles,
   canDeactivateMembers,
   canEditGrowthSettings,
-  viewerMemberId
+  viewerMemberId,
+  scopeName
 }: Props) {
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState<MemberSearchFilters>(emptyMemberSearchFilters);
@@ -122,7 +124,7 @@ function MemberSearchTableInner({
         <h1 className="text-2xl font-semibold">
           メンバー一覧{" "}
           <span className="text-base font-medium text-[var(--muted-foreground)]">
-            {members.length}名
+            {scopeName}・{members.length}名
           </span>
         </h1>
         <MemberCreateDialog

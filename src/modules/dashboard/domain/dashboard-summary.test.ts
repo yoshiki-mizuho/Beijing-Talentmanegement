@@ -1,59 +1,82 @@
 import { describe, expect, it } from "vitest";
+import {
+  buildOrganizationDashboard,
+  type OrganizationMember,
+} from "@/modules/dashboard/domain/dashboard-summary";
 
-import { buildDashboardSummary } from "@/modules/dashboard/domain/dashboard-summary";
-
-describe("buildDashboardSummary", () => {
-  it("counts unset members and role achievement rates", () => {
-    const summary = buildDashboardSummary({
-      members: [
+const members: OrganizationMember[] = [
+  {
+    id: "m1",
+    department: { id: "d1", name: "開発部" },
+    memberSkills: [{ skillId: "s1", level: 4 }],
+    targetRole: {
+      id: "r1",
+      name: "Engineer",
+      roleRequirements: [
         {
-          id: "member-1",
-          memberSkills: [{ skillId: "skill-1", level: 3 }]
+          skillId: "s1",
+          requiredLevel: 4,
+          isRequired: true,
+          skill: { name: "TypeScript" },
         },
-        {
-          id: "member-2",
-          memberSkills: []
-        }
       ],
-      skillsCount: 2,
-      activeSkillsCount: 1,
-      roles: [
+    },
+  },
+  {
+    id: "m2",
+    department: { id: "d1", name: "開発部" },
+    memberSkills: [],
+    targetRole: {
+      id: "r1",
+      name: "Engineer",
+      roleRequirements: [
         {
-          id: "role-1",
-          name: "Developer",
-          roleRequirements: [
-            {
-              skillId: "skill-1",
-              requiredLevel: 3,
-              isRequired: true
-            }
-          ]
-        }
+          skillId: "s1",
+          requiredLevel: 4,
+          isRequired: true,
+          skill: { name: "TypeScript" },
+        },
       ],
-      categories: [
+    },
+  },
+];
+describe("buildOrganizationDashboard", () => {
+  it("各指標、推移、不足スキル、部署、ロールを集計する", () => {
+    const summary = buildOrganizationDashboard({
+      members,
+      now: new Date("2026-10-12T00:00:00Z"),
+      levelChanges: [
         {
-          id: "category-1",
-          name: "Engineering",
-          _count: { skills: 2 }
-        }
+          memberId: "m1",
+          changedAt: new Date("2026-10-01T00:00:00Z"),
+          source: "APPROVAL",
+          fromLevel: 3,
+          toLevel: 4,
+        },
       ],
-      pendingAssessmentsCount: 4,
-      unreadNotificationsCount: 5
+      pendingAssessments: [
+        { memberId: "m2", createdAt: new Date("2026-10-01T00:00:00Z") },
+      ],
     });
-
-    expect(summary.memberCount).toBe(2);
-    expect(summary.membersWithoutSkills).toBe(1);
+    expect(summary).toMatchObject({
+      currentMonthLevelUps: 1,
+      highLevelMembers: 1,
+      targetedCount: 2,
+      achievedCount: 1,
+      pendingCount: 1,
+      stalePendingCount: 1,
+    });
+    expect(summary.missingSkills[0]).toMatchObject({
+      name: "TypeScript",
+      count: 1,
+    });
+    expect(summary.departmentSummaries[0]).toMatchObject({
+      memberCount: 2,
+      achievedRate: 50,
+    });
     expect(summary.roleSummaries[0]).toMatchObject({
-      achievedMembers: 1,
-      achievementRate: 0.5,
-      requiredSkillCount: 1
+      achievedCount: 1,
+      targetCount: 2,
     });
-    expect(summary.categorySummaries).toEqual([
-      {
-        id: "category-1",
-        name: "Engineering",
-        skillCount: 2
-      }
-    ]);
   });
 });

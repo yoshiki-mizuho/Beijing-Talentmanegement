@@ -1,12 +1,12 @@
 import { expect, test } from "@playwright/test";
 
-import { openLoggedInContext } from "./helpers/auth";
+import { login, openLoggedInContext } from "./helpers/auth";
 import { readDemoCredentials } from "./helpers/credentials";
 
 const credentials = readDemoCredentials();
 
 test("管理者がメンバーを登録し、詳細で役職を更新して無効化できる", async ({
-  browser
+  browser,
 }) => {
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
   const uniqueSuffix = `${Date.now()}-${test.info().workerIndex}`;
@@ -22,7 +22,7 @@ test("管理者がメンバーを登録し、詳細で役職を更新して無�
       .click();
 
     const createDialog = admin.page.getByRole("dialog", {
-      name: "メンバーを追加"
+      name: "メンバーを追加",
     });
     await createDialog.getByLabel("社員番号").fill(employeeNo);
     await createDialog.getByLabel("氏名").fill(memberName);
@@ -32,42 +32,86 @@ test("管理者がメンバーを登録し、詳細で役職を更新して無�
       .click();
     await expect(
       admin.page.getByText(
-        "メンバーを登録しました。初期認証情報を安全な経路で共有してください。"
-      )
+        "メンバーを登録しました。初期認証情報を安全な経路で共有してください。",
+      ),
     ).toBeVisible();
 
     await admin.page.getByLabel("キーワード").fill(employeeNo);
-    const createdRow = admin.page.getByRole("row").filter({ hasText: employeeNo });
+    const createdRow = admin.page
+      .getByRole("row")
+      .filter({ hasText: employeeNo });
     await expect(createdRow).toBeVisible();
     await createdRow
       .getByRole("button", { name: `${memberName}の詳細を開く` })
       .click();
 
     const detailDialog = admin.page.getByRole("dialog", {
-      name: `${memberName}の詳細`
+      name: `${memberName}の詳細`,
     });
     await detailDialog.getByLabel("役職").fill(updatedJobTitle);
     await detailDialog
       .getByRole("button", { name: "基本情報を更新", exact: true })
       .click();
-    await expect(admin.page.getByText("メンバー情報を更新しました。"))
-      .toBeVisible();
+    await expect(
+      admin.page.getByText("メンバー情報を更新しました。"),
+    ).toBeVisible();
     await expect(detailDialog.getByLabel("役職")).toHaveValue(updatedJobTitle);
 
     await detailDialog
       .getByRole("button", { name: "無効化", exact: true })
       .click();
     const deactivateDialog = admin.page.getByRole("dialog", {
-      name: "メンバーを無効化しますか"
+      name: "メンバーを無効化しますか",
     });
     await deactivateDialog
       .getByRole("button", { name: "無効化する", exact: true })
       .click();
-    await expect(admin.page.getByText("メンバーを無効化しました。"))
-      .toBeVisible();
+    await expect(
+      admin.page.getByText("メンバーを無効化しました。"),
+    ).toBeVisible();
     await expect(detailDialog).toHaveCount(0);
     await expect(createdRow).toHaveCount(0);
   } finally {
     await admin.context.close();
   }
+});
+
+test("マネージャーの一覧と更新APIは自組織の範囲に制限される", async ({
+  browser,
+}) => {
+  const admin = await openLoggedInContext(browser, credentials.ADMIN);
+  const manager = await openLoggedInContext(browser, credentials.MANAGER);
+  try {
+    const response = await admin.page.request.get("/api/members?q=TM0103");
+    const outsideMembers = (await response.json()) as { id: string }[];
+    expect(outsideMembers).toHaveLength(1);
+
+    await manager.page.goto("/members");
+    await manager.page.getByLabel("キーワード").fill("TM0103");
+    await expect(manager.page.getByText("デモメンバー03")).toHaveCount(0);
+
+    const forbidden = await manager.page.request.patch(
+      `/api/members/${outsideMembers[0].id}`,
+      { data: {} },
+    );
+    expect(forbidden.status()).toBe(403);
+  } finally {
+    await admin.context.close();
+    await manager.context.close();
+  }
+});
+
+test("スキルの面を押すと詳細が切り替わる", async ({ page }) => {
+  await login(page, credentials.ADMIN);
+  await page.goto("/skill-map");
+  const tiles = page
+    .locator("button[aria-pressed]")
+    .filter({ has: page.locator("strong") });
+  test.skip((await tiles.count()) < 2, "スキルが2件以上必要です");
+  const second = tiles.nth(1);
+  const name = await second.locator("strong").innerText();
+  await second.click();
+  await expect(
+    page.getByRole("complementary", { name: `${name} の詳細` }),
+  ).toBeVisible();
 });

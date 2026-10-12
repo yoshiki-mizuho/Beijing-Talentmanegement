@@ -8,6 +8,7 @@ import { listSkills } from "@/modules/skills/application/skill-service";
 import { listRoles } from "@/modules/roles/application/role-service";
 import { Card, CardContent } from "@/shared/ui/card";
 import { managerOrAdmin, requirePageRoles } from "@/server/auth/authorization";
+import { getMemberScope } from "@/modules/members/application/member-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -15,8 +16,9 @@ export default async function MembersPage() {
   const session = await requirePageRoles(managerOrAdmin);
   const canDeactivateMembers = session.user.role === "ADMIN";
   const canEditGrowthSettings = session.user.role === "ADMIN";
+  const scope = await getMemberScope(session.user.role, session.user.memberId);
   const [members, departments, skills, roles, managerCandidates] = await Promise.all([
-    listMembers(),
+    listMembers(undefined, scope.memberIds),
     listDepartments(),
     listSkills(),
     listRoles(),
@@ -90,6 +92,7 @@ export default async function MembersPage() {
             canDeactivateMembers={canDeactivateMembers}
             canEditGrowthSettings={canEditGrowthSettings}
             viewerMemberId={session.user.memberId}
+            scopeName={scope.name}
           />
         </CardContent>
       </Card>

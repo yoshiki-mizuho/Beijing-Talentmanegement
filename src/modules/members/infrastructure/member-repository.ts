@@ -80,9 +80,14 @@ export function buildMemberSearchWhere(
   };
 }
 
-export async function listMembers(input?: MemberSearchInput) {
+export async function listMembers(input?: MemberSearchInput, memberIds?: string[]) {
   const members = await prisma.member.findMany({
-    where: buildMemberSearchWhere(input),
+    where: {
+      AND: [
+        buildMemberSearchWhere(input),
+        ...(memberIds ? [{ id: { in: memberIds } }] : [])
+      ]
+    },
     include: {
       department: true,
       manager: { select: { id: true, name: true } },

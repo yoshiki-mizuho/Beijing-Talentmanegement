@@ -1,72 +1,46 @@
-import { NotificationStatus, SkillSelfAssessmentStatus } from "@prisma/client";
-
 import { prisma } from "@/server/db/prisma";
 
-export async function getDashboardData() {
-  const [
-    members,
-    skillsCount,
-    activeSkillsCount,
-    roles,
-    categories,
-    pendingAssessmentsCount,
-    unreadNotificationsCount
-  ] = await Promise.all([
+export async function getOrganizationDashboardData(
+  memberIds: string[],
+  from: Date,
+) {
+  const [members, levelChanges, pendingAssessments] = await Promise.all([
     prisma.member.findMany({
+      where: { id: { in: memberIds }, status: "ACTIVE" },
       select: {
         id: true,
-        memberSkills: {
+        department: { select: { id: true, name: true } },
+        memberSkills: { select: { skillId: true, level: true } },
+        targetRole: {
           select: {
-            skillId: true,
-            level: true
-          }
-        }
-      }
-    }),
-    prisma.skill.count(),
-    prisma.skill.count({ where: { isActive: true } }),
-    prisma.role.findMany({
-      where: { isActive: true },
-      select: {
-        id: true,
-        name: true,
-        roleRequirements: {
-          select: {
-            skillId: true,
-            requiredLevel: true,
-            isRequired: true
-          }
-        }
+            id: true,
+            name: true,
+            roleRequirements: {
+              select: {
+                skillId: true,
+                requiredLevel: true,
+                isRequired: true,
+                skill: { select: { name: true } },
+              },
+            },
+          },
+        },
       },
-      orderBy: { name: "asc" }
     }),
-    prisma.skillCategory.findMany({
+    prisma.skillLevelChange.findMany({
+      where: { memberId: { in: memberIds }, changedAt: { gte: from } },
       select: {
-        id: true,
-        name: true,
-        _count: {
-          select: {
-            skills: true
-          }
-        }
+        memberId: true,
+        changedAt: true,
+        source: true,
+        fromLevel: true,
+        toLevel: true,
       },
-      orderBy: [{ displayOrder: "asc" }, { name: "asc" }]
     }),
-    prisma.skillSelfAssessment.count({
-      where: { status: SkillSelfAssessmentStatus.PENDING }
+    prisma.skillSelfAssessment.findMany({
+      where: { memberId: { in: memberIds }, status: "PENDING" },
+      select: { memberId: true, createdAt: true },
     }),
-    prisma.notification.count({
-      where: { status: NotificationStatus.UNREAD }
-    })
   ]);
-
-  return {
-    members,
-    skillsCount,
-    activeSkillsCount,
-    roles,
-    categories,
-    pendingAssessmentsCount,
-    unreadNotificationsCount
-  };
+  return { members, levelChanges, pendingAssessments };
 }

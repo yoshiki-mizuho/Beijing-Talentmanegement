@@ -7,6 +7,7 @@ import {
 } from "@/modules/members/application/member-service";
 import { MemberUserLinkError } from "@/modules/members/domain/member-user-policy";
 import { authorizeApi, managerOrAdmin } from "@/server/auth/authorization";
+import { getMemberScope } from "@/modules/members/application/member-scope";
 
 export async function GET(request: NextRequest) {
   const auth = await authorizeApi(managerOrAdmin);
@@ -16,8 +17,12 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const scope = await getMemberScope(
+      auth.session.user.role,
+      auth.session.user.memberId
+    );
     return NextResponse.json(
-      await listMembers(Object.fromEntries(request.nextUrl.searchParams))
+      await listMembers(Object.fromEntries(request.nextUrl.searchParams), scope.memberIds)
     );
   } catch (error) {
     if (error instanceof ZodError) {
