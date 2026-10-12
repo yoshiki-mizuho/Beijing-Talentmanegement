@@ -19,8 +19,6 @@ import { EmptyState } from "@/shared/ui/empty-state";
 import { SubmitButton } from "@/shared/ui/submit-button";
 
 const MAX_VISIBLE_UNREAD_COUNT = 99;
-const OPEN_DELAY_MS = 200;
-const CLOSE_DELAY_MS = 300;
 
 export function formatUnreadNotificationCount(unreadCount: number) {
   const normalizedCount = Math.max(0, Math.floor(unreadCount));
@@ -48,41 +46,12 @@ export function NotificationIndicator({
   const normalizedCount = Math.max(0, Math.floor(unreadCount));
   const accessibleLabel = getNotificationAccessibleLabel(normalizedCount);
   const detailsRef = useDismissibleNotificationDetails();
-  const openTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-
-  function clearTimers() {
-    clearTimeout(openTimerRef.current);
-    clearTimeout(closeTimerRef.current);
-  }
-
-  function scheduleOpen() {
-    clearTimers();
-    openTimerRef.current = setTimeout(() => {
-      if (detailsRef.current) detailsRef.current.open = true;
-    }, OPEN_DELAY_MS);
-  }
-
-  function scheduleClose() {
-    clearTimers();
-    closeTimerRef.current = setTimeout(() => {
-      if (detailsRef.current) detailsRef.current.open = false;
-    }, CLOSE_DELAY_MS);
-  }
-
-  useEffect(() => clearTimers, []);
 
   return (
-    <details
-      ref={detailsRef}
-      className="group relative"
-      onMouseEnter={scheduleOpen}
-      onMouseLeave={scheduleClose}
-    >
+    <details ref={detailsRef} className="group relative">
       <summary
         className="relative inline-flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-md text-[var(--muted-foreground)] hover:bg-[var(--surface-subtle)] hover:text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] [&::-webkit-details-marker]:hidden"
         aria-label={accessibleLabel}
-        onClick={clearTimers}
       >
         <Bell className="h-4 w-4" aria-hidden="true" />
         {normalizedCount > 0 ? (

@@ -173,6 +173,19 @@ function buildTargetRole(
       requiredLevel: requirement.requiredLevel
     };
   });
+  const currentLevelBySkillId = new Map(skills.map((skill) => [skill.id, skill.level]));
+  const requirements = role.roleRequirements
+    .map((requirement) => {
+      const currentLevel = currentLevelBySkillId.get(requirement.skillId) ?? null;
+      return {
+        skillId: requirement.skillId,
+        skillName: requirement.skill.name,
+        requiredLevel: requirement.requiredLevel,
+        currentLevel,
+        achieved: currentLevel !== null && currentLevel >= requirement.requiredLevel
+      };
+    })
+    .sort((left, right) => Number(left.achieved) - Number(right.achieved));
 
   return {
     id: role.id,
@@ -184,6 +197,7 @@ function buildTargetRole(
     achieved: evaluation.achieved && role.roleRequirements.length > 0,
     requiredSkillCount: role.roleRequirements.length,
     satisfiedSkillCount: evaluation.satisfiedRequirements.length,
+    requirements,
     gaps
   };
 }

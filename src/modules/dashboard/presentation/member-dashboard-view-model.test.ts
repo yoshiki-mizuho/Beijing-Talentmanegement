@@ -46,6 +46,20 @@ describe("buildMemberDashboardViewModel", () => {
         id: "role-1",
         achievementRate: 50,
         satisfiedSkillCount: 1,
+        requirements: [
+          {
+            skillId: "skill-2",
+            currentLevel: 2,
+            requiredLevel: 4,
+            achieved: false
+          },
+          {
+            skillId: "skill-1",
+            currentLevel: 3,
+            requiredLevel: 3,
+            achieved: true
+          }
+        ],
         gaps: [{ skillId: "skill-2", currentLevel: 2, requiredLevel: 4 }]
       },
       radar: [

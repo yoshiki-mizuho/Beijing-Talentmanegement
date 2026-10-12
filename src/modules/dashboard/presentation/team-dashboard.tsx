@@ -128,6 +128,7 @@ export function TeamDashboard({ viewModel }: { viewModel: TeamDashboardViewModel
                       memberId={item.memberId}
                       name={item.memberName}
                       avatarUpdatedAt={item.avatarUpdatedAt}
+                      href={`/people/${item.memberId}`}
                     />
                     <div className="min-w-0">
                     <p className="truncate text-sm font-semibold">{item.memberName}　{item.roleName}</p>
@@ -160,6 +161,7 @@ export function TeamDashboard({ viewModel }: { viewModel: TeamDashboardViewModel
                       memberId={item.memberId}
                       name={item.memberName}
                       avatarUpdatedAt={item.avatarUpdatedAt}
+                      href={`/people/${item.memberId}`}
                     />
                     <div>
                     <p className="text-sm font-semibold">{item.memberName}</p>

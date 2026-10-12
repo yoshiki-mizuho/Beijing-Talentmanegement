@@ -18,6 +18,7 @@ export function SkillProfileHeader({ profile, isOwner }: { profile: Profile; isO
             name={profile.name}
             avatarUpdatedAt={profile.avatarUpdatedAt}
             size="lg"
+            href={`/people/${profile.id}`}
           />
           {isOwner ? <AvatarEditor hasAvatar={Boolean(profile.avatarUpdatedAt)} /> : null}
         </div>

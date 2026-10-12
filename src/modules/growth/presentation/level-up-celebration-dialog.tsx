@@ -109,7 +109,7 @@ export function LevelUpCelebrationDialog({
       <div ref={contentRef} className="space-y-5 text-center">
         <div className="relative mx-auto grid h-28 w-28 place-items-center">
           <span className="absolute inset-2 rounded-full border-2 border-[var(--primary)] animate-ping motion-reduce:hidden" style={{ animationDuration: "1.25s", animationIterationCount: 2 }} aria-hidden="true" />
-          <span className="relative grid h-24 w-24 place-items-center rounded-full bg-[var(--primary)] text-white shadow-lg">
+          <span className="relative flex h-24 w-24 flex-col items-center justify-center rounded-full bg-[var(--primary)] text-white shadow-lg">
             <span className="text-xs font-semibold">NEW LEVEL</span>
             <strong className="text-4xl">{current.toLevel}</strong>
           </span>

@@ -195,6 +195,7 @@ function SkillApprovalItem({
             memberId={row.memberId}
             name={row.memberName}
             avatarUpdatedAt={row.avatarUpdatedAt}
+            href={`/people/${row.memberId}`}
           />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">{row.memberName}</p>
