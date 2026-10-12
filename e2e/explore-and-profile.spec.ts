@@ -7,14 +7,39 @@ const credentials = readDemoCredentials();
 test("MEMBERがスキルとレベルで人を探しプロフィールを開く", async ({ page }) => {
   await login(page, credentials.MEMBER);
   await page.goto("/explore");
-  await page.getByRole("combobox", { name: "探すスキル" }).selectOption({ label: "TypeScript" });
-  await page.getByRole("combobox", { name: "最低レベル" }).selectOption("4");
-  await page.getByRole("button", { name: "探す", exact: true }).click();
+  await page.getByRole("combobox", { name: "探すスキル" }).fill("type");
+  await page.getByRole("option", { name: "TypeScript" }).click();
+  await page.getByRole("button", { name: "Lv4以上" }).click();
+  await expect(page).toHaveURL(/skill=.+/);
+  await expect(page).toHaveURL(/level=4/);
   const result = page.locator("#people-search li a").first();
   await expect(result).toBeVisible();
   await result.click();
   await expect(page).toHaveURL(/\/people\//);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+});
+
+test("いま伸びている技術から移動すると選択欄にスキル名が表示される", async ({ page }) => {
+  await login(page, credentials.MEMBER);
+  await page.goto("/explore");
+  const trendingSkill = page
+    .getByRole("region", { name: "いま伸びている技術" })
+    .getByRole("link")
+    .first();
+  const skillName = await trendingSkill.locator("strong").textContent();
+  await trendingSkill.click();
+  await expect(page).toHaveURL(/skill=.+/);
+  await expect(page.getByRole("combobox", { name: "探すスキル" })).toHaveValue(skillName ?? "");
+});
+
+test("コンボボックスはキーボードだけでスキルを選べる", async ({ page }) => {
+  await login(page, credentials.MEMBER);
+  await page.goto("/explore");
+  const combobox = page.getByRole("combobox", { name: "探すスキル" });
+  await combobox.fill("type");
+  await combobox.press("ArrowDown");
+  await combobox.press("Enter");
+  await expect(page).toHaveURL(/skill=.+/);
 });
 
 test("本人が公開設定を切り替え、最後に公開へ戻す", async ({ page }) => {

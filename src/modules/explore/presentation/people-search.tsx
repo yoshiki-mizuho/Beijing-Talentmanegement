@@ -7,9 +7,8 @@ import {
   getMemberInitial
 } from "@/modules/members/presentation/skill-approval";
 import { cn } from "@/shared/lib/utils";
-import { Button } from "@/shared/ui/button";
 import { EmptyState } from "@/shared/ui/empty-state";
-import { SelectField } from "@/shared/ui/form-field";
+import { PeopleSearchFilters } from "./people-search-filters";
 import { SectionHeading } from "./section-heading";
 
 type Data = Awaited<ReturnType<typeof getExploreData>>;
@@ -30,36 +29,15 @@ export function PeopleSearch({
       aria-labelledby="people-search-heading"
     >
       <SectionHeading id="people-search-heading" icon={Compass} title="人を探す" />
-      <form className="mt-4 flex flex-wrap items-end gap-3">
-        <SelectField
-          id="explore-skill"
-          name="skill"
-          label="探すスキル"
-          defaultValue={selectedSkill ?? ""}
-          className="min-w-56"
-        >
-          <option value="">選択してください</option>
-          {data.skills.map((skill) => (
-            <option key={skill.id} value={skill.id}>
-              {skill.name}
-            </option>
-          ))}
-        </SelectField>
-        <SelectField
-          id="explore-minimum-level"
-          name="level"
-          label="最低レベル"
-          defaultValue={String(level)}
-        >
-          {[1, 2, 3, 4, 5].map((value) => (
-            <option key={value} value={value}>
-              Lv{value}
-            </option>
-          ))}
-        </SelectField>
-        <Button type="submit">探す</Button>
-      </form>
-      <div className="mt-5">
+      <PeopleSearchFilters
+        options={data.skills.map((skill) => ({
+          value: skill.id,
+          label: skill.name,
+          group: skill.category.name
+        }))}
+        selectedSkill={selectedSkill ?? null}
+        level={level}
+      >
         {selectedSkill && data.results.length === 0 ? (
           <EmptyState title="条件に合う人はいません" />
         ) : (
@@ -91,7 +69,7 @@ export function PeopleSearch({
             ))}
           </ul>
         )}
-      </div>
+      </PeopleSearchFilters>
     </section>
   );
 }
