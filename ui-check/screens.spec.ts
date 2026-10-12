@@ -86,6 +86,12 @@ test.describe("UI check", () => {
     await capture(page, "MEMBER", "header-notifications");
     await page.goto("/explore");
     await capture(page, "MEMBER", "explore");
+    await page.getByRole("combobox", { name: "探すスキル" }).fill("フレーム");
+    await capture(page, "MEMBER", "explore-combobox");
+    await page.getByRole("option").first().click();
+    await page.getByRole("button", { name: "Lv3以上" }).click();
+    await page.waitForURL(/level=3/);
+    await capture(page, "MEMBER", "explore-results");
     await page.getByLabel("アカウントメニューを開く").click();
     await page.getByRole("link", { name: "スキルプロフィール" }).click();
     await page.waitForURL("**/people/**");
