@@ -97,6 +97,7 @@ export function CheerCelebrationDialog({ celebrations }: { celebrations: CheerCe
             name={current.sender.name}
             avatarUpdatedAt={current.sender.avatarUpdatedAt}
             className="h-11 w-11"
+            href={`/people/${current.sender.id}`}
           />
           <p className="min-w-0 whitespace-pre-wrap break-words text-sm leading-7">
             「{current.message}」

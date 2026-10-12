@@ -284,7 +284,10 @@ function MemberSearchTableInner({
                 <tr
                   key={member.id}
                   className="cursor-pointer hover:bg-[var(--surface-subtle)]"
-                  onClick={() => setSelectedMemberId(member.id)}
+                  onClick={(event) => {
+                    if ((event.target as Element).closest("a")) return;
+                    setSelectedMemberId(member.id);
+                  }}
                 >
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
@@ -292,6 +295,7 @@ function MemberSearchTableInner({
                         memberId={member.id}
                         name={member.name}
                         avatarUpdatedAt={member.avatarUpdatedAt}
+                        href={`/people/${member.id}`}
                       />
                       <div>
                         <button

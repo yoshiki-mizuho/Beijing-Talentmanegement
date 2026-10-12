@@ -1,5 +1,7 @@
 "use client";
 
+import type { Route } from "next";
+import Link from "next/link";
 import { useState } from "react";
 
 import { cn } from "@/shared/lib/utils";
@@ -43,19 +45,21 @@ export function MemberAvatar({
   name,
   avatarUpdatedAt,
   size = "md",
-  className
+  className,
+  href
 }: {
   memberId: string;
   name: string;
   avatarUpdatedAt: Date | string | null;
   size?: MemberAvatarSize;
   className?: string;
+  href?: string;
 }) {
   const url = buildMemberAvatarUrl(memberId, avatarUpdatedAt);
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const showImage = url && failedUrl !== url;
 
-  return (
+  const avatar = (
     <span
       className={cn(
         "grid shrink-0 place-items-center overflow-hidden rounded-full font-bold",
@@ -78,5 +82,17 @@ export function MemberAvatar({
         getMemberInitial(name)
       )}
     </span>
+  );
+
+  if (!href) return avatar;
+
+  return (
+    <Link
+      href={href as Route}
+      aria-label={`${name}さんのプロフィールを見る`}
+      className="shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2"
+    >
+      {avatar}
+    </Link>
   );
 }

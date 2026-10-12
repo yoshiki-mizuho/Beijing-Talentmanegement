@@ -77,7 +77,7 @@ test.describe("UI check", () => {
     await page.getByRole("button", { name: "Member Userの詳細を開く" }).click();
     await page.getByRole("tab", { name: "1on1 メモ" }).click();
     await capture(page, "MANAGER", "member-one-on-one");
-    await page.getByRole("link", { name: "プロフィールを見る" }).click();
+    await page.getByRole("link", { name: "プロフィールを見る", exact: true }).click();
     await page.waitForURL("**/people/**");
     await capture(page, "MANAGER", "subordinate-profile");
     await page.goto("/skill-approvals");
@@ -98,6 +98,11 @@ test.describe("UI check", () => {
       await page.waitForLoadState("networkidle");
     }
     await capture(page, "MEMBER", "dashboard");
+    await page.getByText("必要なスキルをすべて見る").click();
+    await page.screenshot({ path: "test-results/ui-check/MEMBER-target-role-requirements.png" });
+    await page.getByRole("button", { name: "変更" }).click();
+    await page.screenshot({ path: "test-results/ui-check/MEMBER-target-role.png" });
+    await page.getByRole("button", { name: "キャンセル" }).click();
     await page.getByLabel(/通知を開く/).click();
     await capture(page, "MEMBER", "header-notifications");
     await page.goto("/explore");
