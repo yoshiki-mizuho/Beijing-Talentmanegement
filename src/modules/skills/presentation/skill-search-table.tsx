@@ -1,35 +1,25 @@
 "use client";
 
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  type ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable
-} from "@tanstack/react-table";
-import { ListFilter, Pencil, RotateCcw, SearchX } from "lucide-react";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { type ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import { ChevronDown, ChevronRight, MoreHorizontal, Search, SearchX } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import {
-  deactivateSkillAction,
-  updateSkillAction
-} from "@/modules/skills/presentation/actions";
+import { deactivateSkillAction, updateSkillAction } from "@/modules/skills/presentation/actions";
 import {
   buildSkillSearchParams,
   emptySkillSearchFilters,
   type SkillSearchFilters
 } from "@/modules/skills/presentation/skill-search-params";
+import { calculateAverageSkillLevel } from "@/modules/skills/domain/skill-statistics";
 import { ActionForm, ConfirmSubmitButton } from "@/shared/ui/action-form";
-import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Dialog } from "@/shared/ui/dialog";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { FormField, SelectField, TextareaField } from "@/shared/ui/form-field";
 import { Input } from "@/shared/ui/input";
-import { Label } from "@/shared/ui/label";
 import { QueryProvider } from "@/shared/ui/query-provider";
-import { Select } from "@/shared/ui/select";
 import { SubmitButton } from "@/shared/ui/submit-button";
 
 export type SkillRow = {
@@ -47,6 +37,7 @@ export type SkillRow = {
     memberSkills: number;
     roleRequirements: number;
   };
+  memberSkills: { level: number }[];
 };
 
 type CategoryOption = {
@@ -77,21 +68,24 @@ function SkillSearchTableInner({
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [filters, setFilters] = useState<SkillSearchFilters>(
-    emptySkillSearchFilters
-  );
+  const [filters, setFilters] = useState<SkillSearchFilters>(emptySkillSearchFilters);
   const [editingSkill, setEditingSkill] = useState<SkillRow | null>(null);
-  const hasFilters = Object.values(filters).some(Boolean);
+  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const query = useQuery({
     queryKey: ["skills", filters],
     queryFn: () => fetchSkills(filters),
-    initialData: hasFilters ? undefined : initialSkills,
+    initialData: initialSkills.filter((skill) => skill.isActive),
     placeholderData: keepPreviousData
   });
   const rows = query.data ?? [];
 
+  // 追加・編集の後にサーバーの一覧が変わったら、表示中の検索結果も取り直す
   useEffect(() => {
-    queryClient.setQueryData(["skills", emptySkillSearchFilters], initialSkills);
+    queryClient.setQueryData(
+      ["skills", emptySkillSearchFilters],
+      initialSkills.filter((skill) => skill.isActive)
+    );
+    void queryClient.invalidateQueries({ queryKey: ["skills"] });
   }, [initialSkills, queryClient]);
 
   const columns = useMemo<ColumnDef<SkillRow>[]>(() => {
@@ -106,35 +100,32 @@ function SkillSearchTableInner({
         )
       },
       {
-        accessorKey: "category.name",
-        header: "カテゴリ",
+        id: "averageLevel",
+        header: "平均レベル",
         cell: ({ row }) => (
-          <Badge variant="primary">{row.original.category.name}</Badge>
-        )
-      },
-      {
-        accessorKey: "description",
-        header: "説明",
-        cell: ({ row }) => (
-          <span className="block min-w-48 max-w-96 break-words text-[var(--muted-foreground)]">
-            {row.original.description || "説明なし"}
-          </span>
+          <AverageLevel value={calculateAverageSkillLevel(row.original.memberSkills)} />
         )
       },
       {
         id: "memberSkillCount",
         header: "保有人数",
         cell: ({ row }) => (
-          <span className="tabular-nums">{row.original._count.memberSkills}人</span>
+          <span className="tabular-nums">{row.original.memberSkills.length}人</span>
         )
       },
       {
         accessorKey: "isActive",
         header: "状態",
         cell: ({ row }) => (
-          <Badge variant={row.original.isActive ? "success" : "neutral"}>
+          <span
+            className={
+              row.original.isActive
+                ? "font-medium text-emerald-700"
+                : "text-[var(--muted-foreground)]"
+            }
+          >
             {row.original.isActive ? "有効" : "無効"}
-          </Badge>
+          </span>
         )
       }
     ];
@@ -146,14 +137,13 @@ function SkillSearchTableInner({
         cell: ({ row }) => (
           <Button
             type="button"
-            variant="secondary"
+            variant="ghost"
             size="small"
             className="min-h-11"
             onClick={() => setEditingSkill(row.original)}
             aria-label={`${row.original.name}を編集`}
           >
-            <Pencil className="h-4 w-4" aria-hidden="true" />
-            編集
+            <MoreHorizontal className="h-5 w-5" aria-hidden="true" />
           </Button>
         )
       });
@@ -169,6 +159,14 @@ function SkillSearchTableInner({
     columns,
     getCoreRowModel: getCoreRowModel()
   });
+  // table のインスタンスはデータが変わっても同じなので、メモ化せず毎回まとめ直す
+  const tableRows = table.getRowModel().rows;
+  const groupedRows = categories
+    .map((category) => ({
+      category,
+      rows: tableRows.filter((row) => row.original.categoryId === category.id)
+    }))
+    .filter((group) => group.rows.length > 0);
 
   function handleEditSuccess() {
     setEditingSkill(null);
@@ -178,64 +176,48 @@ function SkillSearchTableInner({
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 border-y border-[var(--border)] bg-[var(--surface-subtle)] p-4 md:grid-cols-[minmax(14rem,1fr)_14rem_10rem_auto]">
-        <div>
-          <Label htmlFor="skill-search-q">キーワード</Label>
+      <div className="flex flex-wrap items-center gap-3 border-b border-[var(--border)] pb-4">
+        <div className="relative min-w-64 flex-1 md:max-w-sm">
+          <Search
+            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]"
+            aria-hidden="true"
+          />
           <Input
             id="skill-search-q"
+            aria-label="スキル名"
             value={filters.q}
-            onChange={(event) =>
-              setFilters((current) => ({ ...current, q: event.target.value }))
-            }
-            placeholder="名称、説明"
-            className="mt-1 bg-[var(--surface)]"
+            onChange={(event) => setFilters((current) => ({ ...current, q: event.target.value }))}
+            placeholder="スキル名を検索"
+            className="rounded-full pl-9"
           />
         </div>
-        <SelectFilter
-          id="skill-search-category"
-          label="カテゴリ"
-          value={filters.categoryId}
-          onChange={(categoryId) =>
-            setFilters((current) => ({ ...current, categoryId }))
-          }
-        >
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
+        <div className="flex max-w-full gap-1 overflow-x-auto" aria-label="カテゴリ">
+          {[{ id: "", name: "すべて" }, ...categories].map((category) => (
+            <button
+              key={category.id || "all"}
+              type="button"
+              aria-pressed={filters.categoryId === category.id}
+              className={`min-h-9 shrink-0 rounded-full border px-3 text-sm ${filters.categoryId === category.id ? "border-[var(--primary)] bg-[var(--primary)] text-white" : "border-[var(--border)]"}`}
+              onClick={() => setFilters((current) => ({ ...current, categoryId: category.id }))}
+            >
               {category.name}
-            </option>
+            </button>
           ))}
-        </SelectFilter>
-        <SelectFilter
-          id="skill-search-active"
-          label="状態"
-          value={filters.isActive}
-          onChange={(isActive) =>
-            setFilters((current) => ({ ...current, isActive }))
-          }
-        >
-          <option value="true">有効</option>
-          <option value="false">無効</option>
-        </SelectFilter>
-        <div className="self-end">
-          <Button
-            type="button"
-            variant="secondary"
-            className="w-full"
-            onClick={() => setFilters(emptySkillSearchFilters)}
-            disabled={!hasFilters}
-          >
-            <RotateCcw className="h-4 w-4" aria-hidden="true" />
-            条件をクリア
-          </Button>
         </div>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]" aria-live="polite">
-          <ListFilter className="h-4 w-4" aria-hidden="true" />
-          {query.isFetching ? "検索結果を更新中..." : `${rows.length}件を表示`}
-        </p>
-        {hasFilters ? <Badge variant="primary">条件適用中</Badge> : null}
+        <label className="ml-auto flex min-h-11 items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={filters.isActive === ""}
+            onChange={(event) =>
+              setFilters((current) => ({
+                ...current,
+                isActive: event.target.checked ? "" : "true"
+              }))
+            }
+            className="h-4 w-4 accent-[var(--primary)]"
+          />
+          無効を含む
+        </label>
       </div>
 
       {query.isError ? (
@@ -252,47 +234,86 @@ function SkillSearchTableInner({
           description="キーワードやカテゴリ、状態を変更して再度検索してください。"
         />
       ) : (
-        <div
-          className="overflow-x-auto border-t border-[var(--border)]"
-          tabIndex={0}
-          aria-label="スキル一覧。横方向にスクロールできます"
-        >
-          <table className="w-full min-w-[780px] text-sm">
-            <thead className="bg-[var(--surface-subtle)] text-left text-[var(--muted-foreground)]">
-              {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <th
-                      key={header.id}
-                      scope="col"
-                      className="whitespace-nowrap px-3 py-3 font-medium"
-                    >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </th>
-                  ))}
-                </tr>
-              ))}
-            </thead>
-            <tbody className="divide-y divide-[var(--border)] bg-[var(--surface)]">
-              {table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="hover:bg-[var(--surface-subtle)]">
-                  {row.getVisibleCells().map((cell) => (
-                    <td
-                      key={cell.id}
-                      className="px-3 py-3 align-top text-[var(--foreground)]"
-                    >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="space-y-2">
+          {groupedRows.map(({ category, rows: categoryRows }) => (
+            <section
+              key={category.id}
+              className="overflow-hidden rounded-xl border border-[var(--border)]"
+            >
+              <button
+                type="button"
+                className="flex min-h-11 w-full items-center gap-2 bg-[var(--surface-subtle)] px-4 text-left font-semibold"
+                aria-expanded={!collapsedCategories.has(category.id)}
+                onClick={() =>
+                  setCollapsedCategories((current) => {
+                    const next = new Set(current);
+                    if (next.has(category.id)) next.delete(category.id);
+                    else next.add(category.id);
+                    return next;
+                  })
+                }
+              >
+                {collapsedCategories.has(category.id) ? (
+                  <ChevronRight className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+                {category.name}
+                <span className="text-sm font-normal text-[var(--muted-foreground)]">
+                  {categoryRows.length}件
+                </span>
+              </button>
+              {!collapsedCategories.has(category.id) ? (
+                <table className="w-full min-w-[680px] table-fixed text-sm">
+                  <colgroup>
+                    <col className="w-[34%]" />
+                    <col className="w-[28%]" />
+                    <col className="w-[14%]" />
+                    <col className="w-[12%]" />
+                    <col className="w-[12%]" />
+                  </colgroup>
+                  <thead className="bg-[var(--surface-subtle)] text-left text-[var(--muted-foreground)]">
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <tr key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                          <th
+                            key={header.id}
+                            scope="col"
+                            className="whitespace-nowrap px-3 py-3 font-medium"
+                          >
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(header.column.columnDef.header, header.getContext())}
+                          </th>
+                        ))}
+                      </tr>
+                    ))}
+                  </thead>
+                  <tbody className="divide-y divide-[var(--border)] bg-[var(--surface)]">
+                    {categoryRows.map((row) => (
+                      <tr
+                        key={row.id}
+                        className={
+                          row.original.isActive
+                            ? "hover:bg-[var(--surface-subtle)]"
+                            : "bg-[var(--surface-subtle)] opacity-60"
+                        }
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <td
+                            key={cell.id}
+                            className="px-3 py-3 align-top text-[var(--foreground)]"
+                          >
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : null}
+            </section>
+          ))}
         </div>
       )}
 
@@ -359,10 +380,7 @@ function SkillSearchTableInner({
             </ActionForm>
 
             <div className="border-t border-[var(--border)] pt-5">
-              <ActionForm
-                action={deactivateSkillAction}
-                onSuccess={handleEditSuccess}
-              >
+              <ActionForm action={deactivateSkillAction} onSuccess={handleEditSuccess}>
                 <input type="hidden" name="id" value={editingSkill.id} />
                 <ConfirmSubmitButton
                   pendingLabel="無効化中…"
@@ -386,31 +404,24 @@ function SkillSearchTableInner({
   );
 }
 
-function SelectFilter({
-  id,
-  label,
-  value,
-  onChange,
-  children
-}: {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  children: ReactNode;
-}) {
+function AverageLevel({ value }: { value: number }) {
+  if (value === 0)
+    return (
+      <span className="text-xs text-[var(--muted-foreground)]" aria-label="保有者なし">
+        —
+      </span>
+    );
   return (
-    <div>
-      <Label htmlFor={id}>{label}</Label>
-      <Select
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-1 bg-[var(--surface)]"
-      >
-        <option value="">すべて</option>
-        {children}
-      </Select>
+    <div className="flex items-center gap-2" aria-label={`保有者の平均 Lv${value.toFixed(1)}`}>
+      <span className="flex gap-1" aria-hidden="true">
+        {[1, 2, 3, 4, 5].map((level) => (
+          <span
+            key={level}
+            className={`h-2 w-5 rounded-full ${level <= Math.round(value) ? "bg-[var(--primary)]" : "bg-[var(--border)]"}`}
+          />
+        ))}
+      </span>
+      <span className="text-xs tabular-nums">Lv{value.toFixed(1)}</span>
     </div>
   );
 }

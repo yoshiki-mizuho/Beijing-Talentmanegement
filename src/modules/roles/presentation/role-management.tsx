@@ -1,6 +1,6 @@
 "use client";
 
-import { ListChecks, Plus, Target, UsersRound } from "lucide-react";
+import { ListChecks, MoreHorizontal, Plus, Target, UsersRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -14,13 +14,7 @@ import {
 import { ActionForm, ConfirmSubmitButton } from "@/shared/ui/action-form";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
-} from "@/shared/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
 import { Dialog } from "@/shared/ui/dialog";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { FormField, SelectField, TextareaField } from "@/shared/ui/form-field";
@@ -59,6 +53,7 @@ type RoleItem = {
     }[];
   }[];
   achievedMemberCount: number;
+  targetMemberCount: number;
 };
 
 type SkillOption = {
@@ -86,13 +81,12 @@ export function RoleManagement({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="ロール管理"
-        description="ロール要件を管理し、メンバーごとの達成状況を確認します。"
+        title={`ロール管理　${roles.length}件`}
         actions={
           canManage ? (
             <Button onClick={() => setCreateOpen(true)}>
               <Plus className="h-4 w-4" aria-hidden="true" />
-              新規ロール
+              ロールを追加
             </Button>
           ) : undefined
         }
@@ -111,55 +105,76 @@ export function RoleManagement({
           />
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 lg:grid-cols-2">
           {roles.map((role) => {
-            const requiredCount = role.requirements.filter(
-              (requirement) => requirement.isRequired
-            ).length;
-            const optionalCount = role.requirements.length - requiredCount;
-
             return (
-              <Card key={role.id} className="flex min-h-64 flex-col">
+              <Card
+                key={role.id}
+                className={`flex min-h-56 flex-col ${role.isActive ? "" : "opacity-60"}`}
+              >
                 <CardHeader>
                   <div className="flex items-start justify-between gap-3">
-                    <CardTitle className="text-base">{role.name}</CardTitle>
-                    <Badge variant={role.isActive ? "success" : "neutral"}>
-                      {role.isActive ? "有効" : "無効"}
-                    </Badge>
+                    <div>
+                      <CardTitle className="text-base">{role.name}</CardTitle>
+                      {!role.isActive ? (
+                        <Badge className="mt-2" variant="neutral">
+                          無効
+                        </Badge>
+                      ) : null}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium">
+                        達成 {role.achievedMemberCount}名・目標 {role.targetMemberCount}名
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="small"
+                        onClick={() => setSelectedRoleId(role.id)}
+                        aria-label={`${role.name}の${canManage ? "編集" : "詳細"}を開く`}
+                      >
+                        <MoreHorizontal className="h-5 w-5" aria-hidden="true" />
+                      </Button>
+                    </div>
                   </div>
                   <CardDescription className="line-clamp-3">
                     {role.description ?? "説明未設定"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="mt-auto space-y-4">
-                  <dl className="grid grid-cols-2 gap-3 text-sm">
-                    <div className="rounded-lg bg-[var(--surface-subtle)] p-3">
-                      <dt className="flex items-center gap-1 text-xs text-[var(--muted-foreground)]">
-                        <ListChecks className="h-4 w-4" aria-hidden="true" />
-                        要件
-                      </dt>
-                      <dd className="mt-1 font-semibold text-[var(--foreground)]">
-                        必須 {requiredCount}・任意 {optionalCount}
-                      </dd>
+                  <div className="flex flex-wrap gap-2">
+                    {role.requirements.map((requirement) => (
+                      <Badge
+                        key={requirement.id}
+                        variant={requirement.isRequired ? "primary" : "neutral"}
+                      >
+                        {requirement.skill.name} Lv{requirement.requiredLevel}
+                        {requirement.isRequired ? "" : " 任意"}
+                      </Badge>
+                    ))}
+                    {role.requirements.length === 0 ? (
+                      <span className="text-sm text-[var(--muted-foreground)]">要件未設定</span>
+                    ) : null}
+                  </div>
+                  {role.targetMemberCount > 0 ? (
+                    <div>
+                      <div className="mb-1 flex justify-between text-xs text-[var(--muted-foreground)]">
+                        <span>目標メンバーの達成割合</span>
+                        <span>
+                          {Math.min(role.achievedMemberCount, role.targetMemberCount)}/
+                          {role.targetMemberCount}
+                        </span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-[var(--border)]">
+                        <div
+                          className="h-full rounded-full bg-[var(--primary)]"
+                          style={{
+                            width: `${Math.min(100, (role.achievedMemberCount / role.targetMemberCount) * 100)}%`
+                          }}
+                        />
+                      </div>
                     </div>
-                    <div className="rounded-lg bg-[var(--surface-subtle)] p-3">
-                      <dt className="flex items-center gap-1 text-xs text-[var(--muted-foreground)]">
-                        <UsersRound className="h-4 w-4" aria-hidden="true" />
-                        達成者
-                      </dt>
-                      <dd className="mt-1 font-semibold text-[var(--foreground)]">
-                        {role.achievedMemberCount}人 / {role.memberStatuses.length}人
-                      </dd>
-                    </div>
-                  </dl>
-                  <Button
-                    variant={canManage ? "secondary" : "primary"}
-                    className="w-full min-h-11"
-                    onClick={() => setSelectedRoleId(role.id)}
-                    aria-label={`${role.name}の${canManage ? "編集" : "詳細"}を開く`}
-                  >
-                    {canManage ? "編集" : "詳細"}
-                  </Button>
+                  ) : null}
                 </CardContent>
               </Card>
             );
@@ -182,17 +197,8 @@ export function RoleManagement({
               refresh();
             }}
           >
-            <FormField
-              id="create-role-name"
-              label="ロール名"
-              name="name"
-              required
-            />
-            <TextareaField
-              id="create-role-description"
-              label="説明"
-              name="description"
-            />
+            <FormField id="create-role-name" label="ロール名" name="name" required />
+            <TextareaField id="create-role-description" label="説明" name="description" />
             <label className="flex min-h-11 items-center gap-2 text-sm font-medium text-[var(--foreground)]">
               <input
                 type="checkbox"
@@ -241,9 +247,7 @@ function RoleDetailDialog({
   onRefresh: () => void;
   onDeactivate: () => void;
 }) {
-  const existingSkillIds = new Set(
-    role.requirements.map((requirement) => requirement.skillId)
-  );
+  const existingSkillIds = new Set(role.requirements.map((requirement) => requirement.skillId));
   const availableSkills = skills.filter((skill) => !existingSkillIds.has(skill.id));
 
   return (
@@ -364,16 +368,9 @@ function RoleDetailDialog({
                     </p>
                   </div>
                   {canManage ? (
-                    <ActionForm
-                      action={removeRoleRequirementAction}
-                      onSuccess={onRefresh}
-                    >
+                    <ActionForm action={removeRoleRequirementAction} onSuccess={onRefresh}>
                       <input type="hidden" name="roleId" value={role.id} />
-                      <input
-                        type="hidden"
-                        name="skillId"
-                        value={requirement.skillId}
-                      />
+                      <input type="hidden" name="skillId" value={requirement.skillId} />
                       <ConfirmSubmitButton
                         pendingLabel="削除中…"
                         variant="destructive"
@@ -473,9 +470,7 @@ function RoleDetailDialog({
                 <div key={member.id} className="py-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <p className="font-medium text-[var(--foreground)]">
-                        {member.name}
-                      </p>
+                      <p className="font-medium text-[var(--foreground)]">{member.name}</p>
                       <p className="mt-1 text-sm text-[var(--muted-foreground)]">
                         {member.departmentName} / {member.jobTitle ?? "役職未設定"}
                       </p>

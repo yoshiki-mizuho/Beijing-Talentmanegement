@@ -2,6 +2,7 @@ import { expect, test, type Locator } from "@playwright/test";
 
 import { openLoggedInContext } from "./helpers/auth";
 import { readDemoCredentials } from "./helpers/credentials";
+import { dismissExistingLevelUpDialogs } from "./helpers/level-up";
 
 const credentials = readDemoCredentials();
 
@@ -47,22 +48,6 @@ test("承認後のレベルアップ演出は閉じると再表示されない",
     await member.context.close();
   }
 });
-
-async function dismissExistingLevelUpDialogs(
-  page: import("@playwright/test").Page
-) {
-  for (let attempt = 0; attempt < 10; attempt += 1) {
-    const dialog = page.getByRole("dialog").filter({ hasText: "LEVEL UP" });
-    if ((await dialog.count()) === 0) return;
-
-    await dialog
-      .getByRole("button", { name: "ダイアログを閉じる" })
-      .click();
-    await expect(dialog).toHaveCount(0);
-    await page.reload();
-  }
-  throw new Error("既存のレベルアップ通知を10件以内に確認できませんでした。");
-}
 
 async function findUpgradeableSkill(groups: Locator) {
   for (let index = 0; index < await groups.count(); index += 1) {

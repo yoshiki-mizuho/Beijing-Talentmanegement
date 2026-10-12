@@ -65,7 +65,8 @@ test("管理者がメンバーを登録し、詳細で役職を更新して無�
       .click();
     await expect(admin.page.getByText("メンバーを無効化しました。"))
       .toBeVisible();
-    await expect(detailDialog.getByLabel("状態")).toHaveValue("INACTIVE");
+    await expect(detailDialog).toHaveCount(0);
+    await expect(createdRow).toHaveCount(0);
   } finally {
     await admin.context.close();
   }
