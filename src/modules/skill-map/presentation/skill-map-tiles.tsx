@@ -108,7 +108,11 @@ export function SkillMapTiles({
                         ...getTileSpan(skill.holderCount, maxHolderCount)
                       }}
                     >
-                      <strong className="line-clamp-2 break-all pr-10 text-sm">{skill.name}</strong>
+                      <strong
+                        className={`line-clamp-2 break-words text-sm ${skill.growthCount ? "pr-10" : ""}`}
+                      >
+                        {skill.name}
+                      </strong>
                       <span className="text-xs">
                         {skill.holderCount === 0
                           ? "保有者なし"
