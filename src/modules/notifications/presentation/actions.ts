@@ -56,3 +56,21 @@ export async function confirmLevelUpNotificationAction(
     await markNotificationRead(id, session.user.memberId);
   }, "レベルアップ通知を確認しました。");
 }
+
+export async function confirmCheerNotificationAction(
+  formData: FormData
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requirePasswordReadyMember();
+    // 閉じるときは、まだ見ていない応援もまとめて既読にするため、複数の id を受け取る
+    const ids = formData.getAll("id").filter((value): value is string => typeof value === "string");
+    if (ids.length === 0) throw new UserFacingError("応援の通知が見つかりません。");
+    for (const id of ids) {
+      const notification = await findNotification(id, session.user.memberId);
+      if (!notification || notification.type !== NotificationType.CHEER_RECEIVED) {
+        throw new UserFacingError("応援の通知が見つかりません。");
+      }
+    }
+    for (const id of ids) await markNotificationRead(id, session.user.memberId);
+  }, "応援の通知を確認しました。");
+}

@@ -1,11 +1,13 @@
 import { expect, test } from "@playwright/test";
 import { login, openLoggedInContext } from "./helpers/auth";
 import { readDemoCredentials } from "./helpers/credentials";
+import { dismissExistingLevelUpDialogs } from "./helpers/level-up";
 
 const credentials = readDemoCredentials();
 
 test("MEMBERがスキルとレベルで人を探しプロフィールを開く", async ({ page }) => {
   await login(page, credentials.MEMBER);
+  await dismissExistingLevelUpDialogs(page);
   await page.goto("/explore");
   await page.getByRole("combobox", { name: "探すスキル" }).fill("type");
   await page.getByRole("option", { name: "TypeScript" }).click();
@@ -21,6 +23,7 @@ test("MEMBERがスキルとレベルで人を探しプロフィールを開く",
 
 test("いま伸びている技術から移動すると選択欄にスキル名が表示される", async ({ page }) => {
   await login(page, credentials.MEMBER);
+  await dismissExistingLevelUpDialogs(page);
   await page.goto("/explore");
   const trendingSkill = page
     .getByRole("region", { name: "いま伸びている技術" })
@@ -34,6 +37,7 @@ test("いま伸びている技術から移動すると選択欄にスキル名�
 
 test("コンボボックスはキーボードだけでスキルを選べる", async ({ page }) => {
   await login(page, credentials.MEMBER);
+  await dismissExistingLevelUpDialogs(page);
   await page.goto("/explore");
   const combobox = page.getByRole("combobox", { name: "探すスキル" });
   await combobox.fill("type");
@@ -44,6 +48,7 @@ test("コンボボックスはキーボードだけでスキルを選べる", as
 
 test("本人が公開設定を切り替え、最後に公開へ戻す", async ({ page }) => {
   await login(page, credentials.MEMBER);
+  await dismissExistingLevelUpDialogs(page);
   await page.getByLabel("アカウントメニューを開く").click();
   await page.getByRole("link", { name: "スキルプロフィール" }).click();
   await expect(page).toHaveURL(/\/people\//);
@@ -61,6 +66,7 @@ test("非公開プロフィールは別のMEMBER相当の閲覧者に氏名を�
   const manager = await openLoggedInContext(browser, credentials.MANAGER);
   const member = await openLoggedInContext(browser, credentials.MEMBER);
   try {
+    await dismissExistingLevelUpDialogs(member.page);
     await manager.page.getByLabel("アカウントメニューを開く").click();
     await manager.page.getByRole("link", { name: "スキルプロフィール" }).click();
     await expect(manager.page).toHaveURL(/\/people\//);

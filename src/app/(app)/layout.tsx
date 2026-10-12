@@ -9,7 +9,11 @@ import {
   countPendingSkillAssessments,
   hasMemberTargetRole
 } from "@/modules/members/application/member-service";
-import { getLevelUpCelebrations } from "@/modules/growth/application/growth-service";
+import {
+  getCheerCelebrations,
+  getLevelUpCelebrations
+} from "@/modules/growth/application/growth-service";
+import { CheerCelebrationDialog } from "@/modules/growth/presentation/cheer-celebration-dialog";
 import { LevelUpCelebrationDialog } from "@/modules/growth/presentation/level-up-celebration-dialog";
 import {
   countUnreadNotifications,
@@ -49,7 +53,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     pendingApprovalCount,
     approvedSkillCount,
     hasTargetRole,
-    levelUpCelebrations
+    levelUpCelebrations,
+    cheerCelebrations
   ] = await Promise.all([
     session.user.memberId
       ? countUnreadNotifications(session.user.memberId)
@@ -74,6 +79,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       : Promise.resolve(false),
     session.user.memberId && !session.user.passwordChangeRequired
       ? getLevelUpCelebrations(session.user.memberId)
+      : Promise.resolve([]),
+    session.user.memberId && !session.user.passwordChangeRequired
+      ? getCheerCelebrations(session.user.memberId)
       : Promise.resolve([])
   ]);
   const setupProgress = session.user.memberId
@@ -99,6 +107,14 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     >
       {children}
       <LevelUpCelebrationDialog celebrations={levelUpCelebrations} />
+      <CheerCelebrationDialog
+        key={
+          levelUpCelebrations.length > 0
+            ? "cheer-celebrations-blocked"
+            : cheerCelebrations[0]?.notificationId ?? "no-cheer-celebrations"
+        }
+        celebrations={levelUpCelebrations.length === 0 ? cheerCelebrations : []}
+      />
     </AppShell>
   );
 }

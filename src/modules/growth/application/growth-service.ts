@@ -12,8 +12,10 @@ import { calculateBadgeAchievements } from "@/modules/growth/domain/growth-insig
 import * as growthRepository from "@/modules/growth/infrastructure/growth-repository";
 import {
   getMemberGrowthData as fetchMemberGrowthData,
+  listUnreadCheerNotifications,
   listUnreadLevelUpNotifications
 } from "@/modules/growth/infrastructure/member-growth-repository";
+import type { UnreadCheerNotification } from "@/modules/growth/infrastructure/member-growth-repository";
 import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
 import { AuthorizationError } from "@/server/auth/authorization";
 import { UserFacingError } from "@/shared/lib/user-facing-error";
@@ -223,6 +225,28 @@ function buildTargetProgress(
 export type LevelUpCelebration = Awaited<
   ReturnType<typeof getLevelUpCelebrations>
 >[number];
+
+export async function getCheerCelebrations(memberId: string) {
+  const notifications = await listUnreadCheerNotifications(memberId);
+  return notifications.flatMap(toCheerCelebration);
+}
+
+export function toCheerCelebration(notification: UnreadCheerNotification) {
+  if (!notification.cheer) return [];
+
+  return [
+    {
+      notificationId: notification.id,
+      createdAt: notification.createdAt,
+      message: notification.cheer.message,
+      sender: notification.cheer.fromMember,
+      targetSkillName: notification.cheer.targetSkill?.name ?? null,
+      mentorMember: notification.cheer.mentorMember
+    }
+  ];
+}
+
+export type CheerCelebration = Awaited<ReturnType<typeof getCheerCelebrations>>[number];
 
 async function assertLevelUpInteractionAccess(
   levelChangeId: string,
