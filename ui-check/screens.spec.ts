@@ -60,12 +60,18 @@ test.describe("UI check", () => {
     await capture(page, "MANAGER", "skill-map");
     await page.getByLabel(/通知を開く/).click();
     await capture(page, "MANAGER", "header-notifications");
+    await page.goto("/dashboard");
+    await page.waitForLoadState("networkidle");
     const cheer = page
       .getByRole("button", { name: /応援する|応援しました/ })
       .first();
     if (await cheer.count()) {
       await cheer.click();
       await capture(page, "MANAGER", "cheer-dialog");
+      // MEMBER 側で応援の演出を撮るため、応援を1件送っておく（ローカルの DB にだけ残る）
+      await page.getByLabel("メッセージ").fill("ui:check の応援です。いつもありがとうございます！");
+      await page.getByRole("button", { name: "送信する" }).click();
+      await page.getByText("応援を送りました").waitFor();
     }
     await page.goto("/members");
     await page.getByRole("button", { name: "Member Userの詳細を開く" }).click();
@@ -81,6 +87,16 @@ test.describe("UI check", () => {
     test.skip(!enabled("MEMBER"));
     await login(page, credentials.MEMBER);
     await page.goto("/dashboard");
+    await page.waitForLoadState("networkidle");
+    // 未確認のレベルアップ・応援の演出を撮ってから閉じる（閉じると残りもまとめて既読になる）
+    const celebration = page.getByRole("dialog").filter({ hasText: /LEVEL UP|CHEER/ });
+    for (let count = 1; count <= 10 && (await celebration.count()); count += 1) {
+      await capture(page, "MEMBER", `celebration-${count}`);
+      await celebration.getByRole("button", { name: "ダイアログを閉じる" }).click();
+      await page.waitForLoadState("networkidle");
+      await page.reload();
+      await page.waitForLoadState("networkidle");
+    }
     await capture(page, "MEMBER", "dashboard");
     await page.getByLabel(/通知を開く/).click();
     await capture(page, "MEMBER", "header-notifications");

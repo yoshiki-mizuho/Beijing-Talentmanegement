@@ -200,3 +200,32 @@ export function listUnreadLevelUpNotifications(memberId: string) {
 export type UnreadLevelUpNotification = Awaited<
   ReturnType<typeof listUnreadLevelUpNotifications>
 >[number];
+
+export function listUnreadCheerNotifications(memberId: string) {
+  return prisma.notification.findMany({
+    where: {
+      recipientMemberId: memberId,
+      status: NotificationStatus.UNREAD,
+      type: NotificationType.CHEER_RECEIVED,
+      cheerId: { not: null }
+    },
+    select: {
+      id: true,
+      createdAt: true,
+      cheer: {
+        select: {
+          message: true,
+          fromMember: { select: { id: true, name: true } },
+          targetSkill: { select: { name: true } },
+          mentorMember: { select: { id: true, name: true } }
+        }
+      }
+    },
+    orderBy: { createdAt: "asc" },
+    take: 10
+  });
+}
+
+export type UnreadCheerNotification = Awaited<
+  ReturnType<typeof listUnreadCheerNotifications>
+>[number];
