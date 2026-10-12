@@ -33,3 +33,9 @@ export function getMemberStatusLabel(status: string) {
   if (status === "INACTIVE") return "退職・無効";
   return "不明";
 }
+
+export function getTargetRoleProgressLabel(satisfied: number, required: number) {
+  if (required === 0 || satisfied >= required) return "達成";
+  const remaining = required - satisfied;
+  return remaining === 1 ? "あと1" : `${satisfied}/${required}`;
+}

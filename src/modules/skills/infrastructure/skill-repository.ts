@@ -92,6 +92,11 @@ export async function listSkills(input?: SkillSearchInput) {
     },
     include: {
       category: true,
+      // 平均レベルと保有者数は在籍中のメンバーだけで集計する
+      memberSkills: {
+        where: { member: { status: "ACTIVE" } },
+        select: { level: true }
+      },
       _count: {
         select: {
           memberSkills: true,

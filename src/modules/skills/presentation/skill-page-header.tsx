@@ -28,10 +28,12 @@ type SkillCategory = {
 
 export function SkillPageHeader({
   categories,
-  canManage
+  canManage,
+  skillCount
 }: {
   categories: SkillCategory[];
   canManage: boolean;
+  skillCount: number;
 }) {
   const router = useRouter();
   const [createOpen, setCreateOpen] = useState(false);
@@ -42,8 +44,7 @@ export function SkillPageHeader({
   return (
     <>
       <PageHeader
-        title="スキル管理"
-        description="スキル体系とカテゴリを整備し、組織共通の評価基準を管理します。"
+        title={`スキル管理　${skillCount}件`}
         actions={
           canManage ? (
             <div className="flex flex-wrap justify-end gap-2">

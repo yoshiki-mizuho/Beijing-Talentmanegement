@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  getTargetRoleProgressLabel,
   sortMemberSkillsByLevel,
   summarizeMemberSkills
 } from "@/modules/members/presentation/member-display";
@@ -35,5 +36,13 @@ describe("member display", () => {
       "TypeScript",
       "Docker"
     ]);
+  });
+});
+
+describe("getTargetRoleProgressLabel", () => {
+  it("returns short progress labels", () => {
+    expect(getTargetRoleProgressLabel(3, 3)).toBe("達成");
+    expect(getTargetRoleProgressLabel(2, 3)).toBe("あと1");
+    expect(getTargetRoleProgressLabel(1, 3)).toBe("1/3");
   });
 });

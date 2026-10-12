@@ -5,6 +5,7 @@ import {
 } from "@/modules/roles/application/role-service";
 import { canManageRoles } from "@/modules/roles/presentation/role-permissions";
 import { RoleManagement } from "@/modules/roles/presentation/role-management";
+import { calculateRoleStatistics } from "@/modules/roles/domain/role-statistics";
 import { listSkills } from "@/modules/skills/application/skill-service";
 import { managerOrAdmin, requirePageRoles } from "@/server/auth/authorization";
 
@@ -26,7 +27,7 @@ export default async function RolesPage() {
       isRequired: requirement.isRequired,
       skillName: requirement.skill.name
     }));
-    const memberStatuses = members.map((member) => {
+    const memberStatuses = members.filter((member) => member.status === "ACTIVE").map((member) => {
       const result = evaluateMemberForRole(
         requirements,
         member.memberSkills.map((memberSkill) => ({
@@ -52,6 +53,7 @@ export default async function RolesPage() {
       };
     });
 
+    const statistics = calculateRoleStatistics(role.id, requirements, members);
     return {
       id: role.id,
       name: role.name,
@@ -68,7 +70,8 @@ export default async function RolesPage() {
         }
       })),
       memberStatuses,
-      achievedMemberCount: memberStatuses.filter((status) => status.achieved).length
+      achievedMemberCount: statistics.achievedCount,
+      targetMemberCount: statistics.targetCount
     };
   });
 

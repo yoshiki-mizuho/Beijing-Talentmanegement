@@ -1,21 +1,22 @@
 "use client";
 
-import {
-  type ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable
-} from "@tanstack/react-table";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FilterX, UsersRound } from "lucide-react";
+import { ChevronLeft, ChevronRight, FilterX, Search, UsersRound } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-
-import { buildMemberSearchParams, emptyMemberSearchFilters, hasMemberSearchFilters, type MemberSearchFilters } from "@/modules/members/presentation/member-search-filters";
 import { MemberDetailModal } from "@/modules/members/presentation/member-detail-modal";
+import { MemberCreateDialog } from "@/modules/members/presentation/member-create-dialog";
 import {
   getMemberStatusLabel,
+  getTargetRoleProgressLabel,
   summarizeMemberSkills
 } from "@/modules/members/presentation/member-display";
+import {
+  buildMemberSearchParams,
+  emptyMemberSearchFilters,
+  getMemberPageRange,
+  MEMBER_PAGE_SIZE,
+  type MemberSearchFilters
+} from "@/modules/members/presentation/member-search-filters";
 import type {
   DepartmentOption,
   ManagerOption,
@@ -24,17 +25,21 @@ import type {
   SkillOption,
   TargetRoleOption
 } from "@/modules/members/presentation/member-presentation-types";
+import {
+  getMemberAvatarTone,
+  getMemberInitial
+} from "@/modules/members/presentation/skill-approval";
 import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
+import { cn } from "@/shared/lib/utils";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { Input } from "@/shared/ui/input";
-import { Label } from "@/shared/ui/label";
 import { QueryProvider } from "@/shared/ui/query-provider";
 import { Select } from "@/shared/ui/select";
 import { Tooltip } from "@/shared/ui/tooltip";
 
-export function MemberSearchTable(props: {
+type Props = {
   initialMembers: MemberRow[];
   departments: DepartmentOption[];
   skills: SkillOption[];
@@ -44,7 +49,9 @@ export function MemberSearchTable(props: {
   canDeactivateMembers: boolean;
   canEditGrowthSettings: boolean;
   viewerMemberId: string;
-}) {
+};
+
+export function MemberSearchTable(props: Props) {
   return (
     <QueryProvider>
       <MemberSearchTableInner {...props} />
@@ -62,35 +69,25 @@ function MemberSearchTableInner({
   canDeactivateMembers,
   canEditGrowthSettings,
   viewerMemberId
-}: {
-  initialMembers: MemberRow[];
-  departments: DepartmentOption[];
-  skills: SkillOption[];
-  roles: RoleOption[];
-  managerCandidates: ManagerOption[];
-  targetRoles: TargetRoleOption[];
-  canDeactivateMembers: boolean;
-  canEditGrowthSettings: boolean;
-  viewerMemberId: string;
-}) {
+}: Props) {
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState<MemberSearchFilters>(emptyMemberSearchFilters);
   const [debouncedKeyword, setDebouncedKeyword] = useState(filters.q);
+  const [page, setPage] = useState(1);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const closeMemberDetail = useCallback(() => setSelectedMemberId(null), []);
+  const activeInitialMembers = useMemo(
+    () => initialMembers.filter((member) => member.status === "ACTIVE"),
+    [initialMembers]
+  );
 
   useEffect(() => {
-    queryClient.setQueryData(["members", ""], initialMembers);
-  }, [initialMembers, queryClient]);
-
+    queryClient.setQueryData(["members", "status=ACTIVE"], activeInitialMembers);
+  }, [activeInitialMembers, queryClient]);
   useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      setDebouncedKeyword(filters.q.trim());
-    }, 300);
-
-    return () => window.clearTimeout(timeoutId);
+    const id = window.setTimeout(() => setDebouncedKeyword(filters.q.trim()), 300);
+    return () => window.clearTimeout(id);
   }, [filters.q]);
-
   const appliedFilters = useMemo(
     () => ({ ...filters, q: debouncedKeyword }),
     [debouncedKeyword, filters]
@@ -99,274 +96,248 @@ function MemberSearchTableInner({
     () => buildMemberSearchParams(appliedFilters).toString(),
     [appliedFilters]
   );
-  const hasActiveFilters = hasMemberSearchFilters(filters);
   const query = useQuery({
     queryKey: ["members", searchParams],
     queryFn: ({ signal }) => fetchMembers(searchParams, signal),
-    initialData: searchParams ? undefined : initialMembers,
+    initialData: searchParams === "status=ACTIVE" ? activeInitialMembers : undefined,
     placeholderData: keepPreviousData,
     refetchOnWindowFocus: false
   });
-
   const members = query.data ?? [];
-  const selectedMember =
-    members.find((member) => member.id === selectedMemberId) ?? null;
-  const refreshMembers = useCallback(() => {
-    void query.refetch();
-  }, [query]);
-  const selectedRole = roles.find((role) => role.id === appliedFilters.roleId);
-  const columns = useMemo<ColumnDef<MemberRow>[]>(
-    () => [
-      {
-        accessorKey: "employeeNo",
-        header: "社員番号"
-      },
-      {
-        accessorKey: "name",
-        header: "氏名",
-        cell: ({ row }) => (
-          <Button
-            type="button"
-            variant="ghost"
-            className="h-auto min-h-11 justify-start px-0 text-left text-[var(--foreground)]"
-            aria-haspopup="dialog"
-            aria-label={`${row.original.name}の詳細を開く`}
-            onClick={(event) => {
-              event.stopPropagation();
-              setSelectedMemberId(row.original.id);
-            }}
-          >
-            {row.original.name}
-          </Button>
-        )
-      },
-      {
-        accessorKey: "department.name",
-        header: "部署",
-        cell: ({ row }) => row.original.department.name
-      },
-      {
-        accessorKey: "jobTitle",
-        header: "役職",
-        cell: ({ row }) => row.original.jobTitle ?? "未設定"
-      },
-      {
-        accessorKey: "memberSkills",
-        header: "スキル",
-        cell: ({ row }) => <MemberSkillsCell member={row.original} />
-      },
-      {
-        accessorKey: "status",
-        header: "状態",
-        cell: ({ row }) => (
-          <Badge variant={row.original.status === "ACTIVE" ? "success" : "neutral"}>
-            {getMemberStatusLabel(row.original.status)}
-          </Badge>
-        )
-      },
-      {
-        id: "roleStatus",
-        header: "ロール保有",
-        cell: ({ row }) => {
-          if (selectedRole) {
-            const result = evaluateRoleAchievement(
-              selectedRole.roleRequirements.map((requirement) => ({
-                skillId: requirement.skillId,
-                requiredLevel: requirement.requiredLevel,
-                isRequired: requirement.isRequired,
-                skillName: requirement.skill.name
-              })),
-              row.original.memberSkills.map((memberSkill) => ({
-                skillId: memberSkill.skillId,
-                level: memberSkill.level,
-                skillName: memberSkill.skill.name
-              }))
-            );
-
-            return result.achieved
-              ? "達成"
-              : `未達 ${Math.round(result.achievementRate * 100)}%`;
-          }
-
-          const achievedCount = roles.filter((role) =>
-            evaluateRoleAchievement(
-              role.roleRequirements.map((requirement) => ({
-                skillId: requirement.skillId,
-                requiredLevel: requirement.requiredLevel,
-                isRequired: requirement.isRequired
-              })),
-              row.original.memberSkills.map((memberSkill) => ({
-                skillId: memberSkill.skillId,
-                level: memberSkill.level
-              }))
-            ).achieved
-          ).length;
-
-          return `${achievedCount}/${roles.length}`;
-        }
-      }
-    ],
-    [roles, selectedRole]
+  const range = getMemberPageRange(members.length, page);
+  const pageMembers = members.slice(
+    (range.currentPage - 1) * MEMBER_PAGE_SIZE,
+    range.currentPage * MEMBER_PAGE_SIZE
   );
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const table = useReactTable({
-    data: members,
-    columns,
-    getCoreRowModel: getCoreRowModel()
-  });
+  const selectedMember = members.find((member) => member.id === selectedMemberId) ?? null;
+  const refreshMembers = useCallback(() => void query.refetch(), [query]);
+  const updateFilters = (next: MemberSearchFilters) => {
+    setFilters(next);
+    setPage(1);
+  };
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-4 border-b border-[var(--border)] bg-[var(--surface-subtle)] p-4 md:grid-cols-2 xl:grid-cols-6">
-        <div className="md:col-span-2 xl:col-span-2">
-          <Label htmlFor="member-search-q">キーワード</Label>
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--border)] pb-5">
+        <h1 className="text-2xl font-semibold">
+          メンバー一覧{" "}
+          <span className="text-base font-medium text-[var(--muted-foreground)]">
+            {members.length}名
+          </span>
+        </h1>
+        <MemberCreateDialog
+          departments={departments}
+          managerCandidates={managerCandidates}
+          targetRoles={targetRoles}
+          canEditGrowthSettings={canEditGrowthSettings}
+        />
+      </div>
+      <div className="flex flex-wrap items-center gap-3 border-b border-[var(--border)] pb-4">
+        <div className="relative min-w-56 flex-1 md:max-w-xs">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]"
+            aria-hidden="true"
+          />
           <Input
-            id="member-search-q"
+            aria-label="キーワード"
             value={filters.q}
-            onChange={(event) =>
-              setFilters((current) => ({ ...current, q: event.target.value }))
-            }
-            placeholder="氏名、社員番号、メール、役職"
-            className="mt-1"
+            onChange={(event) => updateFilters({ ...filters, q: event.target.value })}
+            placeholder="氏名・社員番号"
+            className="rounded-full pl-9"
           />
         </div>
-        <SelectFilter
-          id="member-search-department"
-          label="部署"
-          value={filters.departmentId}
-          onChange={(departmentId) =>
-            setFilters((current) => ({ ...current, departmentId }))
-          }
-        >
-          {departments.map((department) => (
-            <option key={department.id} value={department.id}>
-              {department.name}
-            </option>
-          ))}
-        </SelectFilter>
-        <SelectFilter
-          id="member-search-skill"
+        <FilterChip
           label="スキル"
-          value={filters.skillId}
-          onChange={(skillId) =>
-            setFilters((current) => ({ ...current, skillId }))
+          value={
+            filters.skillId ? skills.find((skill) => skill.id === filters.skillId)?.name : undefined
           }
         >
-          {skills.map((skill) => (
-            <option key={skill.id} value={skill.id}>
-              {skill.category.name} / {skill.name}
-            </option>
-          ))}
-        </SelectFilter>
-        <SelectFilter
-          id="member-search-level"
-          label="最低レベル"
-          value={filters.minLevel}
-          onChange={(minLevel) =>
-            setFilters((current) => ({ ...current, minLevel }))
-          }
-        >
-          {[1, 2, 3, 4, 5].map((level) => (
-            <option key={level} value={level}>
-              Lv.{level}
-            </option>
-          ))}
-        </SelectFilter>
-        <SelectFilter
-          id="member-search-role"
+          <Select
+            aria-label="スキル"
+            value={filters.skillId}
+            onChange={(event) => updateFilters({ ...filters, skillId: event.target.value })}
+          >
+            <option value="">すべて</option>
+            {skills.map((skill) => (
+              <option key={skill.id} value={skill.id}>
+                {skill.category.name} / {skill.name}
+              </option>
+            ))}
+          </Select>
+          <Select
+            aria-label="最低レベル"
+            value={filters.minLevel}
+            onChange={(event) => updateFilters({ ...filters, minLevel: event.target.value })}
+          >
+            <option value="">最低レベルなし</option>
+            {[1, 2, 3, 4, 5].map((level) => (
+              <option key={level} value={level}>
+                Lv.{level}以上
+              </option>
+            ))}
+          </Select>
+        </FilterChip>
+        <FilterChip
           label="ロール"
-          value={filters.roleId}
-          onChange={(roleId) =>
-            setFilters((current) => ({ ...current, roleId }))
+          value={
+            filters.roleId ? roles.find((role) => role.id === filters.roleId)?.name : undefined
           }
         >
-          {roles.map((role) => (
-            <option key={role.id} value={role.id}>
-              {role.name}
-            </option>
+          <Select
+            aria-label="ロール"
+            value={filters.roleId}
+            onChange={(event) => updateFilters({ ...filters, roleId: event.target.value })}
+          >
+            <option value="">すべて</option>
+            {roles.map((role) => (
+              <option key={role.id} value={role.id}>
+                {role.name}
+              </option>
+            ))}
+          </Select>
+        </FilterChip>
+        <FilterChip
+          label="部署"
+          value={
+            filters.departmentId
+              ? departments.find((department) => department.id === filters.departmentId)?.name
+              : undefined
+          }
+        >
+          <Select
+            aria-label="部署"
+            value={filters.departmentId}
+            onChange={(event) => updateFilters({ ...filters, departmentId: event.target.value })}
+          >
+            <option value="">すべて</option>
+            {departments.map((department) => (
+              <option key={department.id} value={department.id}>
+                {department.name}
+              </option>
+            ))}
+          </Select>
+        </FilterChip>
+        <div className="flex flex-wrap gap-1" aria-label="在籍状態">
+          {[
+            ["ACTIVE", "在籍中"],
+            ["LEAVE", "休職中"],
+            ["INACTIVE", "退職・無効"]
+          ].map(([status, label]) => (
+            <button
+              key={status}
+              type="button"
+              aria-pressed={filters.status === status}
+              className={chipClass(filters.status === status)}
+              onClick={() =>
+                updateFilters({ ...filters, status: filters.status === status ? "" : status })
+              }
+            >
+              {label}
+            </button>
           ))}
-        </SelectFilter>
-        <SelectFilter
-          id="member-search-status"
-          label="在籍状態"
-          value={filters.status}
-          onChange={(status) =>
-            setFilters((current) => ({ ...current, status }))
-          }
-        >
-          <option value="ACTIVE">在籍中</option>
-          <option value="INACTIVE">退職・無効</option>
-          <option value="LEAVE">休職中</option>
-        </SelectFilter>
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="text-sm font-semibold text-[var(--foreground)]">
-            {query.isPending ? "検索中..." : `${members.length}件`}
-          </p>
-          {hasActiveFilters ? <Badge variant="primary">条件適用中</Badge> : null}
-          {query.isFetching && !query.isPending ? (
-            <span className="text-xs text-[var(--muted-foreground)]">更新中...</span>
-          ) : null}
         </div>
         <Button
           type="button"
           variant="ghost"
           size="small"
-          disabled={!hasActiveFilters}
-          onClick={() => setFilters(emptyMemberSearchFilters)}
+          className="ml-auto"
+          onClick={() => updateFilters(emptyMemberSearchFilters)}
         >
           <FilterX className="h-4 w-4" aria-hidden="true" />
-          リセット
+          条件をクリア
         </Button>
       </div>
+      <p className="text-sm font-semibold" aria-live="polite">
+        {query.isFetching ? "検索中..." : `${members.length}名`}
+      </p>
       {query.isError ? (
-        <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-          メンバーの検索に失敗しました。時間をおいて再度お試しください。
+        <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">
+          メンバーの検索に失敗しました。
         </p>
       ) : null}
       {!query.isPending && !query.isError && members.length === 0 ? (
         <EmptyState
           icon={UsersRound}
           title="条件に一致するメンバーがいません"
-          description="検索条件を変更するか、リセットして一覧を確認してください。"
+          description="検索条件を変更してください。"
         />
       ) : null}
-      <div className={members.length === 0 ? "hidden" : "overflow-x-auto border border-[var(--border)]"} tabIndex={0} aria-label="メンバー検索結果">
-        <table className="min-w-[920px] divide-y divide-[var(--border)] text-sm">
-          <thead className="bg-[var(--surface-subtle)] text-left text-[var(--muted-foreground)]">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <th key={header.id} className="whitespace-nowrap px-3 py-2 font-medium">
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
+      {members.length > 0 ? (
+        <div
+          className="overflow-x-auto rounded-xl border border-[var(--border)]"
+          tabIndex={0}
+          aria-label="メンバー検索結果"
+        >
+          <table className="w-full min-w-[850px] text-sm">
+            <thead className="bg-[var(--surface-subtle)] text-left text-[var(--muted-foreground)]">
+              <tr>
+                <th className="px-4 py-3">メンバー</th>
+                <th className="px-4 py-3">得意なスキル</th>
+                <th className="px-4 py-3">目標ロール</th>
+                <th className="px-4 py-3">状態</th>
+                <th>
+                  <span className="sr-only">詳細</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--border)]">
+              {pageMembers.map((member) => (
+                <tr
+                  key={member.id}
+                  className="cursor-pointer hover:bg-[var(--surface-subtle)]"
+                  onClick={() => setSelectedMemberId(member.id)}
+                >
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={cn(
+                          "grid h-10 w-10 place-items-center rounded-full font-bold",
+                          getMemberAvatarTone(member.id)
                         )}
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-          <tbody className="divide-y divide-[var(--border)] bg-[var(--surface)]">
-            {table.getRowModel().rows.map((row) => (
-              <tr
-                key={row.id}
-                className="cursor-pointer transition-colors hover:bg-[var(--surface-subtle)]"
-                onClick={() => setSelectedMemberId(row.original.id)}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="max-w-72 px-3 py-3 align-top text-slate-700">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      >
+                        {getMemberInitial(member.name)}
+                      </span>
+                      <div>
+                        <button
+                          type="button"
+                          className="font-semibold hover:underline"
+                          aria-haspopup="dialog"
+                          aria-label={`${member.name}の詳細を開く`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setSelectedMemberId(member.id);
+                          }}
+                        >
+                          {member.name}
+                        </button>
+                        <p className="text-xs text-[var(--muted-foreground)]">
+                          {member.jobTitle ?? "役職未設定"}・{member.employeeNo}
+                        </p>
+                      </div>
+                    </div>
                   </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                  <td className="px-4 py-3">
+                    <MemberSkillsCell member={member} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <TargetRoleCell member={member} roles={roles} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="inline-flex items-center gap-2 whitespace-nowrap">
+                      <span className={cn("h-2 w-2 rounded-full", statusDot(member.status))} />
+                      {getMemberStatusLabel(member.status)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-xl text-[var(--muted-foreground)]">›</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+      {members.length > 0 ? (
+        <Pagination total={members.length} range={range} onPage={setPage} />
+      ) : null}
       {selectedMember ? (
         <MemberDetailModal
           member={selectedMember}
@@ -385,34 +356,56 @@ function MemberSearchTableInner({
   );
 }
 
-function MemberSkillsCell({ member }: { member: MemberRow }) {
-  const { visibleSkills, hiddenSkills } = summarizeMemberSkills(
-    member.memberSkills
-  );
-
-  if (visibleSkills.length === 0) return "未設定";
-
-  const hiddenSkillSummary = hiddenSkills
-    .map(
-      (memberSkill) =>
-        `${memberSkill.skill.name} Lv.${memberSkill.level}`
-    )
-    .join(" / ");
-
+function FilterChip({
+  label,
+  value,
+  children
+}: {
+  label: string;
+  value?: string;
+  children: ReactNode;
+}) {
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {visibleSkills.map((memberSkill) => (
-        <Badge key={memberSkill.id} variant="primary">
-          {memberSkill.skill.name} Lv.{memberSkill.level}
+    <details className="relative">
+      <summary className={cn(chipClass(Boolean(value)), "list-none cursor-pointer")}>
+        {value ? `${label}: ${value}` : label}
+      </summary>
+      <div className="absolute left-0 top-11 z-20 grid min-w-64 gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 shadow-lg">
+        {children}
+      </div>
+    </details>
+  );
+}
+function chipClass(active: boolean) {
+  return cn(
+    "min-h-9 rounded-full border px-3 text-sm font-medium",
+    active
+      ? "border-[var(--primary)] bg-[var(--primary)] text-white"
+      : "border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-subtle)]"
+  );
+}
+function statusDot(status: string) {
+  return status === "ACTIVE"
+    ? "bg-emerald-500"
+    : status === "LEAVE"
+      ? "bg-amber-500"
+      : "bg-slate-400";
+}
+
+function MemberSkillsCell({ member }: { member: MemberRow }) {
+  const { visibleSkills, hiddenSkills } = summarizeMemberSkills(member.memberSkills);
+  if (!visibleSkills.length) return <span className="text-[var(--muted-foreground)]">未設定</span>;
+  const summary = hiddenSkills.map((item) => `${item.skill.name} Lv.${item.level}`).join(" / ");
+  return (
+    <div className="flex flex-wrap gap-1">
+      {visibleSkills.map((item) => (
+        <Badge key={item.id} variant="primary">
+          {item.skill.name} Lv.{item.level}
         </Badge>
       ))}
-      {hiddenSkills.length > 0 ? (
-        <Tooltip content={hiddenSkillSummary}>
-          <Badge
-            tabIndex={0}
-            aria-label={`ほか${hiddenSkills.length}件: ${hiddenSkillSummary}`}
-            className="cursor-help focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
-          >
+      {hiddenSkills.length ? (
+        <Tooltip content={summary}>
+          <Badge tabIndex={0} aria-label={`ほか${hiddenSkills.length}件: ${summary}`}>
             +{hiddenSkills.length}
           </Badge>
         </Tooltip>
@@ -420,45 +413,85 @@ function MemberSkillsCell({ member }: { member: MemberRow }) {
     </div>
   );
 }
-
-function SelectFilter({
-  id,
-  label,
-  value,
-  onChange,
-  children
-}: {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  children: ReactNode;
-}) {
+function TargetRoleCell({ member, roles }: { member: MemberRow; roles: RoleOption[] }) {
+  const role = roles.find((item) => item.id === member.targetRoleId);
+  if (!member.targetRole || !role)
+    return <span className="text-[var(--muted-foreground)]">未設定</span>;
+  const result = evaluateRoleAchievement(role.roleRequirements, member.memberSkills);
+  const required = role.roleRequirements.filter((item) => item.isRequired).length;
+  const satisfied = result.satisfiedRequirements.length;
+  const rate = required === 0 ? 100 : Math.round((satisfied / required) * 100);
   return (
-    <div>
-      <Label htmlFor={id}>{label}</Label>
-      <Select
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-1"
+    <div className="flex items-center gap-2">
+      <span
+        className="grid h-10 w-10 place-items-center rounded-full text-xs font-bold"
+        style={{ background: `conic-gradient(var(--primary) ${rate}%, var(--border) 0)` }}
       >
-        <option value="">すべて</option>
-        {children}
-      </Select>
+        <span className="grid h-7 w-7 place-items-center rounded-full bg-[var(--surface)]">
+          {satisfied}/{required}
+        </span>
+      </span>
+      <div>
+        <p className="font-medium">{member.targetRole.name}</p>
+        <p className="text-xs text-[var(--muted-foreground)]">
+          {getTargetRoleProgressLabel(satisfied, required)}
+        </p>
+      </div>
     </div>
   );
 }
-
-async function fetchMembers(searchParams: string, signal: AbortSignal) {
-  const response = await fetch(
-    searchParams ? `/api/members?${searchParams}` : "/api/members",
-    { signal }
+function Pagination({
+  total,
+  range,
+  onPage
+}: {
+  total: number;
+  range: ReturnType<typeof getMemberPageRange>;
+  onPage: (page: number) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <p className="text-sm text-[var(--muted-foreground)]">
+        {total}件中 {range.start}〜{range.end}件
+      </p>
+      <div className="flex items-center gap-1">
+        <Button
+          type="button"
+          variant="ghost"
+          size="small"
+          aria-label="前のページ"
+          disabled={range.currentPage === 1}
+          onClick={() => onPage(range.currentPage - 1)}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        {Array.from({ length: range.pageCount }, (_, index) => index + 1).map((item) => (
+          <button
+            key={item}
+            type="button"
+            aria-current={item === range.currentPage ? "page" : undefined}
+            className={chipClass(item === range.currentPage)}
+            onClick={() => onPage(item)}
+          >
+            {item}
+          </button>
+        ))}
+        <Button
+          type="button"
+          variant="ghost"
+          size="small"
+          aria-label="次のページ"
+          disabled={range.currentPage === range.pageCount}
+          onClick={() => onPage(range.currentPage + 1)}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
   );
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch members.");
-  }
-
+}
+async function fetchMembers(searchParams: string, signal: AbortSignal) {
+  const response = await fetch(`/api/members?${searchParams}`, { signal });
+  if (!response.ok) throw new Error("Failed to fetch members.");
   return (await response.json()) as MemberRow[];
 }

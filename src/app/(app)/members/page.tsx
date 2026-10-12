@@ -3,12 +3,10 @@ import {
   listManagerCandidates,
   listMembers
 } from "@/modules/members/application/member-service";
-import { MemberCreateDialog } from "@/modules/members/presentation/member-create-dialog";
 import { MemberSearchTable } from "@/modules/members/presentation/member-search-table";
 import { listSkills } from "@/modules/skills/application/skill-service";
 import { listRoles } from "@/modules/roles/application/role-service";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
-import { PageHeader } from "@/shared/ui/page-header";
+import { Card, CardContent } from "@/shared/ui/card";
 import { managerOrAdmin, requirePageRoles } from "@/server/auth/authorization";
 
 export const dynamic = "force-dynamic";
@@ -80,23 +78,7 @@ export default async function MembersPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="メンバー"
-        description="組織のメンバー情報、保有スキル、ロール充足状況を確認・管理します。"
-        actions={
-          <MemberCreateDialog
-            departments={departments}
-            managerCandidates={managerCandidates}
-            targetRoles={targetRoleOptions}
-            canEditGrowthSettings={canEditGrowthSettings}
-          />
-        }
-      />
-
       <Card>
-        <CardHeader>
-          <CardTitle>検索・ロール保有状況</CardTitle>
-        </CardHeader>
         <CardContent>
           <MemberSearchTable
             initialMembers={memberRows}

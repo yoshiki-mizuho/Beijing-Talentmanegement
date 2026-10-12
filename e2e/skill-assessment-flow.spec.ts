@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { openLoggedInContext } from "./helpers/auth";
 import { readDemoCredentials } from "./helpers/credentials";
+import { dismissExistingLevelUpDialogs } from "./helpers/level-up";
 
 const credentials = readDemoCredentials();
 
@@ -62,6 +63,10 @@ test("メンバーのスキル申告をマネージャーが承認できる", as
       name: `${skillName}の申告履歴`
     }).first();
     await expect(approvedHistory).toContainText("承認済み");
+
+    // 承認で生まれたレベルアップ演出を確認済みにして、後のテストに残さない
+    await member.page.goto("/dashboard");
+    await dismissExistingLevelUpDialogs(member.page);
   } finally {
     await member.context.close();
   }

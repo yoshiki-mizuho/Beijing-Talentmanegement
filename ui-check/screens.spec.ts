@@ -28,6 +28,8 @@ test.describe("UI check", () => {
     await page.goto("/dashboard?view=organization"); await capture(page, "ADMIN", "organization");
     await page.goto("/members"); await capture(page, "ADMIN", "members");
     await page.getByRole("button", { name: "メンバーを追加" }).click(); await capture(page, "ADMIN", "member-create-dialog");
+    await page.goto("/skills"); await capture(page, "ADMIN", "skills");
+    await page.goto("/roles"); await capture(page, "ADMIN", "roles");
   });
   test("MANAGER", async ({ page }) => {
     test.skip(!enabled("MANAGER")); await login(page, credentials.MANAGER);

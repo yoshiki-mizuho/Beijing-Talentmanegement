@@ -93,6 +93,7 @@ test("管理者がスキルを作成・編集・無効化し、ロール要件�
     await expect(requirement).toHaveCount(0);
 
     await admin.page.goto("/skills");
+    await admin.page.getByLabel("無効を含む").check();
     const editedRow = admin.page
       .getByRole("row")
       .filter({ hasText: editedSkillName });

@@ -7,7 +7,7 @@ export type SkillSearchFilters = {
 export const emptySkillSearchFilters: SkillSearchFilters = {
   q: "",
   categoryId: "",
-  isActive: ""
+  isActive: "true"
 };
 
 export function buildSkillSearchParams(filters: SkillSearchFilters) {
