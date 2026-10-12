@@ -11,7 +11,9 @@ export async function getSkillMapData(memberIds: string[], since: Date) {
         where: { memberId: { in: memberIds }, member: { status: "ACTIVE" } },
         select: {
           level: true,
-          member: { select: { id: true, name: true, jobTitle: true } },
+          member: {
+            select: { id: true, name: true, jobTitle: true, avatarUpdatedAt: true },
+          },
         },
       },
       skillLevelChanges: {

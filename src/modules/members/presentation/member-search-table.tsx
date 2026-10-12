@@ -25,10 +25,7 @@ import type {
   SkillOption,
   TargetRoleOption
 } from "@/modules/members/presentation/member-presentation-types";
-import {
-  getMemberAvatarTone,
-  getMemberInitial
-} from "@/modules/members/presentation/skill-approval";
+import { MemberAvatar } from "@/shared/ui/member-avatar";
 import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
 import { cn } from "@/shared/lib/utils";
 import { Badge } from "@/shared/ui/badge";
@@ -291,14 +288,11 @@ function MemberSearchTableInner({
                 >
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <span
-                        className={cn(
-                          "grid h-10 w-10 place-items-center rounded-full font-bold",
-                          getMemberAvatarTone(member.id)
-                        )}
-                      >
-                        {getMemberInitial(member.name)}
-                      </span>
+                      <MemberAvatar
+                        memberId={member.id}
+                        name={member.name}
+                        avatarUpdatedAt={member.avatarUpdatedAt}
+                      />
                       <div>
                         <button
                           type="button"

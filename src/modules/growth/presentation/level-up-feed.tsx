@@ -19,11 +19,11 @@ import {
   toggleLevelUpReactionAction
 } from "@/modules/growth/presentation/actions";
 import { formatNotificationDate } from "@/modules/notifications/presentation/notification-date";
-import { getMemberAvatarTone, getMemberInitial } from "@/modules/members/presentation/skill-approval";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { Tooltip } from "@/shared/ui/tooltip";
+import { MemberAvatar } from "@/shared/ui/member-avatar";
 
 type ReactionType = "CONGRATS" | "AMAZING" | "WANT_TO_LEARN";
 
@@ -33,7 +33,11 @@ const reactionDefinitions = [
   { type: "WANT_TO_LEARN", label: "教えてほしい", icon: MessageCircleQuestion }
 ] as const;
 
-export type SerializableFeedItem = Omit<LevelUpFeedItem, "changedAt" | "comments"> & {
+export type SerializableFeedItem = Omit<
+  LevelUpFeedItem,
+  "avatarUpdatedAt" | "changedAt" | "comments"
+> & {
+  avatarUpdatedAt: string | null;
   changedAt: string;
   comments: Array<Omit<LevelUpFeedItem["comments"][number], "createdAt"> & { createdAt: string }>;
 };
@@ -125,6 +129,7 @@ function FeedItem({
         id: `optimistic-${Date.now()}`,
         authorMemberId: viewer.memberId,
         authorName: viewer.memberName,
+        authorAvatarUpdatedAt: null,
         body: body.trim(),
         createdAt: new Date().toISOString()
       }]);
@@ -140,9 +145,11 @@ function FeedItem({
   return (
     <li className="p-5">
       <div className="flex items-start gap-3">
-        <span className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-bold", getMemberAvatarTone(initialItem.memberId))} aria-hidden="true">
-          {getMemberInitial(initialItem.memberName)}
-        </span>
+        <MemberAvatar
+          memberId={initialItem.memberId}
+          name={initialItem.memberName}
+          avatarUpdatedAt={initialItem.avatarUpdatedAt}
+        />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <p className="text-sm text-[var(--foreground)]">

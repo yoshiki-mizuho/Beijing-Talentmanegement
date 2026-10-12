@@ -1,11 +1,8 @@
 import { ExternalLink } from "lucide-react";
 import type { getSkillProfile } from "@/modules/explore/application/explore-service";
-import {
-  getMemberAvatarTone,
-  getMemberInitial
-} from "@/modules/members/presentation/skill-approval";
-import { cn } from "@/shared/lib/utils";
 import { Badge } from "@/shared/ui/badge";
+import { MemberAvatar } from "@/shared/ui/member-avatar";
+import { AvatarEditor } from "./avatar-editor";
 import { EarnedBadge } from "./earned-badge";
 import { ProfileVisibility } from "./profile-visibility";
 
@@ -15,14 +12,15 @@ export function SkillProfileHeader({ profile, isOwner }: { profile: Profile; isO
   return (
     <header className="flex flex-wrap items-start justify-between gap-5 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
       <div className="flex min-w-0 gap-4">
-        <span
-          className={cn(
-            "grid h-16 w-16 shrink-0 place-items-center rounded-full text-xl font-bold",
-            getMemberAvatarTone(profile.id)
-          )}
-        >
-          {getMemberInitial(profile.name)}
-        </span>
+        <div className="relative mb-5 shrink-0 self-start">
+          <MemberAvatar
+            memberId={profile.id}
+            name={profile.name}
+            avatarUpdatedAt={profile.avatarUpdatedAt}
+            size="lg"
+          />
+          {isOwner ? <AvatarEditor hasAvatar={Boolean(profile.avatarUpdatedAt)} /> : null}
+        </div>
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-[26px] font-bold">{profile.name}</h1>

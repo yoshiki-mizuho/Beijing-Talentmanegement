@@ -6,6 +6,7 @@ export type SkillMapSource = {
     id: string;
     name: string;
     jobTitle: string | null;
+    avatarUpdatedAt: Date | string | null;
     level: number;
   }[];
   changes: {

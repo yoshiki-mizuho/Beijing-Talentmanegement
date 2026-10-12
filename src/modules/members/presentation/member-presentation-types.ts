@@ -2,6 +2,7 @@ export type MemberRow = {
   id: string;
   employeeNo: string;
   name: string;
+  avatarUpdatedAt: string | null;
   email: string;
   profile: string | null;
   status: string;

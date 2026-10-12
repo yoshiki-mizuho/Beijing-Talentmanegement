@@ -74,6 +74,7 @@ export default async function DashboardPage({
           viewModel={model}
           levelUpFeed={feed.map((item) => ({
             ...item,
+            avatarUpdatedAt: item.avatarUpdatedAt?.toISOString() ?? null,
             changedAt: item.changedAt.toISOString(),
             comments: item.comments.map((comment) => ({
               ...comment,

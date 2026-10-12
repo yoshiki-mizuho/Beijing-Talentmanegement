@@ -12,8 +12,8 @@ describe("buildSkillMap", () => {
           name: "A",
           category,
           holders: [
-            { id: "1", name: "a", jobTitle: null, level: 5 },
-            { id: "2", name: "b", jobTitle: null, level: 4 },
+            { id: "1", name: "a", jobTitle: null, avatarUpdatedAt: null, level: 5 },
+            { id: "2", name: "b", jobTitle: null, avatarUpdatedAt: null, level: 4 },
           ],
           changes: [
             {
@@ -36,7 +36,9 @@ describe("buildSkillMap", () => {
           id: "small",
           name: "B",
           category,
-          holders: [{ id: "3", name: "c", jobTitle: null, level: 5 }],
+          holders: [
+            { id: "3", name: "c", jobTitle: null, avatarUpdatedAt: null, level: 5 }
+          ],
           changes: [],
         },
       ],

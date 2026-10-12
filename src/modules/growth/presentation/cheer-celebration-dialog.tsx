@@ -7,14 +7,10 @@ import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import type { CheerCelebration } from "@/modules/growth/application/growth-service";
-import {
-  getMemberAvatarTone,
-  getMemberInitial
-} from "@/modules/members/presentation/skill-approval";
 import { confirmCheerNotificationAction } from "@/modules/notifications/presentation/actions";
-import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Dialog } from "@/shared/ui/dialog";
+import { MemberAvatar } from "@/shared/ui/member-avatar";
 
 export function CheerCelebrationDialog({ celebrations }: { celebrations: CheerCelebration[] }) {
   const router = useRouter();
@@ -96,15 +92,12 @@ export function CheerCelebrationDialog({ celebrations }: { celebrations: CheerCe
         </div>
 
         <div className="flex items-start gap-3">
-          <span
-            className={cn(
-              "grid h-11 w-11 shrink-0 place-items-center rounded-full text-sm font-bold",
-              getMemberAvatarTone(current.sender.id)
-            )}
-            aria-hidden="true"
-          >
-            {getMemberInitial(current.sender.name)}
-          </span>
+          <MemberAvatar
+            memberId={current.sender.id}
+            name={current.sender.name}
+            avatarUpdatedAt={current.sender.avatarUpdatedAt}
+            className="h-11 w-11"
+          />
           <p className="min-w-0 whitespace-pre-wrap break-words text-sm leading-7">
             「{current.message}」
           </p>

@@ -8,5 +8,17 @@ export async function getSkillMapPageData(role: AuthRole, memberId: string, depa
   const now = new Date();
   const skills = buildSkillMap({ skills: await getSkillMapData(scope.memberIds, new Date(now.getTime() - 90 * 86400000)), now });
   const categories = [...new Map(skills.map((skill) => [skill.category.id, { id: skill.category.id, name: skill.category.name }])).values()];
-  return { scope, skills, categories };
+  return {
+    scope,
+    skills: skills.map((skill) => ({
+      ...skill,
+      holders: skill.holders.map((holder) => ({
+        ...holder,
+        avatarUpdatedAt: holder.avatarUpdatedAt
+          ? new Date(holder.avatarUpdatedAt).toISOString()
+          : null
+      }))
+    })),
+    categories
+  };
 }

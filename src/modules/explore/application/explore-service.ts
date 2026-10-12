@@ -61,6 +61,7 @@ export async function getExploreData(
             {
               id: candidate.id,
               name: candidate.name,
+              avatarUpdatedAt: candidate.avatarUpdatedAt?.toISOString() ?? null,
               departmentName: candidate.department.name,
               jobTitle: candidate.jobTitle,
               reasons,
@@ -85,6 +86,7 @@ export async function getExploreData(
                 {
                   id: candidate.id,
                   name: candidate.name,
+                  avatarUpdatedAt: candidate.avatarUpdatedAt?.toISOString() ?? null,
                   departmentName: candidate.department.name,
                   jobTitle: candidate.jobTitle,
                   level: skill.level
@@ -184,6 +186,7 @@ export async function getSkillProfile(viewer: ProfileViewer, memberId: string, n
     departmentName: member.department.name,
     jobTitle: member.jobTitle,
     isProfilePublic: member.isProfilePublic,
+    avatarUpdatedAt: member.avatarUpdatedAt?.toISOString() ?? null,
     skills,
     achievedRoles: achievedRoleNames(skills, roleDefinitions),
     badges,

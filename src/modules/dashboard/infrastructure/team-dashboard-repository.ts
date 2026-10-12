@@ -22,6 +22,7 @@ export function getTeamDashboardData(managerMemberId: string) {
         select: {
           id: true,
           name: true,
+          avatarUpdatedAt: true,
           createdAt: true,
           targetRole: {
             select: {

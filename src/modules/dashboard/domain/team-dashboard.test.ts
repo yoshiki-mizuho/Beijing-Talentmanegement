@@ -12,6 +12,7 @@ import {
 const member = (overrides: Partial<TeamMemberSnapshot> = {}): TeamMemberSnapshot => ({
   id: "member-1",
   name: "山田 太郎",
+  avatarUpdatedAt: null,
   createdAt: new Date("2026-01-01T00:00:00Z"),
   targetRole: {
     name: "シニアエンジニア",

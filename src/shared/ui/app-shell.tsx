@@ -35,6 +35,7 @@ import {
   type AppRole
 } from "@/shared/auth/app-access";
 import { NotificationIndicator } from "@/shared/ui/notification-indicator";
+import { MemberAvatar } from "@/shared/ui/member-avatar";
 import type { SetupProgress } from "@/shared/ui/setup-progress";
 import { Tooltip } from "@/shared/ui/tooltip";
 
@@ -59,7 +60,12 @@ const roleLabels: Record<AppRole, string> = {
 };
 
 type AppShellProps = {
-  user: { name?: string | null; role: AppRole; memberId: string };
+  user: {
+    name?: string | null;
+    role: AppRole;
+    memberId: string;
+    avatarUpdatedAt: string | null;
+  };
   unreadNotificationCount: number;
   latestUnreadNotifications: Notification[];
   pendingApprovalCount: number;
@@ -352,7 +358,6 @@ function SetupProgressIndicator({ progress }: { progress: SetupProgress }) {
 
 function AccountMenu({ user }: { user: AppShellProps["user"] }) {
   const name = user.name?.trim() || "ユーザー";
-  const initial = Array.from(name)[0] ?? "ユ";
   const detailsRef = useDismissibleDetails();
 
   return (
@@ -361,9 +366,12 @@ function AccountMenu({ user }: { user: AppShellProps["user"] }) {
         className="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden"
         aria-label="アカウントメニューを開く"
       >
-        <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--primary-subtle)] text-sm font-bold text-[var(--primary)]">
-          {initial}
-        </span>
+        <MemberAvatar
+          memberId={user.memberId}
+          name={name}
+          avatarUpdatedAt={user.avatarUpdatedAt}
+          className="h-9 w-9"
+        />
       </summary>
       <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-60 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-2 shadow-xl">
         <div className="border-b border-[var(--border)] px-2 py-2">
