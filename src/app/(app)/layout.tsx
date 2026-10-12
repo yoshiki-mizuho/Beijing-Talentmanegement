@@ -9,6 +9,7 @@ import {
   countPendingSkillAssessments,
   hasMemberTargetRole
 } from "@/modules/members/application/member-service";
+import { getMyAvatarUpdatedAt } from "@/modules/members/application/member-avatar-service";
 import {
   getCheerCelebrations,
   getLevelUpCelebrations
@@ -54,7 +55,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     approvedSkillCount,
     hasTargetRole,
     levelUpCelebrations,
-    cheerCelebrations
+    cheerCelebrations,
+    avatarUpdatedAt
   ] = await Promise.all([
     session.user.memberId
       ? countUnreadNotifications(session.user.memberId)
@@ -82,7 +84,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       : Promise.resolve([]),
     session.user.memberId && !session.user.passwordChangeRequired
       ? getCheerCelebrations(session.user.memberId)
-      : Promise.resolve([])
+      : Promise.resolve([]),
+    session.user.memberId
+      ? getMyAvatarUpdatedAt(session.user.memberId)
+      : Promise.resolve(null)
   ]);
   const setupProgress = session.user.memberId
     ? buildSetupProgress({
@@ -98,7 +103,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       user={{
         name: session.user.name,
         role: session.user.role,
-        memberId: session.user.memberId!
+        memberId: session.user.memberId!,
+        avatarUpdatedAt: avatarUpdatedAt?.toISOString() ?? null
       }}
       unreadNotificationCount={unreadNotificationCount}
       latestUnreadNotifications={latestUnreadNotifications}

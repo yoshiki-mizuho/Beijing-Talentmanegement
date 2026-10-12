@@ -144,6 +144,9 @@ model Member {
   jobTitle              String?
   profile               String?
   isProfilePublic       Boolean               @default(true)
+  avatarImage           Bytes?
+  avatarMimeType        String?
+  avatarUpdatedAt       DateTime?
   managerId             String?
   manager               Member?               @relation("MemberManager", fields: [managerId], references: [id])
   reports               Member[]               @relation("MemberManager")

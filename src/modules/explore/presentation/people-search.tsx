@@ -2,12 +2,8 @@ import { Compass } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
 import type { getExploreData } from "@/modules/explore/application/explore-service";
-import {
-  getMemberAvatarTone,
-  getMemberInitial
-} from "@/modules/members/presentation/skill-approval";
-import { cn } from "@/shared/lib/utils";
 import { EmptyState } from "@/shared/ui/empty-state";
+import { MemberAvatar } from "@/shared/ui/member-avatar";
 import { PeopleSearchFilters } from "./people-search-filters";
 import { SectionHeading } from "./section-heading";
 
@@ -48,14 +44,11 @@ export function PeopleSearch({
                   href={`/people/${person.id}` as Route}
                   className="flex min-h-16 items-center gap-3 px-2 hover:bg-[var(--surface-subtle)]"
                 >
-                  <span
-                    className={cn(
-                      "grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-bold",
-                      getMemberAvatarTone(person.id)
-                    )}
-                  >
-                    {getMemberInitial(person.name)}
-                  </span>
+                  <MemberAvatar
+                    memberId={person.id}
+                    name={person.name}
+                    avatarUpdatedAt={person.avatarUpdatedAt}
+                  />
                   <span className="min-w-0 flex-1">
                     <strong className="block text-sm">{person.name}</strong>
                     <span className="text-xs text-[var(--muted-foreground)]">

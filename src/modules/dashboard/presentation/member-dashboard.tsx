@@ -9,6 +9,7 @@ import { TargetRoleCard } from "@/modules/growth/presentation/target-role-card";
 import { LevelUpFeed, type SerializableFeedItem } from "@/modules/growth/presentation/level-up-feed";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { PageHeader } from "@/shared/ui/page-header";
+import { MemberAvatar } from "@/shared/ui/member-avatar";
 
 export function MemberDashboard({
   viewModel,
@@ -50,7 +51,11 @@ export function MemberDashboard({
           <ul className="divide-y divide-[var(--border)] border-t border-[var(--border)] px-5">
             {viewModel.cheers.map((cheer) => (
               <li key={cheer.id} className="flex gap-3 py-4">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[var(--primary-subtle)] text-sm font-bold text-[var(--primary)]" aria-hidden="true">{Array.from(cheer.senderName)[0]}</span>
+                <MemberAvatar
+                  memberId={cheer.senderId}
+                  name={cheer.senderName}
+                  avatarUpdatedAt={cheer.senderAvatarUpdatedAt}
+                />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-baseline justify-between gap-2"><p className="text-sm font-semibold">{cheer.senderName}さんが応援しています</p><time className="text-xs text-[var(--muted-foreground)]">{formatShortDate(cheer.createdAt)}</time></div>
                   <p className="mt-2 whitespace-pre-wrap text-sm leading-6">{cheer.message}</p>
@@ -88,7 +93,11 @@ export function MemberDashboard({
             <ul className="divide-y divide-[var(--border)] border-t border-[var(--border)] px-5">
               {viewModel.mentors.map((mentor) => (
                 <li key={`${mentor.memberId}-${mentor.skillId}`} className="flex items-center gap-3 py-4">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[var(--primary-subtle)] text-sm font-bold text-[var(--primary)]" aria-hidden="true">{Array.from(mentor.name)[0]}</span>
+                  <MemberAvatar
+                    memberId={mentor.memberId}
+                    name={mentor.name}
+                    avatarUpdatedAt={mentor.avatarUpdatedAt}
+                  />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold">{mentor.name}</p>
                     <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">{mentor.skillName} Lv{mentor.level}{mentor.jobTitle ? `・${mentor.jobTitle}` : ""}</p>

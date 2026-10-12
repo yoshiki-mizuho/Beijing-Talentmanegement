@@ -84,6 +84,7 @@ type FeedCommentRow = {
   id: string;
   authorMemberId: string;
   authorName: string;
+  authorAvatarUpdatedAt: string | null;
   body: string;
   createdAt: string;
 };
@@ -92,6 +93,7 @@ type LevelUpFeedRow = {
   id: string;
   memberId: string;
   memberName: string;
+  avatarUpdatedAt: Date | null;
   skillName: string;
   toLevel: number;
   changedAt: Date;
@@ -118,6 +120,7 @@ export async function listLevelUpFeed(input: {
       change.id,
       change."memberId",
       member.name AS "memberName",
+      member."avatarUpdatedAt",
       skill.name AS "skillName",
       change."toLevel",
       change."changedAt",
@@ -150,6 +153,7 @@ export async function listLevelUpFeed(input: {
           'id', comment.id,
           'authorMemberId', comment."authorMemberId",
           'authorName', author.name,
+          'authorAvatarUpdatedAt', author."avatarUpdatedAt",
           'body', comment.body,
           'createdAt', comment."createdAt"
         ) ORDER BY comment."createdAt"

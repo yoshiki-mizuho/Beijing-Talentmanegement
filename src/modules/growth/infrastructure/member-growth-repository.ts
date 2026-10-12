@@ -94,7 +94,7 @@ export async function getMemberGrowthData(memberId: string) {
           id: true,
           message: true,
           createdAt: true,
-          fromMember: { select: { name: true } },
+          fromMember: { select: { id: true, name: true, avatarUpdatedAt: true } },
           targetSkill: { select: { id: true, name: true } },
           mentorMember: {
             select: {
@@ -111,6 +111,7 @@ export async function getMemberGrowthData(memberId: string) {
         select: {
           id: true,
           name: true,
+          avatarUpdatedAt: true,
           jobTitle: true,
           status: true,
           memberSkills: {
@@ -215,9 +216,9 @@ export function listUnreadCheerNotifications(memberId: string) {
       cheer: {
         select: {
           message: true,
-          fromMember: { select: { id: true, name: true } },
+          fromMember: { select: { id: true, name: true, avatarUpdatedAt: true } },
           targetSkill: { select: { name: true } },
-          mentorMember: { select: { id: true, name: true } }
+          mentorMember: { select: { id: true, name: true, avatarUpdatedAt: true } }
         }
       }
     },

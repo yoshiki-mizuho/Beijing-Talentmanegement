@@ -1,6 +1,7 @@
 export type TeamMemberSnapshot = {
   id: string;
   name: string;
+  avatarUpdatedAt: Date | null;
   createdAt: Date;
   targetRole: {
     name: string;
@@ -87,6 +88,7 @@ export function findAlmostThereMembers(members: TeamMemberSnapshot[]) {
     return [{
       memberId: member.id,
       memberName: member.name,
+      avatarUpdatedAt: member.avatarUpdatedAt,
       roleName: member.targetRole.name,
       skillId: gap.skillId,
       skillName: gap.skillName,
@@ -118,6 +120,7 @@ export function findInactiveMembers(
       ? [{
           memberId: member.id,
           memberName: member.name,
+          avatarUpdatedAt: member.avatarUpdatedAt,
           lastUpdatedAt,
           daysAgo,
           targetRoleUnset: member.targetRole === null

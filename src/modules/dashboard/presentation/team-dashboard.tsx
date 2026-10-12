@@ -27,6 +27,7 @@ import { EmptyState } from "@/shared/ui/empty-state";
 import { Label } from "@/shared/ui/label";
 import { Select } from "@/shared/ui/select";
 import { SubmitButton } from "@/shared/ui/submit-button";
+import { MemberAvatar } from "@/shared/ui/member-avatar";
 
 export function TeamDashboard({ viewModel }: { viewModel: TeamDashboardViewModel }) {
   const [cheerTarget, setCheerTarget] = useState<TeamDashboardViewModel["almostThere"][number] | null>(null);
@@ -122,11 +123,18 @@ export function TeamDashboard({ viewModel }: { viewModel: TeamDashboardViewModel
             <ul className="divide-y divide-[var(--border)] border-t border-[var(--border)]">
               {viewModel.almostThere.map((item) => (
                 <li key={item.memberId} className="flex items-center justify-between gap-3 px-5 py-4">
-                  <div className="min-w-0">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <MemberAvatar
+                      memberId={item.memberId}
+                      name={item.memberName}
+                      avatarUpdatedAt={item.avatarUpdatedAt}
+                    />
+                    <div className="min-w-0">
                     <p className="truncate text-sm font-semibold">{item.memberName}　{item.roleName}</p>
                     <p className="mt-1 text-xs text-[var(--muted-foreground)]">
                       {item.skillName}　Lv{item.currentLevel} → 必要 Lv{item.requiredLevel}{item.pending ? "（申請中）" : ""}
                     </p>
+                    </div>
                   </div>
                   <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                     <Button type="button" aria-label={`${item.memberName}を${cheeredIds.has(item.memberId) ? "応援しました" : "応援する"}`} variant={cheeredIds.has(item.memberId) ? "secondary" : "primary"} onClick={() => setCheerTarget(item)}>
@@ -147,12 +155,19 @@ export function TeamDashboard({ viewModel }: { viewModel: TeamDashboardViewModel
             <ul className="divide-y divide-[var(--border)] border-t border-[var(--border)]">
               {viewModel.inactiveMembers.map((item) => (
                 <li key={item.memberId} className="flex items-center justify-between gap-3 px-5 py-4">
-                  <div>
+                  <div className="flex items-center gap-3">
+                    <MemberAvatar
+                      memberId={item.memberId}
+                      name={item.memberName}
+                      avatarUpdatedAt={item.avatarUpdatedAt}
+                    />
+                    <div>
                     <p className="text-sm font-semibold">{item.memberName}</p>
                     <p className="mt-1 text-xs text-[var(--muted-foreground)]">
                       最後の更新：{formatLongDate(item.lastUpdatedAt)}（{item.daysAgo}日前）
                       {item.targetRoleUnset ? "・目標ロール未設定" : ""}
                     </p>
+                    </div>
                   </div>
                   <Button type="button" variant="secondary" onClick={() => setNoteTarget(item)}>
                     {notedIds.has(item.memberId) ? "1on1 メモに追加済み" : "1on1 メモに追加"}

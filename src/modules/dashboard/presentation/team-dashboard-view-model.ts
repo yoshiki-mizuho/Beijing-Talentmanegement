@@ -50,6 +50,7 @@ export function buildTeamDashboardViewModel(data: TeamDashboardResult) {
     },
     almostThere: findAlmostThereMembers(data.members).map((item) => ({
       ...item,
+      avatarUpdatedAt: item.avatarUpdatedAt?.toISOString() ?? null,
       message: buildCheerMessage({
         memberName: item.memberName,
         roleName: item.roleName,
@@ -66,10 +67,12 @@ export function buildTeamDashboardViewModel(data: TeamDashboardResult) {
     })),
     inactiveMembers: findInactiveMembers(data.members, data.now).map((item) => ({
       ...item,
+      avatarUpdatedAt: item.avatarUpdatedAt?.toISOString() ?? null,
       noteAdded: data.openOneOnOneMemberIds.includes(item.memberId)
     })),
     feed: data.feed.map((item) => ({
       ...item,
+      avatarUpdatedAt: item.avatarUpdatedAt?.toISOString() ?? null,
       changedAt: item.changedAt.toISOString(),
       comments: item.comments.map((comment) => ({
         ...comment,

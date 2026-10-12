@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { MemberAvatar } from "@/shared/ui/member-avatar";
 import type { buildSkillMap } from "@/modules/skill-map/domain/skill-map-matrix";
 
 type Skill = ReturnType<typeof buildSkillMap>[number];
@@ -222,9 +223,12 @@ function SkillDetail({ skill }: { skill: Skill }) {
             href={`/people/${person.id}`}
             className="flex items-center gap-3 border-t border-[var(--border)] py-2.5 text-sm"
           >
-            <span className="grid h-8 w-8 place-items-center rounded-full bg-teal-100 font-bold text-teal-800">
-              {person.name.slice(0, 1)}
-            </span>
+            <MemberAvatar
+              memberId={person.id}
+              name={person.name}
+              avatarUpdatedAt={person.avatarUpdatedAt}
+              size="sm"
+            />
             <span className="min-w-0 flex-1">
               <b>{person.name}</b>
               <span className="block truncate text-xs text-[var(--muted-foreground)]">

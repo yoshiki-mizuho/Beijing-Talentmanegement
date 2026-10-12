@@ -9,12 +9,11 @@ import {
   reviewSkillAssessmentAction
 } from "@/modules/members/presentation/actions";
 import {
-  getMemberAvatarTone,
-  getMemberInitial,
   getSkillApprovalLevelChange,
   isSkillApprovalLongWaiting,
   type SkillApprovalRow
 } from "@/modules/members/presentation/skill-approval";
+import { MemberAvatar } from "@/shared/ui/member-avatar";
 import { cn } from "@/shared/lib/utils";
 import { ActionForm, ConfirmSubmitButton } from "@/shared/ui/action-form";
 import { Badge } from "@/shared/ui/badge";
@@ -192,15 +191,11 @@ function SkillApprovalItem({
           />
         </label>
         <div className="flex min-w-0 items-center gap-3">
-          <span
-            className={cn(
-              "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold",
-              getMemberAvatarTone(row.memberId)
-            )}
-            aria-hidden="true"
-          >
-            {getMemberInitial(row.memberName)}
-          </span>
+          <MemberAvatar
+            memberId={row.memberId}
+            name={row.memberName}
+            avatarUpdatedAt={row.avatarUpdatedAt}
+          />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">{row.memberName}</p>
             <p className="truncate text-xs text-[var(--muted-foreground)]">{row.departmentName}</p>

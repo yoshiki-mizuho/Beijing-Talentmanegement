@@ -121,10 +121,18 @@ export function buildMemberDashboardViewModel(
           level: skill.level
         }))
       }))
-    }),
+    }).map((mentor) => ({
+      ...mentor,
+      avatarUpdatedAt:
+        data.mentorCandidates
+          .find((candidate) => candidate.id === mentor.memberId)
+          ?.avatarUpdatedAt?.toISOString() ?? null
+    })),
     cheers: data.receivedCheers.map((cheer) => ({
       id: cheer.id,
+      senderId: cheer.fromMember.id,
       senderName: cheer.fromMember.name,
+      senderAvatarUpdatedAt: cheer.fromMember.avatarUpdatedAt?.toISOString() ?? null,
       message: cheer.message,
       createdAt: cheer.createdAt.toISOString(),
       mentor: cheer.mentorMember && cheer.targetSkill ? {

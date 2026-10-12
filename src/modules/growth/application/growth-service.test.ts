@@ -15,9 +15,9 @@ describe("toCheerCelebration", () => {
   it("対象スキルと紹介された人を含む表示用データへ変換する", () => {
     const notification = buildNotification({
       message: "次のレベルも応援しています！",
-      fromMember: { id: "manager-1", name: "山田" },
+      fromMember: { id: "manager-1", name: "山田", avatarUpdatedAt: null },
       targetSkill: { name: "TypeScript" },
-      mentorMember: { id: "mentor-1", name: "佐藤" }
+      mentorMember: { id: "mentor-1", name: "佐藤", avatarUpdatedAt: null }
     });
 
     expect(toCheerCelebration(notification)).toEqual([
@@ -25,9 +25,9 @@ describe("toCheerCelebration", () => {
         notificationId: "notification-1",
         createdAt: new Date("2026-10-12T00:00:00.000Z"),
         message: "次のレベルも応援しています！",
-        sender: { id: "manager-1", name: "山田" },
+        sender: { id: "manager-1", name: "山田", avatarUpdatedAt: null },
         targetSkillName: "TypeScript",
-        mentorMember: { id: "mentor-1", name: "佐藤" }
+        mentorMember: { id: "mentor-1", name: "佐藤", avatarUpdatedAt: null }
       }
     ]);
   });
@@ -35,7 +35,7 @@ describe("toCheerCelebration", () => {
   it("対象スキルと紹介された人がない場合は null として変換する", () => {
     const notification = buildNotification({
       message: "小さな前進も応援しています！",
-      fromMember: { id: "manager-1", name: "山田" },
+      fromMember: { id: "manager-1", name: "山田", avatarUpdatedAt: null },
       targetSkill: null,
       mentorMember: null
     });
@@ -45,7 +45,7 @@ describe("toCheerCelebration", () => {
         notificationId: "notification-1",
         createdAt: new Date("2026-10-12T00:00:00.000Z"),
         message: "小さな前進も応援しています！",
-        sender: { id: "manager-1", name: "山田" },
+        sender: { id: "manager-1", name: "山田", avatarUpdatedAt: null },
         targetSkillName: null,
         mentorMember: null
       }

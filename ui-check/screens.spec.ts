@@ -112,6 +112,19 @@ test.describe("UI check", () => {
     await page.getByRole("link", { name: "スキルプロフィール" }).click();
     await page.waitForURL("**/people/**");
     await capture(page, "MEMBER", "skill-profile");
+    // アイコン画像を登録した状態を撮り、最後に削除して元に戻す（1×1 の PNG を 256px に拡大した単色の画像になる）
+    await page.locator('input[type="file"]').setInputFiles({
+      name: "avatar.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGPgL8sDAAGLAPQ8xSAqAAAAAElFTkSuQmCC",
+        "base64"
+      )
+    });
+    await page.getByText("アイコン画像を変更しました。").waitFor();
+    await capture(page, "MEMBER", "skill-profile-avatar");
+    await page.getByRole("button", { name: "画像を削除" }).click();
+    await page.getByText("アイコン画像を削除しました。").waitFor();
     await page.goto("/explore");
     await page
       .getByRole("link", { name: /デモメンバー01/ })

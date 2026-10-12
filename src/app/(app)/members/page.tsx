@@ -29,6 +29,7 @@ export default async function MembersPage() {
     id: member.id,
     employeeNo: member.employeeNo,
     name: member.name,
+    avatarUpdatedAt: member.avatarUpdatedAt?.toISOString() ?? null,
     email: member.email,
     profile: member.profile,
     status: member.status,

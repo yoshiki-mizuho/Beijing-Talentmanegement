@@ -49,6 +49,7 @@ export async function getExploreSourceData(viewer: ProfileViewer, since: Date) {
       select: {
         id: true,
         name: true,
+        avatarUpdatedAt: true,
         departmentId: true,
         department: { select: { name: true } },
         jobTitle: true,
@@ -82,6 +83,7 @@ export async function getSkillProfileSourceData(memberId: string) {
         department: { select: { name: true } },
         jobTitle: true,
         isProfilePublic: true,
+        avatarUpdatedAt: true,
         memberSkills: { select: { skillId: true, level: true, skill: { select: { name: true } } } },
         skillLevelChanges: {
           select: {

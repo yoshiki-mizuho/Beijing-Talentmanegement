@@ -23,6 +23,7 @@ export async function getTeamDashboard(
   const members: TeamMemberSnapshot[] = data.reports.map((member) => ({
     id: member.id,
     name: member.name,
+    avatarUpdatedAt: member.avatarUpdatedAt,
     createdAt: member.createdAt,
     targetRole: member.targetRole
       ? {
