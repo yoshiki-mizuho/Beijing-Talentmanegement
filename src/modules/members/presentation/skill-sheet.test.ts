@@ -35,14 +35,19 @@ describe("skill sheet display logic", () => {
       ],
       memberSkills: [{ skillId: "skill-react", level: 3 }],
       pendingAssessments: [{ skillId: "skill-react", requestedLevel: 4 }],
-      targetRequirements: [{ skillId: "skill-react", requiredLevel: 4 }]
+      targetRequirements: [{ skillId: "skill-react", requiredLevel: 4 }],
+      latestAssessments: [
+        { skillId: "skill-sql", status: "REJECTED", managerComment: "実務例を追記してください" }
+      ]
     });
 
     expect(rows.map((row) => row.skillId)).toEqual(["skill-sql", "skill-react"]);
     expect(rows[0]).toMatchObject({
       currentLevel: null,
       pendingLevel: null,
-      targetLevel: null
+      targetLevel: null,
+      isRejected: true,
+      rejectionReason: "実務例を追記してください"
     });
     expect(getSkillSheetRowStatus(rows[1])).toEqual([
       "承認待ち（申請 Lv4）",
@@ -79,7 +84,8 @@ describe("skill sheet display logic", () => {
       ],
       memberSkills: [{ skillId: "react", level: 2 }],
       pendingAssessments: [],
-      targetRequirements: []
+      targetRequirements: [],
+      latestAssessments: []
     });
     expect(filterSkillSheetRows(rows, {
       query: "sql",

@@ -29,8 +29,7 @@ describe("getNotificationDestination", () => {
 
   it.each([
     NotificationType.SKILL_ASSESSMENT_APPROVED,
-    NotificationType.SKILL_ASSESSMENT_CORRECTED,
-    NotificationType.SKILL_ASSESSMENT_REJECTED
+    NotificationType.SKILL_ASSESSMENT_CORRECTED
   ])("申告結果 %s は自分のスキル画面へ遷移する", (type) => {
     expect(
       getNotificationDestination({
@@ -39,6 +38,16 @@ describe("getNotificationDestination", () => {
         skillSelfAssessmentId: "assessment-1"
       })
     ).toBe("/my/skills");
+  });
+
+  it("差し戻し結果は申告履歴へ遷移する", () => {
+    expect(
+      getNotificationDestination({
+        type: NotificationType.SKILL_ASSESSMENT_REJECTED,
+        role: AuthRole.MEMBER,
+        skillSelfAssessmentId: "assessment-1"
+      })
+    ).toBe("/my/skills?tab=history");
   });
 
   it("関連データがない通知は通知一覧に留まる", () => {

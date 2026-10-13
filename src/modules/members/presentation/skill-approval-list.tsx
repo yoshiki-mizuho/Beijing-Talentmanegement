@@ -116,13 +116,10 @@ export function SkillApprovalList({ rows }: { rows: SkillApprovalRow[] }) {
             </SubmitButton>
           </ActionForm>
         </div>
-        <p className="text-xs text-[var(--muted-foreground)] sm:text-right" aria-live="polite">
-          {selectedCount}件を選択中
-        </p>
       </Card>
 
       <Card className="overflow-hidden rounded-2xl">
-        <div className="hidden grid-cols-[44px_minmax(150px,1.25fr)_minmax(130px,1fr)_minmax(140px,1fr)_80px_120px_minmax(330px,1.6fr)] gap-3 border-b border-[var(--border)] bg-[var(--surface-subtle)] px-4 py-3 text-xs font-semibold text-[var(--muted-foreground)] lg:grid">
+        <div className="hidden grid-cols-[44px_minmax(150px,1.25fr)_minmax(130px,1fr)_minmax(140px,1fr)_80px_120px_minmax(360px,1.6fr)] gap-3 border-b border-[var(--border)] bg-[var(--surface-subtle)] px-4 py-3 text-xs font-semibold text-[var(--muted-foreground)] lg:grid">
           <span>
             <span className="sr-only">選択</span>
           </span>
@@ -178,7 +175,7 @@ function SkillApprovalItem({
     <div
       role="listitem"
       aria-label={`${row.memberName} / ${row.skillName}の承認`}
-      className="grid gap-3 px-4 py-4 lg:grid-cols-[44px_minmax(150px,1.25fr)_minmax(130px,1fr)_minmax(140px,1fr)_80px_120px_minmax(330px,1.6fr)] lg:items-center"
+      className="grid gap-3 px-4 py-4 lg:grid-cols-[44px_minmax(150px,1.25fr)_minmax(130px,1fr)_minmax(140px,1fr)_80px_120px_minmax(360px,1.6fr)] lg:items-center"
     >
       <div className="grid grid-cols-[44px_minmax(0,1fr)_minmax(0,1fr)] items-center gap-3 lg:contents">
         <label className="flex min-h-11 cursor-pointer items-center" title="一括承認の対象に選択">
@@ -208,7 +205,7 @@ function SkillApprovalItem({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 items-center gap-3 border-t border-[var(--border)] pt-3 sm:grid-cols-[minmax(130px,1fr)_80px_120px_minmax(330px,1.6fr)] lg:contents">
+      <div className="grid grid-cols-2 items-center gap-3 border-t border-[var(--border)] pt-3 sm:grid-cols-[minmax(130px,1fr)_80px_120px_minmax(360px,1.6fr)] lg:contents">
         <div>
           <p className="text-sm font-semibold">
             {getSkillApprovalLevelChange(row.currentLevel, row.requestedLevel)}
@@ -234,7 +231,13 @@ function SkillApprovalItem({
             {row.waitingDays}日待ち
           </Badge>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div
+          className={cn(
+            // 3つのボタンを同じ幅・高さで1行に並べる（1つ目はフォームに包まれているので、フォームも1列として扱う）
+            "grid grid-cols-3 gap-2",
+            "[&_button]:min-h-9 [&_button]:w-full [&_button]:whitespace-nowrap [&_button]:px-2 [&_button]:text-sm"
+          )}
+        >
           <ActionForm action={reviewSkillAssessmentAction} onSuccess={onReviewed}>
             <input type="hidden" name="assessmentId" value={row.id} />
             <input type="hidden" name="status" value={statuses.approved} />
