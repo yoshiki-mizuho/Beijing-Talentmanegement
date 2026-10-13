@@ -1,6 +1,7 @@
 "use client";
+import { X } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { MemberAvatar } from "@/shared/ui/member-avatar";
 import type { buildSkillMap } from "@/modules/skill-map/domain/skill-map-matrix";
 
@@ -14,6 +15,7 @@ export function SkillMapTiles({
   categories: { id: string; name: string }[];
 }) {
   const [query, setQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [category, setCategory] = useState("");
   const visible = useMemo(
     () =>
@@ -33,13 +35,29 @@ export function SkillMapTiles({
   return (
     <>
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <input
-          aria-label="スキルを探す"
-          placeholder="スキルを探す"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          className="h-9 rounded-full border border-[var(--border)] bg-white px-4 text-sm"
-        />
+        <div className="relative">
+          <input
+            ref={searchInputRef}
+            aria-label="スキルを探す"
+            placeholder="スキルを探す"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            className="h-9 rounded-full border border-[var(--border)] bg-white px-4 pr-10 text-sm"
+          />
+          {query ? (
+            <button
+              type="button"
+              aria-label="検索をクリア"
+              className="absolute right-1 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-[var(--muted-foreground)] hover:bg-[var(--surface-subtle)] hover:text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+              onClick={() => {
+                setQuery("");
+                searchInputRef.current?.focus();
+              }}
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          ) : null}
+        </div>
         <button
           type="button"
           className={chip(!category)}

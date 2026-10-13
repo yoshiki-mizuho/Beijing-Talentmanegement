@@ -101,6 +101,25 @@ test("マネージャーの一覧と更新APIは自組織の範囲に制限さ�
   }
 });
 
+test(
+  "メンバー一覧の絞り込みチップは外側や別のチップを押すと閉じる",
+  async ({ page }) => {
+    await login(page, credentials.ADMIN);
+    await page.goto("/members");
+
+    await page.getByText("部署", { exact: true }).click();
+    await expect(page.getByRole("combobox", { name: "部署", exact: true })).toBeVisible();
+    await page.getByRole("heading", { name: /メンバー一覧/ }).click();
+    await expect(page.getByRole("combobox", { name: "部署", exact: true })).not.toBeVisible();
+
+    await page.getByText("スキル", { exact: true }).click();
+    await expect(page.getByRole("combobox", { name: "スキル", exact: true })).toBeVisible();
+    await page.getByText("ロール", { exact: true }).click();
+    await expect(page.getByRole("combobox", { name: "スキル", exact: true })).not.toBeVisible();
+    await expect(page.getByRole("combobox", { name: "ロール", exact: true })).toBeVisible();
+  }
+);
+
 test("スキルの面を押すと詳細が切り替わる", async ({ page }) => {
   await login(page, credentials.ADMIN);
   await page.goto("/skill-map");
@@ -114,4 +133,19 @@ test("スキルの面を押すと詳細が切り替わる", async ({ page }) => 
   await expect(
     page.getByRole("complementary", { name: `${name} の詳細` }),
   ).toBeVisible();
+});
+
+test("スキルマップの検索条件をクリアできる", async ({ page }) => {
+  await login(page, credentials.ADMIN);
+  await page.goto("/skill-map");
+
+  const searchInput = page.getByLabel("スキルを探す");
+  await searchInput.fill("TypeScript");
+  const clearButton = page.getByRole("button", { name: "検索をクリア" });
+  await expect(clearButton).toBeVisible();
+  await clearButton.click();
+
+  await expect(searchInput).toHaveValue("");
+  await expect(searchInput).toBeFocused();
+  await expect(clearButton).toHaveCount(0);
 });

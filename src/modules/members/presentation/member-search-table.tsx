@@ -35,6 +35,7 @@ import { Input } from "@/shared/ui/input";
 import { QueryProvider } from "@/shared/ui/query-provider";
 import { Select } from "@/shared/ui/select";
 import { Tooltip } from "@/shared/ui/tooltip";
+import { useDismissibleDetails } from "@/shared/ui/use-dismissible-details";
 
 type Props = {
   initialMembers: MemberRow[];
@@ -365,9 +366,16 @@ function FilterChip({
   value?: string;
   children: ReactNode;
 }) {
+  const detailsRef = useDismissibleDetails();
+
   return (
-    <details className="relative">
-      <summary className={cn(chipClass(Boolean(value)), "list-none cursor-pointer")}>
+    <details ref={detailsRef} className="relative">
+      <summary
+        className={cn(
+          chipClass(Boolean(value)),
+          "inline-flex cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden"
+        )}
+      >
         {value ? `${label}: ${value}` : label}
       </summary>
       <div className="absolute left-0 top-11 z-20 grid min-w-64 gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 shadow-lg">
