@@ -5,7 +5,10 @@ import {
   type AppRole
 } from "@/shared/auth/app-access";
 
-type NotificationDestination = "/skill-approvals" | "/my/skills";
+type NotificationDestination =
+  | "/skill-approvals"
+  | "/my/skills"
+  | "/my/skills?tab=history";
 
 type NotificationDestinationInput = {
   type: NotificationType;
@@ -28,11 +31,15 @@ export function getNotificationDestination({
     destination = "/skill-approvals";
   } else if (
     type === "SKILL_ASSESSMENT_APPROVED" ||
-    type === "SKILL_ASSESSMENT_CORRECTED" ||
-    type === "SKILL_ASSESSMENT_REJECTED"
+    type === "SKILL_ASSESSMENT_CORRECTED"
   ) {
     destination = "/my/skills";
+  } else if (type === "SKILL_ASSESSMENT_REJECTED") {
+    destination = "/my/skills?tab=history";
   }
 
-  return destination && canAccessAppPath(role, destination) ? destination : null;
+  const accessPath = destination?.split("?")[0] ?? null;
+  return destination && accessPath && canAccessAppPath(role, accessPath)
+    ? destination
+    : null;
 }

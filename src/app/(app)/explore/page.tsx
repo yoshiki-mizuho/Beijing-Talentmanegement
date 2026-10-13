@@ -27,11 +27,11 @@ export default async function ExplorePage({
         <Compass className="h-7 w-7 text-[var(--primary)]" aria-hidden="true" />
         <h1 className="text-[26px] font-bold">探す</h1>
       </div>
+      <PeopleSearch data={data} selectedSkill={query.skill} level={level} />
       <div className="grid gap-5 lg:grid-cols-2">
         <TrendingSkills items={data.trending} level={level} />
         <RecommendedPeople people={data.recommendations} />
       </div>
-      <PeopleSearch data={data} selectedSkill={query.skill} level={level} />
     </div>
   );
 }

@@ -7,6 +7,8 @@ export type SkillSheetRow = {
   currentLevel: number | null;
   pendingLevel: number | null;
   targetLevel: number | null;
+  isRejected: boolean;
+  rejectionReason: string | null;
 };
 
 type SkillSheetSource = {
@@ -28,6 +30,11 @@ type SkillSheetSource = {
     skillId: string;
     requiredLevel: number;
   }>;
+  latestAssessments: ReadonlyArray<{
+    skillId: string;
+    status: string;
+    managerComment: string | null;
+  }>;
 };
 
 export const SKILL_SHEET_ENCOURAGEMENT_MESSAGES = {
@@ -44,7 +51,8 @@ export function buildSkillSheetRows({
   skills,
   memberSkills,
   pendingAssessments,
-  targetRequirements
+  targetRequirements,
+  latestAssessments
 }: SkillSheetSource): SkillSheetRow[] {
   const currentLevels = new Map(
     memberSkills.map((memberSkill) => [memberSkill.skillId, memberSkill.level])
@@ -61,6 +69,12 @@ export function buildSkillSheetRows({
       requirement.requiredLevel
     ])
   );
+  const rejectionReasons = new Map(
+    latestAssessments
+      .filter((assessment) => assessment.status === "REJECTED")
+      .map((assessment) => [assessment.skillId, assessment.managerComment])
+  );
+  const rejectedSkillIds = new Set(rejectionReasons.keys());
 
   return skills
     .map((skill) => ({
@@ -71,7 +85,9 @@ export function buildSkillSheetRows({
       categoryDisplayOrder: skill.category.displayOrder,
       currentLevel: currentLevels.get(skill.id) ?? null,
       pendingLevel: pendingLevels.get(skill.id) ?? null,
-      targetLevel: targetLevels.get(skill.id) ?? null
+      targetLevel: targetLevels.get(skill.id) ?? null,
+      isRejected: rejectedSkillIds.has(skill.id),
+      rejectionReason: rejectionReasons.get(skill.id) ?? null
     }))
     .sort(
       (left, right) =>

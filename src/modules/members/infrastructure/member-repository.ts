@@ -277,7 +277,12 @@ export async function listMemberSkillAssessments(memberId: string) {
 }
 
 export async function getMemberSkillSheetContext(memberId: string) {
-  const [member, pendingAssessments, assessmentHistory] = await Promise.all([
+  const [
+    member,
+    latestAssessments,
+    pendingAssessments,
+    assessmentHistory
+  ] = await Promise.all([
     prisma.member.findUniqueOrThrow({
       where: { id: memberId },
       select: {
@@ -299,6 +304,16 @@ export async function getMemberSkillSheetContext(memberId: string) {
           }
         }
       }
+    }),
+    prisma.skillSelfAssessment.findMany({
+      where: { memberId },
+      select: {
+        skillId: true,
+        status: true,
+        managerComment: true
+      },
+      orderBy: { createdAt: "desc" },
+      distinct: ["skillId"]
     }),
     prisma.skillSelfAssessment.findMany({
       where: {
@@ -342,6 +357,7 @@ export async function getMemberSkillSheetContext(memberId: string) {
     targetRoleName: member.targetRole?.name ?? null,
     targetRequirements: member.targetRole?.roleRequirements ?? [],
     pendingAssessments,
+    latestAssessments,
     assessmentHistory
   };
 }
@@ -649,7 +665,9 @@ async function reviewSkillAssessmentInTransaction(
       ? `${assessment.skill.name} Lv.${assessment.requestedLevel} の申告が承認されました。`
       : reviewStatus === SkillSelfAssessmentStatus.CORRECTED
         ? `${assessment.skill.name} の申告が Lv${approvedLevel} に補正して承認されました。`
-        : `${assessment.skill.name} の申告が差し戻されました。`;
+        : input.managerComment
+          ? `${assessment.skill.name} の申告が差し戻されました。理由：${input.managerComment}`
+          : `${assessment.skill.name} の申告が差し戻されました。`;
 
     await tx.notification.create({
       data: {

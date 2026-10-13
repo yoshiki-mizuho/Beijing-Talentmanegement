@@ -1,4 +1,6 @@
 import { ClipboardList } from "lucide-react";
+import type { Route } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { getMemberSkillSheetContext } from "@/modules/members/application/member-service";
@@ -16,12 +18,10 @@ import { Badge } from "@/shared/ui/badge";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle
 } from "@/shared/ui/card";
 import { EmptyState } from "@/shared/ui/empty-state";
-import { PageHeader } from "@/shared/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -39,8 +39,14 @@ const dateFormatter = new Intl.DateTimeFormat("ja-JP", {
   timeZone: "Asia/Tokyo"
 });
 
-export default async function MySkillsPage() {
+export default async function MySkillsPage({
+  searchParams
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
   const session = await getCurrentSession();
+  const query = await searchParams;
+  const activeTab = query.tab === "history" ? "history" : "apply";
 
   if (!session?.user.memberId) {
     redirect("/login");
@@ -55,7 +61,8 @@ export default async function MySkillsPage() {
     skills,
     memberSkills: context.memberSkills,
     pendingAssessments: context.pendingAssessments,
-    targetRequirements: context.targetRequirements
+    targetRequirements: context.targetRequirements,
+    latestAssessments: context.latestAssessments
   });
   const encouragement = selectSkillSheetEncouragement(
     context.assessmentHistory[0]?.createdAt ?? null
@@ -63,44 +70,65 @@ export default async function MySkillsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        eyebrow="スキル申請"
-        title="スキルシート申請"
-        description="今のスキルを見渡し、変化したレベルだけをまとめて申請できます。"
-      />
+      <h1 className="sr-only">スキル申請</h1>
+      <div
+        role="tablist"
+        aria-label="自分のスキル"
+        className="flex gap-1 border-b border-[var(--border)]"
+      >
+        {[
+          { id: "apply", label: "申請", href: "/my/skills" },
+          { id: "history", label: "申告履歴", href: "/my/skills?tab=history" }
+        ].map((tab) => (
+          <Link
+            key={tab.id}
+            id={`my-skills-${tab.id}-tab`}
+            href={tab.href as Route}
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            aria-controls={`my-skills-${tab.id}-panel`}
+            tabIndex={activeTab === tab.id ? 0 : -1}
+            data-selected={activeTab === tab.id}
+            className="inline-flex min-h-11 items-center border-b-2 border-transparent px-4 text-sm font-semibold text-[var(--muted-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] data-[selected=true]:border-[var(--primary)] data-[selected=true]:text-[var(--primary)]"
+          >
+            {tab.label}
+          </Link>
+        ))}
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>スキルとレベルを選ぶ</CardTitle>
-          <CardDescription>
-            現在のレベルと定義を確認し、申請したいレベルを1回押してください。
-            {context.targetRoleName
-              ? ` 目標ロール「${context.targetRoleName}」の必要レベルも表示しています。`
-              : " 目標ロールを設定すると、必要なレベルもここに表示されます。"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <SkillSheetForm
-            key={context.pendingAssessments
-              .map((assessment) => assessment.skillId)
-              .sort()
-              .join(",")}
-            rows={rows}
-            levels={levels.map((level) => ({
-              level: level.level,
-              description: level.description
-            }))}
-            encouragement={encouragement}
-          />
-        </CardContent>
-      </Card>
+      {activeTab === "apply" ? (
+        <Card
+          id="my-skills-apply-panel"
+          role="tabpanel"
+          aria-labelledby="my-skills-apply-tab"
+        >
+          <CardContent className="pt-6">
+            <SkillSheetForm
+              key={context.pendingAssessments
+                .map((assessment) => assessment.skillId)
+                .sort()
+                .join(",")}
+              rows={rows}
+              levels={levels.map((level) => ({
+                level: level.level,
+                description: level.description
+              }))}
+              encouragement={encouragement}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>申告履歴</CardTitle>
-          <CardDescription>新しい申請から10件を表示しています。</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
+      {activeTab === "history" ? (
+        <Card
+          id="my-skills-history-panel"
+          role="tabpanel"
+          aria-labelledby="my-skills-history-tab"
+        >
+          <CardHeader>
+            <CardTitle>申告履歴</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
           {context.assessmentHistory.map((assessment) => {
             const approvedLevel = assessment.skillLevelChanges[0]?.toLevel ??
               (assessment.status === "APPROVED"
@@ -143,8 +171,16 @@ export default async function MySkillsPage() {
                   </p>
                 ) : null}
                 {assessment.managerComment ? (
-                  <p className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">
-                    マネージャーコメント: {assessment.managerComment}
+                  <p
+                    className={
+                      assessment.status === "REJECTED"
+                        ? "mt-3 rounded-lg border border-[var(--destructive)]/30 bg-red-50 px-3 py-2 text-sm font-medium leading-6 text-[var(--destructive)]"
+                        : "mt-2 text-sm leading-6 text-[var(--muted-foreground)]"
+                    }
+                  >
+                    {assessment.status === "REJECTED"
+                      ? `差し戻しの理由：${assessment.managerComment}`
+                      : `マネージャーコメント: ${assessment.managerComment}`}
                   </p>
                 ) : null}
               </div>
@@ -157,8 +193,9 @@ export default async function MySkillsPage() {
               description="レベルを選んで申請すると、ここで承認状況を確認できます。"
             />
           ) : null}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }

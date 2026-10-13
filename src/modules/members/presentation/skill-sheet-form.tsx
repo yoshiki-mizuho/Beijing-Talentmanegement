@@ -13,10 +13,10 @@ import {
 } from "@/modules/members/presentation/skill-sheet";
 import { cn } from "@/shared/lib/utils";
 import { ActionForm } from "@/shared/ui/action-form";
+import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { Input } from "@/shared/ui/input";
-import { Label } from "@/shared/ui/label";
 import { SelectField } from "@/shared/ui/form-field";
 import { SubmitButton } from "@/shared/ui/submit-button";
 
@@ -130,8 +130,10 @@ export function SkillSheetForm({
 
       <div className="grid gap-4 md:grid-cols-[minmax(240px,1fr)_minmax(180px,0.6fr)_auto] md:items-end">
         <div>
-          <Label htmlFor="skill-sheet-search">スキルを検索</Label>
-          <div className="relative mt-1">
+          <label htmlFor="skill-sheet-search" className="sr-only">
+            スキルを検索
+          </label>
+          <div className="relative">
             <Search
               className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]"
               aria-hidden="true"
@@ -141,7 +143,7 @@ export function SkillSheetForm({
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="スキル名で絞り込み"
+              placeholder="スキルを検索"
               className="w-full pl-9"
             />
           </div>
@@ -150,6 +152,7 @@ export function SkillSheetForm({
         <SelectField
           id="skill-sheet-category"
           label="カテゴリ"
+          labelClassName="sr-only"
           value={categoryId}
           onChange={(event) => setCategoryId(event.target.value)}
         >
@@ -160,7 +163,7 @@ export function SkillSheetForm({
         </SelectField>
 
         <div>
-          <span className="mb-1 block text-sm font-medium text-[var(--foreground)]">
+          <span className="sr-only">
             表示するスキル
           </span>
           <div className="flex flex-wrap gap-2" role="group" aria-label="表示するスキル">
@@ -215,6 +218,7 @@ export function SkillSheetForm({
                   const isChanged = selectedLevel !== null;
                   const definitionId = `skill-definition-${row.skillId}`;
                   const pendingReasonId = `skill-pending-reason-${row.skillId}`;
+                  const rejectionReasonId = `skill-rejection-reason-${row.skillId}`;
 
                   return (
                     <div
@@ -231,6 +235,20 @@ export function SkillSheetForm({
                         <p className="text-sm font-semibold text-[var(--foreground)]">
                           {row.skillName}
                         </p>
+                        {row.isRejected ? (
+                          <div className="mt-2 space-y-1">
+                            <Badge variant="danger">差し戻し</Badge>
+                            <p
+                              id={rejectionReasonId}
+                              title={row.rejectionReason ?? undefined}
+                              className="line-clamp-2 text-xs leading-5 text-[var(--destructive)]"
+                            >
+                              {row.rejectionReason
+                                ? `差し戻しの理由：${row.rejectionReason}`
+                                : "差し戻しの理由はありません。"}
+                            </p>
+                          </div>
+                        ) : null}
                         <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[var(--muted-foreground)]">
                           {getSkillSheetRowStatus(row).map((status) => (
                             <span
@@ -250,11 +268,13 @@ export function SkillSheetForm({
                         <div
                           role="group"
                           aria-label={`${row.skillName}のレベル`}
-                          aria-describedby={
-                            row.pendingLevel === null
-                              ? definitionId
-                              : `${definitionId} ${pendingReasonId}`
-                          }
+                          aria-describedby={[
+                            definitionId,
+                            row.pendingLevel === null ? null : pendingReasonId,
+                            row.isRejected ? rejectionReasonId : null
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
                           className="flex flex-wrap gap-2"
                         >
                           {levels.map(({ level }) => {
