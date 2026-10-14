@@ -9,7 +9,7 @@ import {
   deleteSkill,
   deactivateSkill,
   updateSkillCategory,
-  updateSkill
+  updateSkillWithLevelGuides
 } from "@/modules/skills/application/skill-service";
 import { adminOnly, requireRoles } from "@/server/auth/authorization";
 import { runAction, type ActionResult } from "@/shared/lib/action-result";
@@ -65,13 +65,23 @@ export async function createSkillAction(formData: FormData): Promise<ActionResul
 export async function updateSkillAction(formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
     await requireRoles(adminOnly);
-    await updateSkill(getString(formData, "id"), {
-      ...parseSkillForm(formData),
-      code: getString(formData, "code")
-    });
+    await updateSkillWithLevelGuides(
+      getString(formData, "id"),
+      {
+        ...parseSkillForm(formData),
+        code: getString(formData, "code")
+      },
+      {
+        guides: [1, 2, 3, 4, 5].map((level) => ({
+          level,
+          description: getString(formData, `levelGuide${level}`)
+        }))
+      }
+    );
     revalidatePath("/skills");
     revalidatePath("/members");
     revalidatePath("/roles");
+    revalidatePath("/my/skills");
   }, "スキルを更新しました。");
 }
 

@@ -17,6 +17,7 @@ import {
 } from "@/modules/growth/infrastructure/member-growth-repository";
 import type { UnreadCheerNotification } from "@/modules/growth/infrastructure/member-growth-repository";
 import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
+import { resolveSkillLevelDescription } from "@/modules/skills/domain/skill-level-guide";
 import { AuthorizationError } from "@/server/auth/authorization";
 import { UserFacingError } from "@/shared/lib/user-facing-error";
 
@@ -144,10 +145,6 @@ export async function getLevelUpCelebrations(memberId: string) {
     mentoredCheers: growthData.mentoredCheers
   });
   const progress = buildTargetProgress(growthData);
-  const levelDescriptions = new Map(
-    growthData.levelDefinitions.map((item) => [item.level, item.description])
-  );
-
   return notifications.flatMap((notification) => {
     const assessment = notification.skillSelfAssessment;
     const levelChange =
@@ -177,7 +174,11 @@ export async function getLevelUpCelebrations(memberId: string) {
       fromLevel: levelChange.fromLevel,
       toLevel: levelChange.toLevel,
       levelDescription:
-        levelDescriptions.get(levelChange.toLevel) ??
+        resolveSkillLevelDescription(
+          levelChange.toLevel,
+          growthData.levelDefinitions,
+          levelChange.skill.levelGuides
+        ) ??
         "新しいレベルの定義はまだ登録されていません。",
       managerName:
         levelChange.changedByMember?.name ??

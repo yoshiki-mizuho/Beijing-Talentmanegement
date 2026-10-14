@@ -1,4 +1,8 @@
-import { listSkillCategories, listSkills } from "@/modules/skills/application/skill-service";
+import {
+  listSkillCategories,
+  listSkillLevels,
+  listSkills
+} from "@/modules/skills/application/skill-service";
 import { SkillPageHeader } from "@/modules/skills/presentation/skill-page-header";
 import { canManageSkillMaster } from "@/modules/skills/presentation/skill-permissions";
 import { SkillSearchTable } from "@/modules/skills/presentation/skill-search-table";
@@ -10,9 +14,10 @@ export const dynamic = "force-dynamic";
 export default async function SkillsPage() {
   const session = await requirePageRoles(managerOrAdmin);
   const canManageSkills = canManageSkillMaster(session.user.role);
-  const [categories, skills] = await Promise.all([
+  const [categories, skills, levels] = await Promise.all([
     listSkillCategories(),
-    listSkills()
+    listSkills(),
+    listSkillLevels()
   ]);
   return (
     <div className="space-y-6">
@@ -27,6 +32,7 @@ export default async function SkillsPage() {
           <SkillSearchTable
             initialSkills={skills}
             categories={categories}
+            levels={levels}
             canManage={canManageSkills}
           />
         </CardContent>

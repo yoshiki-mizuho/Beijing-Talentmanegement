@@ -4,6 +4,7 @@ import { RotateCcw, Search, SearchX, Send } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { createSkillAssessmentsAction } from "@/modules/members/presentation/actions";
+import { resolveSkillLevelDescription } from "@/modules/skills/domain/skill-level-guide";
 import {
   getNextSkillSheetLevel,
   filterSkillSheetRows,
@@ -42,10 +43,6 @@ export function SkillSheetForm({
   const [categoryId, setCategoryId] = useState("all");
   const [selectedLevels, setSelectedLevels] = useState<Record<string, number>>(
     {}
-  );
-  const levelDescriptions = useMemo(
-    () => new Map(levels.map((level) => [level.level, level.description])),
-    [levels]
   );
   const changedSkillIds = useMemo(
     () => new Set(Object.keys(selectedLevels)),
@@ -324,7 +321,11 @@ export function SkillSheetForm({
                           selectedLevel,
                           displayedLevel === null
                             ? undefined
-                            : levelDescriptions.get(displayedLevel)
+                            : resolveSkillLevelDescription(
+                                displayedLevel,
+                                levels,
+                                row.levelGuides
+                              )
                         )}
                       </p>
                     </div>

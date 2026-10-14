@@ -168,7 +168,12 @@ export function listUnreadLevelUpNotifications(memberId: string) {
           fromLevel: true,
           toLevel: true,
           changedAt: true,
-          skill: { select: { name: true } },
+          skill: {
+            select: {
+              name: true,
+              levelGuides: { select: { level: true, description: true } }
+            }
+          },
           changedByMember: { select: { name: true } },
           skillSelfAssessment: { select: { managerComment: true } }
         }
@@ -184,7 +189,12 @@ export function listUnreadLevelUpNotifications(memberId: string) {
               fromLevel: true,
               toLevel: true,
               changedAt: true,
-              skill: { select: { name: true } },
+              skill: {
+                select: {
+                  name: true,
+                  levelGuides: { select: { level: true, description: true } }
+                }
+              },
               changedByMember: { select: { name: true } },
               skillSelfAssessment: { select: { managerComment: true } }
             },
