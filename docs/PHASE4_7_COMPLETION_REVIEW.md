@@ -6,6 +6,8 @@
 - migration 4本：`20261010000000_phase47_growth`、`20261010120000_add_member_profile_visibility`、`20261012120000_add_member_avatar`、`20261014120000_add_skill_level_guides`
 - `docs/DESIGN_GUIDELINES.md`、`e2e/`、`ui-check/`
 
+migration 4本は、いずれもデモ DB に適用済み（GitLab の手動パイプライン `DEMO_DB_TASK=migrate`、最後の1本は2026-10-15に利用者が実行）。
+
 ## 判定
 
 Phase 4.7 の完了条件を満たしている。確認日は2026-10-15。利用者がデモ環境（Vercel）で全画面の通しの確認を行い、完了と判断した。残った課題は「残課題」として Phase 5 以降に持ち越す。
@@ -54,7 +56,6 @@ Phase 4.7 の完了条件を満たしている。確認日は2026-10-15。利用
 - 「相談する」のチャットへのリンク（`CHAT_LINK_TEMPLATE`）の形式は、社内のチャットツールが決まってから設定する。
 - `npm run start` の standalone の警告。
 - ローカル DB とデモ DB に、E2E や動作確認で作ったデータが残っている（例：「E2Eスキル-…」「E2Eカテゴリ-…」）。
-- R3-B の migration（`20261014120000_add_skill_level_guides`）が、デモ DB に適用されていること（GitLab の手動パイプライン `DEMO_DB_TASK=migrate`）を記録として残す。
 
 ## 次のフェーズ
 
