@@ -1,7 +1,8 @@
 import {
   createSkillInputSchema,
   skillCategoryInputSchema,
-  skillInputSchema
+  skillInputSchema,
+  skillLevelGuidesInputSchema
 } from "@/modules/skills/domain/skill-schema";
 import {
   type SkillSearchInput,
@@ -15,6 +16,10 @@ export function listSkillCategories() {
 
 export function listSkillLevels() {
   return skillRepository.listSkillLevels();
+}
+
+export function listSkillLevelGuides(skillId: string) {
+  return skillRepository.listSkillLevelGuides(skillId);
 }
 
 export function listActiveSkillsForSkillSheet() {
@@ -48,6 +53,18 @@ export function createSkill(input: unknown) {
 
 export function updateSkill(id: string, input: unknown) {
   return skillRepository.updateSkill(id, skillInputSchema.parse(input));
+}
+
+export function updateSkillWithLevelGuides(
+  id: string,
+  input: unknown,
+  levelGuides: unknown
+) {
+  return skillRepository.updateSkillWithLevelGuides(
+    id,
+    skillInputSchema.parse(input),
+    skillLevelGuidesInputSchema.parse(levelGuides)
+  );
 }
 
 export function deactivateSkill(id: string) {

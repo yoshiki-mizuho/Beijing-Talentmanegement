@@ -1,7 +1,8 @@
 import type {
   CreateSkillInput,
   SkillCategoryInput,
-  SkillInput
+  SkillInput,
+  SkillLevelGuidesInput
 } from "@/modules/skills/domain/skill-schema";
 import type { Prisma } from "@prisma/client";
 import { generateNextSkillCodeFromExistingCodes } from "@/modules/skills/domain/skill-code";
@@ -37,6 +38,20 @@ export async function listSkillLevels() {
   });
 }
 
+export async function listSkillLevelGuides(skillId: string) {
+  const guides = await prisma.skillLevelGuide.findMany({
+    where: { skillId },
+    select: { level: true, description: true },
+    orderBy: { level: "asc" }
+  });
+  const guidesByLevel = new Map(guides.map((guide) => [guide.level, guide.description]));
+
+  return [1, 2, 3, 4, 5].map((level) => ({
+    level,
+    description: guidesByLevel.get(level) ?? null
+  }));
+}
+
 export async function listActiveSkillsForSkillSheet() {
   return prisma.skill.findMany({
     where: { isActive: true },
@@ -49,6 +64,10 @@ export async function listActiveSkillsForSkillSheet() {
           name: true,
           displayOrder: true
         }
+      },
+      levelGuides: {
+        select: { level: true, description: true },
+        orderBy: { level: "asc" }
       }
     },
     orderBy: [{ category: { displayOrder: "asc" } }, { name: "asc" }]
@@ -97,6 +116,10 @@ export async function listSkills(input?: SkillSearchInput) {
     },
     include: {
       category: true,
+      levelGuides: {
+        select: { level: true, description: true },
+        orderBy: { level: "asc" }
+      },
       // 平均レベルと保有者数は在籍中のメンバーだけで集計する
       memberSkills: {
         where: { member: { status: "ACTIVE" } },
@@ -211,6 +234,32 @@ export async function updateSkill(id: string, input: SkillInput) {
   return prisma.skill.update({
     where: { id },
     data: input
+  });
+}
+
+export async function updateSkillWithLevelGuides(
+  id: string,
+  input: SkillInput,
+  levelGuides: SkillLevelGuidesInput
+) {
+  return prisma.$transaction(async (transaction) => {
+    const skill = await transaction.skill.update({ where: { id }, data: input });
+
+    for (const guide of levelGuides.guides) {
+      if (guide.description === "") {
+        await transaction.skillLevelGuide.deleteMany({
+          where: { skillId: id, level: guide.level }
+        });
+      } else {
+        await transaction.skillLevelGuide.upsert({
+          where: { skillId_level: { skillId: id, level: guide.level } },
+          create: { skillId: id, ...guide },
+          update: { description: guide.description }
+        });
+      }
+    }
+
+    return skill;
   });
 }
 

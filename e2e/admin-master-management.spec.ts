@@ -5,6 +5,64 @@ import { readDemoCredentials } from "./helpers/credentials";
 
 const credentials = readDemoCredentials();
 
+test("スキルごとのレベルの目安を保存してスキルシートに表示できる", async ({ browser }) => {
+  const admin = await openLoggedInContext(browser, credentials.ADMIN);
+  const uniqueSuffix = `${Date.now()}-${test.info().workerIndex}`;
+  const skillName = `E2E目安スキル-${uniqueSuffix}`;
+  const levelGuide = "E2Eで設定したLv3の目安";
+
+  try {
+    await admin.page.goto("/skills");
+    await admin.page.getByRole("button", { name: "スキルを追加", exact: true }).click();
+    const createDialog = admin.page.getByRole("dialog", { name: "スキルを追加" });
+    await createDialog.getByLabel("スキル名").fill(skillName);
+    await createDialog.getByRole("button", { name: "スキルを追加", exact: true }).click();
+    await expect(admin.page.getByText("スキルを登録しました。")).toBeVisible();
+
+    const skillRow = admin.page.getByRole("row").filter({ hasText: skillName });
+    await skillRow.getByRole("button", { name: `${skillName}を編集` }).click();
+    let editDialog = admin.page.getByRole("dialog", { name: `${skillName}を編集` });
+    await editDialog.getByLabel("Lv3").fill(levelGuide);
+    await editDialog.getByRole("button", { name: "保存", exact: true }).click();
+    await expect(admin.page.getByText("スキルを更新しました。")).toBeVisible();
+
+    await skillRow.getByRole("button", { name: `${skillName}を編集` }).click();
+    editDialog = admin.page.getByRole("dialog", { name: `${skillName}を編集` });
+    await expect(editDialog.getByLabel("Lv3")).toHaveValue(levelGuide);
+    await editDialog.getByRole("button", { name: "ダイアログを閉じる" }).click();
+
+    const member = await openLoggedInContext(browser, credentials.MEMBER);
+    try {
+      await member.page.goto("/my/skills");
+      await member.page.getByLabel("スキルを検索").fill(skillName);
+      const skillGroup = member.page.getByRole("group", { name: `${skillName}のレベル` });
+      await skillGroup.getByRole("button", { name: "Lv3" }).click();
+      await expect(member.page.getByText(levelGuide)).toBeVisible();
+    } finally {
+      await member.context.close();
+    }
+
+    await admin.page.goto("/skills");
+    await admin.page.getByLabel("スキル名").fill(skillName);
+    await admin.page
+      .getByRole("row")
+      .filter({ hasText: skillName })
+      .getByRole("button", { name: `${skillName}を編集` })
+      .click();
+    await admin.page
+      .getByRole("dialog", { name: `${skillName}を編集` })
+      .getByRole("button", { name: "スキルを削除" })
+      .click();
+    await admin.page
+      .getByRole("dialog", { name: "スキルを削除しますか" })
+      .getByRole("button", { name: "削除する" })
+      .click();
+    await expect(admin.page.getByText("スキルを削除しました。")).toBeVisible();
+  } finally {
+    await admin.context.close();
+  }
+});
+
 test("管理者がスキルを作成・編集・無効化し、ロール要件を追加・削除できる", async ({
   browser
 }) => {
@@ -93,10 +151,13 @@ test("管理者がスキルを作成・編集・無効化し、ロール要件�
     await expect(requirement).toHaveCount(0);
 
     await admin.page.goto("/skills");
+    // 一覧の読み込みで行の位置がずれないよう、名前で1件に絞ってから操作する
+    await admin.page.getByLabel("スキル名").fill(editedSkillName);
     await admin.page.getByLabel("無効を含む").check();
     const editedRow = admin.page
       .getByRole("row")
       .filter({ hasText: editedSkillName });
+    await expect(admin.page.getByRole("row")).toHaveCount(2);
     await editedRow
       .getByRole("button", { name: `${editedSkillName}を編集` })
       .click();

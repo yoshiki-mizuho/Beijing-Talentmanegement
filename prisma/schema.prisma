@@ -199,11 +199,25 @@ model Skill {
   roleRequirements RoleRequirement[]
   skillLevelChanges SkillLevelChange[]
   cheers            Cheer[]
+  levelGuides       SkillLevelGuide[]
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
 
   @@unique([categoryId, name])
   @@index([categoryId])
+}
+
+model SkillLevelGuide {
+  id          String   @id @default(cuid())
+  skillId     String
+  skill       Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  level       Int
+  description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([skillId, level])
+  @@index([skillId])
 }
 
 model SkillLevel {

@@ -45,6 +45,7 @@ export type SkillRow = {
     roleRequirements: number;
   };
   memberSkills: { level: number }[];
+  levelGuides: Array<{ level: number; description: string }>;
   isDeletable: boolean;
   reason: string | null;
 };
@@ -54,9 +55,15 @@ type CategoryOption = {
   name: string;
 };
 
+type LevelOption = {
+  level: number;
+  description: string;
+};
+
 export function SkillSearchTable(props: {
   initialSkills: SkillRow[];
   categories: CategoryOption[];
+  levels: LevelOption[];
   canManage: boolean;
 }) {
   return (
@@ -69,10 +76,12 @@ export function SkillSearchTable(props: {
 function SkillSearchTableInner({
   initialSkills,
   categories,
+  levels,
   canManage
 }: {
   initialSkills: SkillRow[];
   categories: CategoryOption[];
+  levels: LevelOption[];
   canManage: boolean;
 }) {
   const router = useRouter();
@@ -392,6 +401,31 @@ function SkillSearchTableInner({
                 name="description"
                 defaultValue={editingSkill.description ?? ""}
               />
+              <div className="space-y-3 border-t border-[var(--border)] pt-4">
+                <div>
+                  <h3 className="font-semibold text-[var(--foreground)]">レベルの目安</h3>
+                  <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+                    空欄のレベルは共通の目安を表示します。
+                  </p>
+                </div>
+                {levels.map((level) => (
+                  <TextareaField
+                    key={level.level}
+                    id={`edit-skill-level-guide-${editingSkill.id}-${level.level}`}
+                    label={`Lv${level.level}`}
+                    name={`levelGuide${level.level}`}
+                    rows={2}
+                    maxLength={300}
+                    className="[&_textarea]:min-h-16"
+                    defaultValue={
+                      editingSkill.levelGuides.find(
+                        (guide) => guide.level === level.level
+                      )?.description ?? ""
+                    }
+                    placeholder={`空欄の場合: ${level.description}`}
+                  />
+                ))}
+              </div>
               <label className="flex min-h-11 items-center gap-2 text-sm font-medium text-[var(--foreground)]">
                 <input
                   type="checkbox"

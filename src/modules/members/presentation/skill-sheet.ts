@@ -9,6 +9,7 @@ export type SkillSheetRow = {
   targetLevel: number | null;
   isRejected: boolean;
   rejectionReason: string | null;
+  levelGuides: ReadonlyArray<{ level: number; description: string }>;
 };
 
 type SkillSheetSource = {
@@ -20,6 +21,7 @@ type SkillSheetSource = {
       name: string;
       displayOrder: number;
     };
+    levelGuides?: ReadonlyArray<{ level: number; description: string }>;
   }>;
   memberSkills: ReadonlyArray<{ skillId: string; level: number }>;
   pendingAssessments: ReadonlyArray<{
@@ -87,7 +89,8 @@ export function buildSkillSheetRows({
       pendingLevel: pendingLevels.get(skill.id) ?? null,
       targetLevel: targetLevels.get(skill.id) ?? null,
       isRejected: rejectedSkillIds.has(skill.id),
-      rejectionReason: rejectionReasons.get(skill.id) ?? null
+      rejectionReason: rejectionReasons.get(skill.id) ?? null,
+      levelGuides: skill.levelGuides ?? []
     }))
     .sort(
       (left, right) =>
