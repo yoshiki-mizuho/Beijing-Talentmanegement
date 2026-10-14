@@ -26,7 +26,11 @@ import type {
   TargetRoleOption
 } from "@/modules/members/presentation/member-presentation-types";
 import { MemberAvatar } from "@/shared/ui/member-avatar";
-import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
+import {
+  evaluateMemberTargetRole,
+  matchesTargetRoleFilter,
+  type TargetRoleFilter
+} from "@/modules/members/presentation/target-role-filter";
 import { cn } from "@/shared/lib/utils";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
@@ -48,6 +52,7 @@ type Props = {
   canEditGrowthSettings: boolean;
   viewerMemberId: string;
   scopeName: string;
+  initialTargetRoleFilter: TargetRoleFilter;
 };
 
 export function MemberSearchTable(props: Props) {
@@ -68,12 +73,14 @@ function MemberSearchTableInner({
   canDeactivateMembers,
   canEditGrowthSettings,
   viewerMemberId,
-  scopeName
+  scopeName,
+  initialTargetRoleFilter
 }: Props) {
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState<MemberSearchFilters>(emptyMemberSearchFilters);
   const [debouncedKeyword, setDebouncedKeyword] = useState(filters.q);
   const [page, setPage] = useState(1);
+  const [targetRoleFilter, setTargetRoleFilter] = useState(initialTargetRoleFilter);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const closeMemberDetail = useCallback(() => setSelectedMemberId(null), []);
   const activeInitialMembers = useMemo(
@@ -103,7 +110,13 @@ function MemberSearchTableInner({
     placeholderData: keepPreviousData,
     refetchOnWindowFocus: false
   });
-  const members = query.data ?? [];
+  const members = useMemo(
+    () =>
+      (query.data ?? []).filter((member) =>
+        matchesTargetRoleFilter(member, roles, targetRoleFilter)
+      ),
+    [query.data, roles, targetRoleFilter]
+  );
   const range = getMemberPageRange(members.length, page);
   const pageMembers = members.slice(
     (range.currentPage - 1) * MEMBER_PAGE_SIZE,
@@ -236,12 +249,38 @@ function MemberSearchTableInner({
             </button>
           ))}
         </div>
+        <div className="flex flex-wrap gap-1" role="group" aria-label="目標ロール">
+          {[
+            ["", "すべて"],
+            ["unset", "未設定"],
+            ["achieved", "達成"],
+            ["in_progress", "未達"]
+          ].map(([value, label]) => (
+            <button
+              key={value || "all"}
+              type="button"
+              aria-pressed={targetRoleFilter === value}
+              className={chipClass(targetRoleFilter === value)}
+              onClick={() => {
+                setTargetRoleFilter((current) =>
+                  current === value ? "" : (value as TargetRoleFilter)
+                );
+                setPage(1);
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <Button
           type="button"
           variant="ghost"
           size="small"
           className="ml-auto"
-          onClick={() => updateFilters(emptyMemberSearchFilters)}
+          onClick={() => {
+            updateFilters(emptyMemberSearchFilters);
+            setTargetRoleFilter("");
+          }}
         >
           <FilterX className="h-4 w-4" aria-hidden="true" />
           条件をクリア
@@ -425,7 +464,8 @@ function TargetRoleCell({ member, roles }: { member: MemberRow; roles: RoleOptio
   const role = roles.find((item) => item.id === member.targetRoleId);
   if (!member.targetRole || !role)
     return <span className="text-[var(--muted-foreground)]">未設定</span>;
-  const result = evaluateRoleAchievement(role.roleRequirements, member.memberSkills);
+  const result = evaluateMemberTargetRole(member, roles);
+  if (!result) return <span className="text-[var(--muted-foreground)]">未設定</span>;
   const required = role.roleRequirements.filter((item) => item.isRequired).length;
   const satisfied = result.satisfiedRequirements.length;
   const rate = required === 0 ? 100 : Math.round((satisfied / required) * 100);

@@ -1,5 +1,6 @@
 import { Award, CalendarDays, Heart, History, PartyPopper, Radar, Users } from "lucide-react";
 import type { Route } from "next";
+import Link from "next/link";
 
 import { DashboardSectionHeading as SectionHeading } from "@/modules/dashboard/presentation/dashboard-section-heading";
 import type { MemberDashboardViewModel } from "@/modules/dashboard/presentation/member-dashboard-view-model";
@@ -11,6 +12,9 @@ import { TargetRoleCard } from "@/modules/growth/presentation/target-role-card";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { MemberAvatar } from "@/shared/ui/member-avatar";
 import { PageHeader } from "@/shared/ui/page-header";
+
+// 成長カレンダーと同じ段に並べるので、高さが揃うよう新しい順に5件までにする
+const TIMELINE_LIMIT = 5;
 
 export function MemberDashboard({
   viewModel,
@@ -90,7 +94,7 @@ export function MemberDashboard({
           <div className="p-5"><SectionHeading id="timeline-heading" icon={History} title="成長の記録" description="最近のスキル変化を新しい順に表示します。" /></div>
           {viewModel.timeline.length > 0 ? (
             <ol className="divide-y divide-[var(--border)] border-t border-[var(--border)] px-5">
-              {viewModel.timeline.map((item) => (
+              {viewModel.timeline.slice(0, TIMELINE_LIMIT).map((item) => (
                 <li key={item.id} className="relative py-4 pl-7">
                   <span className="absolute left-0 top-5 h-3 w-3 rounded-full bg-[var(--primary)] ring-4 ring-[var(--primary-subtle)]" aria-hidden="true" />
                   <p className="text-sm font-semibold">
@@ -103,13 +107,24 @@ export function MemberDashboard({
                 </li>
               ))}
             </ol>
-          ) : (
+          ) : null}
+          {viewModel.timeline.length > TIMELINE_LIMIT ? (
+            <div className="border-t border-[var(--border)] px-5 py-3 text-right">
+              <Link
+                href="/my/skills?tab=history"
+                className="text-sm font-semibold text-[var(--primary)] hover:underline"
+              >
+                すべて見る
+              </Link>
+            </div>
+          ) : null}
+          {viewModel.timeline.length === 0 ? (
             <EmptyState
               icon={History}
               title="成長の記録はまだありません"
               description="スキルを申請すると、承認後の変化がここに残ります。"
             />
-          )}
+          ) : null}
         </section>
       </div>
 
