@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import {
   createRole,
   deactivateRole,
+  deleteRole,
   removeRoleRequirement,
   setRoleRequirement,
   updateRole
@@ -43,6 +44,15 @@ export async function deactivateRoleAction(formData: FormData): Promise<ActionRe
     await deactivateRole(getString(formData, "id"));
     revalidatePath("/roles");
   }, "ロールを無効化しました。");
+}
+
+export async function deleteRoleAction(formData: FormData): Promise<ActionResult> {
+  return runAction(async () => {
+    await requireRoles(adminOnly);
+    await deleteRole(getString(formData, "id"));
+    revalidatePath("/roles");
+    revalidatePath("/members");
+  }, "ロールを削除しました。");
 }
 
 export async function setRoleRequirementAction(formData: FormData): Promise<ActionResult> {

@@ -6,7 +6,11 @@ import { ChevronDown, ChevronRight, MoreHorizontal, Search, SearchX } from "luci
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { deactivateSkillAction, updateSkillAction } from "@/modules/skills/presentation/actions";
+import {
+  deactivateSkillAction,
+  deleteSkillAction,
+  updateSkillAction
+} from "@/modules/skills/presentation/actions";
 import {
   buildSkillSearchParams,
   emptySkillSearchFilters,
@@ -35,9 +39,14 @@ export type SkillRow = {
   };
   _count: {
     memberSkills: number;
+    selfAssessments: number;
+    skillLevelChanges: number;
+    cheers: number;
     roleRequirements: number;
   };
   memberSkills: { level: number }[];
+  isDeletable: boolean;
+  reason: string | null;
 };
 
 type CategoryOption = {
@@ -74,7 +83,12 @@ function SkillSearchTableInner({
   const query = useQuery({
     queryKey: ["skills", filters],
     queryFn: () => fetchSkills(filters),
-    initialData: initialSkills.filter((skill) => skill.isActive),
+    initialData:
+      filters.q === emptySkillSearchFilters.q &&
+      filters.categoryId === emptySkillSearchFilters.categoryId &&
+      filters.isActive === emptySkillSearchFilters.isActive
+        ? initialSkills.filter((skill) => skill.isActive)
+        : undefined,
     placeholderData: keepPreviousData
   });
   const rows = query.data ?? [];
@@ -191,7 +205,7 @@ function SkillSearchTableInner({
             className="rounded-full pl-9"
           />
         </div>
-        <div className="flex max-w-full gap-1 overflow-x-auto" aria-label="カテゴリ">
+        <div className="flex max-w-full flex-wrap gap-1" aria-label="カテゴリ">
           {[{ id: "", name: "すべて" }, ...categories].map((category) => (
             <button
               key={category.id || "all"}
@@ -380,22 +394,46 @@ function SkillSearchTableInner({
             </ActionForm>
 
             <div className="border-t border-[var(--border)] pt-5">
-              <ActionForm action={deactivateSkillAction} onSuccess={handleEditSuccess}>
-                <input type="hidden" name="id" value={editingSkill.id} />
-                <ConfirmSubmitButton
-                  pendingLabel="無効化中…"
-                  variant="destructive"
-                  disabled={!editingSkill.isActive}
-                  confirm={{
-                    title: "スキルを無効化しますか",
-                    description: `「${editingSkill.name}」を無効化します。既存の設定内容は保持されます。`,
-                    confirmLabel: "無効化する",
-                    destructive: true
-                  }}
-                >
-                  スキルを無効化
-                </ConfirmSubmitButton>
-              </ActionForm>
+              <div className="flex flex-wrap gap-3">
+                <ActionForm action={deactivateSkillAction} onSuccess={handleEditSuccess}>
+                  <input type="hidden" name="id" value={editingSkill.id} />
+                  <ConfirmSubmitButton
+                    pendingLabel="無効化中…"
+                    variant="destructive"
+                    disabled={!editingSkill.isActive}
+                    confirm={{
+                      title: "スキルを無効化しますか",
+                      description: `「${editingSkill.name}」を無効化します。既存の設定内容は保持されます。`,
+                      confirmLabel: "無効化する",
+                      destructive: true
+                    }}
+                  >
+                    スキルを無効化
+                  </ConfirmSubmitButton>
+                </ActionForm>
+                {editingSkill.isDeletable ? (
+                  <ActionForm action={deleteSkillAction} onSuccess={handleEditSuccess}>
+                    <input type="hidden" name="id" value={editingSkill.id} />
+                    <ConfirmSubmitButton
+                      pendingLabel="削除中…"
+                      variant="destructive"
+                      confirm={{
+                        title: "スキルを削除しますか",
+                        description: `「${editingSkill.name}」を削除します。この操作は取り消せません。`,
+                        confirmLabel: "削除する",
+                        destructive: true
+                      }}
+                    >
+                      スキルを削除
+                    </ConfirmSubmitButton>
+                  </ActionForm>
+                ) : null}
+              </div>
+              {!editingSkill.isDeletable && editingSkill.reason ? (
+                <p className="mt-3 text-sm text-[var(--muted-foreground)]">
+                  {editingSkill.reason}
+                </p>
+              ) : null}
             </div>
           </div>
         </Dialog>

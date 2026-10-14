@@ -119,3 +119,96 @@ test("管理者がスキルを作成・編集・無効化し、ロール要件�
     await admin.context.close();
   }
 });
+
+test("管理者がスキルを検索・削除し、要件付きロールも削除できる", async ({ browser }) => {
+  test.setTimeout(60_000);
+  const admin = await openLoggedInContext(browser, credentials.ADMIN);
+  const uniqueSuffix = `${Date.now()}-${test.info().workerIndex}`;
+  const categoryName = `E2Eカテゴリ-${uniqueSuffix}`;
+  const skillName = `E2E削除スキル-${uniqueSuffix}`;
+  const roleName = `E2E削除ロール-${uniqueSuffix}`;
+
+  try {
+    await admin.page.goto("/skills");
+    await admin.page.getByRole("button", { name: "カテゴリを管理" }).click();
+    const categoryDialog = admin.page.getByRole("dialog", { name: "カテゴリを管理" });
+    await categoryDialog.getByLabel("カテゴリ名").first().fill(categoryName);
+    await categoryDialog.getByRole("button", { name: "追加", exact: true }).click();
+    await expect(admin.page.getByText("カテゴリを登録しました。")).toBeVisible();
+    await categoryDialog.getByRole("button", { name: "ダイアログを閉じる" }).click();
+
+    await admin.page.getByRole("button", { name: "スキルを追加", exact: true }).click();
+    const createSkillDialog = admin.page.getByRole("dialog", { name: "スキルを追加" });
+    await createSkillDialog.getByLabel("スキル名").fill(skillName);
+    await createSkillDialog.getByLabel("カテゴリ").selectOption({ label: categoryName });
+    await createSkillDialog
+      .getByRole("button", { name: "スキルを追加", exact: true })
+      .click();
+    await expect(admin.page.getByText("スキルを登録しました。")).toBeVisible();
+
+    await admin.page.getByLabel("スキル名").fill(skillName);
+    await expect(admin.page.getByRole("row").filter({ hasText: skillName })).toHaveCount(1);
+    await expect(admin.page.getByRole("row")).toHaveCount(2);
+
+    await admin.page.getByRole("row").filter({ hasText: skillName }).getByRole("button").click();
+    const deleteSkillDialog = admin.page.getByRole("dialog", { name: `${skillName}を編集` });
+    await deleteSkillDialog.getByRole("button", { name: "スキルを削除" }).click();
+    await admin.page
+      .getByRole("dialog", { name: "スキルを削除しますか" })
+      .getByRole("button", { name: "削除する" })
+      .click();
+    await expect(admin.page.getByText("スキルを削除しました。")).toBeVisible();
+
+    await admin.page.getByRole("button", { name: "カテゴリを管理" }).click();
+    // カテゴリ名は入力欄の値なので hasText では探せない。入力欄と削除ボタンを両方含む最も内側の要素を行とみなす
+    const categoryRow = admin.page
+      .getByRole("dialog", { name: "カテゴリを管理" })
+      .locator("div")
+      .filter({ has: admin.page.locator(`input[value="${categoryName}"]`) })
+      .filter({ has: admin.page.getByRole("button", { name: "削除", exact: true }) })
+      .last();
+    await categoryRow.getByRole("button", { name: "削除", exact: true }).click();
+    await admin.page
+      .getByRole("dialog", { name: "カテゴリを削除しますか" })
+      .getByRole("button", { name: "削除する" })
+      .click();
+    await expect(admin.page.getByText("カテゴリを削除しました。")).toBeVisible();
+
+    await admin.page.goto("/skills");
+    const usedSkillRow = admin.page.getByRole("row").filter({ hasText: "TypeScript" });
+    await usedSkillRow.getByRole("button", { name: "TypeScriptを編集" }).click();
+    const usedSkillDialog = admin.page.getByRole("dialog", { name: "TypeScriptを編集" });
+    await expect(usedSkillDialog.getByRole("button", { name: "スキルを削除" })).toHaveCount(0);
+    await expect(usedSkillDialog.getByText(/ため削除できません。無効化してください。/)).toBeVisible();
+    await usedSkillDialog.getByRole("button", { name: "ダイアログを閉じる" }).click();
+
+    await admin.page.goto("/roles");
+    await admin.page.getByRole("button", { name: "ロールを追加" }).click();
+    const createRoleDialog = admin.page.getByRole("dialog", { name: "新規ロール" });
+    await createRoleDialog.getByLabel("ロール名").fill(roleName);
+    await createRoleDialog.getByRole("button", { name: "ロールを登録" }).click();
+    await expect(admin.page.getByText("ロールを登録しました。")).toBeVisible();
+
+    await admin.page.getByRole("button", { name: `${roleName}の編集を開く` }).click();
+    const roleDialog = admin.page.getByRole("dialog", { name: roleName });
+    const typeScriptOption = roleDialog
+      .getByLabel("追加するスキル")
+      .locator("option")
+      .filter({ hasText: "TypeScript" });
+    const typeScriptOptionValue = await typeScriptOption.getAttribute("value");
+    if (!typeScriptOptionValue) {
+      throw new Error("TypeScriptがロール要件の候補にありません。");
+    }
+    await roleDialog.getByLabel("追加するスキル").selectOption(typeScriptOptionValue);
+    await roleDialog.getByRole("button", { name: "要件を追加" }).click();
+    await expect(admin.page.getByText("ロール要件を設定しました。")).toBeVisible();
+    await roleDialog.getByRole("button", { name: "ロールを削除" }).click();
+    const deleteRoleDialog = admin.page.getByRole("dialog", { name: "ロールを削除しますか" });
+    await expect(deleteRoleDialog).toContainText("必要スキルの設定も削除されます");
+    await deleteRoleDialog.getByRole("button", { name: "削除する" }).click();
+    await expect(admin.page.getByText("ロールを削除しました。")).toBeVisible();
+    await expect(admin.page.getByText(roleName)).toHaveCount(0);
+  } finally {
+    await admin.context.close();
+  }
+});

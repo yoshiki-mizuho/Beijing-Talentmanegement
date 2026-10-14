@@ -25,6 +25,10 @@ export function deactivateRole(id: string) {
   return roleRepository.deactivateRole(id);
 }
 
+export function deleteRole(id: string) {
+  return roleRepository.deleteRole(id);
+}
+
 export function setRoleRequirement(input: unknown) {
   return roleRepository.upsertRoleRequirement(roleRequirementInputSchema.parse(input));
 }

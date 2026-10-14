@@ -41,6 +41,17 @@ export async function deactivateRole(id: string) {
   });
 }
 
+export async function deleteRole(id: string) {
+  return prisma.$transaction(async (transaction) => {
+    await transaction.roleRequirement.deleteMany({ where: { roleId: id } });
+    await transaction.member.updateMany({
+      where: { targetRoleId: id },
+      data: { targetRoleId: null }
+    });
+    return transaction.role.delete({ where: { id } });
+  });
+}
+
 export async function upsertRoleRequirement(input: RoleRequirementInput) {
   return prisma.roleRequirement.upsert({
     where: {
