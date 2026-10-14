@@ -76,7 +76,7 @@ export function GrowthCalendar({
               role="gridcell"
               aria-label={label || undefined}
               className={cn(
-                "grid aspect-square min-h-8 place-items-center rounded-md text-[11px]",
+                "grid h-7 place-items-center rounded-md text-[11px]",
                 day.day !== null && "border border-[var(--border)]",
                 kind === "assessment" && "border-teal-200 bg-teal-100 text-teal-950",
                 kind === "level-up" && "border-[var(--primary)] bg-[var(--primary)] font-semibold text-white"

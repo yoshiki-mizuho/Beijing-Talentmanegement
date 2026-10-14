@@ -40,8 +40,10 @@ export default async function RolesPage() {
       return {
         id: member.id,
         name: member.name,
+        avatarUpdatedAt: member.avatarUpdatedAt?.toISOString() ?? null,
         departmentName: member.department.name,
         jobTitle: member.jobTitle,
+        isTarget: member.targetRoleId === role.id,
         achieved: result.achieved,
         achievementRate: result.achievementRate,
         missingRequirements: result.missingRequirements.map((requirement) => ({

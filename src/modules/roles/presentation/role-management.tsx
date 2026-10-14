@@ -21,6 +21,8 @@ import { EmptyState } from "@/shared/ui/empty-state";
 import { FormField, SelectField, TextareaField } from "@/shared/ui/form-field";
 import { PageHeader } from "@/shared/ui/page-header";
 import { SubmitButton } from "@/shared/ui/submit-button";
+import { MemberAvatar } from "@/shared/ui/member-avatar";
+import { cn } from "@/shared/lib/utils";
 
 const skillLevels = [1, 2, 3, 4, 5] as const;
 
@@ -42,8 +44,10 @@ type RoleItem = {
   memberStatuses: {
     id: string;
     name: string;
+    avatarUpdatedAt: string | null;
     departmentName: string;
     jobTitle: string | null;
+    isTarget: boolean;
     achieved: boolean;
     achievementRate: number;
     missingRequirements: {
@@ -254,8 +258,38 @@ function RoleDetailDialog({
   onDeactivate: () => void;
   onDelete: () => void;
 }) {
+  const [achievementFilter, setAchievementFilter] = useState<
+    "target" | "achieved" | "all"
+  >("target");
+  const [showAllMembers, setShowAllMembers] = useState(false);
   const existingSkillIds = new Set(role.requirements.map((requirement) => requirement.skillId));
   const availableSkills = skills.filter((skill) => !existingSkillIds.has(skill.id));
+  const sortedMemberStatuses = [...role.memberStatuses].sort(
+    (left, right) =>
+      right.achievementRate - left.achievementRate || left.name.localeCompare(right.name, "ja")
+  );
+  const filteredMemberStatuses = sortedMemberStatuses.filter((member) => {
+    if (achievementFilter === "target") return member.isTarget;
+    if (achievementFilter === "achieved") return member.achieved;
+    return true;
+  });
+  const visibleMemberStatuses = showAllMembers
+    ? filteredMemberStatuses
+    : filteredMemberStatuses.slice(0, 10);
+  const remainingMemberCount = filteredMemberStatuses.length - visibleMemberStatuses.length;
+  const filterOptions = [
+    [
+      "target",
+      "目標にしている",
+      role.memberStatuses.filter((member) => member.isTarget).length
+    ],
+    [
+      "achieved",
+      "達成",
+      role.memberStatuses.filter((member) => member.achieved).length
+    ],
+    ["all", "全員", role.memberStatuses.length]
+  ] as const;
 
   return (
     <Dialog
@@ -482,41 +516,94 @@ function RoleDetailDialog({
             </p>
           </div>
 
-          {role.memberStatuses.length === 0 ? (
+          <div
+            className="flex flex-wrap gap-1"
+            role="group"
+            aria-label="達成状況の表示範囲"
+          >
+            {filterOptions.map(([value, label, count]) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={achievementFilter === value}
+                className={cn(
+                  "min-h-9 rounded-full border px-3 text-sm font-medium",
+                  achievementFilter === value
+                    ? "border-[var(--primary)] bg-[var(--primary)] text-white"
+                    : "border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-subtle)]"
+                )}
+                onClick={() => {
+                  setAchievementFilter(value);
+                  setShowAllMembers(false);
+                }}
+              >
+                {label} {count}
+              </button>
+            ))}
+          </div>
+
+          {filteredMemberStatuses.length === 0 ? (
             <EmptyState
               icon={UsersRound}
-              title="メンバーがいません"
-              description="メンバーが登録されると、ここに達成状況が表示されます。"
+              title={
+                achievementFilter === "target"
+                  ? "このロールを目標にしているメンバーはいません"
+                  : achievementFilter === "achieved"
+                    ? "このロールを達成しているメンバーはいません"
+                    : "メンバーがいません"
+              }
             />
           ) : (
-            <div className="divide-y divide-[var(--border)] border-y border-[var(--border)]">
-              {role.memberStatuses.map((member) => (
-                <div key={member.id} className="py-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="font-medium text-[var(--foreground)]">{member.name}</p>
-                      <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-                        {member.departmentName} / {member.jobTitle ?? "役職未設定"}
+            <div>
+              <div className="divide-y divide-[var(--border)] border-y border-[var(--border)]">
+                {visibleMemberStatuses.map((member) => {
+                  const missingSkills = member.missingRequirements
+                    .map(
+                      (requirement) =>
+                        `${requirement.skillName} レベル${requirement.memberLevel ?? 0}/${requirement.requiredLevel}`
+                    )
+                    .join("、");
+                  return (
+                    <div key={member.id} className="flex items-center gap-3 py-3">
+                      <MemberAvatar
+                        memberId={member.id}
+                        name={member.name}
+                        avatarUpdatedAt={member.avatarUpdatedAt}
+                        href={`/people/${member.id}`}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium text-[var(--foreground)]">
+                          {member.name}
+                        </p>
+                        <p className="truncate text-xs text-[var(--muted-foreground)]">
+                          {member.departmentName} / {member.jobTitle ?? "役職未設定"}
+                        </p>
+                      </div>
+                      <Badge variant={member.achieved ? "success" : "warning"}>
+                        {member.achieved
+                          ? "達成"
+                          : `${Math.round(member.achievementRate * 100)}%`}
+                      </Badge>
+                      <p
+                        className="max-w-64 truncate text-sm text-[var(--muted-foreground)]"
+                        title={missingSkills || undefined}
+                      >
+                        {missingSkills ? `不足スキル: ${missingSkills}` : "不足スキルなし"}
                       </p>
                     </div>
-                    <Badge variant={member.achieved ? "success" : "warning"}>
-                      {member.achieved ? "達成" : "未達"} /{" "}
-                      {Math.round(member.achievementRate * 100)}%
-                    </Badge>
-                  </div>
-                  {member.missingRequirements.length > 0 ? (
-                    <p className="mt-2 text-sm text-[var(--muted-foreground)]">
-                      不足スキル:{" "}
-                      {member.missingRequirements
-                        .map(
-                          (requirement) =>
-                            `${requirement.skillName} レベル${requirement.memberLevel ?? 0}/${requirement.requiredLevel}`
-                        )
-                        .join("、")}
-                    </p>
-                  ) : null}
-                </div>
-              ))}
+                  );
+                })}
+              </div>
+              {remainingMemberCount > 0 ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="mt-3 w-full"
+                  onClick={() => setShowAllMembers(true)}
+                >
+                  さらに表示（あと {remainingMemberCount}名）
+                </Button>
+              ) : null}
             </div>
           )}
         </section>

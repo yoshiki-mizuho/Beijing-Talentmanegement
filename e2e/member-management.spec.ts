@@ -120,6 +120,46 @@ test(
   }
 );
 
+test("URLから目標ロール未設定のメンバーに絞り込める", async ({ page }) => {
+  await login(page, credentials.ADMIN);
+  await page.goto("/members?targetRole=unset");
+
+  const targetRoleFilters = page.getByRole("group", { name: "目標ロール" });
+  await expect(targetRoleFilters.getByRole("button", { name: "未設定" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+
+  const resultRows = page
+    .getByRole("table")
+    .getByRole("row")
+    .filter({ has: page.getByRole("cell") });
+  await expect(resultRows.first()).toBeVisible();
+  const count = await resultRows.count();
+  for (let index = 0; index < count; index += 1) {
+    await expect(resultRows.nth(index).getByRole("cell").nth(2)).toHaveText("未設定");
+  }
+});
+
+test("チームダッシュボードのKPIから目標ロールで絞り込める", async ({ page }) => {
+  await login(page, credentials.MANAGER);
+  await page.goto("/dashboard?view=team");
+
+  const unsetLink = page.getByRole("link", { name: /目標ロールの設定/ });
+  const achievedLink = page.getByRole("link", { name: /ロール達成者/ });
+  const link = (await unsetLink.getAttribute("href"))?.includes("targetRole=")
+    ? unsetLink
+    : achievedLink;
+  await link.click();
+
+  await expect(page).toHaveURL(/\/members\?targetRole=(unset|achieved)/);
+  await expect(
+    page
+      .getByRole("group", { name: "目標ロール" })
+      .locator('button[aria-pressed="true"]')
+  ).toHaveCount(1);
+});
+
 test("スキルの面を押すと詳細が切り替わる", async ({ page }) => {
   await login(page, credentials.ADMIN);
   await page.goto("/skill-map");

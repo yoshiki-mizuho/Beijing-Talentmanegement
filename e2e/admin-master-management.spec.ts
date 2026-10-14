@@ -212,3 +212,43 @@ test("管理者がスキルを検索・削除し、要件付きロールも削�
     await admin.context.close();
   }
 });
+
+test("スキル検索をクリアして一覧を元に戻せる", async ({ browser }) => {
+  const admin = await openLoggedInContext(browser, credentials.ADMIN);
+  try {
+    await admin.page.goto("/skills");
+    const searchInput = admin.page.getByLabel("スキル名");
+    const initialRows = await admin.page.getByRole("row").count();
+    await searchInput.fill("TypeScript");
+    await admin.page.getByRole("button", { name: "検索をクリア" }).click();
+
+    await expect(searchInput).toHaveValue("");
+    await expect(searchInput).toBeFocused();
+    await expect(admin.page.getByRole("row")).toHaveCount(initialRows);
+  } finally {
+    await admin.context.close();
+  }
+});
+
+test("ロール詳細の達成状況を全員に切り替えられる", async ({ browser }) => {
+  const admin = await openLoggedInContext(browser, credentials.ADMIN);
+  try {
+    await admin.page.goto("/roles");
+    await admin.page.getByRole("button", { name: /の編集を開く$/ }).first().click();
+    const dialog = admin.page.getByRole("dialog");
+    const filters = dialog.getByRole("group", { name: "達成状況の表示範囲" });
+    const targetButton = filters.getByRole("button", { name: /^目標にしている \d+$/ });
+    const allButton = filters.getByRole("button", { name: /^全員 \d+$/ });
+    const targetCount = Number((await targetButton.innerText()).match(/\d+/)?.[0] ?? 0);
+    const allCount = Number((await allButton.innerText()).match(/\d+/)?.[0] ?? 0);
+
+    expect(allCount).toBeGreaterThanOrEqual(targetCount);
+    await allButton.click();
+    await expect(allButton).toHaveAttribute("aria-pressed", "true");
+    if (allCount > 10) {
+      await expect(dialog.getByRole("button", { name: /さらに表示/ })).toBeVisible();
+    }
+  } finally {
+    await admin.context.close();
+  }
+});

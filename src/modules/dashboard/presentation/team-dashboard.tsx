@@ -100,14 +100,14 @@ export function TeamDashboard({ viewModel }: { viewModel: TeamDashboardViewModel
             caption={viewModel.kpis.levelUps.comparison}
           />
           <KpiCard
-            href="/members"
+            href="/members?targetRole=achieved"
             icon={Award}
             label="ロール達成者"
             value={`${viewModel.kpis.achieved}/${viewModel.memberCount}名`}
             caption="目標ロールの必須要件を達成"
           />
           <KpiCard
-            href="/members"
+            href={viewModel.kpis.targetSet < viewModel.memberCount ? "/members?targetRole=unset" : "/members"}
             icon={Target}
             label="目標ロールの設定"
             value={`${viewModel.kpis.targetSet}/${viewModel.memberCount}名`}

@@ -48,6 +48,10 @@ test.describe("UI check", () => {
     await capture(page, "ADMIN", "skills");
     await page.goto("/roles");
     await capture(page, "ADMIN", "roles");
+    await page.getByRole("button", { name: /の編集を開く$/ }).first().click();
+    await capture(page, "ADMIN", "role-detail");
+    await page.getByRole("heading", { name: "達成状況" }).scrollIntoViewIfNeeded();
+    await page.screenshot({ path: "test-results/ui-check/ADMIN-role-achievement.png" });
   });
   test("MANAGER", async ({ page }) => {
     test.skip(!enabled("MANAGER"));

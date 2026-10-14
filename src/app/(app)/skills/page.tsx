@@ -23,7 +23,7 @@ export default async function SkillsPage() {
       />
 
       <Card>
-        <CardContent>
+        <CardContent className="pt-5">
           <SkillSearchTable
             initialSkills={skills}
             categories={categories}

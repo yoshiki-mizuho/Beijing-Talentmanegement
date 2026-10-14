@@ -2,7 +2,7 @@
 
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import { ChevronDown, ChevronRight, MoreHorizontal, Search, SearchX } from "lucide-react";
+import { ChevronDown, ChevronRight, MoreHorizontal, Search, SearchX, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -202,8 +202,21 @@ function SkillSearchTableInner({
             value={filters.q}
             onChange={(event) => setFilters((current) => ({ ...current, q: event.target.value }))}
             placeholder="スキル名を検索"
-            className="rounded-full pl-9"
+            className="rounded-full pl-9 pr-10"
           />
+          {filters.q ? (
+            <button
+              type="button"
+              aria-label="検索をクリア"
+              className="absolute right-1 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-[var(--muted-foreground)] hover:bg-[var(--surface-subtle)] hover:text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+              onClick={() => {
+                setFilters((current) => ({ ...current, q: "" }));
+                document.querySelector<HTMLInputElement>("#skill-search-q")?.focus();
+              }}
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          ) : null}
         </div>
         <div className="flex max-w-full flex-wrap gap-1" aria-label="カテゴリ">
           {[{ id: "", name: "すべて" }, ...categories].map((category) => (

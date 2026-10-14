@@ -9,10 +9,16 @@ import { listRoles } from "@/modules/roles/application/role-service";
 import { Card, CardContent } from "@/shared/ui/card";
 import { managerOrAdmin, requirePageRoles } from "@/server/auth/authorization";
 import { getMemberScope } from "@/modules/members/application/member-scope";
+import { parseTargetRoleFilter } from "@/modules/members/presentation/target-role-filter";
 
 export const dynamic = "force-dynamic";
 
-export default async function MembersPage() {
+export default async function MembersPage({
+  searchParams
+}: {
+  searchParams: Promise<{ targetRole?: string | string[] }>;
+}) {
+  const { targetRole } = await searchParams;
   const session = await requirePageRoles(managerOrAdmin);
   const canDeactivateMembers = session.user.role === "ADMIN";
   const canEditGrowthSettings = session.user.role === "ADMIN";
@@ -82,7 +88,7 @@ export default async function MembersPage() {
   return (
     <div className="space-y-6">
       <Card>
-        <CardContent>
+        <CardContent className="pt-5">
           <MemberSearchTable
             initialMembers={memberRows}
             departments={departments}
@@ -94,6 +100,7 @@ export default async function MembersPage() {
             canEditGrowthSettings={canEditGrowthSettings}
             viewerMemberId={session.user.memberId}
             scopeName={scope.name}
+            initialTargetRoleFilter={parseTargetRoleFilter(targetRole)}
           />
         </CardContent>
       </Card>
