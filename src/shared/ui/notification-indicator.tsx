@@ -5,7 +5,6 @@ import { Bell } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
 
 import {
   confirmNotificationAction,
@@ -17,6 +16,7 @@ import type { AppRole } from "@/shared/auth/app-access";
 import { ActionForm } from "@/shared/ui/action-form";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { SubmitButton } from "@/shared/ui/submit-button";
+import { useDismissibleDetails } from "@/shared/ui/use-dismissible-details";
 
 const MAX_VISIBLE_UNREAD_COUNT = 99;
 
@@ -45,7 +45,7 @@ export function NotificationIndicator({
 }) {
   const normalizedCount = Math.max(0, Math.floor(unreadCount));
   const accessibleLabel = getNotificationAccessibleLabel(normalizedCount);
-  const detailsRef = useDismissibleNotificationDetails();
+  const detailsRef = useDismissibleDetails();
 
   return (
     <details ref={detailsRef} className="group relative">
@@ -140,41 +140,4 @@ function NotificationPopoverItem({
       </SubmitButton>
     </ActionForm>
   );
-}
-
-function useDismissibleNotificationDetails() {
-  const detailsRef = useRef<HTMLDetailsElement>(null);
-
-  useEffect(() => {
-    function close(returnFocus: boolean) {
-      const details = detailsRef.current;
-      if (!details?.open) return;
-      details.open = false;
-      if (returnFocus) details.querySelector("summary")?.focus();
-    }
-
-    function handlePointerDown(event: PointerEvent) {
-      if (!detailsRef.current?.contains(event.target as Node)) close(false);
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") close(true);
-    }
-
-    function handleClick(event: MouseEvent) {
-      if ((event.target as Element | null)?.closest("a")) close(false);
-    }
-
-    const details = detailsRef.current;
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-    details?.addEventListener("click", handleClick);
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-      details?.removeEventListener("click", handleClick);
-    };
-  }, []);
-
-  return detailsRef;
 }
