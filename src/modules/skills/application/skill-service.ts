@@ -53,3 +53,7 @@ export function updateSkill(id: string, input: unknown) {
 export function deactivateSkill(id: string) {
   return skillRepository.deactivateSkill(id);
 }
+
+export function deleteSkill(id: string) {
+  return skillRepository.deleteSkill(id);
+}

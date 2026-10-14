@@ -6,6 +6,7 @@ import {
   createSkill,
   createSkillCategory,
   deleteSkillCategory,
+  deleteSkill,
   deactivateSkill,
   updateSkillCategory,
   updateSkill
@@ -82,4 +83,14 @@ export async function deactivateSkillAction(formData: FormData): Promise<ActionR
     revalidatePath("/members");
     revalidatePath("/roles");
   }, "スキルを無効化しました。");
+}
+
+export async function deleteSkillAction(formData: FormData): Promise<ActionResult> {
+  return runAction(async () => {
+    await requireRoles(adminOnly);
+    await deleteSkill(getString(formData, "id"));
+    revalidatePath("/skills");
+    revalidatePath("/members");
+    revalidatePath("/roles");
+  }, "スキルを削除しました。");
 }

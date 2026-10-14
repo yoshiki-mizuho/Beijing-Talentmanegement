@@ -7,6 +7,7 @@ import { useState } from "react";
 import {
   createRoleAction,
   deactivateRoleAction,
+  deleteRoleAction,
   removeRoleRequirementAction,
   setRoleRequirementAction,
   updateRoleAction
@@ -226,6 +227,10 @@ export function RoleManagement({
             setSelectedRoleId(null);
             refresh();
           }}
+          onDelete={() => {
+            setSelectedRoleId(null);
+            refresh();
+          }}
         />
       ) : null}
     </div>
@@ -238,7 +243,8 @@ function RoleDetailDialog({
   canManage,
   onClose,
   onRefresh,
-  onDeactivate
+  onDeactivate,
+  onDelete
 }: {
   role: RoleItem;
   skills: SkillOption[];
@@ -246,6 +252,7 @@ function RoleDetailDialog({
   onClose: () => void;
   onRefresh: () => void;
   onDeactivate: () => void;
+  onDelete: () => void;
 }) {
   const existingSkillIds = new Set(role.requirements.map((requirement) => requirement.skillId));
   const availableSkills = skills.filter((skill) => !existingSkillIds.has(skill.id));
@@ -300,22 +307,39 @@ function RoleDetailDialog({
                 <SubmitButton pendingLabel="保存中…">基本情報を保存</SubmitButton>
               </div>
             </ActionForm>
-            <ActionForm action={deactivateRoleAction} onSuccess={onDeactivate}>
-              <input type="hidden" name="id" value={role.id} />
-              <ConfirmSubmitButton
-                pendingLabel="無効化中…"
-                variant="destructive"
-                disabled={!role.isActive}
-                confirm={{
-                  title: "ロールを無効化しますか",
-                  description: `「${role.name}」を無効化します。設定済みの要件は保持されます。`,
-                  confirmLabel: "無効化する",
-                  destructive: true
-                }}
-              >
-                ロールを無効化
-              </ConfirmSubmitButton>
-            </ActionForm>
+            <div className="flex flex-wrap gap-3">
+              <ActionForm action={deactivateRoleAction} onSuccess={onDeactivate}>
+                <input type="hidden" name="id" value={role.id} />
+                <ConfirmSubmitButton
+                  pendingLabel="無効化中…"
+                  variant="destructive"
+                  disabled={!role.isActive}
+                  confirm={{
+                    title: "ロールを無効化しますか",
+                    description: `「${role.name}」を無効化します。設定済みの要件は保持されます。`,
+                    confirmLabel: "無効化する",
+                    destructive: true
+                  }}
+                >
+                  ロールを無効化
+                </ConfirmSubmitButton>
+              </ActionForm>
+              <ActionForm action={deleteRoleAction} onSuccess={onDelete}>
+                <input type="hidden" name="id" value={role.id} />
+                <ConfirmSubmitButton
+                  pendingLabel="削除中…"
+                  variant="destructive"
+                  confirm={{
+                    title: "ロールを削除しますか",
+                    description: `「${role.name}」を削除します。必要スキルの設定も削除されます。${role.targetMemberCount > 0 ? `このロールを目標にしている ${role.targetMemberCount} 名は目標ロールが未設定になります。` : ""}この操作は取り消せません。`,
+                    confirmLabel: "削除する",
+                    destructive: true
+                  }}
+                >
+                  ロールを削除
+                </ConfirmSubmitButton>
+              </ActionForm>
+            </div>
           </section>
         ) : null}
 

@@ -3,6 +3,7 @@ import type {
   SkillCategoryInput,
   SkillInput
 } from "@/modules/skills/domain/skill-schema";
+import type { Prisma } from "@prisma/client";
 import { generateNextSkillCodeFromExistingCodes } from "@/modules/skills/domain/skill-code";
 import {
   SkillCategoryNotFoundError,
@@ -10,6 +11,10 @@ import {
   SkillNameConflictError
 } from "@/modules/skills/domain/skill-errors";
 import type { SkillSearchInput } from "@/modules/skills/domain/skill-search";
+import {
+  getSkillDeletionState,
+  type SkillUsage
+} from "@/modules/skills/domain/skill-usage";
 import { prisma } from "@/server/db/prisma";
 import { UserFacingError } from "@/shared/lib/user-facing-error";
 
@@ -76,7 +81,7 @@ export async function deleteSkillCategory(id: string) {
 }
 
 export async function listSkills(input?: SkillSearchInput) {
-  return prisma.skill.findMany({
+  const skills = await prisma.skill.findMany({
     where: {
       ...(input?.q
         ? {
@@ -100,12 +105,42 @@ export async function listSkills(input?: SkillSearchInput) {
       _count: {
         select: {
           memberSkills: true,
+          selfAssessments: true,
+          skillLevelChanges: true,
+          cheers: true,
           roleRequirements: true
         }
       }
     },
     orderBy: [{ category: { displayOrder: "asc" } }, { name: "asc" }]
   });
+
+  return skills.map((skill) => ({
+    ...skill,
+    ...getSkillDeletionState({
+      memberSkills: skill._count.memberSkills,
+      selfAssessments: skill._count.selfAssessments,
+      skillLevelChanges: skill._count.skillLevelChanges,
+      cheers: skill._count.cheers,
+      roleRequirements: skill._count.roleRequirements
+    })
+  }));
+}
+
+async function countSkillUsage(
+  client: Prisma.TransactionClient,
+  skillId: string
+): Promise<SkillUsage> {
+  const [memberSkills, selfAssessments, skillLevelChanges, cheers, roleRequirements] =
+    await Promise.all([
+      client.memberSkill.count({ where: { skillId } }),
+      client.skillSelfAssessment.count({ where: { skillId } }),
+      client.skillLevelChange.count({ where: { skillId } }),
+      client.cheer.count({ where: { targetSkillId: skillId } }),
+      client.roleRequirement.count({ where: { skillId } })
+    ]);
+
+  return { memberSkills, selfAssessments, skillLevelChanges, cheers, roleRequirements };
 }
 
 async function generateNextSkillCode() {
@@ -183,5 +218,17 @@ export async function deactivateSkill(id: string) {
   return prisma.skill.update({
     where: { id },
     data: { isActive: false }
+  });
+}
+
+export async function deleteSkill(id: string) {
+  return prisma.$transaction(async (transaction) => {
+    const deletionState = getSkillDeletionState(await countSkillUsage(transaction, id));
+
+    if (!deletionState.isDeletable) {
+      throw new UserFacingError(deletionState.reason ?? "使用中のスキルは削除できません。");
+    }
+
+    return transaction.skill.delete({ where: { id } });
   });
 }
