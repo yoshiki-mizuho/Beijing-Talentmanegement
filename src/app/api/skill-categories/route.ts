@@ -23,6 +23,9 @@ export async function POST(request: NextRequest) {
     return auth.response;
   }
 
-  const category = await createSkillCategory(await request.json());
+  const category = await createSkillCategory(
+    await request.json(),
+    auth.session.user.memberId
+  );
   return NextResponse.json(category, { status: 201 });
 }

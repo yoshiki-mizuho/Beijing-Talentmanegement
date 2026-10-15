@@ -26,19 +26,23 @@ export function listActiveSkillsForSkillSheet() {
   return skillRepository.listActiveSkillsForSkillSheet();
 }
 
-export function createSkillCategory(input: unknown) {
-  return skillRepository.createSkillCategory(skillCategoryInputSchema.parse(input));
-}
-
-export function updateSkillCategory(id: string, input: unknown) {
-  return skillRepository.updateSkillCategory(
-    id,
-    skillCategoryInputSchema.parse(input)
+export function createSkillCategory(input: unknown, actorMemberId: string | null) {
+  return skillRepository.createSkillCategory(
+    skillCategoryInputSchema.parse(input),
+    actorMemberId
   );
 }
 
-export function deleteSkillCategory(id: string) {
-  return skillRepository.deleteSkillCategory(id);
+export function updateSkillCategory(id: string, input: unknown, actorMemberId: string | null) {
+  return skillRepository.updateSkillCategory(
+    id,
+    skillCategoryInputSchema.parse(input),
+    actorMemberId
+  );
+}
+
+export function deleteSkillCategory(id: string, actorMemberId: string | null) {
+  return skillRepository.deleteSkillCategory(id, actorMemberId);
 }
 
 export function listSkills(input?: SkillSearchInput) {
@@ -47,30 +51,32 @@ export function listSkills(input?: SkillSearchInput) {
   );
 }
 
-export function createSkill(input: unknown) {
-  return skillRepository.createSkill(createSkillInputSchema.parse(input));
+export function createSkill(input: unknown, actorMemberId: string | null) {
+  return skillRepository.createSkill(createSkillInputSchema.parse(input), actorMemberId);
 }
 
-export function updateSkill(id: string, input: unknown) {
-  return skillRepository.updateSkill(id, skillInputSchema.parse(input));
+export function updateSkill(id: string, input: unknown, actorMemberId: string | null) {
+  return skillRepository.updateSkill(id, skillInputSchema.parse(input), actorMemberId);
 }
 
 export function updateSkillWithLevelGuides(
   id: string,
   input: unknown,
-  levelGuides: unknown
+  levelGuides: unknown,
+  actorMemberId: string | null
 ) {
   return skillRepository.updateSkillWithLevelGuides(
     id,
     skillInputSchema.parse(input),
-    skillLevelGuidesInputSchema.parse(levelGuides)
+    skillLevelGuidesInputSchema.parse(levelGuides),
+    actorMemberId
   );
 }
 
-export function deactivateSkill(id: string) {
-  return skillRepository.deactivateSkill(id);
+export function deactivateSkill(id: string, actorMemberId: string | null) {
+  return skillRepository.deactivateSkill(id, actorMemberId);
 }
 
-export function deleteSkill(id: string) {
-  return skillRepository.deleteSkill(id);
+export function deleteSkill(id: string, actorMemberId: string | null) {
+  return skillRepository.deleteSkill(id, actorMemberId);
 }

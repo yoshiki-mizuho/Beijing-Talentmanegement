@@ -16,5 +16,7 @@ export async function PUT(request: NextRequest, context: RoleRequirementContext)
 
   const { roleId } = await context.params;
   const body = await request.json();
-  return NextResponse.json(await setRoleRequirement({ ...body, roleId }));
+  return NextResponse.json(
+    await setRoleRequirement({ ...body, roleId }, auth.session.user.memberId)
+  );
 }

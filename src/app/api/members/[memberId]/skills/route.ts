@@ -25,5 +25,5 @@ export async function PUT(request: NextRequest, context: MemberSkillContext) {
     ...body,
     memberId,
     changedByMemberId: auth.session.user.memberId
-  }));
+  }, auth.session.user.memberId));
 }

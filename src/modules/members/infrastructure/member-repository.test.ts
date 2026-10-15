@@ -4,6 +4,7 @@ import { SkillSelfAssessmentStatus } from "@prisma/client";
 const mocks = vi.hoisted(() => ({
   transaction: vi.fn(),
   memberFindUniqueOrThrow: vi.fn(),
+  memberUpdate: vi.fn(),
   skillFindMany: vi.fn(),
   assessmentFindMany: vi.fn(),
   assessmentFindUnique: vi.fn(),
@@ -14,7 +15,9 @@ const mocks = vi.hoisted(() => ({
   notificationCreate: vi.fn(),
   memberSkillFindUnique: vi.fn(),
   memberSkillUpsert: vi.fn(),
-  skillLevelChangeCreate: vi.fn()
+  skillLevelChangeCreate: vi.fn(),
+  auditLogCreate: vi.fn(),
+  auditLogCreateMany: vi.fn()
 }));
 
 vi.mock("@/server/db/prisma", () => ({
@@ -26,11 +29,15 @@ vi.mock("@/server/db/prisma", () => ({
 import {
   approveSkillAssessments,
   buildMemberSearchWhere,
-  createSkillAssessments
+  createSkillAssessments,
+  updateMember
 } from "@/modules/members/infrastructure/member-repository";
 
 const transactionClient = {
-  member: { findUniqueOrThrow: mocks.memberFindUniqueOrThrow },
+  member: {
+    findUniqueOrThrow: mocks.memberFindUniqueOrThrow,
+    update: mocks.memberUpdate
+  },
   skill: { findMany: mocks.skillFindMany },
   skillSelfAssessment: {
     findMany: mocks.assessmentFindMany,
@@ -47,8 +54,79 @@ const transactionClient = {
     findUnique: mocks.memberSkillFindUnique,
     upsert: mocks.memberSkillUpsert
   },
-  skillLevelChange: { create: mocks.skillLevelChangeCreate }
+  skillLevelChange: { create: mocks.skillLevelChangeCreate },
+  auditLog: {
+    create: mocks.auditLogCreate,
+    createMany: mocks.auditLogCreateMany
+  }
 };
+
+describe("updateMember audit log", () => {
+  const before = {
+    id: "member-1",
+    employeeNo: "E001",
+    name: "変更前",
+    email: "member@example.com",
+    departmentId: "department-1",
+    jobTitle: "Engineer",
+    profile: "変更前プロフィール",
+    status: "ACTIVE"
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.transaction.mockImplementation(async (callback) => callback(transactionClient));
+    mocks.memberFindUniqueOrThrow.mockResolvedValue(before);
+    mocks.auditLogCreate.mockResolvedValue({});
+  });
+
+  it("records only changed fields and redacts the profile value", async () => {
+    mocks.memberUpdate.mockResolvedValue({
+      ...before,
+      name: "変更後",
+      profile: "変更後プロフィール"
+    });
+
+    await updateMember("member-1", {
+      employeeNo: "E001",
+      name: "変更後",
+      email: "member@example.com",
+      departmentId: "department-1",
+      jobTitle: "Engineer",
+      profile: "変更後プロフィール",
+      status: "ACTIVE"
+    }, "actor-1");
+
+    expect(mocks.auditLogCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        actorMemberId: "actor-1",
+        action: "member.update",
+        targetType: "Member",
+        targetId: "member-1",
+        before: { name: "変更前" },
+        after: { name: "変更後" }
+      })
+    });
+    expect(mocks.auditLogCreate.mock.calls[0][0].data.before).not.toHaveProperty("profile");
+    expect(mocks.auditLogCreate.mock.calls[0][0].data.after).not.toHaveProperty("profile");
+  });
+
+  it("does not record an audit log when nothing changed", async () => {
+    mocks.memberUpdate.mockResolvedValue(before);
+
+    await updateMember("member-1", {
+      employeeNo: "E001",
+      name: "変更前",
+      email: "member@example.com",
+      departmentId: "department-1",
+      jobTitle: "Engineer",
+      profile: "変更前プロフィール",
+      status: "ACTIVE"
+    }, "actor-1");
+
+    expect(mocks.auditLogCreate).not.toHaveBeenCalled();
+  });
+});
 
 describe("createSkillAssessments transaction boundary", () => {
   beforeEach(() => {
@@ -82,7 +160,7 @@ describe("createSkillAssessments transaction boundary", () => {
         { skillId: "skill-1", requestedLevel: 3 },
         { skillId: "skill-2", requestedLevel: 4 }
       ]
-    });
+    }, null);
 
     expect(mocks.transaction).toHaveBeenCalledTimes(1);
     expect(mocks.assessmentCreate).toHaveBeenCalledTimes(2);
@@ -111,7 +189,7 @@ describe("createSkillAssessments transaction boundary", () => {
           { skillId: "skill-1", requestedLevel: 3 },
           { skillId: "skill-2", requestedLevel: 4 }
         ]
-      })
+      }, null)
     ).rejects.toThrow("notification failed");
 
     expect(mocks.transaction).toHaveBeenCalledTimes(1);
@@ -142,6 +220,7 @@ describe("approveSkillAssessments transaction boundary", () => {
       Promise.resolve({ id, ...data })
     );
     mocks.notificationCreate.mockResolvedValue({});
+    mocks.auditLogCreate.mockResolvedValue({});
   });
 
   it("approves every selected assessment through one transaction", async () => {
@@ -156,6 +235,15 @@ describe("approveSkillAssessments transaction boundary", () => {
     expect(mocks.memberSkillUpsert).toHaveBeenCalledTimes(2);
     expect(mocks.skillLevelChangeCreate).toHaveBeenCalledTimes(2);
     expect(mocks.notificationCreate).toHaveBeenCalledTimes(2);
+    expect(mocks.auditLogCreate).toHaveBeenCalledTimes(2);
+    expect(mocks.auditLogCreate).toHaveBeenNthCalledWith(
+      1,
+      { data: expect.objectContaining({ targetId: "assessment-1" }) }
+    );
+    expect(mocks.auditLogCreate).toHaveBeenNthCalledWith(
+      2,
+      { data: expect.objectContaining({ targetId: "assessment-2" }) }
+    );
     expect(result).toHaveLength(2);
   });
 

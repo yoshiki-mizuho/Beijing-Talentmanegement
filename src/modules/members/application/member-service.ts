@@ -33,24 +33,24 @@ export function listMembers(input?: MemberSearchInput, memberIds?: string[]) {
   );
 }
 
-export function createMember(input: unknown) {
-  return memberRepository.createMember(memberInputSchema.parse(input));
+export function createMember(input: unknown, actorMemberId: string | null) {
+  return memberRepository.createMember(memberInputSchema.parse(input), actorMemberId);
 }
 
-export function updateMember(id: string, input: unknown) {
-  return memberRepository.updateMember(id, memberInputSchema.parse(input));
+export function updateMember(id: string, input: unknown, actorMemberId: string | null) {
+  return memberRepository.updateMember(id, memberInputSchema.parse(input), actorMemberId);
 }
 
-export function deactivateMember(id: string) {
-  return memberRepository.deactivateMember(id);
+export function deactivateMember(id: string, actorMemberId: string | null) {
+  return memberRepository.deactivateMember(id, actorMemberId);
 }
 
-export function setMemberSkillLevel(input: unknown) {
-  return memberRepository.upsertMemberSkill(memberSkillInputSchema.parse(input));
+export function setMemberSkillLevel(input: unknown, actorMemberId: string | null) {
+  return memberRepository.upsertMemberSkill(memberSkillInputSchema.parse(input), actorMemberId);
 }
 
-export function removeMemberSkill(memberId: string, skillId: string) {
-  return memberRepository.removeMemberSkill(memberId, skillId);
+export function removeMemberSkill(memberId: string, skillId: string, actorMemberId: string | null) {
+  return memberRepository.removeMemberSkill(memberId, skillId, actorMemberId);
 }
 
 export function listMemberSkillAssessments(memberId: string) {
@@ -93,13 +93,16 @@ export function hasMemberTargetRole(memberId: string) {
   return memberRepository.hasMemberTargetRole(memberId);
 }
 
-export function createSkillAssessment(input: unknown) {
-  return memberRepository.createSkillAssessment(skillAssessmentInputSchema.parse(input));
+export function createSkillAssessment(input: unknown, actorMemberId: string | null) {
+  return memberRepository.createSkillAssessment(
+    skillAssessmentInputSchema.parse(input),
+    actorMemberId
+  );
 }
 
-export function createSkillAssessments(input: unknown) {
+export function createSkillAssessments(input: unknown, actorMemberId: string | null) {
   return memberRepository.createSkillAssessments(
-    skillAssessmentBatchInputSchema.parse(input)
+    skillAssessmentBatchInputSchema.parse(input), actorMemberId
   );
 }
 export function reviewSkillAssessment(input: unknown) {
@@ -114,14 +117,14 @@ export function approveSkillAssessments(input: unknown) {
   );
 }
 
-export function updateMemberManager(input: unknown) {
+export function updateMemberManager(input: unknown, actorMemberId: string | null) {
   return memberRepository.updateMemberManager(
-    memberManagerInputSchema.parse(input)
+    memberManagerInputSchema.parse(input), actorMemberId
   );
 }
 
-export function updateMemberTargetRole(input: unknown) {
+export function updateMemberTargetRole(input: unknown, actorMemberId: string | null) {
   return memberRepository.updateMemberTargetRole(
-    memberTargetRoleInputSchema.parse(input)
+    memberTargetRoleInputSchema.parse(input), actorMemberId
   );
 }

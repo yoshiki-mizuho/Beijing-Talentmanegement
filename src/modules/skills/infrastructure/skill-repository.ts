@@ -17,9 +17,32 @@ import {
   type SkillUsage
 } from "@/modules/skills/domain/skill-usage";
 import { prisma } from "@/server/db/prisma";
+import { AUDIT_ACTION, AUDIT_TARGET_TYPE } from "@/modules/audit/domain/audit-action";
+import { diffForAudit } from "@/modules/audit/domain/audit-diff";
+import { recordAuditLog } from "@/modules/audit/infrastructure/audit-repository";
 import { UserFacingError } from "@/shared/lib/user-facing-error";
 
 const SKILL_CODE_PREFIX = "SKILL-";
+
+function skillAuditFields(skill: {
+  code: string;
+  name: string;
+  categoryId: string;
+  description: string | null;
+  isActive: boolean;
+}) {
+  return {
+    code: skill.code,
+    name: skill.name,
+    categoryId: skill.categoryId,
+    description: skill.description,
+    isActive: skill.isActive
+  };
+}
+
+function categoryAuditFields(category: { name: string; displayOrder: number }) {
+  return { name: category.name, displayOrder: category.displayOrder };
+}
 
 export async function listSkillCategories() {
   return prisma.skillCategory.findMany({
@@ -74,28 +97,69 @@ export async function listActiveSkillsForSkillSheet() {
   });
 }
 
-export async function createSkillCategory(input: SkillCategoryInput) {
-  return prisma.skillCategory.create({ data: input });
-}
-
-export async function updateSkillCategory(id: string, input: SkillCategoryInput) {
-  return prisma.skillCategory.update({
-    where: { id },
-    data: input
+export async function createSkillCategory(
+  input: SkillCategoryInput,
+  actorMemberId: string | null
+) {
+  return prisma.$transaction(async (tx) => {
+    const item = await tx.skillCategory.create({ data: input });
+    await recordAuditLog(tx, {
+      actorMemberId,
+      action: AUDIT_ACTION.SKILL_CATEGORY_CREATE,
+      targetType: AUDIT_TARGET_TYPE.SKILL_CATEGORY,
+      targetId: item.id,
+      after: categoryAuditFields(item)
+    });
+    return item;
   });
 }
 
-export async function deleteSkillCategory(id: string) {
-  const skillCount = await prisma.skill.count({
-    where: { categoryId: id }
+export async function updateSkillCategory(
+  id: string,
+  input: SkillCategoryInput,
+  actorMemberId: string | null
+) {
+  return prisma.$transaction(async (tx) => {
+    const before = await tx.skillCategory.findUniqueOrThrow({ where: { id } });
+    const item = await tx.skillCategory.update({ where: { id }, data: input });
+    const diff = diffForAudit(categoryAuditFields(before), categoryAuditFields(item));
+    if (diff) {
+      await recordAuditLog(tx, {
+        actorMemberId,
+        action: AUDIT_ACTION.SKILL_CATEGORY_UPDATE,
+        targetType: AUDIT_TARGET_TYPE.SKILL_CATEGORY,
+        targetId: id,
+        ...diff
+      });
+    }
+    return item;
   });
+}
 
-  if (skillCount > 0) {
-    throw new UserFacingError("スキルが残っているカテゴリは削除できません。");
-  }
+export async function deleteSkillCategory(
+  id: string,
+  actorMemberId: string | null
+) {
+  return prisma.$transaction(async (tx) => {
+    const skillCount = await tx.skill.count({
+      where: { categoryId: id }
+    });
 
-  return prisma.skillCategory.delete({
-    where: { id }
+    if (skillCount > 0) {
+      throw new UserFacingError("スキルが残っているカテゴリは削除できません。");
+    }
+
+    const item = await tx.skillCategory.delete({
+      where: { id }
+    });
+    await recordAuditLog(tx, {
+      actorMemberId,
+      action: AUDIT_ACTION.SKILL_CATEGORY_DELETE,
+      targetType: AUDIT_TARGET_TYPE.SKILL_CATEGORY,
+      targetId: id,
+      before: categoryAuditFields(item)
+    });
+    return item;
   });
 }
 
@@ -166,8 +230,8 @@ async function countSkillUsage(
   return { memberSkills, selfAssessments, skillLevelChanges, cheers, roleRequirements };
 }
 
-async function generateNextSkillCode() {
-  const skills = await prisma.skill.findMany({
+async function generateNextSkillCode(client: Prisma.TransactionClient) {
+  const skills = await client.skill.findMany({
     where: {
       code: {
         startsWith: SKILL_CODE_PREFIX
@@ -199,16 +263,35 @@ function hasPrismaCode(error: unknown, code: string) {
   );
 }
 
-export async function createSkill(input: CreateSkillInput) {
+export async function createSkill(
+  input: CreateSkillInput,
+  actorMemberId: string | null
+) {
   const maximumAttempts = 3;
 
   for (let attempt = 0; attempt < maximumAttempts; attempt += 1) {
     try {
-      return await prisma.skill.create({
-        data: {
-          ...input,
-          code: await generateNextSkillCode()
-        }
+      return await prisma.$transaction(async (tx) => {
+        const skill = await tx.skill.create({
+          data: {
+            ...input,
+            code: await generateNextSkillCode(tx)
+          }
+        });
+        await recordAuditLog(tx, {
+          actorMemberId,
+          action: AUDIT_ACTION.SKILL_CREATE,
+          targetType: AUDIT_TARGET_TYPE.SKILL,
+          targetId: skill.id,
+          after: {
+            code: skill.code,
+            name: skill.name,
+            categoryId: skill.categoryId,
+            description: skill.description,
+            isActive: skill.isActive
+          }
+        });
+        return skill;
       });
     } catch (error) {
       if (hasPrismaCode(error, "P2002") && hasConstraintTarget(error, "code")) {
@@ -230,19 +313,39 @@ export async function createSkill(input: CreateSkillInput) {
   throw new SkillCodeGenerationError();
 }
 
-export async function updateSkill(id: string, input: SkillInput) {
-  return prisma.skill.update({
-    where: { id },
-    data: input
+export async function updateSkill(
+  id: string,
+  input: SkillInput,
+  actorMemberId: string | null
+) {
+  return prisma.$transaction(async (tx) => {
+    const before = await tx.skill.findUniqueOrThrow({ where: { id } });
+    const item = await tx.skill.update({ where: { id }, data: input });
+    const diff = diffForAudit(skillAuditFields(before), skillAuditFields(item));
+    if (diff) {
+      await recordAuditLog(tx, {
+        actorMemberId,
+        action: AUDIT_ACTION.SKILL_UPDATE,
+        targetType: AUDIT_TARGET_TYPE.SKILL,
+        targetId: id,
+        ...diff
+      });
+    }
+    return item;
   });
 }
 
 export async function updateSkillWithLevelGuides(
   id: string,
   input: SkillInput,
-  levelGuides: SkillLevelGuidesInput
+  levelGuides: SkillLevelGuidesInput,
+  actorMemberId: string | null
 ) {
   return prisma.$transaction(async (transaction) => {
+    const before = await transaction.skill.findUniqueOrThrow({
+      where: { id },
+      include: { levelGuides: true }
+    });
     const skill = await transaction.skill.update({ where: { id }, data: input });
 
     for (const guide of levelGuides.guides) {
@@ -259,18 +362,59 @@ export async function updateSkillWithLevelGuides(
       }
     }
 
+    const skillDiff = diffForAudit(skillAuditFields(before), skillAuditFields(skill));
+    if (skillDiff) {
+      await recordAuditLog(transaction, {
+        actorMemberId,
+        action: AUDIT_ACTION.SKILL_UPDATE,
+        targetType: AUDIT_TARGET_TYPE.SKILL,
+        targetId: id,
+        ...skillDiff
+      });
+    }
+    const afterGuides = await transaction.skillLevelGuide.findMany({ where: { skillId: id } });
+    const guideDiff = diffForAudit(
+      Object.fromEntries(before.levelGuides.map((guide) => [guide.level, guide.description])),
+      Object.fromEntries(afterGuides.map((guide) => [guide.level, guide.description]))
+    );
+    if (guideDiff) {
+      await recordAuditLog(transaction, {
+        actorMemberId,
+        action: AUDIT_ACTION.SKILL_LEVEL_GUIDES_UPDATE,
+        targetType: AUDIT_TARGET_TYPE.SKILL,
+        targetId: id,
+        ...guideDiff
+      });
+    }
     return skill;
   });
 }
 
-export async function deactivateSkill(id: string) {
-  return prisma.skill.update({
-    where: { id },
-    data: { isActive: false }
+export async function deactivateSkill(id: string, actorMemberId: string | null) {
+  return prisma.$transaction(async (tx) => {
+    const before = await tx.skill.findUniqueOrThrow({ where: { id } });
+    const item = await tx.skill.update({
+      where: { id },
+      data: { isActive: false }
+    });
+    const diff = diffForAudit(
+      { isActive: before.isActive },
+      { isActive: item.isActive }
+    );
+    if (diff) {
+      await recordAuditLog(tx, {
+        actorMemberId,
+        action: AUDIT_ACTION.SKILL_DEACTIVATE,
+        targetType: AUDIT_TARGET_TYPE.SKILL,
+        targetId: id,
+        ...diff
+      });
+    }
+    return item;
   });
 }
 
-export async function deleteSkill(id: string) {
+export async function deleteSkill(id: string, actorMemberId: string | null) {
   return prisma.$transaction(async (transaction) => {
     const deletionState = getSkillDeletionState(await countSkillUsage(transaction, id));
 
@@ -278,6 +422,14 @@ export async function deleteSkill(id: string) {
       throw new UserFacingError(deletionState.reason ?? "使用中のスキルは削除できません。");
     }
 
-    return transaction.skill.delete({ where: { id } });
+    const item = await transaction.skill.delete({ where: { id } });
+    await recordAuditLog(transaction, {
+      actorMemberId,
+      action: AUDIT_ACTION.SKILL_DELETE,
+      targetType: AUDIT_TARGET_TYPE.SKILL,
+      targetId: id,
+      before: skillAuditFields(item)
+    });
+    return item;
   });
 }

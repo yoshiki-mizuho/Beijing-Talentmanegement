@@ -23,6 +23,6 @@ export async function POST(request: NextRequest) {
     return auth.response;
   }
 
-  const role = await createRole(await request.json());
+  const role = await createRole(await request.json(), auth.session.user.memberId);
   return NextResponse.json(role, { status: 201 });
 }
