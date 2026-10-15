@@ -13,6 +13,8 @@ stages:
   - demo_db
 
 default:
+  # 社内のランナー（日報アプリと共用）で動かし、GitLab.com のクレジットを消費しない。
+  tags: [on-premises-runner]
   image: node:24-bookworm-slim
   cache:
     key:
@@ -110,6 +112,7 @@ sast:
 semgrep-sast:
   inherit:
     default: false
+  tags: [on-premises-runner]
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
 
