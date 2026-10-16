@@ -6,7 +6,7 @@ workflow:
     - when: never
 
 # 社内ランナー（日報アプリと共用、スペックは高くない）の負荷を抑えるため、
-# 検証は verify → e2e の2ジョブを順番に動かす（同時に動くのは1ジョブだけ）。
+# MR では verify の1ジョブだけを自動で動かす。e2e は手動。
 stages:
   - verify
   - e2e
@@ -37,7 +37,7 @@ variables:
 .mr_app_changes:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-      changes:
+      changes: &app_changes
         - src/**/*
         - prisma/**/*
         - e2e/**/*
@@ -73,10 +73,16 @@ verify:
     - npm exec prisma migrate deploy
     - npm run prisma:migrate:check
 
-# verify が成功したときだけ動く。ビルドもここで行う（build ジョブとの重複をなくした）。
+# 社内ランナーの負荷を抑えるため、e2e は必要なときだけ手動で動かす（MR の前に手元で全件流す）。
+# ビルドもここで行う（build ジョブとの重複をなくした）。
 e2e:
-  extends: [.mr_app_changes, .postgres_service]
+  extends: .postgres_service
   stage: e2e
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes: *app_changes
+      when: manual
+      allow_failure: true
   variables:
     DEMO_ADMIN_PASSWORD: "ci-admin-password-47"
     DEMO_MANAGER_PASSWORD: "ci-manager-password-58"
