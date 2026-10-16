@@ -48,6 +48,15 @@ test.describe("UI check", () => {
     await capture(page, "ADMIN", "skills");
     await page.goto("/roles");
     await capture(page, "ADMIN", "roles");
+    await page.goto("/audit-logs");
+    await capture(page, "ADMIN", "audit-logs");
+    const firstAuditLog = page.locator("main details").first();
+    if (await firstAuditLog.count()) {
+      // 行の中の対象へのリンクを押さないよう、時刻の部分を押して開く
+      await firstAuditLog.locator("summary time").click();
+      await capture(page, "ADMIN", "audit-logs-detail");
+    }
+    await page.goto("/roles");
     await page.getByRole("button", { name: /の編集を開く$/ }).first().click();
     await capture(page, "ADMIN", "role-detail");
     await page.getByRole("heading", { name: "達成状況" }).scrollIntoViewIfNeeded();
