@@ -9,7 +9,7 @@ test("管理者が6種類のCSVを出力して監査ログを確認できる", a
 }) => {
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
   try {
-    await admin.page.goto("/csv");
+    await admin.page.goto("/csv?tab=export");
     for (const name of [
       "部署",
       "メンバー",

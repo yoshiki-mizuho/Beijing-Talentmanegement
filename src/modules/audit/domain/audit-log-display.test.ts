@@ -219,6 +219,23 @@ describe("audit log display", () => {
     expect(buildAuditSummary(input)).toBe("42件");
   });
 
+  it("CSV 取り込みの文と要約を組み立てる", () => {
+    const input = {
+      action: "csv.import",
+      targetType: "Csv",
+      targetName: "（削除済み）",
+      before: null,
+      after: null,
+      metadata: { target: "departments", created: 12, updated: 3 },
+    };
+    expect(buildActionDescription(input)).toEqual({
+      prefix: "",
+      target: "部署",
+      suffix: " の CSV を取り込み",
+    });
+    expect(buildAuditSummary(input)).toBe("新規 12件・更新 3件");
+  });
+
   it("削除済み対象は記録時の名前を使い、複合対象はメンバー名とスキル名を使う", () => {
     const base = {
       targetId: "deleted-1",

@@ -27,6 +27,10 @@ export const AUDIT_ACTION = {
   ROLE_REQUIREMENT_REMOVE: "role.requirement.remove",
   AUDIT_LOG_EXPORT: "audit_log.export",
   CSV_EXPORT: "csv.export",
+  CSV_IMPORT: "csv.import",
+  CSV_IMPORT_FAILED: "csv.import.failed",
+  DEPARTMENT_CREATE: "department.create",
+  DEPARTMENT_UPDATE: "department.update",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTION)[keyof typeof AUDIT_ACTION];
@@ -40,6 +44,7 @@ export const AUDIT_TARGET_TYPE = {
   ROLE: "Role",
   AUDIT_LOG: "AuditLog",
   CSV: "Csv",
+  DEPARTMENT: "Department",
 } as const;
 
 export type AuditTargetType =

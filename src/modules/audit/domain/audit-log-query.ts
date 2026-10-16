@@ -140,7 +140,7 @@ export const operationLabels: Record<AuditOperationGroup, string> = {
 };
 
 export function targetGroup(type: string): AuditTargetGroup | null {
-  if (type === "Member" || type === "MemberSkill") return "member";
+  if (type === "Member" || type === "MemberSkill" || type === "Department") return "member";
   if (type === "Skill" || type === "SkillCategory") return "skill";
   if (type === "Role") return "role";
   if (type === "SkillSelfAssessment") return "assessment";

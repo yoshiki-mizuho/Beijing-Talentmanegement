@@ -3,6 +3,7 @@ import type { AuditLogQuery } from "../domain/audit-log-query";
 
 const db = vi.hoisted(() => ({
   member: { findMany: vi.fn() },
+  department: { findMany: vi.fn() },
   skill: { findMany: vi.fn() },
   skillCategory: { findMany: vi.fn() },
   role: { findMany: vi.fn() },
@@ -31,6 +32,7 @@ describe("buildAuditLogWhere", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     db.member.findMany.mockResolvedValue([]);
+    db.department.findMany.mockResolvedValue([]);
     db.skill.findMany.mockResolvedValue([]);
     db.skillCategory.findMany.mockResolvedValue([]);
     db.role.findMany.mockResolvedValue([]);
@@ -49,7 +51,7 @@ describe("buildAuditLogWhere", () => {
       query({ targets: ["member", "assessment"] }),
     );
     expect(where.targetType).toEqual({
-      in: ["Member", "MemberSkill", "SkillSelfAssessment"],
+      in: ["Member", "MemberSkill", "SkillSelfAssessment", "Department"],
     });
   });
 
@@ -76,6 +78,7 @@ describe("buildAuditLogWhere", () => {
 
   it("名称候補ID、metadata参照、削除前名称をOR条件にする", async () => {
     db.member.findMany.mockResolvedValue([{ id: "member-1" }]);
+    db.department.findMany.mockResolvedValue([{ id: "department-1" }]);
     db.skill.findMany.mockResolvedValue([{ id: "skill-1" }]);
     db.skillCategory.findMany.mockResolvedValue([{ id: "category-1" }]);
     db.role.findMany.mockResolvedValue([{ id: "role-1" }]);
@@ -88,6 +91,9 @@ describe("buildAuditLogWhere", () => {
     expect(db.skill.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ take: 100 }),
     );
+    expect(db.department.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ take: 100 }),
+    );
     expect(db.skillCategory.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ take: 100 }),
     );
@@ -97,7 +103,13 @@ describe("buildAuditLogWhere", () => {
     expect(where.OR).toEqual([
       {
         targetId: {
-          in: ["member-1", "skill-1", "category-1", "role-1"],
+          in: [
+            "member-1",
+            "department-1",
+            "skill-1",
+            "category-1",
+            "role-1",
+          ],
         },
       },
       { metadata: { path: ["memberId"], equals: "member-1" } },
