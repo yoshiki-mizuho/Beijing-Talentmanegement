@@ -1,14 +1,15 @@
 workflow:
-  # Run validation for Merge Requests and demo DB tasks only when explicitly started from the web UI.
+  # MR の検証と、Web から明示的に起動したデモ DB の作業だけでパイプラインを作る。
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_PIPELINE_SOURCE == "web" && $CI_COMMIT_BRANCH == "main" && $DEMO_DB_TASK'
     - when: never
 
+# 社内ランナー（日報アプリと共用、スペックは高くない）の負荷を抑えるため、
+# 検証は verify → e2e の2ジョブを順番に動かす（同時に動くのは1ジョブだけ）。
 stages:
-  - validate
-  - test
-  - build
+  - verify
+  - e2e
   - security
   - demo_db
 
@@ -16,14 +17,11 @@ default:
   # 社内のランナー（日報アプリと共用）で動かし、GitLab.com のクレジットを消費しない。
   tags: [on-premises-runner]
   image: node:24-bookworm-slim
-  cache:
-    key:
-      files:
-        - package-lock.json
-    paths:
-      - .npm/
+  # 同じ MR に続けて push したら、古いパイプラインは止める。
+  interruptible: true
   before_script:
-    - npm ci --cache .npm --prefer-offline
+    # npm のキャッシュはランナーのディスク（/cache）に置き、ジョブ間で使い回す。
+    - npm ci --cache /cache/talenthub/npm --prefer-offline
 
 variables:
   AST_ENABLE_MR_PIPELINES: "true"
@@ -32,26 +30,29 @@ variables:
   AUTH_URL: "http://localhost:3000"
   AUTH_TRUST_HOST: "true"
   NEXT_TELEMETRY_DISABLED: "1"
+  # Chromium もランナーのディスクに置き、毎回ダウンロードしない。
+  PLAYWRIGHT_BROWSERS_PATH: /cache/talenthub/ms-playwright
 
-.mr_only:
+# アプリに関わるファイルが変わった MR だけで動かす（ドキュメントだけの MR では動かさない）。
+.mr_app_changes:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - src/**/*
+        - prisma/**/*
+        - e2e/**/*
+        - ui-check/**/*
+        - scripts/**/*
+        - public/**/*
+        - package.json
+        - package-lock.json
+        - .npmrc
+        - "*.config.ts"
+        - "*.config.mjs"
+        - tsconfig.json
+        - .gitlab-ci.yml
 
-lint:
-  extends: .mr_only
-  stage: validate
-  script:
-    - npm run lint
-
-typecheck:
-  extends: .mr_only
-  stage: validate
-  script:
-    - npm run typecheck
-
-migration_check:
-  extends: .mr_only
-  stage: validate
+.postgres_service:
   services:
     - name: postgres:17-alpine
       alias: postgres
@@ -59,28 +60,23 @@ migration_check:
         POSTGRES_DB: talentmanagement
         POSTGRES_USER: talent
         POSTGRES_PASSWORD: talent_password
+
+# lint、typecheck、単体テスト、migration の確認を1ジョブにまとめ、npm ci を1回で済ませる。
+verify:
+  extends: [.mr_app_changes, .postgres_service]
+  stage: verify
   script:
     - npm run prisma:generate
+    - npm run lint
+    - npm run typecheck
+    - npm run test
     - npm exec prisma migrate deploy
     - npm run prisma:migrate:check
 
-test:
-  extends: .mr_only
-  stage: test
-  script:
-    - npm run prisma:generate
-    - npm run test
-
+# verify が成功したときだけ動く。ビルドもここで行う（build ジョブとの重複をなくした）。
 e2e:
-  extends: .mr_only
-  stage: test
-  services:
-    - name: postgres:17-alpine
-      alias: postgres
-      variables:
-        POSTGRES_DB: talentmanagement
-        POSTGRES_USER: talent
-        POSTGRES_PASSWORD: talent_password
+  extends: [.mr_app_changes, .postgres_service]
+  stage: e2e
   variables:
     DEMO_ADMIN_PASSWORD: "ci-admin-password-47"
     DEMO_MANAGER_PASSWORD: "ci-manager-password-58"
@@ -99,12 +95,6 @@ e2e:
       - test-results/
     expire_in: 7 days
 
-build:
-  extends: .mr_only
-  stage: build
-  script:
-    - npm run build
-
 sast:
   stage: security
 
@@ -113,11 +103,20 @@ semgrep-sast:
   inherit:
     default: false
   tags: [on-premises-runner]
+  interruptible: true
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - src/**/*
+        - prisma/**/*
+        - scripts/**/*
+        - package.json
+        - package-lock.json
 
 demo_db_migrate:
   stage: demo_db
+  # DB の作業は途中で止めない。
+  interruptible: false
   resource_group: demo_db
   rules:
     - if: '$CI_PIPELINE_SOURCE == "web" && $CI_COMMIT_BRANCH == "main" && $DEMO_DB_TASK =~ /^(migrate|migrate_and_seed)$/'
@@ -133,6 +132,7 @@ demo_db_migrate:
 
 demo_db_seed:
   stage: demo_db
+  interruptible: false
   resource_group: demo_db
   needs: [demo_db_migrate]
   rules:
