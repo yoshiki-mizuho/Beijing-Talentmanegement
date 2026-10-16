@@ -34,6 +34,6 @@ export async function POST(request: NextRequest) {
     return auth.response;
   }
 
-  const skill = await createSkill(await request.json());
+  const skill = await createSkill(await request.json(), auth.session.user.memberId);
   return NextResponse.json(skill, { status: 201 });
 }

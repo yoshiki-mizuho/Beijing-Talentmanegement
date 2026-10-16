@@ -13,28 +13,35 @@ export function listRoles() {
   return roleRepository.listRoles();
 }
 
-export function createRole(input: unknown) {
-  return roleRepository.createRole(roleInputSchema.parse(input));
+export function createRole(input: unknown, actorMemberId: string | null) {
+  return roleRepository.createRole(roleInputSchema.parse(input), actorMemberId);
 }
 
-export function updateRole(id: string, input: unknown) {
-  return roleRepository.updateRole(id, roleInputSchema.parse(input));
+export function updateRole(id: string, input: unknown, actorMemberId: string | null) {
+  return roleRepository.updateRole(id, roleInputSchema.parse(input), actorMemberId);
 }
 
-export function deactivateRole(id: string) {
-  return roleRepository.deactivateRole(id);
+export function deactivateRole(id: string, actorMemberId: string | null) {
+  return roleRepository.deactivateRole(id, actorMemberId);
 }
 
-export function deleteRole(id: string) {
-  return roleRepository.deleteRole(id);
+export function deleteRole(id: string, actorMemberId: string | null) {
+  return roleRepository.deleteRole(id, actorMemberId);
 }
 
-export function setRoleRequirement(input: unknown) {
-  return roleRepository.upsertRoleRequirement(roleRequirementInputSchema.parse(input));
+export function setRoleRequirement(input: unknown, actorMemberId: string | null) {
+  return roleRepository.upsertRoleRequirement(
+    roleRequirementInputSchema.parse(input),
+    actorMemberId
+  );
 }
 
-export function removeRoleRequirement(roleId: string, skillId: string) {
-  return roleRepository.removeRoleRequirement(roleId, skillId);
+export function removeRoleRequirement(
+  roleId: string,
+  skillId: string,
+  actorMemberId: string | null
+) {
+  return roleRepository.removeRoleRequirement(roleId, skillId, actorMemberId);
 }
 
 export function evaluateMemberForRole(

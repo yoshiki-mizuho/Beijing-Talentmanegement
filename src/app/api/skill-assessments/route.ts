@@ -30,6 +30,6 @@ export async function POST(request: NextRequest) {
   const assessment = await createSkillAssessment({
     ...body,
     memberId: auth.session.user.memberId
-  });
+  }, auth.session.user.memberId);
   return NextResponse.json(assessment, { status: 201 });
 }

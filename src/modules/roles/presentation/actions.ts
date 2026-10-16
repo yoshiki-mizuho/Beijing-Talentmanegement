@@ -24,32 +24,32 @@ function parseRoleForm(formData: FormData) {
 
 export async function createRoleAction(formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    await requireRoles(adminOnly);
-    await createRole(parseRoleForm(formData));
+    const session = await requireRoles(adminOnly);
+    await createRole(parseRoleForm(formData), session.user.memberId);
     revalidatePath("/roles");
   }, "ロールを登録しました。");
 }
 
 export async function updateRoleAction(formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    await requireRoles(adminOnly);
-    await updateRole(getString(formData, "id"), parseRoleForm(formData));
+    const session = await requireRoles(adminOnly);
+    await updateRole(getString(formData, "id"), parseRoleForm(formData), session.user.memberId);
     revalidatePath("/roles");
   }, "ロールを更新しました。");
 }
 
 export async function deactivateRoleAction(formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    await requireRoles(adminOnly);
-    await deactivateRole(getString(formData, "id"));
+    const session = await requireRoles(adminOnly);
+    await deactivateRole(getString(formData, "id"), session.user.memberId);
     revalidatePath("/roles");
   }, "ロールを無効化しました。");
 }
 
 export async function deleteRoleAction(formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    await requireRoles(adminOnly);
-    await deleteRole(getString(formData, "id"));
+    const session = await requireRoles(adminOnly);
+    await deleteRole(getString(formData, "id"), session.user.memberId);
     revalidatePath("/roles");
     revalidatePath("/members");
   }, "ロールを削除しました。");
@@ -57,22 +57,26 @@ export async function deleteRoleAction(formData: FormData): Promise<ActionResult
 
 export async function setRoleRequirementAction(formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    await requireRoles(adminOnly);
+    const session = await requireRoles(adminOnly);
     const isRequired = formData.get("isRequired");
     await setRoleRequirement({
       roleId: getString(formData, "roleId"),
       skillId: getString(formData, "skillId"),
       requiredLevel: getNumber(formData, "requiredLevel"),
       isRequired: isRequired === null ? true : isRequired === "true"
-    });
+    }, session.user.memberId);
     revalidatePath("/roles");
   }, "ロール要件を設定しました。");
 }
 
 export async function removeRoleRequirementAction(formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    await requireRoles(adminOnly);
-    await removeRoleRequirement(getString(formData, "roleId"), getString(formData, "skillId"));
+    const session = await requireRoles(adminOnly);
+    await removeRoleRequirement(
+      getString(formData, "roleId"),
+      getString(formData, "skillId"),
+      session.user.memberId
+    );
     revalidatePath("/roles");
   }, "ロール要件を削除しました。");
 }

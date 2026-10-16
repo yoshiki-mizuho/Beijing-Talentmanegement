@@ -19,7 +19,11 @@ export async function PATCH(request: NextRequest, context: SkillCategoryContext)
 
   const { categoryId } = await context.params;
   return NextResponse.json(
-    await updateSkillCategory(categoryId, await request.json())
+    await updateSkillCategory(
+      categoryId,
+      await request.json(),
+      auth.session.user.memberId
+    )
   );
 }
 
@@ -32,7 +36,7 @@ export async function DELETE(_request: NextRequest, context: SkillCategoryContex
 
   const { categoryId } = await context.params;
   try {
-    await deleteSkillCategory(categoryId);
+    await deleteSkillCategory(categoryId, auth.session.user.memberId);
   } catch {
     return NextResponse.json(
       { error: "Skill category still has skills" },

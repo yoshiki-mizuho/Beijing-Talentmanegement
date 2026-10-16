@@ -18,7 +18,9 @@ export async function PATCH(request: NextRequest, context: SkillContext) {
   }
 
   const { skillId } = await context.params;
-  return NextResponse.json(await updateSkill(skillId, await request.json()));
+  return NextResponse.json(
+    await updateSkill(skillId, await request.json(), auth.session.user.memberId)
+  );
 }
 
 export async function DELETE(_request: NextRequest, context: SkillContext) {
@@ -29,6 +31,6 @@ export async function DELETE(_request: NextRequest, context: SkillContext) {
   }
 
   const { skillId } = await context.params;
-  await deactivateSkill(skillId);
+  await deactivateSkill(skillId, auth.session.user.memberId);
   return new NextResponse(null, { status: 204 });
 }

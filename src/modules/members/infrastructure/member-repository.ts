@@ -8,6 +8,9 @@ import {
 import bcrypt from "bcryptjs";
 
 import { INITIAL_PASSWORD } from "@/modules/auth/domain/password-schema";
+import { AUDIT_ACTION, AUDIT_TARGET_TYPE } from "@/modules/audit/domain/audit-action";
+import { diffForAudit } from "@/modules/audit/domain/audit-diff";
+import { recordAuditLog, recordAuditLogs } from "@/modules/audit/infrastructure/audit-repository";
 import { createsManagerCycle } from "@/modules/members/domain/member-manager-policy";
 import type {
   MemberInput,
@@ -31,6 +34,24 @@ import { UserFacingError } from "@/shared/lib/user-facing-error";
 
 async function hashInitialPassword() {
   return bcrypt.hash(INITIAL_PASSWORD, 12);
+}
+
+function memberAuditFields(member: {
+  employeeNo: string;
+  name: string;
+  email: string;
+  departmentId: string;
+  jobTitle: string | null;
+  status: string;
+}) {
+  return {
+    employeeNo: member.employeeNo,
+    name: member.name,
+    email: member.email,
+    departmentId: member.departmentId,
+    jobTitle: member.jobTitle,
+    status: member.status
+  };
 }
 
 export async function listDepartments() {
@@ -142,7 +163,7 @@ export async function listMembers(input?: MemberSearchInput, memberIds?: string[
   );
 }
 
-export async function createMember(input: MemberInput) {
+export async function createMember(input: MemberInput, actorMemberId: string | null) {
   return prisma.$transaction(async (tx) => {
     const member = await tx.member.create({ data: input });
     const existingUser = await tx.user.findUnique({
@@ -170,6 +191,13 @@ export async function createMember(input: MemberInput) {
               })
         }
       });
+      await recordAuditLog(tx, {
+        actorMemberId,
+        action: AUDIT_ACTION.MEMBER_CREATE,
+        targetType: AUDIT_TARGET_TYPE.MEMBER,
+        targetId: member.id,
+        after: memberAuditFields(member)
+      });
       return member;
     }
 
@@ -184,25 +212,65 @@ export async function createMember(input: MemberInput) {
       }
     });
 
+    await recordAuditLog(tx, {
+      actorMemberId,
+      action: AUDIT_ACTION.MEMBER_CREATE,
+      targetType: AUDIT_TARGET_TYPE.MEMBER,
+      targetId: member.id,
+      after: memberAuditFields(member)
+    });
     return member;
   });
 }
 
-export async function updateMember(id: string, input: MemberInput) {
-  return prisma.member.update({
-    where: { id },
-    data: input
+export async function updateMember(
+  id: string,
+  input: MemberInput,
+  actorMemberId: string | null
+) {
+  return prisma.$transaction(async (tx) => {
+    const before = await tx.member.findUniqueOrThrow({ where: { id } });
+    const member = await tx.member.update({ where: { id }, data: input });
+    const diff = diffForAudit(
+      { ...memberAuditFields(before), profile: before.profile },
+      { ...memberAuditFields(member), profile: member.profile },
+      { redactedFields: ["profile"] }
+    );
+    if (diff) {
+      await recordAuditLog(tx, {
+        actorMemberId,
+        action: AUDIT_ACTION.MEMBER_UPDATE,
+        targetType: AUDIT_TARGET_TYPE.MEMBER,
+        targetId: id,
+        ...diff
+      });
+    }
+    return member;
   });
 }
 
-export async function deactivateMember(id: string) {
-  return prisma.member.update({
-    where: { id },
-    data: { status: "INACTIVE" }
+export async function deactivateMember(id: string, actorMemberId: string | null) {
+  return prisma.$transaction(async (tx) => {
+    const before = await tx.member.findUniqueOrThrow({ where: { id }, select: { status: true } });
+    const member = await tx.member.update({ where: { id }, data: { status: "INACTIVE" } });
+    const diff = diffForAudit(before, { status: member.status });
+    if (diff) {
+      await recordAuditLog(tx, {
+        actorMemberId,
+        action: AUDIT_ACTION.MEMBER_DEACTIVATE,
+        targetType: AUDIT_TARGET_TYPE.MEMBER,
+        targetId: id,
+        ...diff
+      });
+    }
+    return member;
   });
 }
 
-export async function upsertMemberSkill(input: MemberSkillInput) {
+export async function upsertMemberSkill(
+  input: MemberSkillInput,
+  actorMemberId: string | null
+) {
   return prisma.$transaction(async (tx) => {
     const current = await tx.memberSkill.findUnique({
       where: {
@@ -246,18 +314,51 @@ export async function upsertMemberSkill(input: MemberSkillInput) {
       });
     }
 
+    const diff = diffForAudit(
+      current ? { level: current.level } : {},
+      { level: memberSkill.level }
+    );
+    if (diff) {
+      await recordAuditLog(tx, {
+        actorMemberId,
+        action: current
+          ? AUDIT_ACTION.MEMBER_SKILL_UPDATE
+          : AUDIT_ACTION.MEMBER_SKILL_CREATE,
+        targetType: AUDIT_TARGET_TYPE.MEMBER_SKILL,
+        targetId: memberSkill.id,
+        before: current ? diff.before : undefined,
+        after: diff.after,
+        metadata: { memberId: input.memberId, skillId: input.skillId }
+      });
+    }
+
     return memberSkill;
   });
 }
 
-export async function removeMemberSkill(memberId: string, skillId: string) {
-  return prisma.memberSkill.delete({
-    where: {
-      memberId_skillId: {
-        memberId,
-        skillId
+export async function removeMemberSkill(
+  memberId: string,
+  skillId: string,
+  actorMemberId: string | null
+) {
+  return prisma.$transaction(async (tx) => {
+    const removed = await tx.memberSkill.delete({
+      where: {
+        memberId_skillId: {
+          memberId,
+          skillId
+        }
       }
-    }
+    });
+    await recordAuditLog(tx, {
+      actorMemberId,
+      action: AUDIT_ACTION.MEMBER_SKILL_DELETE,
+      targetType: AUDIT_TARGET_TYPE.MEMBER_SKILL,
+      targetId: removed.id,
+      before: { level: removed.level },
+      metadata: { memberId, skillId }
+    });
+    return removed;
   });
 }
 
@@ -445,7 +546,10 @@ export async function hasMemberTargetRole(memberId: string) {
   return Boolean(member?.targetRoleId);
 }
 
-export async function createSkillAssessment(input: SkillAssessmentInput) {
+export async function createSkillAssessment(
+  input: SkillAssessmentInput,
+  actorMemberId: string | null
+) {
   const [assessment] = await createSkillAssessments({
     memberId: input.memberId,
     assessments: [{
@@ -453,12 +557,15 @@ export async function createSkillAssessment(input: SkillAssessmentInput) {
       requestedLevel: input.requestedLevel,
       yearsOfExperience: input.yearsOfExperience
     }]
-  });
+  }, actorMemberId);
 
   return assessment;
 }
 
-export async function createSkillAssessments(input: SkillAssessmentBatchInput) {
+export async function createSkillAssessments(
+  input: SkillAssessmentBatchInput,
+  actorMemberId: string | null
+) {
   return prisma.$transaction(async (tx) => {
     const skillIds = input.assessments.map((assessment) => assessment.skillId);
     const member = await tx.member.findUniqueOrThrow({
@@ -541,6 +648,22 @@ export async function createSkillAssessments(input: SkillAssessmentBatchInput) {
     if (notifications.length > 0) {
       await tx.notification.createMany({ data: notifications });
     }
+
+    await recordAuditLogs(
+      tx,
+      assessments.map((assessment) => ({
+        actorMemberId,
+        action: AUDIT_ACTION.SKILL_ASSESSMENT_CREATE,
+        targetType: AUDIT_TARGET_TYPE.SKILL_SELF_ASSESSMENT,
+        targetId: assessment.id,
+        after: {
+          memberId: assessment.memberId,
+          skillId: assessment.skillId,
+          requestedLevel: assessment.requestedLevel,
+          yearsOfExperience: assessment.yearsOfExperience
+        }
+      }))
+    );
 
     return assessments;
   });
@@ -679,6 +802,29 @@ async function reviewSkillAssessmentInTransaction(
       }
     });
 
+    const action = reviewStatus === SkillSelfAssessmentStatus.APPROVED
+      ? AUDIT_ACTION.SKILL_ASSESSMENT_APPROVE
+      : reviewStatus === SkillSelfAssessmentStatus.CORRECTED
+        ? AUDIT_ACTION.SKILL_ASSESSMENT_CORRECT
+        : AUDIT_ACTION.SKILL_ASSESSMENT_REJECT;
+    await recordAuditLog(tx, {
+      actorMemberId: input.reviewerMemberId,
+      action,
+      targetType: AUDIT_TARGET_TYPE.SKILL_SELF_ASSESSMENT,
+      targetId: assessment.id,
+      before: { status: assessment.status },
+      after: { status: reviewedAssessment.status },
+      metadata: {
+        memberId: assessment.memberId,
+        skillId: assessment.skillId,
+        requestedLevel: assessment.requestedLevel,
+        approvedLevel: reviewStatus === SkillSelfAssessmentStatus.REJECTED
+          ? null
+          : approvedLevel,
+        comment: input.managerComment ?? null
+      }
+    });
+
     return reviewedAssessment;
 }
 
@@ -709,9 +855,12 @@ export async function approveSkillAssessments(
   });
 }
 
-export async function updateMemberManager(input: MemberManagerInput) {
+export async function updateMemberManager(
+  input: MemberManagerInput,
+  actorMemberId: string | null
+) {
   return prisma.$transaction(async (tx) => {
-    await tx.member.findUniqueOrThrow({ where: { id: input.memberId } });
+    const before = await tx.member.findUniqueOrThrow({ where: { id: input.memberId } });
     if (input.managerId) {
       const manager = await tx.member.findFirst({
         where: {
@@ -733,25 +882,58 @@ export async function updateMemberManager(input: MemberManagerInput) {
     if (createsManagerCycle(input.memberId, input.managerId, assignments)) {
       throw new UserFacingError("自分自身または循環する上司関係は設定できません。");
     }
-    return tx.member.update({
+    const member = await tx.member.update({
       where: { id: input.memberId },
       data: { managerId: input.managerId }
     });
+    const diff = diffForAudit({ managerId: before.managerId }, { managerId: member.managerId });
+    if (diff) {
+      await recordAuditLog(tx, {
+        actorMemberId,
+        action: AUDIT_ACTION.MEMBER_MANAGER_UPDATE,
+        targetType: AUDIT_TARGET_TYPE.MEMBER,
+        targetId: input.memberId,
+        ...diff
+      });
+    }
+    return member;
   });
 }
 
-export async function updateMemberTargetRole(input: MemberTargetRoleInput) {
-  if (input.targetRoleId) {
-    const role = await prisma.role.findFirst({
-      where: { id: input.targetRoleId, isActive: true },
-      select: { id: true }
+export async function updateMemberTargetRole(
+  input: MemberTargetRoleInput,
+  actorMemberId: string | null
+) {
+  return prisma.$transaction(async (tx) => {
+    const before = await tx.member.findUniqueOrThrow({
+      where: { id: input.memberId }
     });
-    if (!role) {
-      throw new UserFacingError("目標ロールには有効なロールを指定してください。");
+    if (input.targetRoleId) {
+      const role = await tx.role.findFirst({
+        where: { id: input.targetRoleId, isActive: true },
+        select: { id: true }
+      });
+      if (!role) {
+        throw new UserFacingError("目標ロールには有効なロールを指定してください。");
+      }
     }
-  }
-  return prisma.member.update({
-    where: { id: input.memberId },
-    data: { targetRoleId: input.targetRoleId }
+    const member = await tx.member.update({
+      where: { id: input.memberId },
+      data: { targetRoleId: input.targetRoleId }
+    });
+    const diff = diffForAudit(
+      { targetRoleId: before.targetRoleId },
+      { targetRoleId: member.targetRoleId }
+    );
+    if (diff) {
+      await recordAuditLog(tx, {
+        actorMemberId,
+        action: AUDIT_ACTION.MEMBER_TARGET_ROLE_UPDATE,
+        targetType: AUDIT_TARGET_TYPE.MEMBER,
+        targetId: input.memberId,
+        ...diff
+      });
+    }
+    return member;
   });
 }

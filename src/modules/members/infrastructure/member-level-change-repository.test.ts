@@ -12,7 +12,8 @@ const mocks = vi.hoisted(() => ({
   levelChangeCreate: vi.fn(),
   assessmentFind: vi.fn(),
   assessmentUpdate: vi.fn(),
-  notificationCreate: vi.fn()
+  notificationCreate: vi.fn(),
+  auditLogCreate: vi.fn()
 }));
 
 vi.mock("@/server/db/prisma", () => ({
@@ -34,7 +35,8 @@ const transactionClient = {
     findUnique: mocks.assessmentFind,
     update: mocks.assessmentUpdate
   },
-  notification: { create: mocks.notificationCreate }
+  notification: { create: mocks.notificationCreate },
+  auditLog: { create: mocks.auditLogCreate }
 };
 
 describe("member skill level change recording", () => {
@@ -53,7 +55,7 @@ describe("member skill level change recording", () => {
       skillId: "skill-1",
       level: 3,
       changedByMemberId: "manager-1"
-    });
+    }, null);
 
     expect(mocks.transaction).toHaveBeenCalledTimes(1);
     expect(mocks.levelChangeCreate).toHaveBeenCalledWith({
@@ -74,7 +76,7 @@ describe("member skill level change recording", () => {
       skillId: "skill-1",
       level: 3,
       changedByMemberId: "manager-1"
-    });
+    }, null);
 
     expect(mocks.levelChangeCreate).not.toHaveBeenCalled();
   });

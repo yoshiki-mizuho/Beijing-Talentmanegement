@@ -43,17 +43,17 @@ function parseMemberForm(formData: FormData) {
 export async function createMemberAction(formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
     const session = await requireRoles(managerOrAdmin);
-    const member = await createMember(parseMemberForm(formData));
+    const member = await createMember(parseMemberForm(formData), session.user.memberId);
 
     if (session.user.role === "ADMIN") {
       await updateMemberManager({
         memberId: member.id,
         managerId: getOptionalString(formData, "managerId") ?? null
-      });
+      }, session.user.memberId);
       await updateMemberTargetRole({
         memberId: member.id,
         targetRoleId: getOptionalString(formData, "targetRoleId") ?? null
-      });
+      }, session.user.memberId);
     }
     revalidatePath("/members");
   }, "メンバーを登録しました。初期認証情報を安全な経路で共有してください。");
@@ -65,15 +65,15 @@ export async function updateMemberAction(formData: FormData): Promise<ActionResu
     const memberId = getString(formData, "id");
     const scope = await getMemberScope(session.user.role, session.user.memberId);
     if (!memberIsInScope(scope, memberId)) throw new AuthorizationError("このメンバーを操作する権限がありません。", 403);
-    await updateMember(memberId, parseMemberForm(formData));
+    await updateMember(memberId, parseMemberForm(formData), session.user.memberId);
     revalidatePath("/members");
   }, "メンバー情報を更新しました。");
 }
 
 export async function deactivateMemberAction(formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    await requireRoles(adminOnly);
-    await deactivateMember(getString(formData, "id"));
+    const session = await requireRoles(adminOnly);
+    await deactivateMember(getString(formData, "id"), session.user.memberId);
     revalidatePath("/members");
   }, "メンバーを無効化しました。");
 }
@@ -89,7 +89,7 @@ export async function setMemberSkillLevelAction(formData: FormData): Promise<Act
       skillId: getString(formData, "skillId"),
       level: getNumber(formData, "level"),
       changedByMemberId: session.user.memberId
-    });
+    }, session.user.memberId);
     revalidatePath("/members");
     revalidatePath("/roles");
   }, "メンバーのスキルを設定しました。");
@@ -101,7 +101,7 @@ export async function removeMemberSkillAction(formData: FormData): Promise<Actio
     const memberId = getString(formData, "memberId");
     const scope = await getMemberScope(session.user.role, session.user.memberId);
     if (!memberIsInScope(scope, memberId)) throw new AuthorizationError("このメンバーを操作する権限がありません。", 403);
-    await removeMemberSkill(memberId, getString(formData, "skillId"));
+    await removeMemberSkill(memberId, getString(formData, "skillId"), session.user.memberId);
     revalidatePath("/members");
     revalidatePath("/roles");
   }, "メンバーのスキルを削除しました。");
@@ -117,7 +117,7 @@ export async function createSkillAssessmentAction(formData: FormData): Promise<A
       yearsOfExperience: getOptionalString(formData, "yearsOfExperience")
         ? getNumber(formData, "yearsOfExperience")
         : undefined
-    });
+    }, session.user.memberId);
     revalidatePath("/my/skills");
     revalidatePath("/skill-approvals");
     revalidatePath("/notifications");
@@ -131,7 +131,7 @@ export async function createSkillAssessmentsAction(formData: FormData): Promise<
     const created = await createSkillAssessments({
       memberId: session.user.memberId,
       assessments
-    });
+    }, session.user.memberId);
 
     revalidatePath("/my/skills");
     revalidatePath("/skill-approvals");
@@ -194,11 +194,11 @@ export async function updateMemberManagerAction(
   formData: FormData
 ): Promise<ActionResult> {
   return runAction(async () => {
-    await requireRoles(adminOnly);
+    const session = await requireRoles(adminOnly);
     await updateMemberManager({
       memberId: getString(formData, "memberId"),
       managerId: getOptionalString(formData, "managerId") ?? null
-    });
+    }, session.user.memberId);
     revalidatePath("/members");
     revalidatePath("/skill-approvals");
   }, "上司を更新しました。");
@@ -222,7 +222,7 @@ export async function updateMemberTargetRoleAction(
     await updateMemberTargetRole({
       memberId,
       targetRoleId: getOptionalString(formData, "targetRoleId") ?? null
-    });
+    }, session.user.memberId);
     revalidatePath("/members");
     revalidatePath("/dashboard");
     revalidatePath("/", "layout");

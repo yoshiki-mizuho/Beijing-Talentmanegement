@@ -18,7 +18,9 @@ export async function PATCH(request: NextRequest, context: RoleContext) {
   }
 
   const { roleId } = await context.params;
-  return NextResponse.json(await updateRole(roleId, await request.json()));
+  return NextResponse.json(
+    await updateRole(roleId, await request.json(), auth.session.user.memberId)
+  );
 }
 
 export async function DELETE(_request: NextRequest, context: RoleContext) {
@@ -29,6 +31,6 @@ export async function DELETE(_request: NextRequest, context: RoleContext) {
   }
 
   const { roleId } = await context.params;
-  await deactivateRole(roleId);
+  await deactivateRole(roleId, auth.session.user.memberId);
   return new NextResponse(null, { status: 204 });
 }

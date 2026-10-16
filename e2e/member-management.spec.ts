@@ -36,7 +36,14 @@ test("管理者がメンバーを登録し、詳細で役職を更新して無�
       ),
     ).toBeVisible();
 
+    // 絞り込みの取得が終わる前に更新すると、古い一覧で詳細が上書きされるため、結果を待つ。
+    const searchResponse = admin.page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/members?") &&
+        response.url().includes(`q=${employeeNo}`),
+    );
     await admin.page.getByLabel("キーワード").fill(employeeNo);
+    await searchResponse;
     const createdRow = admin.page
       .getByRole("row")
       .filter({ hasText: employeeNo });

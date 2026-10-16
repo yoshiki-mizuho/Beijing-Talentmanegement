@@ -27,7 +27,9 @@ export async function PATCH(request: NextRequest, context: MemberContext) {
   if (!memberIsInScope(scope, memberId)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-  return NextResponse.json(await updateMember(memberId, await request.json()));
+  return NextResponse.json(
+    await updateMember(memberId, await request.json(), auth.session.user.memberId)
+  );
 }
 
 export async function DELETE(_request: NextRequest, context: MemberContext) {
@@ -38,6 +40,6 @@ export async function DELETE(_request: NextRequest, context: MemberContext) {
   }
 
   const { memberId } = await context.params;
-  await deactivateMember(memberId);
+  await deactivateMember(memberId, auth.session.user.memberId);
   return new NextResponse(null, { status: 204 });
 }
