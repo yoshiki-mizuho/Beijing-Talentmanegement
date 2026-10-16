@@ -6,6 +6,7 @@ export const auditTargetGroups = [
   "skill",
   "role",
   "assessment",
+  "csv",
 ] as const;
 export const auditOperationGroups = [
   "create",
@@ -143,5 +144,6 @@ export function targetGroup(type: string): AuditTargetGroup | null {
   if (type === "Skill" || type === "SkillCategory") return "skill";
   if (type === "Role") return "role";
   if (type === "SkillSelfAssessment") return "assessment";
+  if (type === "Csv" || type === "AuditLog") return "csv";
   return null;
 }

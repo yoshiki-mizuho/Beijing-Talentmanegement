@@ -202,6 +202,23 @@ describe("audit log display", () => {
     ).toBe("24件");
   });
 
+  it("CSV 出力の文と要約を組み立てる", () => {
+    const input = {
+      action: "csv.export",
+      targetType: "Csv",
+      targetName: "（削除済み）",
+      before: null,
+      after: null,
+      metadata: { target: "members", scope: "active", count: 42 },
+    };
+    expect(buildActionDescription(input)).toEqual({
+      prefix: "",
+      target: "メンバー",
+      suffix: " の CSV を出力",
+    });
+    expect(buildAuditSummary(input)).toBe("42件");
+  });
+
   it("削除済み対象は記録時の名前を使い、複合対象はメンバー名とスキル名を使う", () => {
     const base = {
       targetId: "deleted-1",
