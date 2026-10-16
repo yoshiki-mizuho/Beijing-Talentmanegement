@@ -87,7 +87,7 @@ function SkillSearchTableInner({
   const router = useRouter();
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState<SkillSearchFilters>(emptySkillSearchFilters);
-  const [editingSkill, setEditingSkill] = useState<SkillRow | null>(null);
+  const [editingSkillId, setEditingSkillId] = useState<string | null>(null);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const query = useQuery({
     queryKey: ["skills", filters],
@@ -101,6 +101,8 @@ function SkillSearchTableInner({
     placeholderData: keepPreviousData
   });
   const rows = query.data ?? [];
+  // 編集中のスキルは一覧の最新のデータから引く。保存直後に開き直しても、再取得が届いたら最新の内容に置き換わる
+  const editingSkill = rows.find((skill) => skill.id === editingSkillId) ?? null;
 
   // 追加・編集の後にサーバーの一覧が変わったら、表示中の検索結果も取り直す
   useEffect(() => {
@@ -163,7 +165,7 @@ function SkillSearchTableInner({
             variant="ghost"
             size="small"
             className="min-h-11"
-            onClick={() => setEditingSkill(row.original)}
+            onClick={() => setEditingSkillId(row.original.id)}
             aria-label={`${row.original.name}を編集`}
           >
             <MoreHorizontal className="h-5 w-5" aria-hidden="true" />
@@ -192,7 +194,7 @@ function SkillSearchTableInner({
     .filter((group) => group.rows.length > 0);
 
   function handleEditSuccess() {
-    setEditingSkill(null);
+    setEditingSkillId(null);
     router.refresh();
     void query.refetch();
   }
@@ -356,12 +358,13 @@ function SkillSearchTableInner({
       {canManage && editingSkill ? (
         <Dialog
           open
-          onClose={() => setEditingSkill(null)}
+          onClose={() => setEditingSkillId(null)}
           title={`${editingSkill.name}を編集`}
           description="スキルの名称、カテゴリ、説明、状態を更新します。"
         >
           <div className="space-y-5">
             <ActionForm
+              key={query.dataUpdatedAt}
               action={updateSkillAction}
               className="space-y-4"
               onSuccess={handleEditSuccess}
