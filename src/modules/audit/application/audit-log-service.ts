@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { AUDIT_ACTION } from "../domain/audit-action";
-import { buildCsv } from "../domain/audit-csv";
+import { buildCsv } from "@/shared/lib/csv";
 import {
   buildActionDescription,
   buildAuditSummary,
@@ -30,6 +30,7 @@ const targetTypeLabels: Record<string, string> = {
   Role: "ロール",
   SkillSelfAssessment: "申請・承認",
   AuditLog: "監査ログ",
+  Csv: "CSV",
 };
 const mapJson = (value: Prisma.JsonValue | null): JsonMap | null =>
   value && typeof value === "object" && !Array.isArray(value)
@@ -123,7 +124,9 @@ async function buildListItems(
       names,
       diffRows,
     };
-    const isExport = log.action === AUDIT_ACTION.AUDIT_LOG_EXPORT;
+    const isExport =
+      log.action === AUDIT_ACTION.AUDIT_LOG_EXPORT ||
+      log.action === AUDIT_ACTION.CSV_EXPORT;
     const description = buildActionDescription(displayInput);
     const summary = buildAuditSummary(displayInput);
     return {

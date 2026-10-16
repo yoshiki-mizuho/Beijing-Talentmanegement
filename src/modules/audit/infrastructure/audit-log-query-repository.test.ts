@@ -53,6 +53,11 @@ describe("buildAuditLogWhere", () => {
     });
   });
 
+  it("CSV 対象に通常 CSV と監査ログの出力を含める", async () => {
+    const where = await buildAuditLogWhere(query({ targets: ["csv"] }));
+    expect(where.targetType).toEqual({ in: ["AuditLog", "Csv"] });
+  });
+
   it("操作種別を監査アクション定数へ展開する", async () => {
     const where = await buildAuditLogWhere(
       query({ operations: ["approve", "delete"] }),

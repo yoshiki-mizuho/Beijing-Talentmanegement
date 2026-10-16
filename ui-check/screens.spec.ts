@@ -56,6 +56,8 @@ test.describe("UI check", () => {
       await firstAuditLog.locator("summary time").click();
       await capture(page, "ADMIN", "audit-logs-detail");
     }
+    await page.goto("/csv");
+    await capture(page, "ADMIN", "csv");
     await page.goto("/roles");
     await page.getByRole("button", { name: /の編集を開く$/ }).first().click();
     await capture(page, "ADMIN", "role-detail");

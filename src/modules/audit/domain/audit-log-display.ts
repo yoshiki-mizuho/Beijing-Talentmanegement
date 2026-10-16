@@ -219,6 +219,13 @@ export function buildActionDescription(
   if (action === "audit_log.export") {
     return { prefix: "", target: "監査ログ", suffix: " を CSV で出力" };
   }
+  if (action === "csv.export") {
+    return {
+      prefix: "",
+      target: csvTargetLabel(String(input.metadata?.target ?? "")),
+      suffix: " の CSV を出力",
+    };
+  }
   const prefix =
     {
       Skill: "スキル ",
@@ -240,7 +247,7 @@ function levelChange(before: unknown, after: unknown) {
 
 export function buildAuditSummary(input: AuditDisplayInput) {
   const { action, before, after, metadata, names = {}, diffRows = [] } = input;
-  if (action === "audit_log.export") {
+  if (action === "audit_log.export" || action === "csv.export") {
     return metadata?.count === undefined ? "" : `${metadata.count}件`;
   }
   if (action === "skill_assessment.reject") {
@@ -296,6 +303,18 @@ export function buildAuditSummary(input: AuditDisplayInput) {
       : "";
   }
   return diffRows.map((row) => row.label).join("、");
+}
+
+function csvTargetLabel(target: string) {
+  const labels: Record<string, string> = {
+    departments: "部署",
+    members: "メンバー",
+    skills: "スキル",
+    "member-skills": "メンバースキル",
+    roles: "ロール",
+    "role-requirements": "ロール要件",
+  };
+  return labels[target] ?? "CSV";
 }
 
 export function resolveAuditTargetName(input: {

@@ -23,6 +23,7 @@ const targetOptions: [AuditTargetGroup, string][] = [
   ["skill", "スキル"],
   ["role", "ロール"],
   ["assessment", "申請・承認"],
+  ["csv", "CSV"],
 ];
 const operationOptions: AuditOperationGroup[] = [
   "create",
