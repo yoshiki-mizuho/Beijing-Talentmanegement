@@ -15,7 +15,7 @@ stages:
 
 default:
   # 社内のランナー（日報アプリと共用）で動かし、GitLab.com のクレジットを消費しない。
-  tags: [on-premises-runner]
+  tags: [$RUNNER_TAG]
   image: node:24-bookworm-slim
   # 同じ MR に続けて push したら、古いパイプラインは止める。
   interruptible: true
@@ -25,6 +25,12 @@ default:
 
 variables:
   AST_ENABLE_MR_PIPELINES: "true"
+  # 検証のジョブを動かすランナーのタグ。社内ランナーが不安定なときは、プロジェクトの CI/CD 変数で
+  # RUNNER_TAG=saas-linux-small-amd64 を設定すると GitLab.com の共有ランナーで動く（クレジットを消費する）。
+  RUNNER_TAG: on-premises-runner
+  # デモ DB の作業（DEMO_DB_TASK）を動かすランナーのタグ。社内ネットワークは Neon への通信（5432番）が
+  # 遮断されるため、初期値は GitLab.com の共有ランナー。社内ランナーで動かすときは on-premises-runner を渡す。
+  DEMO_DB_RUNNER_TAG: saas-linux-small-amd64
   DATABASE_URL: "postgresql://talent:talent_password@postgres:5432/talentmanagement?schema=public"
   AUTH_SECRET: "ci-replace-with-a-long-random-secret"
   AUTH_URL: "http://localhost:3000"
@@ -108,7 +114,7 @@ sast:
 semgrep-sast:
   inherit:
     default: false
-  tags: [on-premises-runner]
+  tags: [$RUNNER_TAG]
   interruptible: true
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
@@ -121,6 +127,7 @@ semgrep-sast:
 
 demo_db_migrate:
   stage: demo_db
+  tags: [$DEMO_DB_RUNNER_TAG]
   # DB の作業は途中で止めない。
   interruptible: false
   resource_group: demo_db
@@ -138,6 +145,7 @@ demo_db_migrate:
 
 demo_db_seed:
   stage: demo_db
+  tags: [$DEMO_DB_RUNNER_TAG]
   interruptible: false
   resource_group: demo_db
   needs: [demo_db_migrate]
