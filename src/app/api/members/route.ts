@@ -6,7 +6,7 @@ import {
   listMembers
 } from "@/modules/members/application/member-service";
 import { MemberUserLinkError } from "@/modules/members/domain/member-user-policy";
-import { authorizeApi, managerOrAdmin } from "@/server/auth/authorization";
+import { adminOnly, authorizeApi, managerOrAdmin } from "@/server/auth/authorization";
 import { getMemberScope } from "@/modules/members/application/member-scope";
 
 export async function GET(request: NextRequest) {
@@ -21,8 +21,15 @@ export async function GET(request: NextRequest) {
       auth.session.user.role,
       auth.session.user.memberId
     );
+    const members = await listMembers(
+      Object.fromEntries(request.nextUrl.searchParams),
+      scope.memberIds
+    );
     return NextResponse.json(
-      await listMembers(Object.fromEntries(request.nextUrl.searchParams), scope.memberIds)
+      members.map((member) => ({
+        ...member,
+        role: member.users[0]?.role ?? null
+      }))
     );
   } catch (error) {
     if (error instanceof ZodError) {
@@ -34,7 +41,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await authorizeApi(managerOrAdmin);
+  const auth = await authorizeApi(adminOnly);
 
   if ("response" in auth) {
     return auth.response;

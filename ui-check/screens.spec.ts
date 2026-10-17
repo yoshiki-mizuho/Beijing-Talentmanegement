@@ -44,6 +44,10 @@ test.describe("UI check", () => {
     await capture(page, "ADMIN", "members");
     await page.getByRole("button", { name: "メンバーを追加" }).click();
     await capture(page, "ADMIN", "member-create-dialog");
+    // メンバー詳細の基本情報（権限の欄を含む）
+    await page.goto("/members");
+    await page.getByRole("button", { name: "Member Userの詳細を開く" }).click();
+    await capture(page, "ADMIN", "member-detail");
     await page.goto("/skills");
     await capture(page, "ADMIN", "skills");
     await page.goto("/roles");

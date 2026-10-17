@@ -33,6 +33,7 @@ const labels: Record<string, string> = {
   memberId: "メンバー",
   skillId: "スキル",
   comment: "コメント",
+  role: "権限",
 };
 for (let level = 1; level <= 5; level += 1)
   labels[`level${level}`] = `レベルの目安 Lv${level}`;
@@ -63,6 +64,14 @@ export function displayValue(
       REJECTED: "差し戻し",
     };
     return statuses[String(value)] ?? getMemberStatusLabel(String(value));
+  }
+  if (field === "role") {
+    const roles: Record<string, string> = {
+      ADMIN: "管理者",
+      MANAGER: "マネージャー",
+      MEMBER: "メンバー",
+    };
+    return roles[String(value)] ?? String(value);
   }
   if (typeof value === "boolean")
     return field === "isRequired"
@@ -195,6 +204,9 @@ export function buildActionDescription(
   if (action === "member.target_role.update") {
     return { prefix: "", target: targetName, suffix: " の目標ロールを変更" };
   }
+  if (action === "member.role.update") {
+    return { prefix: "", target: targetName, suffix: " の権限を変更" };
+  }
   if (action.startsWith("skill_assessment.")) {
     const verb = {
       "skill_assessment.create": "申請",
@@ -289,6 +301,9 @@ export function buildAuditSummary(input: AuditDisplayInput) {
       return `${levelChange(undefined, level)} を削除`;
     }
     return levelChange(before?.level, after?.level);
+  }
+  if (action === "member.role.update") {
+    return `${displayValue("role", before?.role)} → ${displayValue("role", after?.role)}`;
   }
   if (action === "skill.level_guides.update") {
     return diffRows.map((row) => `Lv${row.field}`).join("・");

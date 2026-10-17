@@ -204,3 +204,47 @@ flowchart TD
 - 監査ログ自体の更新、削除は通常画面から行わない。
 - CSV importの元ファイルは保存しない。件数とエラーの概要を監査ログに残す（2026-10-15 決定）。
 - 通知の作成と既読は、件数が多く調査に役立たないため記録しない（2026-10-15 決定）。
+
+## 実装の対応表
+
+### 画面
+
+| 画面 | 許可するロール | 担当範囲・本人判定 |
+| --- | --- | --- |
+| ダッシュボード | admin、manager、member | member は本人表示。manager は担当範囲。 |
+| メンバー | admin、manager | manager は担当範囲の一覧だけを取得。 |
+| スキル、スキルマップ、ロール | admin、manager | manager は参照のみ。スキルマップは担当範囲。 |
+| 自分のスキル、通知、探す、プロフィール | admin、manager、member | セッションの memberId または公開範囲を使用。 |
+| スキル承認 | admin、manager | manager は担当範囲。 |
+| CSV、監査ログ | admin | なし。 |
+
+### API
+
+| API | 許可するロール | 担当範囲・本人判定 |
+| --- | --- | --- |
+| `GET /api/members` | admin、manager | manager は担当範囲。 |
+| `POST /api/members`、`DELETE /api/members/[memberId]` | admin | なし。 |
+| `PATCH /api/members/[memberId]` | admin、manager | manager は担当範囲。 |
+| `/api/members/[memberId]/skills` | admin、manager | manager は担当範囲。 |
+| `/api/members/[memberId]/avatar` | admin、manager、member | サービスで本人だけを許可。 |
+| `/api/skill-assessments` | admin、manager、member | 作成対象はセッション本人。参照は manager の担当範囲。 |
+| `/api/skill-assessments/[assessmentId]/review` | admin、manager | manager は担当範囲。 |
+| スキル、カテゴリ、ロールの参照 API | admin、manager | なし。 |
+| スキル、カテゴリ、ロールの更新 API | admin | なし。 |
+| 通知 API | admin、manager、member | セッション本人宛だけ。 |
+| CSV import/export、監査ログ export | admin | なし。 |
+| パスワード API | admin、manager、member | セッション本人だけ。 |
+
+### Server Action
+
+| Server Action | 許可するロール | 担当範囲・本人判定 |
+| --- | --- | --- |
+| メンバー作成、無効化、上司設定、権限変更 | admin | 権限変更は自分自身、最後の在籍中 admin、部下がいる対象を追加判定。 |
+| メンバー更新、メンバースキル設定・削除 | admin、manager | manager は担当範囲。 |
+| 目標ロール更新 | admin、manager、member | member は本人だけ。 |
+| スキル申告 | admin、manager、member | セッション本人だけ。 |
+| 申告審査、一括承認 | admin、manager | manager は担当範囲。 |
+| スキル、カテゴリ、ロールの更新 | admin | なし。 |
+| 通知既読、公開設定、アバター、パスワード | admin、manager、member | セッション本人だけ。 |
+| 1on1 メモ | admin、manager | 対象の上司であることをサービスで判定。 |
+| 応援、リアクション、コメント | admin、manager、member | 公開範囲と対象範囲をサービスで判定。 |

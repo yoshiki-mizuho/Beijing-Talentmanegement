@@ -22,6 +22,7 @@ import type { MemberSearchInput } from "@/modules/members/domain/member-search";
 import { canReviewSkillAssessment } from "@/modules/members/domain/skill-assessment-policy";
 import { shouldRecordSkillLevelChange } from "@/modules/members/domain/skill-level-change-policy";
 import { assertUserCanLinkToMember } from "@/modules/members/domain/member-user-policy";
+import { getMemberRoleChangeError } from "@/modules/members/domain/member-role-policy";
 import type {
   SkillAssessmentApprovalBatchInput,
   SkillAssessmentBatchInput,
@@ -110,6 +111,7 @@ export async function listMembers(input?: MemberSearchInput, memberIds?: string[
       ]
     },
     include: {
+      users: { select: { role: true } },
       department: true,
       manager: { select: { id: true, name: true } },
       targetRole: { select: { id: true, name: true, isActive: true } },
@@ -161,6 +163,62 @@ export async function listMembers(input?: MemberSearchInput, memberIds?: string[
       }))
     ).achieved
   );
+}
+
+export async function updateMemberRole(
+  memberId: string,
+  nextRole: AuthRole,
+  actorMemberId: string
+) {
+  return prisma.$transaction(async (tx) => {
+    const member = await tx.member.findUniqueOrThrow({
+      where: { id: memberId },
+      select: {
+        status: true,
+        users: { select: { id: true, role: true } },
+        _count: { select: { reports: true } }
+      }
+    });
+    const user = member.users[0];
+    if (!user) {
+      throw new UserFacingError("ログイン用のユーザーがありません");
+    }
+    const activeAdminCount = await tx.user.count({
+      where: {
+        role: AuthRole.ADMIN,
+        member: { status: "ACTIVE" }
+      }
+    });
+    const error = getMemberRoleChangeError({
+      actorMemberId,
+      targetMemberId: memberId,
+      currentRole: user.role,
+      nextRole,
+      activeAdminCount,
+      targetIsActive: member.status === "ACTIVE",
+      reportCount: member._count.reports
+    });
+    if (error) {
+      throw new UserFacingError(error);
+    }
+    if (user.role === nextRole) {
+      return member;
+    }
+    await tx.user.update({
+      where: { id: user.id },
+      data: { role: nextRole }
+    });
+    await recordAuditLog(tx, {
+      actorMemberId,
+      action: AUDIT_ACTION.MEMBER_ROLE_UPDATE,
+      targetType: AUDIT_TARGET_TYPE.MEMBER,
+      targetId: memberId,
+      before: { role: user.role },
+      after: { role: nextRole },
+      changedFields: ["role"]
+    });
+    return member;
+  });
 }
 
 export async function createMember(input: MemberInput, actorMemberId: string | null) {

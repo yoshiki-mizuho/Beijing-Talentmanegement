@@ -18,6 +18,7 @@ import {
   setMemberSkillLevelAction,
   updateMemberAction,
   updateMemberManagerAction,
+  updateMemberRoleAction,
   updateMemberTargetRoleAction
 } from "@/modules/members/presentation/actions";
 import {
@@ -41,6 +42,11 @@ import { SubmitButton } from "@/shared/ui/submit-button";
 
 const memberStatuses = ["ACTIVE", "LEAVE", "INACTIVE"] as const;
 const skillLevels = [1, 2, 3, 4, 5] as const;
+const roleLabels = {
+  ADMIN: "管理者",
+  MANAGER: "マネージャー",
+  MEMBER: "メンバー"
+} as const;
 type DetailTabId = "basic" | "skills" | "one-on-one";
 
 export function MemberDetailModal({
@@ -151,6 +157,7 @@ export function MemberDetailModal({
           targetRoles={targetRoles}
           canDeactivateMembers={canDeactivateMembers}
           canEditGrowthSettings={canEditGrowthSettings}
+          viewerMemberId={viewerMemberId}
           onMemberChanged={onMemberChanged}
           panelId={`${titleId}-basic-panel`}
           tabId={`${titleId}-basic-tab`}
@@ -264,6 +271,7 @@ function BasicInformationPanel({
   targetRoles,
   canDeactivateMembers,
   canEditGrowthSettings,
+  viewerMemberId,
   onMemberChanged,
   panelId,
   tabId
@@ -274,10 +282,12 @@ function BasicInformationPanel({
   targetRoles: TargetRoleOption[];
   canDeactivateMembers: boolean;
   canEditGrowthSettings: boolean;
+  viewerMemberId: string;
   onMemberChanged: () => void;
   panelId: string;
   tabId: string;
 }) {
+  const [selectedRole, setSelectedRole] = useState(member.role ?? "MEMBER");
   const basicFormKey = [
     member.employeeNo,
     member.name,
@@ -368,6 +378,45 @@ function BasicInformationPanel({
 
       {canEditGrowthSettings ? (
         <>
+          {member.role ? (
+            <ActionForm
+              key={`permission-${member.role}`}
+              action={updateMemberRoleAction}
+              className="grid gap-3 md:col-span-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end"
+              onSuccess={onMemberChanged}
+              confirm={{
+                title: "権限を変更しますか",
+                description: `${member.name}さんの権限を ${roleLabels[member.role]} → ${roleLabels[selectedRole]} に変更します`,
+                confirmLabel: "変更する"
+              }}
+            >
+              <input type="hidden" name="memberId" value={member.id} />
+              <SelectField
+                id={`member-permission-${member.id}`}
+                label="権限"
+                name="role"
+                value={selectedRole}
+                disabled={member.id === viewerMemberId}
+                onChange={(event) =>
+                  setSelectedRole(event.target.value as keyof typeof roleLabels)
+                }
+              >
+                {Object.entries(roleLabels).map(([role, label]) => (
+                  <option key={role} value={role}>
+                    {label}
+                  </option>
+                ))}
+              </SelectField>
+              <SubmitButton
+                pendingLabel="変更中…"
+                disabled={
+                  member.id === viewerMemberId || selectedRole === member.role
+                }
+              >
+                変更
+              </SubmitButton>
+            </ActionForm>
+          ) : null}
           <ActionForm
             key={`manager-${member.managerId ?? "none"}`}
             action={updateMemberManagerAction}

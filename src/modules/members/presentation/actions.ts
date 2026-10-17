@@ -14,6 +14,7 @@ import {
   setMemberSkillLevel,
   updateMember,
   updateMemberManager,
+  updateMemberRole,
   updateMemberTargetRole
 } from "@/modules/members/application/member-service";
 import { canUpdateMemberTargetRole } from "@/modules/members/domain/member-target-role-policy";
@@ -42,7 +43,7 @@ function parseMemberForm(formData: FormData) {
 
 export async function createMemberAction(formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    const session = await requireRoles(managerOrAdmin);
+    const session = await requireRoles(adminOnly);
     const member = await createMember(parseMemberForm(formData), session.user.memberId);
 
     if (session.user.role === "ADMIN") {
@@ -57,6 +58,21 @@ export async function createMemberAction(formData: FormData): Promise<ActionResu
     }
     revalidatePath("/members");
   }, "メンバーを登録しました。初期認証情報を安全な経路で共有してください。");
+}
+
+export async function updateMemberRoleAction(
+  formData: FormData
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requireRoles(adminOnly);
+    await updateMemberRole(
+      getString(formData, "memberId"),
+      getString(formData, "role"),
+      session.user.memberId
+    );
+    revalidatePath("/members");
+    revalidatePath("/", "layout");
+  }, "権限を変更しました。");
 }
 
 export async function updateMemberAction(formData: FormData): Promise<ActionResult> {
