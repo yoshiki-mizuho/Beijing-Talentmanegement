@@ -31,6 +31,7 @@ const targetTypeLabels: Record<string, string> = {
   SkillSelfAssessment: "申請・承認",
   AuditLog: "監査ログ",
   Csv: "CSV",
+  Department: "部署",
 };
 const mapJson = (value: Prisma.JsonValue | null): JsonMap | null =>
   value && typeof value === "object" && !Array.isArray(value)
@@ -127,6 +128,9 @@ async function buildListItems(
     const isExport =
       log.action === AUDIT_ACTION.AUDIT_LOG_EXPORT ||
       log.action === AUDIT_ACTION.CSV_EXPORT;
+    const isImport =
+      log.action === AUDIT_ACTION.CSV_IMPORT ||
+      log.action === AUDIT_ACTION.CSV_IMPORT_FAILED;
     const description = buildActionDescription(displayInput);
     const summary = buildAuditSummary(displayInput);
     return {
@@ -141,7 +145,7 @@ async function buildListItems(
         : null,
       action: log.action,
       operation: isExport ? ("export" as const) : operation,
-      operationLabel: isExport ? "出力" : operationLabels[operation],
+      operationLabel: isExport ? "出力" : isImport ? "取り込み" : operationLabels[operation],
       targetType: log.targetType,
       targetTypeLabel: targetTypeLabels[log.targetType] ?? log.targetType,
       targetId: log.targetId,
@@ -169,6 +173,9 @@ function hasTarget(
   const id = targetId ?? "";
   if (targetType === "Member") {
     return Boolean(names.members[id]);
+  }
+  if (targetType === "Department") {
+    return Boolean(names.departments[id]);
   }
   if (targetType === "Skill") {
     return Boolean(names.skills[id]);

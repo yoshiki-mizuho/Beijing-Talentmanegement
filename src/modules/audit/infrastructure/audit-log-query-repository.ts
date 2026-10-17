@@ -34,12 +34,22 @@ function actions(query: AuditLogQuery) {
 }
 
 async function loadNameSearchIds(q: string) {
-  const [members, skills, categories, roles] = await Promise.all([
+  const [members, departments, skills, categories, roles] = await Promise.all([
     prisma.member.findMany({
       where: {
         OR: [
           { name: { contains: q, mode: "insensitive" } },
           { employeeNo: { contains: q, mode: "insensitive" } },
+        ],
+      },
+      select: { id: true },
+      take: 100,
+    }),
+    prisma.department.findMany({
+      where: {
+        OR: [
+          { name: { contains: q, mode: "insensitive" } },
+          { code: { contains: q, mode: "insensitive" } },
         ],
       },
       select: { id: true },
@@ -64,7 +74,7 @@ async function loadNameSearchIds(q: string) {
   return {
     memberIds: members.map(({ id }) => id),
     skillIds: skills.map(({ id }) => id),
-    targetIds: [...members, ...skills, ...categories, ...roles].map(
+    targetIds: [...members, ...departments, ...skills, ...categories, ...roles].map(
       ({ id }) => id,
     ),
   };
@@ -174,6 +184,8 @@ export async function loadAuditNameMaps(logs: AuditLogRow[]) {
     if (log.targetId) {
       if (log.targetType === AUDIT_TARGET_TYPE.MEMBER) {
         ids.members.add(log.targetId);
+      } else if (log.targetType === AUDIT_TARGET_TYPE.DEPARTMENT) {
+        ids.departments.add(log.targetId);
       } else if (log.targetType === AUDIT_TARGET_TYPE.SKILL) {
         ids.skills.add(log.targetId);
       } else if (log.targetType === AUDIT_TARGET_TYPE.SKILL_CATEGORY) {

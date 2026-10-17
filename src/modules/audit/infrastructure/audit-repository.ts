@@ -10,6 +10,7 @@ export type AuditEntry = {
   before?: object | null;
   after?: object | null;
   metadata?: object | null;
+  csvImportJobId?: string | null;
   // diffForAudit の結果をそのまま展開して渡せるようにする。値は metadata に入れる。
   changedFields?: string[];
 };
@@ -32,6 +33,7 @@ function data(entry: AuditEntry): Prisma.AuditLogCreateManyInput {
     before: toJson(entry.before),
     after: toJson(entry.after),
     metadata: toJson(metadata),
+    csvImportJobId: entry.csvImportJobId,
   };
 }
 

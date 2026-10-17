@@ -58,6 +58,23 @@ test.describe("UI check", () => {
     }
     await page.goto("/csv");
     await capture(page, "ADMIN", "csv");
+    // 確認の段階（登録はしない）。新規・更新・エラーを1件ずつ含む部署の CSV を選ぶ
+    await page.getByLabel("部署のCSVファイル").setInputFiles({
+      name: "departments.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from(
+        "department_code,department_name,parent_department_code,is_active\r\nUI-CHECK,UI確認部,DEV,true\r\nDEV,開発本部,,true\r\nUI-CHECK-2,UI確認部2,,yes\r\n",
+      ),
+    });
+    await page.getByText("エラー").first().waitFor();
+    await capture(page, "ADMIN", "csv-import-preview");
+    // 下に固定した登録のバーは、ページ全体の撮影では途中に写るため、下までスクロールした画面も撮る
+    await page.mouse.wheel(0, 2000);
+    await page.screenshot({
+      path: "test-results/ui-check/ADMIN-csv-import-preview-bottom.png",
+    });
+    await page.goto("/csv?tab=export");
+    await capture(page, "ADMIN", "csv-export");
     await page.goto("/roles");
     await page.getByRole("button", { name: /の編集を開く$/ }).first().click();
     await capture(page, "ADMIN", "role-detail");

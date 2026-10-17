@@ -15,6 +15,8 @@ const labels: Record<string, string> = {
   targetRoleId: "目標ロール",
   level: "レベル",
   code: "コード",
+  parentCode: "親部署コード",
+  categoryName: "カテゴリ",
   categoryId: "カテゴリ",
   description: "説明",
   isActive: "有効",
@@ -226,9 +228,19 @@ export function buildActionDescription(
       suffix: " の CSV を出力",
     };
   }
+  if (action === "csv.import" || action === "csv.import.failed") {
+    return {
+      prefix: "",
+      target: csvTargetLabel(String(input.metadata?.target ?? "")),
+      suffix: action.endsWith(".failed")
+        ? " の CSV 取り込みに失敗"
+        : " の CSV を取り込み",
+    };
+  }
   const prefix =
     {
       Skill: "スキル ",
+      Department: "部署 ",
       SkillCategory: "カテゴリ ",
       Role: "ロール ",
     }[input.targetType] ?? "";
@@ -249,6 +261,12 @@ export function buildAuditSummary(input: AuditDisplayInput) {
   const { action, before, after, metadata, names = {}, diffRows = [] } = input;
   if (action === "audit_log.export" || action === "csv.export") {
     return metadata?.count === undefined ? "" : `${metadata.count}件`;
+  }
+  if (action === "csv.import") {
+    return `新規 ${metadata?.created ?? 0}件・更新 ${metadata?.updated ?? 0}件`;
+  }
+  if (action === "csv.import.failed") {
+    return "取り込み失敗";
   }
   if (action === "skill_assessment.reject") {
     return String(metadata?.comment ?? "差し戻し");
@@ -331,6 +349,8 @@ export function resolveAuditTargetName(input: {
   switch (input.targetType) {
     case "Member":
       return input.names.members?.[input.targetId ?? ""] ?? savedName;
+    case "Department":
+      return input.names.departments?.[input.targetId ?? ""] ?? savedName;
     case "Skill":
       return input.names.skills?.[input.targetId ?? ""] ?? savedName;
     case "SkillCategory":

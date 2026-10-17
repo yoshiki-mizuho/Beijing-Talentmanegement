@@ -1,19 +1,18 @@
-import { Upload } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { loadCsvExportCounts } from "@/modules/csv-import/application/csv-export-service";
 import type { CsvExportScope } from "@/modules/csv-import/domain/csv-export-columns";
 import { CsvExportPanel } from "@/modules/csv-import/presentation/csv-export-panel";
+import { CsvImportPanel } from "@/modules/csv-import/presentation/csv-import-panel";
 import { adminOnly, requirePageRoles } from "@/server/auth/authorization";
 import { cn } from "@/shared/lib/utils";
-import { EmptyState } from "@/shared/ui/empty-state";
 
 export const dynamic = "force-dynamic";
 
 export default async function CsvPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   await requirePageRoles(adminOnly);
   const params = await searchParams;
-  const tab = params.tab === "import" ? "import" : "export";
+  const tab = params.tab === "export" ? "export" : "import";
   const scope: CsvExportScope = params.scope === "all" ? "all" : "active";
   const counts = await loadCsvExportCounts(scope);
   return (
@@ -24,11 +23,7 @@ export default async function CsvPage({ searchParams }: { searchParams: Promise<
         <Tab href={`/csv?tab=export&scope=${scope}`} active={tab === "export"}>出力</Tab>
       </div>
       <div className="mt-5">
-        {tab === "export" ? <CsvExportPanel scope={scope} counts={counts} /> : (
-          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
-            <EmptyState icon={Upload} title="取り込みは準備中です" />
-          </div>
-        )}
+        {tab === "export" ? <CsvExportPanel scope={scope} counts={counts} /> : <CsvImportPanel />}
       </div>
     </div>
   );
