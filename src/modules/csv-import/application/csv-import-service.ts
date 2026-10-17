@@ -8,10 +8,14 @@ import { CsvParseError, parseCsvBytes } from "../domain/csv-parse";
 import { createPreviewToken } from "../domain/preview-token";
 import { validateSkillImport } from "../domain/skill-import";
 import type { SkillChange } from "../domain/skill-import";
+import { validateMemberImport, type MemberChange } from "../domain/member-import";
+import { validateMemberSkillImport, type MemberSkillChange } from "../domain/member-skill-import";
 import {
   applyCsvImport,
   loadDepartmentImportState,
   loadSkillImportState,
+  loadMemberImportState,
+  loadMemberSkillImportState,
 } from "../infrastructure/csv-import-repository";
 
 export type CsvImportPreview = Awaited<ReturnType<typeof previewCsvImport>>;
@@ -28,6 +32,16 @@ export async function previewCsvImport(
   if (target === "departments") {
     const state = await loadDepartmentImportState();
     const result = validateDepartmentImport(mapped.records, state);
+    return buildPreview(csv.rows.length, result.changes, result.errors);
+  }
+  if (target === "members") {
+    const state = await loadMemberImportState();
+    const result = validateMemberImport(mapped.records, state);
+    return buildPreview(csv.rows.length, result.changes, result.errors);
+  }
+  if (target === "member-skills") {
+    const state = await loadMemberSkillImportState();
+    const result = validateMemberSkillImport(mapped.records, state);
     return buildPreview(csv.rows.length, result.changes, result.errors);
   }
   const state = await loadSkillImportState();
@@ -60,16 +74,27 @@ export async function commitCsvImport(input: {
     totalRows: preview.totalRows,
     unchanged: preview.summary.unchanged,
   };
-  const result =
-    input.target === "departments"
-      ? await applyCsvImport({
+  let result;
+  switch (input.target) {
+    case "departments":
+      result = await applyCsvImport({
           ...common,
           departmentChanges: preview.changes as DepartmentChange[],
-        })
-      : await applyCsvImport({
+        });
+      break;
+    case "members":
+      result = await applyCsvImport({ ...common, memberChanges: preview.changes as MemberChange[] });
+      break;
+    case "member-skills":
+      result = await applyCsvImport({ ...common, memberSkillChanges: preview.changes as MemberSkillChange[] });
+      break;
+    case "skills":
+      result = await applyCsvImport({
           ...common,
           skillChanges: preview.changes as SkillChange[],
         });
+      break;
+  }
   return { status: "applied" as const, ...result };
 }
 

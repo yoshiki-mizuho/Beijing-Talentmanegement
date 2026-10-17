@@ -123,9 +123,49 @@ test("マネージャーはCSV取り込みAPIを利用できない", async ({ br
   }
 });
 
+test("管理者がメンバーCSVでログインユーザー付きのメンバーを作成できる", async ({ browser }) => {
+  const admin = await openLoggedInContext(browser, credentials.ADMIN);
+  const suffix = Date.now();
+  const employeeNo = `E2EM${suffix}`;
+  const email = `e2e-member-${suffix}@example.com`;
+  try {
+    await admin.page.goto("/csv");
+    await admin.page.getByRole("button", { name: "メンバー", exact: true }).click();
+    await admin.page.getByLabel("メンバーのCSVファイル").setInputFiles({
+      name: "members.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from(`employee_no,name,email,department_code,job_title,status,manager_employee_no,target_role_name\r\n${employeeNo},E2Eメンバー,${email},DEV,Engineer,active,,\r\n`),
+    });
+    await admin.page.getByRole("button", { name: "1件を登録" }).click();
+    await expect(admin.page.getByRole("heading", { name: "登録しました" })).toBeVisible();
+    await admin.page.goto("/members");
+    await expect(admin.page.getByText(employeeNo)).toBeVisible();
+  } finally {
+    await importByApi(admin.page, "members", `employee_no,name,email,department_code,job_title,status,manager_employee_no,target_role_name\r\n${employeeNo},E2Eメンバー,${email},DEV,Engineer,inactive,,\r\n`);
+    await admin.context.close();
+  }
+});
+
+test("管理者がメンバースキルCSVでレベルを更新し監査ログを確認できる", async ({ browser }) => {
+  const admin = await openLoggedInContext(browser, credentials.ADMIN);
+  const csv = (level: number) => `employee_no,skill_code,level,years_of_experience,last_assessed_at\r\nTM0001,DEMO-SKILL-016,${level},6,2026-10-17\r\n`;
+  try {
+    await admin.page.goto("/csv");
+    await admin.page.getByRole("button", { name: "メンバースキル", exact: true }).click();
+    await admin.page.getByLabel("メンバースキルのCSVファイル").setInputFiles({ name: "member-skills.csv", mimeType: "text/csv", buffer: Buffer.from(csv(5)) });
+    await admin.page.getByRole("button", { name: "1件を登録" }).click();
+    await expect(admin.page.getByRole("heading", { name: "登録しました" })).toBeVisible();
+    await admin.page.getByRole("link", { name: "監査ログを見る" }).click();
+    await expect(admin.page.getByText(/メンバースキル.*更新/).first()).toBeVisible();
+  } finally {
+    await importByApi(admin.page, "member-skills", csv(4));
+    await admin.context.close();
+  }
+});
+
 async function importByApi(
   page: import("@playwright/test").Page,
-  target: "departments" | "skills",
+  target: "departments" | "members" | "skills" | "member-skills",
   csv: string,
 ) {
   const previewResponse = await page.request.post(

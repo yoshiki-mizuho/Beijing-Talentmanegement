@@ -1,4 +1,5 @@
-import { MemberStatus, SkillLevelChangeSource, SkillSelfAssessmentStatus } from "@prisma/client";
+import { MemberStatus, SkillSelfAssessmentStatus } from "@prisma/client";
+import { nonGrowthLevelChangeSources } from "@/modules/growth/domain/level-change-source";
 
 import { prisma } from "@/server/db/prisma";
 
@@ -49,7 +50,7 @@ export function getTeamDashboardData(managerMemberId: string) {
             orderBy: { createdAt: "desc" }
           },
           skillLevelChanges: {
-            where: { source: { not: SkillLevelChangeSource.BACKFILL } },
+            where: { source: { notIn: [...nonGrowthLevelChangeSources] } },
             select: {
               fromLevel: true,
               toLevel: true,

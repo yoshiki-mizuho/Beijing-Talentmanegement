@@ -32,7 +32,7 @@ import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement
 import { prisma } from "@/server/db/prisma";
 import { UserFacingError } from "@/shared/lib/user-facing-error";
 
-async function hashInitialPassword() {
+export async function hashInitialPassword() {
   return bcrypt.hash(INITIAL_PASSWORD, 12);
 }
 
@@ -165,53 +165,7 @@ export async function listMembers(input?: MemberSearchInput, memberIds?: string[
 
 export async function createMember(input: MemberInput, actorMemberId: string | null) {
   return prisma.$transaction(async (tx) => {
-    const member = await tx.member.create({ data: input });
-    const existingUser = await tx.user.findUnique({
-      where: { email: input.email },
-      select: {
-        id: true,
-        passwordHash: true,
-        memberId: true
-      }
-    });
-
-    if (existingUser) {
-      assertUserCanLinkToMember(existingUser.memberId, member.id);
-
-      await tx.user.update({
-        where: { id: existingUser.id },
-        data: {
-          name: input.name,
-          memberId: member.id,
-          ...(existingUser.passwordHash
-            ? {}
-            : {
-                passwordHash: await hashInitialPassword(),
-                passwordChangeRequired: true
-              })
-        }
-      });
-      await recordAuditLog(tx, {
-        actorMemberId,
-        action: AUDIT_ACTION.MEMBER_CREATE,
-        targetType: AUDIT_TARGET_TYPE.MEMBER,
-        targetId: member.id,
-        after: memberAuditFields(member)
-      });
-      return member;
-    }
-
-    await tx.user.create({
-      data: {
-        email: input.email,
-        name: input.name,
-        passwordHash: await hashInitialPassword(),
-        passwordChangeRequired: true,
-        role: AuthRole.MEMBER,
-        memberId: member.id
-      }
-    });
-
+    const member = await createMemberWithUser(tx, input);
     await recordAuditLog(tx, {
       actorMemberId,
       action: AUDIT_ACTION.MEMBER_CREATE,
@@ -221,6 +175,61 @@ export async function createMember(input: MemberInput, actorMemberId: string | n
     });
     return member;
   });
+}
+
+export async function createMemberWithUser(
+  tx: Prisma.TransactionClient,
+  input: Omit<MemberInput, "jobTitle"> & {
+    jobTitle?: string | null;
+    managerId?: string | null;
+    targetRoleId?: string | null;
+  },
+  // CSV の一括登録では、時間のかかるハッシュの計算をトランザクションの外で1回だけ行い、ここに渡す
+  initialPasswordHash?: string
+) {
+  const resolveInitialPasswordHash = () =>
+    initialPasswordHash ?? hashInitialPassword();
+  const member = await tx.member.create({ data: input });
+  const existingUser = await tx.user.findUnique({
+    where: { email: input.email },
+    select: {
+      id: true,
+      passwordHash: true,
+      memberId: true
+    }
+  });
+
+  if (existingUser) {
+    assertUserCanLinkToMember(existingUser.memberId, member.id);
+
+    await tx.user.update({
+      where: { id: existingUser.id },
+      data: {
+        name: input.name,
+        memberId: member.id,
+        ...(existingUser.passwordHash
+          ? {}
+          : {
+              passwordHash: await resolveInitialPasswordHash(),
+              passwordChangeRequired: true
+            })
+      }
+    });
+    return member;
+  }
+
+  await tx.user.create({
+    data: {
+      email: input.email,
+      name: input.name,
+      passwordHash: await resolveInitialPasswordHash(),
+      passwordChangeRequired: true,
+      role: AuthRole.MEMBER,
+      memberId: member.id
+    }
+  });
+
+  return member;
 }
 
 export async function updateMember(

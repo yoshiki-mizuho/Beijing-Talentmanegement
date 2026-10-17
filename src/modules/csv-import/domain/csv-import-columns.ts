@@ -1,7 +1,12 @@
 import { csvExportDefinitions } from "./csv-export-columns";
 import type { ParsedCsv } from "./csv-parse";
 
-export const csvImportTargets = ["departments", "skills"] as const;
+export const csvImportTargets = [
+  "departments",
+  "members",
+  "skills",
+  "member-skills",
+] as const;
 export type CsvImportTarget = (typeof csvImportTargets)[number];
 
 export type CsvImportError = {

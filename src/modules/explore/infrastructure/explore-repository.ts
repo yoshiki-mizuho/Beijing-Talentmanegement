@@ -1,4 +1,5 @@
-import { MemberStatus, SkillLevelChangeSource } from "@prisma/client";
+import { MemberStatus } from "@prisma/client";
+import { nonGrowthLevelChangeSources } from "@/modules/growth/domain/level-change-source";
 import type { ProfileViewer } from "@/modules/explore/domain/explore-profile";
 import { prisma } from "@/server/db/prisma";
 
@@ -55,7 +56,7 @@ export async function getExploreSourceData(viewer: ProfileViewer, since: Date) {
         jobTitle: true,
         memberSkills: { select: { skillId: true, level: true, skill: { select: { name: true } } } },
         skillLevelChanges: {
-          where: { changedAt: { gte: since }, source: { not: SkillLevelChangeSource.BACKFILL } },
+          where: { changedAt: { gte: since }, source: { notIn: [...nonGrowthLevelChangeSources] } },
           select: { fromLevel: true, toLevel: true }
         }
       },

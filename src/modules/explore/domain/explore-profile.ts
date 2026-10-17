@@ -1,3 +1,5 @@
+import { isGrowthLevelChange } from "@/modules/growth/domain/level-change-source";
+
 export type ProfileViewer = { role: string; memberId: string };
 export type VisibleMember = {
   id: string;
@@ -30,7 +32,7 @@ export function aggregateTrendingSkills(
 ) {
   const counts = new Map<string, { skillId: string; skillName: string; count: number }>();
   for (const change of changes) {
-    if (change.source === "BACKFILL" || new Date(change.changedAt) < since) continue;
+    if (!isGrowthLevelChange(change.source) || new Date(change.changedAt) < since) continue;
     if (change.fromLevel !== null && change.toLevel <= change.fromLevel) continue;
     const item = counts.get(change.skillId) ?? {
       skillId: change.skillId,

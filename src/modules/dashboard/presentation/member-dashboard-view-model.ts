@@ -1,4 +1,5 @@
 import { badgeDefinitions, badgeRarities } from "@/modules/growth/domain/badge-art";
+import { isGrowthLevelChange } from "@/modules/growth/domain/level-change-source";
 import {
   calculateBadgeAchievements,
   calculateCategoryAverages,
@@ -40,7 +41,7 @@ export function buildMemberDashboardViewModel(
   const monthlyLevelUps = data.levelChanges.filter((change) => {
     const parts = getTokyoDateParts(change.changedAt);
     return (
-      change.source !== "BACKFILL" &&
+      isGrowthLevelChange(change.source) &&
       (change.fromLevel === null || change.toLevel > change.fromLevel) &&
       parts.year === nowParts.year &&
       parts.month === nowParts.month
@@ -85,7 +86,7 @@ export function buildMemberDashboardViewModel(
     timeline: [...data.levelChanges]
       .filter(
         (change) =>
-          change.source !== "BACKFILL" && currentSkillIds.has(change.skillId)
+          isGrowthLevelChange(change.source) && currentSkillIds.has(change.skillId)
       )
       .sort((left, right) => right.changedAt.getTime() - left.changedAt.getTime())
       .slice(0, 8)
