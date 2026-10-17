@@ -1,4 +1,4 @@
-import type { AuthRole } from "@prisma/client";
+import { AuthRole } from "@prisma/client";
 
 import {
   memberInputSchema,
@@ -43,6 +43,17 @@ export function updateMember(id: string, input: unknown, actorMemberId: string |
 
 export function deactivateMember(id: string, actorMemberId: string | null) {
   return memberRepository.deactivateMember(id, actorMemberId);
+}
+
+export function updateMemberRole(
+  memberId: string,
+  role: unknown,
+  actorMemberId: string
+) {
+  if (!Object.values(AuthRole).includes(role as AuthRole)) {
+    throw new Error("Invalid role");
+  }
+  return memberRepository.updateMemberRole(memberId, role as AuthRole, actorMemberId);
 }
 
 export function setMemberSkillLevel(input: unknown, actorMemberId: string | null) {

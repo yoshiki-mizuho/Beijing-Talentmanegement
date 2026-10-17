@@ -4,6 +4,7 @@ export const AUDIT_ACTION = {
   MEMBER_DEACTIVATE: "member.deactivate",
   MEMBER_MANAGER_UPDATE: "member.manager.update",
   MEMBER_TARGET_ROLE_UPDATE: "member.target_role.update",
+  MEMBER_ROLE_UPDATE: "member.role.update",
   MEMBER_SKILL_CREATE: "member_skill.create",
   MEMBER_SKILL_UPDATE: "member_skill.update",
   MEMBER_SKILL_DELETE: "member_skill.delete",

@@ -49,6 +49,7 @@ export default async function MembersPage({
     manager: member.manager,
     targetRoleId: member.targetRoleId,
     targetRole: member.targetRole,
+    role: member.users[0]?.role ?? null,
     memberSkills: member.memberSkills.map((memberSkill) => ({
       id: memberSkill.id,
       skillId: memberSkill.skillId,

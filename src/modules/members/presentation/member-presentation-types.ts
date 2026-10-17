@@ -16,6 +16,7 @@ export type MemberRow = {
   manager: { id: string; name: string } | null;
   targetRoleId: string | null;
   targetRole: { id: string; name: string; isActive: boolean } | null;
+  role: "ADMIN" | "MANAGER" | "MEMBER" | null;
   memberSkills: {
     id: string;
     skillId: string;

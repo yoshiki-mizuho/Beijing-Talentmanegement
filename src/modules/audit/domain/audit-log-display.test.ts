@@ -13,9 +13,24 @@ describe("audit log display", () => {
     expect(fieldLabel("employeeNo")).toBe("社員番号");
     expect(displayValue("status", "ACTIVE")).toBe("在籍中");
     expect(displayValue("isRequired", false)).toBe("任意");
+    expect(fieldLabel("role")).toBe("権限");
+    expect(displayValue("role", "MANAGER")).toBe("マネージャー");
     expect(
       displayValue("departmentId", "d1", { departments: { d1: "開発部" } }),
     ).toBe("開発部");
+  });
+
+  it("権限変更の文と要約を組み立てる", () => {
+    const input = {
+      action: "member.role.update",
+      targetType: "Member",
+      targetName: "山田 花子",
+      before: { role: "MEMBER" },
+      after: { role: "MANAGER" },
+      metadata: { changedFields: ["role"] },
+    };
+    expect(buildActionDescription(input).suffix).toBe(" の権限を変更");
+    expect(buildAuditSummary(input)).toBe("メンバー → マネージャー");
   });
   it("差分と伏せた項目を行にする", () => {
     const rows = buildDiffRows(

@@ -41,6 +41,7 @@ function member(targetRoleId: string | null, level?: number): MemberRow {
     manager: null,
     targetRoleId,
     targetRole: targetRoleId ? { id: targetRoleId, name: "エンジニア", isActive: true } : null,
+    role: "MEMBER",
     memberSkills:
       level === undefined
         ? []
