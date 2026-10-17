@@ -1,4 +1,5 @@
 import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
+import { isGrowthLevelChange } from "@/modules/growth/domain/level-change-source";
 
 export type OrganizationMember = {
   id: string;
@@ -42,7 +43,7 @@ export function buildOrganizationDashboard(input: {
   });
   const changes = input.levelChanges.filter(
     (item) =>
-      item.source !== "BACKFILL" && item.toLevel > (item.fromLevel ?? 0),
+      isGrowthLevelChange(item.source) && item.toLevel > (item.fromLevel ?? 0),
   );
   const monthlyLevelUps = months.map((month) => ({
     label: month.label,

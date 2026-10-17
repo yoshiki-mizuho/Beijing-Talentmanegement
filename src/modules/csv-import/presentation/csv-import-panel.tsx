@@ -30,7 +30,9 @@ type Preview = {
 
 const labels: Record<CsvImportTarget, string> = {
   departments: "部署",
+  members: "メンバー",
   skills: "スキル",
+  "member-skills": "メンバースキル",
 };
 
 export function CsvImportPanel() {
@@ -166,7 +168,7 @@ export function CsvImportPanel() {
         ))}
       </ol>
       <div className="flex gap-2">
-        {(["departments", "skills"] as const).map((value) => (
+        {(["departments", "members", "skills", "member-skills"] as const).map((value) => (
           <button
             key={value}
             type="button"

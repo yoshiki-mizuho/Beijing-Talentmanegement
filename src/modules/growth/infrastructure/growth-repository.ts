@@ -163,7 +163,7 @@ export async function listLevelUpFeed(input: {
       WHERE comment."levelChangeId" = change.id
     ) comment_data ON TRUE
     WHERE change."memberId" IN (${Prisma.join(input.memberIds)})
-      AND change.source <> 'BACKFILL'::"SkillLevelChangeSource"
+      AND change.source NOT IN ('BACKFILL'::"SkillLevelChangeSource", 'CSV_IMPORT'::"SkillLevelChangeSource")
       AND (change."fromLevel" IS NULL OR change."toLevel" > change."fromLevel")
       ${startCondition}
       ${endCondition}

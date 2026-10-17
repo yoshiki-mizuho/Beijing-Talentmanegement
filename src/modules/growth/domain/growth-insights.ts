@@ -1,4 +1,5 @@
 import type { BadgeId } from "@/modules/growth/domain/badge-art";
+import { isGrowthLevelChange } from "./level-change-source";
 
 const TOKYO_TIME_ZONE = "Asia/Tokyo";
 
@@ -96,7 +97,7 @@ function achievement(id: BadgeId, value: Date | string | null | undefined) {
 function findThreeMonthStreakDate(changes: ReadonlyArray<GrowthLevelChange>) {
   const upgrades = changes.filter(
     (change) =>
-      change.source !== "BACKFILL" &&
+      isGrowthLevelChange(change.source) &&
       (change.fromLevel === null || change.toLevel > change.fromLevel)
   );
   const firstByMonth = new Map<string, GrowthLevelChange>();
@@ -174,7 +175,7 @@ export function buildGrowthCalendar(input: {
     input.levelChanges
       .filter(
         (change) =>
-          change.source !== "BACKFILL" &&
+          isGrowthLevelChange(change.source) &&
           (change.fromLevel === null || change.toLevel > change.fromLevel)
       )
       .map((change) => change.changedAt)

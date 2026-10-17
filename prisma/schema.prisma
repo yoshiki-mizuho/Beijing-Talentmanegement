@@ -30,6 +30,8 @@ enum SkillLevelChangeSource {
   ASSESSMENT_CORRECTED
   DIRECT_EDIT
   BACKFILL
+  /// CSV で取り込んだレベル。成長の演出・フィードには出さない
+  CSV_IMPORT
 }
 
 enum LevelUpReactionType {

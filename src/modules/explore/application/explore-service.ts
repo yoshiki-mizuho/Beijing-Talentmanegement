@@ -1,3 +1,4 @@
+import { isGrowthLevelChange } from "@/modules/growth/domain/level-change-source";
 import {
   achievedRoleNames,
   aggregateTrendingSkills,
@@ -164,7 +165,7 @@ export async function getSkillProfile(viewer: ProfileViewer, memberId: string, n
   const recent = [...changes]
     .filter(
       (change) =>
-        change.source !== "BACKFILL" &&
+        isGrowthLevelChange(change.source) &&
         (change.fromLevel === null || change.toLevel > change.fromLevel)
     )
     .sort((left, right) => new Date(right.changedAt).getTime() - new Date(left.changedAt).getTime())

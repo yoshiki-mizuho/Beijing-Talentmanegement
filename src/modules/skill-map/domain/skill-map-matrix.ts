@@ -1,3 +1,5 @@
+import { isGrowthLevelChange } from "@/modules/growth/domain/level-change-source";
+
 export type SkillMapSource = {
   id: string;
   name: string;
@@ -46,7 +48,7 @@ export function buildSkillMap(input: { skills: SkillMapSource[]; now: Date }) {
       const growthCount = skill.changes.filter(
         (item) =>
           item.changedAt >= boundary &&
-          item.source !== "BACKFILL" &&
+          isGrowthLevelChange(item.source) &&
           item.toLevel > (item.fromLevel ?? 0),
       ).length;
       return {

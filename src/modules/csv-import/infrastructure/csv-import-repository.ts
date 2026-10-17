@@ -1,15 +1,29 @@
-import { CsvImportStatus, CsvImportTargetType, Prisma } from "@prisma/client";
+import {
+  CsvImportStatus,
+  CsvImportTargetType,
+  Prisma,
+  SkillLevelChangeSource,
+} from "@prisma/client";
 import {
   AUDIT_ACTION,
   AUDIT_TARGET_TYPE,
 } from "@/modules/audit/domain/audit-action";
 import { recordAuditLog } from "@/modules/audit/infrastructure/audit-repository";
 import { prisma } from "@/server/db/prisma";
+import {
+  createMemberWithUser,
+  hashInitialPassword,
+} from "@/modules/members/infrastructure/member-repository";
 import type {
   DepartmentChange,
   DepartmentState,
 } from "../domain/department-import";
 import type { CsvImportTarget } from "../domain/csv-import-columns";
+import type { MemberChange, MemberImportState } from "../domain/member-import";
+import type {
+  MemberSkillChange,
+  MemberSkillImportState,
+} from "../domain/member-skill-import";
 import type {
   SkillCategoryState,
   SkillChange,
@@ -62,6 +76,73 @@ export async function loadSkillImportState(): Promise<{
   };
 }
 
+export async function loadMemberImportState(): Promise<MemberImportState> {
+  const [members, departments, roles] = await Promise.all([
+    prisma.member.findMany({
+      select: {
+        id: true,
+        employeeNo: true,
+        name: true,
+        email: true,
+        departmentId: true,
+        department: { select: { code: true } },
+        jobTitle: true,
+        status: true,
+        managerId: true,
+        manager: { select: { employeeNo: true } },
+        targetRoleId: true,
+        targetRole: { select: { name: true } },
+        users: { select: { role: true } },
+      },
+    }),
+    prisma.department.findMany({ select: { id: true, code: true } }),
+    prisma.role.findMany({ select: { id: true, name: true, isActive: true } }),
+  ]);
+  return {
+    members: members.map((member) => ({
+      ...member,
+      departmentCode: member.department.code,
+      managerEmployeeNo: member.manager?.employeeNo ?? null,
+      targetRoleName: member.targetRole?.name ?? null,
+      canManage: member.users.some(
+        (user) => user.role === "ADMIN" || user.role === "MANAGER",
+      ),
+    })),
+    departments,
+    roles,
+  };
+}
+
+export async function loadMemberSkillImportState(): Promise<MemberSkillImportState> {
+  const [members, skills, memberSkills] = await Promise.all([
+    prisma.member.findMany({
+      select: { id: true, employeeNo: true, name: true },
+    }),
+    prisma.skill.findMany({
+      select: { id: true, code: true, name: true, isActive: true },
+    }),
+    prisma.memberSkill.findMany({
+      select: {
+        id: true,
+        memberId: true,
+        skillId: true,
+        level: true,
+        yearsOfExperience: true,
+        lastAssessedAt: true,
+      },
+    }),
+  ]);
+  return {
+    members,
+    skills,
+    memberSkills: memberSkills.map((item) => ({
+      ...item,
+      yearsOfExperience: item.yearsOfExperience?.toString() ?? null,
+      lastAssessedAt: item.lastAssessedAt?.toISOString().slice(0, 10) ?? null,
+    })),
+  };
+}
+
 type ApplyInput = {
   target: CsvImportTarget;
   originalName: string;
@@ -70,62 +151,208 @@ type ApplyInput = {
   unchanged: number;
   departmentChanges?: DepartmentChange[];
   skillChanges?: SkillChange[];
+  memberChanges?: MemberChange[];
+  memberSkillChanges?: MemberSkillChange[];
 };
 
 export async function applyCsvImport(input: ApplyInput) {
+  const initialPasswordHash = input.memberChanges?.some(
+    (change) => change.kind === "new",
+  )
+    ? await hashInitialPassword()
+    : undefined;
   try {
-    return await prisma.$transaction(async (tx) => {
-      const actionable = [
-        ...(input.departmentChanges ?? []),
-        ...(input.skillChanges ?? []),
-      ].filter((change) => change.kind !== "unchanged");
-      const created = actionable.filter(
-        (change) => change.kind === "new",
-      ).length;
-      const updated = actionable.filter(
-        (change) => change.kind === "update",
-      ).length;
-      const job = await tx.csvImportJob.create({
-        data: {
-          targetType: targetType(input.target),
-          status: CsvImportStatus.APPLIED,
-          originalName: input.originalName,
-          totalRows: input.totalRows,
-          validRows: input.totalRows,
-          errorRows: 0,
-          summary: { created, updated, unchanged: input.unchanged },
-          createdById: input.actorMemberId,
-        },
-      });
-      if (input.departmentChanges) {
-        await applyDepartments(
-          tx,
-          input.departmentChanges,
-          input.actorMemberId,
-          job.id,
-        );
-      }
-      if (input.skillChanges) {
-        await applySkills(tx, input.skillChanges, input.actorMemberId, job.id);
-      }
-      await recordAuditLog(tx, {
-        actorMemberId: input.actorMemberId,
-        action: AUDIT_ACTION.CSV_IMPORT,
-        targetType: AUDIT_TARGET_TYPE.CSV,
-        targetId: null,
-        csvImportJobId: job.id,
-        metadata: {
-          target: input.target,
-          created,
-          updated,
-          unchanged: input.unchanged,
-        },
-      });
-      return { jobId: job.id, created, updated };
-    });
+    return await prisma.$transaction(
+      async (tx) => {
+        const actionable = [
+          ...(input.departmentChanges ?? []),
+          ...(input.skillChanges ?? []),
+          ...(input.memberChanges ?? []),
+          ...(input.memberSkillChanges ?? []),
+        ].filter((change) => change.kind !== "unchanged");
+        const created = actionable.filter(
+          (change) => change.kind === "new",
+        ).length;
+        const updated = actionable.filter(
+          (change) => change.kind === "update",
+        ).length;
+        const job = await tx.csvImportJob.create({
+          data: {
+            targetType: targetType(input.target),
+            status: CsvImportStatus.APPLIED,
+            originalName: input.originalName,
+            totalRows: input.totalRows,
+            validRows: input.totalRows,
+            errorRows: 0,
+            summary: { created, updated, unchanged: input.unchanged },
+            createdById: input.actorMemberId,
+          },
+        });
+        if (input.departmentChanges) {
+          await applyDepartments(
+            tx,
+            input.departmentChanges,
+            input.actorMemberId,
+            job.id,
+          );
+        }
+        if (input.skillChanges) {
+          await applySkills(
+            tx,
+            input.skillChanges,
+            input.actorMemberId,
+            job.id,
+          );
+        }
+        if (input.memberChanges)
+          await applyMembers(
+            tx,
+            input.memberChanges,
+            input.actorMemberId,
+            job.id,
+            initialPasswordHash,
+          );
+        if (input.memberSkillChanges)
+          await applyMemberSkills(
+            tx,
+            input.memberSkillChanges,
+            input.actorMemberId,
+            job.id,
+          );
+        await recordAuditLog(tx, {
+          actorMemberId: input.actorMemberId,
+          action: AUDIT_ACTION.CSV_IMPORT,
+          targetType: AUDIT_TARGET_TYPE.CSV,
+          targetId: null,
+          csvImportJobId: job.id,
+          metadata: {
+            target: input.target,
+            created,
+            updated,
+            unchanged: input.unchanged,
+          },
+        });
+        return { jobId: job.id, created, updated };
+      },
+      // 取り込みは件数が多いと時間がかかるので、既定（5秒）より長く待つ
+      { timeout: 60_000, maxWait: 10_000 },
+    );
   } catch (error) {
     await recordFailedImport(input, error);
     throw error;
+  }
+}
+
+async function applyMembers(
+  tx: Prisma.TransactionClient,
+  changes: MemberChange[],
+  actorMemberId: string,
+  jobId: string,
+  initialPasswordHash: string | undefined,
+) {
+  for (const change of changes.filter((item) => item.kind !== "unchanged")) {
+    const data = {
+      employeeNo: change.code,
+      name: change.name,
+      email: change.email,
+      departmentId: change.departmentId,
+      jobTitle: change.jobTitle,
+      status: change.status,
+      managerId: change.managerId,
+      targetRoleId: change.targetRoleId,
+    };
+    const saved =
+      change.kind === "new"
+        ? await createMemberWithUser(tx, data, initialPasswordHash)
+        : await tx.member.update({ where: { id: change.id }, data });
+    await recordAuditLog(tx, {
+      actorMemberId,
+      action:
+        change.kind === "new"
+          ? AUDIT_ACTION.MEMBER_CREATE
+          : AUDIT_ACTION.MEMBER_UPDATE,
+      targetType: AUDIT_TARGET_TYPE.MEMBER,
+      targetId: saved.id,
+      csvImportJobId: jobId,
+      before:
+        change.kind === "update" ? beforeFromChanges(change.changes) : null,
+      after:
+        change.kind === "new"
+          ? {
+              employeeNo: change.code,
+              name: change.name,
+              email: change.email,
+              departmentCode: change.departmentCode,
+              jobTitle: change.jobTitle,
+              status: change.status,
+              managerEmployeeNo: change.managerEmployeeNo,
+              targetRoleName: change.targetRoleName,
+            }
+          : afterFromChanges(change.changes),
+      changedFields:
+        change.kind === "update" ? Object.keys(change.changes) : undefined,
+    });
+  }
+}
+
+async function applyMemberSkills(
+  tx: Prisma.TransactionClient,
+  changes: MemberSkillChange[],
+  actorMemberId: string,
+  jobId: string,
+) {
+  for (const change of changes.filter((item) => item.kind !== "unchanged")) {
+    const data = {
+      memberId: change.memberId,
+      skillId: change.skillId,
+      level: change.level,
+      yearsOfExperience: change.yearsOfExperience,
+      lastAssessedAt: change.lastAssessedAt
+        ? new Date(`${change.lastAssessedAt}T00:00:00Z`)
+        : null,
+    };
+    const saved =
+      change.kind === "new"
+        ? await tx.memberSkill.create({ data })
+        : await tx.memberSkill.update({ where: { id: change.id }, data });
+    const previousLevel =
+      change.kind === "update"
+        ? (change.changes.level?.before as number | undefined)
+        : undefined;
+    if (change.kind === "new" || previousLevel !== undefined)
+      await tx.skillLevelChange.create({
+        data: {
+          memberId: change.memberId,
+          skillId: change.skillId,
+          fromLevel: previousLevel ?? null,
+          toLevel: change.level,
+          source: SkillLevelChangeSource.CSV_IMPORT,
+          changedByMemberId: actorMemberId,
+        },
+      });
+    await recordAuditLog(tx, {
+      actorMemberId,
+      action:
+        change.kind === "new"
+          ? AUDIT_ACTION.MEMBER_SKILL_CREATE
+          : AUDIT_ACTION.MEMBER_SKILL_UPDATE,
+      targetType: AUDIT_TARGET_TYPE.MEMBER_SKILL,
+      targetId: saved.id,
+      csvImportJobId: jobId,
+      before:
+        change.kind === "update" ? beforeFromChanges(change.changes) : null,
+      after:
+        change.kind === "new"
+          ? {
+              level: change.level,
+              yearsOfExperience: change.yearsOfExperience,
+              lastAssessedAt: change.lastAssessedAt,
+            }
+          : afterFromChanges(change.changes),
+      changedFields:
+        change.kind === "update" ? Object.keys(change.changes) : undefined,
+      metadata: { memberId: change.memberId, skillId: change.skillId },
+    });
   }
 }
 
@@ -249,9 +476,16 @@ async function recordFailedImport(input: ApplyInput, error: unknown) {
 }
 
 function targetType(target: CsvImportTarget) {
-  return target === "departments"
-    ? CsvImportTargetType.DEPARTMENTS
-    : CsvImportTargetType.SKILLS;
+  switch (target) {
+    case "departments":
+      return CsvImportTargetType.DEPARTMENTS;
+    case "members":
+      return CsvImportTargetType.MEMBERS;
+    case "skills":
+      return CsvImportTargetType.SKILLS;
+    case "member-skills":
+      return CsvImportTargetType.MEMBER_SKILLS;
+  }
 }
 
 function beforeFromChanges(changes: Record<string, { before: unknown }>) {
