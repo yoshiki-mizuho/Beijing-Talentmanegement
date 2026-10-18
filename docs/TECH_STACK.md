@@ -53,6 +53,12 @@ MVPでは、Next.js、TypeScript、Tailwind CSS、localStorage、Repositoryパ�
 | AI API | OpenAI互換API | サーバー側サービスとして隔離し、APIキーをクライアントへ露出させない |
 | AI評価 | 非同期化・キャッシュ前提 | 必要に応じて再評価、ジョブ履歴、失敗時フォールバックを設ける |
 
+AI APIはSDKを追加せず、サーバー側から`fetch`で呼び出します。
+
+接続設定には`AI_API_BASE_URL`、`AI_API_KEY`、`AI_MODEL`、`AI_TIMEOUT_MS`を使います。
+
+`AI_API_BASE_URL=fake`の場合は開発・テスト用の偽のAIを使います。
+
 ### Testing
 
 | 領域 | 採用技術 | 方針 |

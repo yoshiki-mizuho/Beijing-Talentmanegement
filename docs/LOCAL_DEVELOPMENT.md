@@ -19,6 +19,14 @@
 `CREATEDB` は、Prismaのmigration差分確認でshadow databaseを作るために必要。
 
 3. `.env.example` を `.env` にコピーする。`.env` の `DEMO_ADMIN_PASSWORD`、`DEMO_MANAGER_PASSWORD`、`DEMO_MEMBER_PASSWORD` にローカル専用の値（12文字以上、相互に異なる）を設定しておくと、seedが自動で読み込むため、次の手順の環境変数の設定を省略できる。`.env` はGit管理外であり、コミットしない。
+
+AIを通信なしで確認する場合は、`.env`の`AI_API_BASE_URL`を`fake`にする。
+
+OpenAI互換APIを使う場合は、`AI_API_BASE_URL`、`AI_API_KEY`、`AI_MODEL`を設定する。
+
+必要に応じて`AI_TIMEOUT_MS`へミリ秒単位の上限を設定する。
+
+APIキーはサーバー専用であり、`NEXT_PUBLIC_`を付けない。
 4. 依存関係をインストールし、migrationとseedを実行する。seedのパスワードはローカル専用の値を指定し、コミットしない。
 
 ```powershell

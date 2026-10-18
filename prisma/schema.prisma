@@ -69,21 +69,32 @@ enum CsvImportStatus {
   CANCELED
 }
 
+enum GrowthHintSource {
+  AI
+  FALLBACK
+}
+
+enum AiUsageStatus {
+  SUCCESS
+  FAILED
+  FALLBACK
+}
+
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  passwordHash  String?
-  passwordChangeRequired Boolean @default(false)
-  role          AuthRole  @default(MEMBER)
-  memberId      String?   @unique
-  member        Member?   @relation(fields: [memberId], references: [id])
-  accounts      Account[]
-  sessions      Session[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                     String    @id @default(cuid())
+  name                   String?
+  email                  String    @unique
+  emailVerified          DateTime?
+  image                  String?
+  passwordHash           String?
+  passwordChangeRequired Boolean   @default(false)
+  role                   AuthRole  @default(MEMBER)
+  memberId               String?   @unique
+  member                 Member?   @relation(fields: [memberId], references: [id])
+  accounts               Account[]
+  sessions               Session[]
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 }
 
 model Account {
@@ -151,9 +162,9 @@ model Member {
   avatarUpdatedAt       DateTime?
   managerId             String?
   manager               Member?               @relation("MemberManager", fields: [managerId], references: [id])
-  reports               Member[]               @relation("MemberManager")
+  reports               Member[]              @relation("MemberManager")
   targetRoleId          String?
-  targetRole            Role?                  @relation("MemberTargetRole", fields: [targetRoleId], references: [id])
+  targetRole            Role?                 @relation("MemberTargetRole", fields: [targetRoleId], references: [id])
   users                 User[]
   memberSkills          MemberSkill[]         @relation("MemberSkills")
   approvedMemberSkills  MemberSkill[]         @relation("ApprovedMemberSkills")
@@ -161,15 +172,18 @@ model Member {
   reviewedAssessments   SkillSelfAssessment[] @relation("AssessmentReviewer")
   notifications         Notification[]        @relation("NotificationRecipient")
   auditLogs             AuditLog[]            @relation("AuditActor")
-  skillLevelChanges     SkillLevelChange[]     @relation("SkillLevelChangeMember")
-  changedSkillLevels    SkillLevelChange[]     @relation("SkillLevelChangeActor")
-  levelUpReactions      LevelUpReaction[]      @relation("LevelUpReactionMember")
-  levelUpComments       LevelUpComment[]       @relation("LevelUpCommentAuthor")
-  sentCheers            Cheer[]                @relation("CheerSender")
-  receivedCheers        Cheer[]                @relation("CheerRecipient")
-  mentoredCheers        Cheer[]                @relation("CheerMentor")
-  managedOneOnOneNotes  OneOnOneNote[]         @relation("OneOnOneNoteManager")
-  receivedOneOnOneNotes OneOnOneNote[]         @relation("OneOnOneNoteMember")
+  skillLevelChanges     SkillLevelChange[]    @relation("SkillLevelChangeMember")
+  changedSkillLevels    SkillLevelChange[]    @relation("SkillLevelChangeActor")
+  levelUpReactions      LevelUpReaction[]     @relation("LevelUpReactionMember")
+  levelUpComments       LevelUpComment[]      @relation("LevelUpCommentAuthor")
+  sentCheers            Cheer[]               @relation("CheerSender")
+  receivedCheers        Cheer[]               @relation("CheerRecipient")
+  mentoredCheers        Cheer[]               @relation("CheerMentor")
+  managedOneOnOneNotes  OneOnOneNote[]        @relation("OneOnOneNoteManager")
+  receivedOneOnOneNotes OneOnOneNote[]        @relation("OneOnOneNoteMember")
+  growthHint            GrowthHint?           @relation("GrowthHintMember")
+  generatedGrowthHints  GrowthHint[]          @relation("GrowthHintGeneratedBy")
+  aiUsageLogs           AiUsageLog[]          @relation("AiUsageActor")
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
 
@@ -189,21 +203,21 @@ model SkillCategory {
 }
 
 model Skill {
-  id              String                @id @default(cuid())
-  code            String                @unique
-  name            String
-  categoryId      String
-  category        SkillCategory         @relation(fields: [categoryId], references: [id])
-  description     String?
-  isActive        Boolean               @default(true)
-  memberSkills    MemberSkill[]
-  selfAssessments SkillSelfAssessment[]
-  roleRequirements RoleRequirement[]
+  id                String                @id @default(cuid())
+  code              String                @unique
+  name              String
+  categoryId        String
+  category          SkillCategory         @relation(fields: [categoryId], references: [id])
+  description       String?
+  isActive          Boolean               @default(true)
+  memberSkills      MemberSkill[]
+  selfAssessments   SkillSelfAssessment[]
+  roleRequirements  RoleRequirement[]
   skillLevelChanges SkillLevelChange[]
   cheers            Cheer[]
   levelGuides       SkillLevelGuide[]
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
 
   @@unique([categoryId, name])
   @@index([categoryId])
@@ -232,20 +246,20 @@ model SkillLevel {
 }
 
 model MemberSkill {
-  id                String     @id @default(cuid())
-  memberId          String
-  member            Member     @relation("MemberSkills", fields: [memberId], references: [id])
-  skillId           String
-  skill             Skill      @relation(fields: [skillId], references: [id])
-  level             Int
-  skillLevel        SkillLevel @relation(fields: [level], references: [level])
-  yearsOfExperience Decimal?   @db.Decimal(4, 1)
-  lastAssessedAt    DateTime?  @db.Date
+  id                 String     @id @default(cuid())
+  memberId           String
+  member             Member     @relation("MemberSkills", fields: [memberId], references: [id])
+  skillId            String
+  skill              Skill      @relation(fields: [skillId], references: [id])
+  level              Int
+  skillLevel         SkillLevel @relation(fields: [level], references: [level])
+  yearsOfExperience  Decimal?   @db.Decimal(4, 1)
+  lastAssessedAt     DateTime?  @db.Date
   approvedByMemberId String?
-  approvedByMember   Member?   @relation("ApprovedMemberSkills", fields: [approvedByMemberId], references: [id])
-  approvedAt        DateTime?
-  createdAt         DateTime   @default(now())
-  updatedAt         DateTime   @updatedAt
+  approvedByMember   Member?    @relation("ApprovedMemberSkills", fields: [approvedByMemberId], references: [id])
+  approvedAt         DateTime?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
 
   @@unique([memberId, skillId])
   @@index([skillId])
@@ -253,23 +267,23 @@ model MemberSkill {
 }
 
 model SkillSelfAssessment {
-  id                 String                    @id @default(cuid())
-  memberId           String
-  member             Member                    @relation("AssessmentMember", fields: [memberId], references: [id])
-  skillId            String
-  skill              Skill                     @relation(fields: [skillId], references: [id])
-  requestedLevel     Int
-  requestedSkillLevel SkillLevel               @relation(fields: [requestedLevel], references: [level])
-  yearsOfExperience  Decimal?                  @db.Decimal(4, 1)
-  status             SkillSelfAssessmentStatus @default(PENDING)
-  managerComment     String?
-  reviewedByMemberId String?
-  reviewedByMember   Member?                   @relation("AssessmentReviewer", fields: [reviewedByMemberId], references: [id])
-  reviewedAt         DateTime?
-  notifications      Notification[]
-  skillLevelChanges  SkillLevelChange[]
-  createdAt          DateTime                  @default(now())
-  updatedAt          DateTime                  @updatedAt
+  id                  String                    @id @default(cuid())
+  memberId            String
+  member              Member                    @relation("AssessmentMember", fields: [memberId], references: [id])
+  skillId             String
+  skill               Skill                     @relation(fields: [skillId], references: [id])
+  requestedLevel      Int
+  requestedSkillLevel SkillLevel                @relation(fields: [requestedLevel], references: [level])
+  yearsOfExperience   Decimal?                  @db.Decimal(4, 1)
+  status              SkillSelfAssessmentStatus @default(PENDING)
+  managerComment      String?
+  reviewedByMemberId  String?
+  reviewedByMember    Member?                   @relation("AssessmentReviewer", fields: [reviewedByMemberId], references: [id])
+  reviewedAt          DateTime?
+  notifications       Notification[]
+  skillLevelChanges   SkillLevelChange[]
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
 
   @@index([memberId])
   @@index([skillId])
@@ -278,20 +292,20 @@ model SkillSelfAssessment {
 }
 
 model Notification {
-  id                    String                @id @default(cuid())
+  id                    String               @id @default(cuid())
   recipientMemberId     String
-  recipientMember       Member                @relation("NotificationRecipient", fields: [recipientMemberId], references: [id])
+  recipientMember       Member               @relation("NotificationRecipient", fields: [recipientMemberId], references: [id])
   type                  NotificationType
-  status                NotificationStatus    @default(UNREAD)
+  status                NotificationStatus   @default(UNREAD)
   skillSelfAssessmentId String?
-  skillSelfAssessment   SkillSelfAssessment?  @relation(fields: [skillSelfAssessmentId], references: [id])
+  skillSelfAssessment   SkillSelfAssessment? @relation(fields: [skillSelfAssessmentId], references: [id])
   skillLevelChangeId    String?
-  skillLevelChange      SkillLevelChange?      @relation(fields: [skillLevelChangeId], references: [id])
+  skillLevelChange      SkillLevelChange?    @relation(fields: [skillLevelChangeId], references: [id])
   cheerId               String?
-  cheer                 Cheer?                 @relation(fields: [cheerId], references: [id])
+  cheer                 Cheer?               @relation(fields: [cheerId], references: [id])
   title                 String
   body                  String?
-  createdAt             DateTime              @default(now())
+  createdAt             DateTime             @default(now())
   readAt                DateTime?
 
   @@index([recipientMemberId, status])
@@ -316,7 +330,7 @@ model SkillLevelChange {
   memberId              String
   member                Member                 @relation("SkillLevelChangeMember", fields: [memberId], references: [id])
   skillId               String
-  skill                  Skill                  @relation(fields: [skillId], references: [id])
+  skill                 Skill                  @relation(fields: [skillId], references: [id])
   fromLevel             Int?
   toLevel               Int
   source                SkillLevelChangeSource
@@ -379,15 +393,15 @@ model Cheer {
 }
 
 model OneOnOneNote {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   managerMemberId String
-  managerMember   Member   @relation("OneOnOneNoteManager", fields: [managerMemberId], references: [id])
+  managerMember   Member    @relation("OneOnOneNoteManager", fields: [managerMemberId], references: [id])
   memberId        String
-  member          Member   @relation("OneOnOneNoteMember", fields: [memberId], references: [id])
+  member          Member    @relation("OneOnOneNoteMember", fields: [memberId], references: [id])
   body            String
   discussedAt     DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   @@index([managerMemberId, memberId])
 }
@@ -443,4 +457,37 @@ model CsvImportJob {
   auditLogs    AuditLog[]
 
   @@index([targetType, status])
+}
+
+model GrowthHint {
+  id            String           @id @default(cuid())
+  memberId      String           @unique
+  member        Member           @relation("GrowthHintMember", fields: [memberId], references: [id], onDelete: Cascade)
+  source        GrowthHintSource
+  inputHash     String
+  content       Json
+  model         String?
+  generatedById String?
+  generatedBy   Member?          @relation("GrowthHintGeneratedBy", fields: [generatedById], references: [id])
+  generatedAt   DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+}
+
+model AiUsageLog {
+  id               String        @id @default(cuid())
+  feature          String
+  actorMemberId    String?
+  actorMember      Member?       @relation("AiUsageActor", fields: [actorMemberId], references: [id])
+  targetMemberId   String?
+  model            String?
+  status           AiUsageStatus
+  promptTokens     Int?
+  completionTokens Int?
+  totalTokens      Int?
+  latencyMs        Int
+  errorCode        String?
+  createdAt        DateTime      @default(now())
+
+  @@index([createdAt])
+  @@index([feature, createdAt])
 }
