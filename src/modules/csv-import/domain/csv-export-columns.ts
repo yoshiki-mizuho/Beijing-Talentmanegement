@@ -4,7 +4,6 @@ export const csvExportTargets = [
   "skills",
   "member-skills",
   "roles",
-  "role-requirements",
 ] as const;
 
 export type CsvExportTarget = (typeof csvExportTargets)[number];
@@ -55,11 +54,14 @@ export const csvExportDefinitions = {
   },
   roles: {
     label: "ロール",
-    columns: ["role_name", "description", "is_active"],
-  },
-  "role-requirements": {
-    label: "ロール要件",
-    columns: ["role_name", "skill_code", "required_level", "is_required"],
+    columns: [
+      "role_name",
+      "description",
+      "is_active",
+      "skill_code",
+      "required_level",
+      "is_required",
+    ],
   },
 } as const satisfies Record<
   CsvExportTarget,
@@ -105,12 +107,11 @@ export type CsvExportRows = {
     name: string;
     description: string | null;
     isActive: boolean;
-  }>;
-  "role-requirements": Array<{
-    role: { name: string };
-    skill: { code: string };
-    requiredLevel: number;
-    isRequired: boolean;
+    roleRequirements: Array<{
+      skill: { code: string };
+      requiredLevel: number;
+      isRequired: boolean;
+    }>;
   }>;
 };
 
@@ -158,18 +159,19 @@ export function toCsvExportRows<T extends CsvExportTarget>(
         formatDate(row.lastAssessedAt),
       ]);
     case "roles":
-      return (rows as CsvExportRows["roles"]).map((row) => [
-        row.name,
-        row.description ?? "",
-        row.isActive,
-      ]);
-    case "role-requirements":
-      return (rows as CsvExportRows["role-requirements"]).map((row) => [
-        row.role.name,
-        row.skill.code,
-        row.requiredLevel,
-        row.isRequired,
-      ]);
+      return (rows as CsvExportRows["roles"]).flatMap((row) => {
+        const requirements = row.roleRequirements.length
+          ? row.roleRequirements
+          : [{ skill: null, requiredLevel: null, isRequired: null }];
+        return requirements.map((requirement) => [
+          row.name,
+          row.description ?? "",
+          row.isActive,
+          requirement.skill?.code ?? "",
+          requirement.requiredLevel ?? "",
+          requirement.isRequired ?? "",
+        ]);
+      });
   }
 }
 

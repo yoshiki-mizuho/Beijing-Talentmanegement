@@ -1,6 +1,5 @@
 import type { Prisma } from "@prisma/client";
 import { AUDIT_ACTION } from "../domain/audit-action";
-import { buildCsv } from "@/shared/lib/csv";
 import {
   buildActionDescription,
   buildAuditSummary,
@@ -17,9 +16,7 @@ import {
 import {
   loadAuditActors,
   loadAuditLogs,
-  loadAuditLogsForExport,
   loadAuditNameMaps,
-  recordAuditExport,
 } from "../infrastructure/audit-log-query-repository";
 
 const targetTypeLabels: Record<string, string> = {
@@ -62,7 +59,7 @@ export async function listAuditLogs(
 }
 
 async function buildListItems(
-  logs: Awaited<ReturnType<typeof loadAuditLogsForExport>>,
+  logs: Awaited<ReturnType<typeof loadAuditLogs>>["logs"],
 ) {
   const lookup = await loadAuditNameMaps(logs);
   const names: NameMaps = {
@@ -145,7 +142,11 @@ async function buildListItems(
         : null,
       action: log.action,
       operation: isExport ? ("export" as const) : operation,
-      operationLabel: isExport ? "出力" : isImport ? "取り込み" : operationLabels[operation],
+      operationLabel: isExport
+        ? "出力"
+        : isImport
+          ? "取り込み"
+          : operationLabels[operation],
       targetType: log.targetType,
       targetTypeLabel: targetTypeLabels[log.targetType] ?? log.targetType,
       targetId: log.targetId,
@@ -213,58 +214,4 @@ function serializeQuery(query: ReturnType<typeof parseAuditLogQuery>) {
     from: query.from.toISOString(),
     to: query.to.toISOString(),
   };
-}
-
-const tokyoDateTime = new Intl.DateTimeFormat("sv-SE", {
-  timeZone: "Asia/Tokyo",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-  hour: "2-digit",
-  minute: "2-digit",
-  second: "2-digit",
-  hourCycle: "h23",
-});
-export async function exportAuditLogs(
-  input: Record<string, string | string[] | undefined>,
-  actorMemberId: string,
-) {
-  const query = parseAuditLogQuery(input);
-  const logs = await loadAuditLogsForExport(query);
-  if (logs.length > 10_000) {
-    return null;
-  }
-  const items = await buildListItems(logs);
-  const headers = [
-    "日時",
-    "操作した人",
-    "操作",
-    "対象の種類",
-    "対象",
-    "変更項目",
-    "変更前",
-    "変更後",
-    "補足",
-  ];
-  const rows = items.map((item) => [
-    tokyoDateTime.format(new Date(item.occurredAt)),
-    item.actor?.name ?? "システム",
-    item.operationLabel,
-    item.targetTypeLabel,
-    item.targetName,
-    item.diffRows.map((x) => x.label).join("、"),
-    JSON.stringify(item.before),
-    JSON.stringify(item.after),
-    JSON.stringify(item.metadata),
-  ]);
-  await recordAuditExport(actorMemberId, logs.length, {
-    period: query.period,
-    from: query.fromDate,
-    to: query.toDate,
-    ...(query.actor ? { actor: query.actor } : {}),
-    targets: query.targets,
-    operations: query.operations,
-    q: query.q,
-  });
-  return buildCsv(headers, rows);
 }

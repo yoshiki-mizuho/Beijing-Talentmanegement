@@ -4,7 +4,7 @@ import { readDemoCredentials } from "./helpers/credentials";
 
 const credentials = readDemoCredentials();
 
-test("管理者が6種類のCSVを出力して監査ログを確認できる", async ({
+test("管理者が5種類のCSVを出力して監査ログを確認できる", async ({
   browser,
 }) => {
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
@@ -16,7 +16,6 @@ test("管理者が6種類のCSVを出力して監査ログを確認できる", a
       "スキル",
       "メンバースキル",
       "ロール",
-      "ロール要件",
     ]) {
       await expect(
         admin.page.getByRole("link", {
@@ -34,6 +33,11 @@ test("管理者が6種類のCSVを出力して監査ログを確認できる", a
       "/api/csv/export/members?scope=all",
     );
     expect(all.status()).toBe(200);
+    const roles = await admin.page.request.get("/api/csv/export/roles");
+    expect(roles.status()).toBe(200);
+    expect((await roles.text()).split("\r\n")[0]).toBe(
+      '\uFEFF"role_name","description","is_active","skill_code","required_level","is_required"',
+    );
     await admin.page.goto("/audit-logs?period=today&target=csv");
     await expect(
       admin.page.getByText(/メンバー.*CSV を出力/).first(),

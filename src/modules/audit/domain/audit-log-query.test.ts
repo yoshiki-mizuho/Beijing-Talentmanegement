@@ -17,13 +17,19 @@ describe("parseAuditLogQuery", () => {
     expect(result.from.toISOString()).toBe("2026-09-30T15:00:00.000Z");
     expect(result.to.toISOString()).toBe("2026-10-03T14:59:59.999Z");
   });
-  it("不正な期間指定を拒否する", () =>
-    expect(() =>
-      parseAuditLogQuery(
-        { period: "custom", from: "bad", to: "2026-10-03" },
-        now,
-      ),
-    ).toThrow());
+  it.each([
+    ["不完全", { period: "custom", from: "2026-10-01" }],
+    ["不正", { period: "custom", from: "bad", to: "2026-10-03" }],
+    [
+      "開始日が終了日より後",
+      { period: "custom", from: "2026-10-04", to: "2026-10-03" },
+    ],
+  ])("%sな期間指定を直近30日として扱う", (_, input) => {
+    const result = parseAuditLogQuery(input, now);
+    expect(result.period).toBe("30");
+    expect(result.from.toISOString()).toBe("2026-09-16T15:00:00.000Z");
+    expect(result.to.toISOString()).toBe("2026-10-16T14:59:59.999Z");
+  });
 });
 
 describe("classifyAuditAction", () => {

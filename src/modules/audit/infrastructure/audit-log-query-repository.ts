@@ -7,7 +7,6 @@ import {
   targetGroup,
   type AuditLogQuery,
 } from "../domain/audit-log-query";
-import { recordAuditLog } from "./audit-repository";
 
 type AuditLogRow = Prisma.AuditLogGetPayload<{
   include: {
@@ -74,9 +73,13 @@ async function loadNameSearchIds(q: string) {
   return {
     memberIds: members.map(({ id }) => id),
     skillIds: skills.map(({ id }) => id),
-    targetIds: [...members, ...departments, ...skills, ...categories, ...roles].map(
-      ({ id }) => id,
-    ),
+    targetIds: [
+      ...members,
+      ...departments,
+      ...skills,
+      ...categories,
+      ...roles,
+    ].map(({ id }) => id),
   };
 }
 
@@ -117,27 +120,29 @@ const auditLogInclude = {
 
 export async function loadAuditLogs(query: AuditLogQuery) {
   const where = await buildAuditLogWhere(query);
-  const total = await prisma.auditLog.count({ where });
+  const [total, initialLogs] = await Promise.all([
+    prisma.auditLog.count({ where }),
+    prisma.auditLog.findMany({
+      where,
+      include: auditLogInclude,
+      orderBy: [{ occurredAt: "desc" }, { id: "desc" }],
+      skip: (query.page - 1) * AUDIT_PAGE_SIZE,
+      take: AUDIT_PAGE_SIZE,
+    }),
+  ]);
   const pageCount = Math.max(1, Math.ceil(total / AUDIT_PAGE_SIZE));
   const page = Math.min(query.page, pageCount);
-  const logs = await prisma.auditLog.findMany({
-    where,
-    include: auditLogInclude,
-    orderBy: [{ occurredAt: "desc" }, { id: "desc" }],
-    skip: (page - 1) * AUDIT_PAGE_SIZE,
-    take: AUDIT_PAGE_SIZE,
-  });
+  const logs =
+    page === query.page
+      ? initialLogs
+      : await prisma.auditLog.findMany({
+          where,
+          include: auditLogInclude,
+          orderBy: [{ occurredAt: "desc" }, { id: "desc" }],
+          skip: (page - 1) * AUDIT_PAGE_SIZE,
+          take: AUDIT_PAGE_SIZE,
+        });
   return { logs, total, page, pageCount };
-}
-
-export async function loadAuditLogsForExport(query: AuditLogQuery) {
-  const where = await buildAuditLogWhere(query);
-  return prisma.auditLog.findMany({
-    where,
-    include: auditLogInclude,
-    orderBy: [{ occurredAt: "desc" }, { id: "desc" }],
-    take: 10_001,
-  });
 }
 
 export async function loadAuditActors() {
@@ -208,21 +213,15 @@ export async function loadAuditNameMaps(logs: AuditLogRow[]) {
       }
     }
   }
-  const [memberSkills, assessments] = await Promise.all([
-    prisma.memberSkill.findMany({
-      where: { id: { in: [...ids.memberSkills] } },
-      select: { id: true, memberId: true, skillId: true },
-    }),
-    prisma.skillSelfAssessment.findMany({
-      where: { id: { in: [...ids.assessments] } },
-      select: { id: true, memberId: true, skillId: true },
-    }),
-  ]);
-  for (const reference of [...memberSkills, ...assessments]) {
-    ids.members.add(reference.memberId);
-    ids.skills.add(reference.skillId);
-  }
-  const [members, departments, skills, categories, roles] = await Promise.all([
+  const [
+    members,
+    departments,
+    skills,
+    categories,
+    roles,
+    memberSkills,
+    assessments,
+  ] = await Promise.all([
     prisma.member.findMany({
       where: { id: { in: [...ids.members] } },
       select: { id: true, name: true },
@@ -243,28 +242,42 @@ export async function loadAuditNameMaps(logs: AuditLogRow[]) {
       where: { id: { in: [...ids.roles] } },
       select: { id: true, name: true },
     }),
+    prisma.memberSkill.findMany({
+      where: { id: { in: [...ids.memberSkills] } },
+      select: {
+        id: true,
+        memberId: true,
+        skillId: true,
+        member: { select: { id: true, name: true } },
+        skill: { select: { id: true, name: true } },
+      },
+    }),
+    prisma.skillSelfAssessment.findMany({
+      where: { id: { in: [...ids.assessments] } },
+      select: {
+        id: true,
+        memberId: true,
+        skillId: true,
+        member: { select: { id: true, name: true } },
+        skill: { select: { id: true, name: true } },
+      },
+    }),
   ]);
   return {
-    members,
+    members: [
+      ...members,
+      ...memberSkills.map(({ member }) => member),
+      ...assessments.map(({ member }) => member),
+    ],
     departments,
-    skills,
+    skills: [
+      ...skills,
+      ...memberSkills.map(({ skill }) => skill),
+      ...assessments.map(({ skill }) => skill),
+    ],
     categories,
     roles,
     memberSkills,
     assessments,
   };
-}
-
-export function recordAuditExport(
-  actorMemberId: string,
-  count: number,
-  filters: object,
-) {
-  return recordAuditLog(prisma, {
-    actorMemberId,
-    action: AUDIT_ACTION.AUDIT_LOG_EXPORT,
-    targetType: AUDIT_TARGET_TYPE.AUDIT_LOG,
-    targetId: null,
-    metadata: { count, filters },
-  });
 }

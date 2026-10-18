@@ -49,7 +49,7 @@ describe("CSV export columns", () => {
     ]);
   });
 
-  it("スキル、ロール、ロール要件の null と真偽値を変換する", () => {
+  it("スキルと要件のあるロールを変換する", () => {
     expect(
       toCsvExportRows("skills", [
         {
@@ -63,19 +63,33 @@ describe("CSV export columns", () => {
     ).toEqual([["TS", "TypeScript", "開発", "", false]]);
     expect(
       toCsvExportRows("roles", [
-        { name: "リード", description: null, isActive: true },
-      ]),
-    ).toEqual([["リード", "", true]]);
-    expect(
-      toCsvExportRows("role-requirements", [
         {
-          role: { name: "リード" },
-          skill: { code: "TS" },
-          requiredLevel: 4,
-          isRequired: false,
+          name: "リード",
+          description: null,
+          isActive: true,
+          roleRequirements: [
+            {
+              skill: { code: "TS" },
+              requiredLevel: 4,
+              isRequired: false,
+            },
+          ],
         },
       ]),
-    ).toEqual([["リード", "TS", 4, false]]);
+    ).toEqual([["リード", "", true, "TS", 4, false]]);
+  });
+
+  it("要件のないロールを空欄の要件付きで1行にする", () => {
+    expect(
+      toCsvExportRows("roles", [
+        {
+          name: "メンバー",
+          description: "標準ロール",
+          isActive: true,
+          roleRequirements: [],
+        },
+      ]),
+    ).toEqual([["メンバー", "標準ロール", true, "", "", ""]]);
   });
 
   it("メンバースキルの日付と経験年数を変換する", () => {
