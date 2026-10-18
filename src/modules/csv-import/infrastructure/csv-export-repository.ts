@@ -67,18 +67,20 @@ export async function loadCsvExportRows<T extends CsvExportTarget>(
       }) as Promise<CsvExportRows[T]>;
     case "roles":
       return prisma.role.findMany({
-        select: { name: true, description: true, isActive: true },
-        orderBy: { name: "asc" },
-      }) as Promise<CsvExportRows[T]>;
-    case "role-requirements":
-      return prisma.roleRequirement.findMany({
         select: {
-          role: { select: { name: true } },
-          skill: { select: { code: true } },
-          requiredLevel: true,
-          isRequired: true,
+          name: true,
+          description: true,
+          isActive: true,
+          roleRequirements: {
+            select: {
+              skill: { select: { code: true } },
+              requiredLevel: true,
+              isRequired: true,
+            },
+            orderBy: { skill: { code: "asc" } },
+          },
         },
-        orderBy: [{ role: { name: "asc" } }, { skill: { code: "asc" } }],
+        orderBy: { name: "asc" },
       }) as Promise<CsvExportRows[T]>;
   }
 }
@@ -99,7 +101,6 @@ export async function loadCsvExportCounts(scope: CsvExportScope) {
     members,
     skills,
     "member-skills": memberSkills,
-    roles,
-    "role-requirements": roleRequirements,
-  } satisfies Record<CsvExportTarget, number>;
+    roles: { roles, requirements: roleRequirements },
+  };
 }

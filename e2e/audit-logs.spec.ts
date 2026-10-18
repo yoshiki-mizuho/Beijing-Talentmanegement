@@ -3,7 +3,7 @@ import { openLoggedInContext } from "./helpers/auth";
 import { readDemoCredentials } from "./helpers/credentials";
 
 const credentials = readDemoCredentials();
-test("管理者が監査ログの差分確認とCSV出力をできる", async ({ browser }) => {
+test("管理者が監査ログの差分と期間入力を確認できる", async ({ browser }) => {
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
   const categoryName = `E2E監査カテゴリ-${Date.now()}-${test.info().workerIndex}`;
   try {
@@ -23,11 +23,13 @@ test("管理者が監査ログの差分確認とCSV出力をできる", async ({
     await expect(row).toContainText("作成");
     await row.locator("summary").click();
     await expect(row).toContainText(categoryName);
-    const response = await admin.page.request.get(
-      "/api/audit-logs/export?period=today",
-    );
-    expect(response.status()).toBe(200);
-    expect(await response.text()).toContain('"日時","操作した人"');
+    await admin.page.getByRole("button", { name: "期間を指定" }).click();
+    // 開始日は今日のまま、終了日だけを過去にして「開始日＞終了日」にする
+    await admin.page.getByLabel("終了日").fill("2026-01-05");
+    await expect(
+      admin.page.getByText("開始日は終了日以前にしてください"),
+    ).toBeVisible();
+    await expect(admin.page).not.toHaveURL(/to=2026-01-05/);
   } finally {
     await admin.context.close();
   }

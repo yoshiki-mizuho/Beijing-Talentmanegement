@@ -74,9 +74,8 @@ flowchart TD
 | メンバー | 可 | 可 | メンバー基本情報の一括登録、更新 |
 | スキル | 可 | 可 | スキルマスタの初期登録、更新 |
 | メンバースキル | 可 | 可 | 承認済みメンバー別スキル、レベルの一括登録、更新 |
-| ロール | 後続 | 可 | 初期は画面編集を主とする |
-| ロール要件 | 後続 | 可 | 初期は画面編集を主とする |
-| 監査ログ | 不可 | 可 | `admin` の確認、調査用 |
+| ロール（要件を含む） | 後続 | 可 | 初期は画面編集を主とする |
+| 監査ログ | 不可 | 不可 | 内部 ID が多く読み取りにくいため、画面で確認する（2026-10-17 決定） |
 | AI評価 | 対象外 | 対象外 | Phase 6で再設計 |
 
 ## CSV項目
@@ -87,7 +86,9 @@ flowchart TD
 - 値の表記：真偽値は `true`／`false`、日付は `YYYY-MM-DD`、空の値は空欄。メンバーの状態は `active`／`inactive`／`leave`。
 - 表計算ソフトで数式として実行されないよう、出力では先頭が `=`、`+`、`-`、`@` の値の前に `'` を付ける。取り込みでは、この `'` を取り除く。
 - メンバーとメンバースキルの出力は、範囲を「在籍中」（初期）と「すべて（休職・退職を含む）」から選べる。
-- 追加の列：ロールCSVは `role_name`、`description`、`is_active`。ロール要件CSVは `role_name`、`skill_code`、`required_level`、`is_required`。
+- 追加の列：ロールCSVは `role_name`、`description`、`is_active`、`skill_code`、`required_level`、`is_required`。
+- ロールCSVは1行に1つの要件を出力する。
+- 要件がないロールは要件の列を空欄にして1行出力する。
 
 ### 部署CSV
 
@@ -232,7 +233,7 @@ flowchart TD
 | スキル、カテゴリ、ロールの参照 API | admin、manager | なし。 |
 | スキル、カテゴリ、ロールの更新 API | admin | なし。 |
 | 通知 API | admin、manager、member | セッション本人宛だけ。 |
-| CSV import/export、監査ログ export | admin | なし。 |
+| CSV import/export | admin | なし。 |
 | パスワード API | admin、manager、member | セッション本人だけ。 |
 
 ### Server Action

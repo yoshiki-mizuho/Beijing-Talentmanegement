@@ -1,4 +1,3 @@
-import { Download } from "lucide-react";
 import { listAuditLogs } from "@/modules/audit/application/audit-log-service";
 import { AuditLogFilters } from "@/modules/audit/presentation/audit-log-filters";
 import { AuditLogList } from "@/modules/audit/presentation/audit-log-list";
@@ -24,11 +23,9 @@ export default async function AuditLogsPage({
           : [],
     ),
   ).toString();
-  const exportParams = new URLSearchParams(queryString);
-  exportParams.delete("page");
   return (
     <Card>
-      <CardContent className="space-y-5 pt-5">
+      <CardContent className="space-y-5 pt-5 [&:has([data-pending])_#audit-log-list]:opacity-50">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--border)] pb-5">
           <h1 className="text-2xl font-semibold">
             監査ログ{" "}
@@ -39,13 +36,6 @@ export default async function AuditLogsPage({
               ・{result.total}件
             </span>
           </h1>
-          <a
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-4 text-sm font-semibold hover:bg-[var(--surface-subtle)]"
-            href={`/api/audit-logs/export?${exportParams}`}
-          >
-            <Download className="h-4 w-4" />
-            CSVで出力
-          </a>
         </div>
         <AuditLogFilters query={result.query} actors={result.actors} />
         <AuditLogList

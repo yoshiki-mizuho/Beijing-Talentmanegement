@@ -1,8 +1,8 @@
 "use client";
 
-import { FilterX, Search } from "lucide-react";
+import { FilterX, Search, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import type {
   AuditLogQuery,
   AuditOperationGroup,
@@ -37,7 +37,12 @@ const operationOptions: AuditOperationGroup[] = [
 
 export function AuditLogFilters({ query, actors }: Props) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [actor, setActor] = useState(query.actor ?? null);
+  const [fromDate, setFromDate] = useState(query.fromDate);
+  const [toDate, setToDate] = useState(query.toDate);
+  const [search, setSearch] = useState(query.q);
+  const dateError = fromDate && toDate && fromDate > toDate;
   const update = (changes: Record<string, string | string[] | null>) => {
     const params = new URLSearchParams(window.location.search);
     params.delete("page");
@@ -47,7 +52,12 @@ export function AuditLogFilters({ query, actors }: Props) {
         value.forEach((item) => params.append(key, item));
       else if (value) params.set(key, value);
     }
-    router.push(`/audit-logs?${params.toString()}`);
+    startTransition(() => router.push(`/audit-logs?${params.toString()}`));
+  };
+  const updatePeriod = (from: string, to: string) => {
+    if (isValidDate(from) && isValidDate(to) && from <= to) {
+      update({ from, to });
+    }
   };
   const toggle = (
     key: "target" | "operation",
@@ -60,7 +70,12 @@ export function AuditLogFilters({ query, actors }: Props) {
         : [...selected, value],
     });
   return (
-    <div className="space-y-4 border-b border-[var(--border)] pb-5">
+    // 読み込み中は data-pending を付け、ページ側の CSS で一覧を薄くする
+    <div
+      className="space-y-4 border-b border-[var(--border)] pb-5"
+      data-pending={isPending ? "true" : undefined}
+      aria-busy={isPending}
+    >
       <div className="flex flex-wrap gap-2" role="group" aria-label="期間">
         {[
           ["today", "今日"],
@@ -85,20 +100,31 @@ export function AuditLogFilters({ query, actors }: Props) {
           </button>
         ))}
         {query.period === "custom" ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <Input
-              type="date"
-              aria-label="開始日"
-              value={query.fromDate}
-              onChange={(e) => update({ from: e.target.value })}
-            />
-            <span>〜</span>
-            <Input
-              type="date"
-              aria-label="終了日"
-              value={query.toDate}
-              onChange={(e) => update({ to: e.target.value })}
-            />
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                type="date"
+                aria-label="開始日"
+                value={fromDate}
+                onChange={(e) => {
+                  setFromDate(e.target.value);
+                  updatePeriod(e.target.value, toDate);
+                }}
+              />
+              <span>〜</span>
+              <Input
+                type="date"
+                aria-label="終了日"
+                value={toDate}
+                onChange={(e) => {
+                  setToDate(e.target.value);
+                  updatePeriod(fromDate, e.target.value);
+                }}
+              />
+            </div>
+            <p className="mt-1 text-sm text-[var(--danger)]" aria-live="polite">
+              {dateError ? "開始日は終了日以前にしてください" : ""}
+            </p>
           </div>
         ) : null}
       </div>
@@ -114,7 +140,14 @@ export function AuditLogFilters({ query, actors }: Props) {
           }}
           placeholder="すべて"
         />
-        <form className="self-end" action="/audit-logs">
+        <form
+          className="self-end"
+          action="/audit-logs"
+          onSubmit={(event) => {
+            event.preventDefault();
+            update({ q: search });
+          }}
+        >
           <input type="hidden" name="period" value={query.period} />
           {query.period === "custom" ? (
             <>
@@ -137,10 +170,24 @@ export function AuditLogFilters({ query, actors }: Props) {
             <Input
               id="audit-q"
               name="q"
-              defaultValue={query.q}
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
               placeholder="氏名・社員番号・スキル・カテゴリ・ロール"
-              className="pl-9"
+              className="pl-9 pr-9"
             />
+            {search ? (
+              <button
+                type="button"
+                aria-label="検索をクリア"
+                className="absolute right-2 top-2 grid h-6 w-6 place-items-center rounded hover:bg-[var(--surface-subtle)]"
+                onClick={() => {
+                  setSearch("");
+                  update({ q: null });
+                }}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            ) : null}
           </div>
         </form>
       </div>
@@ -176,13 +223,25 @@ export function AuditLogFilters({ query, actors }: Props) {
           variant="ghost"
           size="small"
           className="ml-auto"
-          onClick={() => router.push("/audit-logs?period=30")}
+          onClick={() =>
+            startTransition(() => router.push("/audit-logs?period=30"))
+          }
         >
           <FilterX className="h-4 w-4" />
           条件をクリア
         </Button>
       </div>
     </div>
+  );
+}
+
+function isValidDate(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+  const date = new Date(`${value}T00:00:00Z`);
+  return (
+    !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
   );
 }
 function chip(active: boolean) {

@@ -35,11 +35,13 @@ export function AuditLogList({
 }) {
   if (!items.length)
     return (
-      <EmptyState
-        icon={ScrollText}
-        title="条件に一致する監査ログがありません"
-        description="検索条件を変更してください。"
-      />
+      <div id="audit-log-list">
+        <EmptyState
+          icon={ScrollText}
+          title="条件に一致する監査ログがありません"
+          description="検索条件を変更してください。"
+        />
+      </div>
     );
   const groups = items.reduce((map, item) => {
     const key = dateKey.format(new Date(item.occurredAt));
@@ -54,7 +56,7 @@ export function AuditLogList({
   const start = (page - 1) * 50 + 1;
   const end = Math.min(page * 50, total);
   return (
-    <div className="space-y-5">
+    <div id="audit-log-list" className="space-y-5 transition-opacity">
       {[...groups.entries()].map(([date, rows]) => (
         <section key={date} aria-labelledby={`date-${date}`}>
           <h2

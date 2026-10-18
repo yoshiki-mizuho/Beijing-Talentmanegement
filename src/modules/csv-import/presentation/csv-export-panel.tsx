@@ -22,7 +22,6 @@ const icons: Record<CsvExportTarget, LucideIcon> = {
   skills: WandSparkles,
   "member-skills": ListChecks,
   roles: Target,
-  "role-requirements": ListChecks,
 };
 
 export function CsvExportPanel({
@@ -30,7 +29,9 @@ export function CsvExportPanel({
   counts,
 }: {
   scope: CsvExportScope;
-  counts: Record<CsvExportTarget, number>;
+  counts: Record<Exclude<CsvExportTarget, "roles">, number> & {
+    roles: { roles: number; requirements: number };
+  };
 }) {
   return (
     <div className="space-y-4">
@@ -61,7 +62,9 @@ export function CsvExportPanel({
                 <p className="font-semibold">
                   {definition.label}{" "}
                   <span className="text-sm font-normal text-[var(--muted-foreground)]">
-                    {counts[target]}件
+                    {target === "roles"
+                      ? `${counts.roles.roles}件（要件 ${counts.roles.requirements}件）`
+                      : `${counts[target]}件`}
                   </span>
                 </p>
                 <p className="truncate text-xs text-[var(--muted-foreground)]">

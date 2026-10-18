@@ -25,12 +25,14 @@ const schema = z.object({
   from: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
+    .optional()
+    .catch(undefined),
   to: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  actor: z.string().trim().max(100).optional(),
+    .optional()
+    .catch(undefined),
+  actor: z.string().trim().max(100).optional().catch(undefined),
   target: z.union([z.string(), z.array(z.string())]).optional(),
   operation: z.union([z.string(), z.array(z.string())]).optional(),
   q: z.string().trim().max(100).catch(""),
@@ -60,6 +62,14 @@ function startOfJst(date: string) {
   return new Date(`${date}T00:00:00+09:00`);
 }
 
+function isValidDate(value: string | undefined) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+  const date = startOfJst(value);
+  return !Number.isNaN(date.getTime()) && jstDate(date) === value;
+}
+
 function values<T extends string>(
   value: string | string[] | undefined,
   allowed: readonly T[],
@@ -74,6 +84,8 @@ export function parseAuditLogQuery(
 ): AuditLogQuery {
   const parsed = schema.parse(input);
   const today = jstDate(now);
+  const customFrom = parsed.from;
+  const customTo = parsed.to;
   let fromDate = today;
   let toDate = today;
   if (parsed.period !== "today" && parsed.period !== "custom") {
@@ -82,21 +94,17 @@ export function parseAuditLogQuery(
     fromDate = jstDate(date);
   } else if (
     parsed.period === "custom" &&
-    parsed.from &&
-    parsed.to &&
-    parsed.from <= parsed.to
+    isValidDate(customFrom) &&
+    isValidDate(customTo) &&
+    customFrom! <= customTo!
   ) {
-    fromDate = parsed.from;
-    toDate = parsed.to;
+    fromDate = customFrom!;
+    toDate = customTo!;
   } else if (parsed.period === "custom") {
-    throw new z.ZodError([
-      {
-        code: "custom",
-        path: ["from"],
-        message: "期間を正しく指定してください",
-        input,
-      },
-    ]);
+    const date = startOfJst(today);
+    date.setUTCDate(date.getUTCDate() - 29);
+    fromDate = jstDate(date);
+    parsed.period = "30";
   }
   return {
     period: parsed.period,
@@ -140,7 +148,8 @@ export const operationLabels: Record<AuditOperationGroup, string> = {
 };
 
 export function targetGroup(type: string): AuditTargetGroup | null {
-  if (type === "Member" || type === "MemberSkill" || type === "Department") return "member";
+  if (type === "Member" || type === "MemberSkill" || type === "Department")
+    return "member";
   if (type === "Skill" || type === "SkillCategory") return "skill";
   if (type === "Role") return "role";
   if (type === "SkillSelfAssessment") return "assessment";

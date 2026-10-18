@@ -48,7 +48,6 @@ test("MANAGER の ADMIN 専用 API は 403", async ({ browser }) => {
     const results = await Promise.all([
       page.request.post("/api/skills", { data: {} }),
       page.request.get("/api/csv/export/members"),
-      page.request.get("/api/audit-logs/export"),
     ]);
     for (const response of results) {
       expect(response.status()).toBe(403);
