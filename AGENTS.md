@@ -41,5 +41,5 @@
 
 ## 現在の状態
 
-- Phase0〜Phase4.7は完了済み。デモ環境の運用手順は `docs/DEMO_DEPLOYMENT.md` を確認する。
-- 現在の主対象はPhase5（CSV・監査・権限強化）。進め方と決定事項は `docs/ROADMAP.md` のPhase 5を確認する。
+- Phase0〜Phase5は完了済み。デモ環境の運用手順は `docs/DEMO_DEPLOYMENT.md` を確認する。
+- 次の対象はPhase6（AI評価機能）。進め方は着手時に `docs/ROADMAP.md` のPhase 6をもとに決める。
