@@ -32,6 +32,16 @@
 | `AUTH_SECRET` | デモ環境専用に生成した長いランダム値 |
 | `AUTH_URL` | Vercelで確定したProduction URL |
 | `AUTH_TRUST_HOST` | `true` |
+| `AI_API_BASE_URL` | 承認済みOpenAI互換APIのベースURL。未決定の場合は空欄にする |
+| `AI_API_KEY` | 承認済みOpenAI互換APIのサーバー専用キー。未決定の場合は空欄にする |
+| `AI_MODEL` | 承認済みOpenAI互換APIのモデル名。未決定の場合は空欄にする |
+| `AI_TIMEOUT_MS` | 呼び出しの上限時間。通常は`30000` |
+
+AIの環境変数はProductionだけに登録する。
+
+`AI_API_KEY`に`NEXT_PUBLIC_`を付けない。
+
+接続先が未決定の間はAI設定を空欄にし、アプリ側の簡易版を使う。
 
 6. GitLabの **Settings → CI/CD → Variables** に次の変数を登録する。
 
