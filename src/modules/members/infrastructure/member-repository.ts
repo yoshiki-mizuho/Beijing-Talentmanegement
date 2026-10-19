@@ -115,6 +115,7 @@ export async function listMembers(input?: MemberSearchInput, memberIds?: string[
       department: true,
       manager: { select: { id: true, name: true } },
       targetRole: { select: { id: true, name: true, isActive: true } },
+      growthHint: { select: { generatedAt: true } },
       memberSkills: {
         include: {
           skill: {
@@ -163,6 +164,48 @@ export async function listMembers(input?: MemberSearchInput, memberIds?: string[
       }))
     ).achieved
   );
+}
+
+export function getGrowthHintMemberContext(memberId: string, since: Date) {
+  return prisma.member.findUnique({
+    where: { id: memberId },
+    select: {
+      id: true,
+      managerId: true,
+      memberSkills: {
+        where: { approvedAt: { not: null } },
+        select: {
+          skillId: true,
+          level: true,
+          skill: { select: { name: true, category: { select: { name: true } } } }
+        }
+      },
+      targetRole: {
+        select: {
+          name: true,
+          roleRequirements: {
+            where: { isRequired: true },
+            select: {
+              skillId: true,
+              requiredLevel: true,
+              skill: { select: { name: true } }
+            }
+          }
+        }
+      },
+      skillLevelChanges: {
+        where: { changedAt: { gte: since } },
+        orderBy: [{ changedAt: "asc" }, { id: "asc" }],
+        select: {
+          skillId: true,
+          fromLevel: true,
+          toLevel: true,
+          source: true,
+          skill: { select: { name: true } }
+        }
+      }
+    }
+  });
 }
 
 export async function updateMemberRole(

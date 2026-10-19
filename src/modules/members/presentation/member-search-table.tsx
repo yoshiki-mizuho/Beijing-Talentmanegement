@@ -350,6 +350,15 @@ function MemberSearchTableInner({
                         >
                           {member.name}
                         </button>
+                        {member.growthHint ? (
+                          <Tooltip
+                            content={`育成のヒントあり（${formatHintDate(member.growthHint.generatedAt)}）`}
+                          >
+                            <span className="ml-2 inline-flex rounded-full bg-[var(--primary-subtle)] px-2 py-0.5 text-xs font-semibold text-[var(--primary)]">
+                              ✦ ヒント
+                            </span>
+                          </Tooltip>
+                        ) : null}
                         <p className="text-xs text-[var(--muted-foreground)]">
                           {member.jobTitle ?? "役職未設定"}・{member.employeeNo}
                         </p>
@@ -394,6 +403,14 @@ function MemberSearchTableInner({
       ) : null}
     </div>
   );
+}
+
+function formatHintDate(value: string) {
+  return new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    month: "long",
+    day: "numeric"
+  }).format(new Date(value));
 }
 
 function FilterChip({

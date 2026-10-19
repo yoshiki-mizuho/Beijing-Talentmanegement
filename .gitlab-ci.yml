@@ -93,6 +93,7 @@ e2e:
     DEMO_ADMIN_PASSWORD: "ci-admin-password-47"
     DEMO_MANAGER_PASSWORD: "ci-manager-password-58"
     DEMO_MEMBER_PASSWORD: "ci-member-password-69"
+    AI_API_BASE_URL: fake
   script:
     - npx playwright install --with-deps chromium
     - npm run prisma:generate

@@ -49,6 +49,9 @@ export default async function MembersPage({
     manager: member.manager,
     targetRoleId: member.targetRoleId,
     targetRole: member.targetRole,
+    growthHint: member.growthHint
+      ? { generatedAt: member.growthHint.generatedAt.toISOString() }
+      : null,
     role: member.users[0]?.role ?? null,
     memberSkills: member.memberSkills.map((memberSkill) => ({
       id: memberSkill.id,

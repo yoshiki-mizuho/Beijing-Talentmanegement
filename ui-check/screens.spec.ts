@@ -122,6 +122,13 @@ test.describe("UI check", () => {
     }
     await page.goto("/members");
     await page.getByRole("button", { name: "Member Userの詳細を開く" }).click();
+    await page.getByRole("tab", { name: "育成のヒント" }).click();
+    const createHint = page.getByRole("button", { name: "ヒントを作る" });
+    if (await createHint.count()) {
+      await createHint.click();
+      await page.getByRole("heading", { name: "得意なこと" }).waitFor();
+    }
+    await capture(page, "MANAGER", "member-growth-hint");
     await page.getByRole("tab", { name: "1on1 メモ" }).click();
     await capture(page, "MANAGER", "member-one-on-one");
     await page.getByRole("link", { name: "プロフィールを見る", exact: true }).click();
