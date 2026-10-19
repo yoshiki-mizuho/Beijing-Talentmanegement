@@ -36,6 +36,7 @@
 | `AI_API_KEY` | 承認済みOpenAI互換APIのサーバー専用キー。未決定の場合は空欄にする |
 | `AI_MODEL` | 承認済みOpenAI互換APIのモデル名。未決定の場合は空欄にする |
 | `AI_TIMEOUT_MS` | 呼び出しの上限時間。通常は`30000` |
+| `AI_MONTHLY_TOKEN_LIMIT` | 日本時間の暦月ごとのトークン上限。未設定は上限なし |
 
 AIの環境変数はProductionだけに登録する。
 

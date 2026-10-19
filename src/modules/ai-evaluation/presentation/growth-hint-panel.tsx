@@ -57,7 +57,9 @@ export function GrowthHintPanel({
         setHint(result.hint);
         setFailure(result.keptPrevious);
         onGenerated();
-        if (!result.keptPrevious) toast.success("育成のヒントを作りました。");
+        if (!result.keptPrevious) {
+          toast.success(result.message ?? "育成のヒントを作りました。");
+        }
       } catch {
         setFailure(true);
         toast.error("育成のヒントを作れませんでした。");

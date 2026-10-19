@@ -12,6 +12,8 @@ AIクライアントはサーバーだけで利用します。
 - `AI_MODEL` は呼び出すモデル名です。
 - `AI_TIMEOUT_MS` は再試行を含む呼び出しの上限時間です。
 - `AI_TIMEOUT_MS` の既定値は30000ミリ秒です。
+- `AI_MONTHLY_TOKEN_LIMIT` は日本時間の暦月ごとのトークン上限です。
+- `AI_MONTHLY_TOKEN_LIMIT` が未設定の場合は上限なしです。
 
 偽のAIを使う場合は呼び出し側が`fakeResponse`を渡します。
 

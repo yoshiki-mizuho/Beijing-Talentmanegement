@@ -4,6 +4,7 @@ import type { Notification } from "@prisma/client";
 
 import {
   BarChart3,
+  Bot,
   Check,
   ChevronDown,
   ClipboardCheck,
@@ -51,6 +52,7 @@ const navigationIcons = {
   profile: UserRound,
   csv: FileSpreadsheet,
   auditLogs: ShieldCheck,
+  aiUsage: Bot,
   explore: Compass
 } satisfies Record<AppNavigationItem["icon"], LucideIcon>;
 

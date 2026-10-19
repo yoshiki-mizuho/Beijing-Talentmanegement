@@ -19,7 +19,8 @@ const expectedNavigation = {
     "/skills",
     "/roles",
     "/csv",
-    "/audit-logs"
+    "/audit-logs",
+    "/ai-usage"
   ],
   MANAGER: [
     "/dashboard",
@@ -65,6 +66,7 @@ describe("application route access", () => {
     expect(canAccessAppPath("MANAGER", "/members")).toBe(true);
     expect(canAccessAppPath("MANAGER", "/csv")).toBe(false);
     expect(canAccessAppPath("MANAGER", "/audit-logs/2026")).toBe(false);
+    expect(canAccessAppPath("MANAGER", "/ai-usage")).toBe(false);
   });
 
   it("MEMBERはメンバー向け画面へアクセスでき、管理画面へアクセスできない", () => {

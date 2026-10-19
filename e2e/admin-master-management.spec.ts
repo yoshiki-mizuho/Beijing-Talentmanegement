@@ -282,6 +282,8 @@ test("スキル検索をクリアして一覧を元に戻せる", async ({ brows
   try {
     await admin.page.goto("/skills");
     const searchInput = admin.page.getByLabel("スキル名");
+    // 一覧が描かれる前に数えると0行が基準になるため、最初の行が出るのを待つ
+    await expect(admin.page.getByRole("row").nth(1)).toBeVisible();
     const initialRows = await admin.page.getByRole("row").count();
     await searchInput.fill("TypeScript");
     await admin.page.getByRole("button", { name: "検索をクリア" }).click();

@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   getContext: vi.fn(),
   getScope: vi.fn(),
   mentors: vi.fn(),
+  sumAiTokensSince: vi.fn(),
 }));
 
 vi.mock(
@@ -34,6 +35,7 @@ vi.mock(
 );
 vi.mock("@/modules/ai-evaluation/infrastructure/ai-usage-repository", () => ({
   recordAiUsage: mocks.recordAiUsage,
+  sumAiTokensSince: mocks.sumAiTokensSince,
 }));
 vi.mock("@/modules/members/application/member-service", () => ({
   getGrowthHintMemberContext: mocks.getContext,
@@ -100,11 +102,46 @@ describe("generateGrowthHint", () => {
     mocks.getScope.mockResolvedValue({ memberIds: ["member"] });
     mocks.mentors.mockResolvedValue([]);
     mocks.findGrowthHint.mockResolvedValue(null);
+    mocks.sumAiTokensSince.mockResolvedValue(0);
+    vi.stubEnv("AI_MONTHLY_TOKEN_LIMIT", "");
     mocks.saveGrowthHint.mockImplementation(async (value) => ({
       ...stored(value.source),
       inputHash: value.inputHash,
       content: value.content,
     }));
+  });
+
+  it("上限未満ならAIを呼ぶ", async () => {
+    vi.stubEnv("AI_MONTHLY_TOKEN_LIMIT", "10");
+    mocks.sumAiTokensSince.mockResolvedValue(9);
+    mocks.getAiConfig.mockReturnValue({ kind: "fake" });
+    mocks.createChatCompletion.mockResolvedValue({
+      content: JSON.stringify({
+        strengthsSummary: "強みです",
+        nextSteps: ["次へ"],
+        oneOnOneTopics: ["話題"],
+      }),
+      model: "fake",
+      usage: { totalTokens: 3 },
+      latencyMs: 4,
+    });
+    await generateGrowthHint("member", viewer);
+    expect(mocks.createChatCompletion).toHaveBeenCalledOnce();
+  });
+
+  it("上限以上ならAIを呼ばず簡易版を保存する", async () => {
+    vi.stubEnv("AI_MONTHLY_TOKEN_LIMIT", "10");
+    mocks.sumAiTokensSince.mockResolvedValue(10);
+    mocks.getAiConfig.mockReturnValue({ kind: "fake" });
+    const result = await generateGrowthHint("member", viewer);
+    expect(mocks.createChatCompletion).not.toHaveBeenCalled();
+    expect(result.message).toContain("利用上限");
+    expect(mocks.recordAiUsage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "FALLBACK",
+        errorCode: "monthly_limit",
+      }),
+    );
   });
 
   it("AI未設定なら簡易版を保存してFALLBACKを記録する", async () => {
