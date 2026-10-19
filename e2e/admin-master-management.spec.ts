@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { openLoggedInContext } from "./helpers/auth";
 import { readDemoCredentials } from "./helpers/credentials";
+import { dismissExistingLevelUpDialogs } from "./helpers/level-up";
 
 const credentials = readDemoCredentials();
 
@@ -34,6 +35,8 @@ test("スキルごとのレベルの目安を保存してスキルシートに�
     const member = await openLoggedInContext(browser, credentials.MEMBER);
     try {
       await member.page.goto("/my/skills");
+      // 他のテストや撮影で届いた応援・レベルアップの演出が操作をふさがないよう閉じておく
+      await dismissExistingLevelUpDialogs(member.page);
       await member.page.getByLabel("スキルを検索").fill(skillName);
       const skillGroup = member.page.getByRole("group", { name: `${skillName}のレベル` });
       await skillGroup.getByRole("button", { name: "Lv3" }).click();

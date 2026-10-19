@@ -33,6 +33,10 @@ export function listMembers(input?: MemberSearchInput, memberIds?: string[]) {
   );
 }
 
+export function getGrowthHintMemberContext(memberId: string, since: Date) {
+  return memberRepository.getGrowthHintMemberContext(memberId, since);
+}
+
 export function createMember(input: unknown, actorMemberId: string | null) {
   return memberRepository.createMember(memberInputSchema.parse(input), actorMemberId);
 }

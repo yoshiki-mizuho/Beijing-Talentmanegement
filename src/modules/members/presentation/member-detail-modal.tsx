@@ -4,6 +4,7 @@ import { Trash2, UserRound } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import Link from "next/link";
 import type { Route } from "next";
+import { GrowthHintPanel } from "@/modules/ai-evaluation/presentation/growth-hint-panel";
 
 import {
   createOneOnOneNoteAction,
@@ -47,7 +48,7 @@ const roleLabels = {
   MANAGER: "マネージャー",
   MEMBER: "メンバー"
 } as const;
-type DetailTabId = "basic" | "skills" | "one-on-one";
+type DetailTabId = "basic" | "skills" | "one-on-one" | "growth-hint";
 
 export function MemberDetailModal({
   member,
@@ -76,7 +77,8 @@ export function MemberDetailModal({
   const detailTabs: Array<{ id: DetailTabId; label: string }> = [
     { id: "basic", label: "基本情報" },
     { id: "skills", label: "スキル" },
-    ...(member.managerId === viewerMemberId ? [{ id: "one-on-one" as const, label: "1on1 メモ" }] : [])
+    ...(member.managerId === viewerMemberId ? [{ id: "one-on-one" as const, label: "1on1 メモ" }] : []),
+    { id: "growth-hint", label: "育成のヒント" }
   ];
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const titleId = `member-detail-${member.id}`;
@@ -170,8 +172,15 @@ export function MemberDetailModal({
           panelId={`${titleId}-skills-panel`}
           tabId={`${titleId}-skills-tab`}
         />
-      ) : (
+      ) : activeTab === "one-on-one" ? (
         <OneOnOneNotesPanel memberId={member.id} panelId={`${titleId}-one-on-one-panel`} tabId={`${titleId}-one-on-one-tab`} />
+      ) : (
+        <GrowthHintPanel
+          memberId={member.id}
+          panelId={`${titleId}-growth-hint-panel`}
+          tabId={`${titleId}-growth-hint-tab`}
+          onGenerated={onMemberChanged}
+        />
       )}
     </Dialog>
   );

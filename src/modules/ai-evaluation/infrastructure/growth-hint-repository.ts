@@ -24,3 +24,11 @@ export async function saveGrowthHint(input: SaveGrowthHintInput) {
     update: { ...data, generatedAt: new Date() },
   });
 }
+
+export async function listGrowthHintDates(memberIds: string[]) {
+  if (memberIds.length === 0) return [];
+  return prisma.growthHint.findMany({
+    where: { memberId: { in: memberIds } },
+    select: { memberId: true, generatedAt: true },
+  });
+}
