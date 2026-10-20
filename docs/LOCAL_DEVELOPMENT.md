@@ -26,7 +26,12 @@ OpenAI互換APIを使う場合は、`AI_API_BASE_URL`、`AI_API_KEY`、`AI_MODEL
 
 必要に応じて`AI_TIMEOUT_MS`へミリ秒単位の上限を設定する。
 
+`AI_MONTHLY_TOKEN_LIMIT`へ正の整数を設定すると、日本時間の暦月ごとにトークン数を制限できる。
+
+未設定の場合は上限なしになる。
+
 APIキーはサーバー専用であり、`NEXT_PUBLIC_`を付けない。
+
 4. 依存関係をインストールし、migrationとseedを実行する。seedのパスワードはローカル専用の値を指定し、コミットしない。
 
 ```powershell

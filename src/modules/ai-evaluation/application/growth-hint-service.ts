@@ -29,6 +29,11 @@ import {
   memberIsInScope,
 } from "@/modules/members/application/member-scope";
 import { AuthorizationError } from "@/server/auth/authorization";
+import {
+  getAiMonthlyTokenLimit,
+  getAiUsageMonth,
+  hasReachedMonthlyTokenLimit,
+} from "@/modules/ai-evaluation/domain/ai-usage-summary";
 
 export type GrowthHintViewer = { memberId: string; role: AuthRole };
 
@@ -91,6 +96,26 @@ export async function generateGrowthHint(
   const previous = await hintRepository.findGrowthHint(memberId);
   const base = await buildComputedContent(memberId, input);
   const config = getAiConfig();
+  const tokenLimit = getAiMonthlyTokenLimit();
+
+  if (tokenLimit !== null) {
+    const totalTokens = await usageRepository.sumAiTokensSince(
+      getAiUsageMonth(undefined).start,
+    );
+    if (hasReachedMonthlyTokenLimit(totalTokens, tokenLimit)) {
+      const saved = await saveContent(
+        "FALLBACK",
+        createFallbackGrowthHint(input),
+        null,
+      );
+      await log("FALLBACK", Date.now() - startedAt, "monthly_limit");
+      return {
+        hint: toView(saved, inputHash, context.managerId === viewer.memberId),
+        keptPrevious: false,
+        message: "今月の AI の利用上限に達したため、簡易版で作りました。",
+      };
+    }
+  }
 
   if (config.kind === "none") {
     const saved = await saveContent(
@@ -102,6 +127,7 @@ export async function generateGrowthHint(
     return {
       hint: toView(saved, inputHash, context.managerId === viewer.memberId),
       keptPrevious: false,
+      message: null,
     };
   }
 
@@ -129,6 +155,7 @@ export async function generateGrowthHint(
     return {
       hint: toView(saved, inputHash, context.managerId === viewer.memberId),
       keptPrevious: false,
+      message: null,
     };
   } catch (error) {
     const errorCode =
@@ -142,6 +169,7 @@ export async function generateGrowthHint(
           context.managerId === viewer.memberId,
         ),
         keptPrevious: true,
+        message: null,
       };
     }
     const saved = await saveContent(
@@ -152,6 +180,7 @@ export async function generateGrowthHint(
     return {
       hint: toView(saved, inputHash, context.managerId === viewer.memberId),
       keptPrevious: false,
+      message: null,
     };
   }
 

@@ -60,6 +60,8 @@ test.describe("UI check", () => {
       await firstAuditLog.locator("summary time").click();
       await capture(page, "ADMIN", "audit-logs-detail");
     }
+    await page.goto("/ai-usage");
+    await capture(page, "ADMIN", "ai-usage");
     await page.goto("/csv");
     await capture(page, "ADMIN", "csv");
     // 確認の段階（登録はしない）。新規・更新・エラーを1件ずつ含む部署の CSV を選ぶ
