@@ -116,7 +116,7 @@ export function LevelUpCelebrationDialog({
         </div>
 
         <div>
-          <p className="text-lg font-bold">{current.fromLevel === null ? `新規 → Lv${current.toLevel}` : `Lv${current.fromLevel} → Lv${current.toLevel}`}</p>
+          <p className="text-lg font-bold">{current.fromLevel === null ? `未登録 → Lv${current.toLevel}` : `Lv${current.fromLevel} → Lv${current.toLevel}`}</p>
           <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[var(--muted-foreground)]">{current.levelDescription}</p>
         </div>
 

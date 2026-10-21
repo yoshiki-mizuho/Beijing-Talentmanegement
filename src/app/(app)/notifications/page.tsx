@@ -43,7 +43,7 @@ export default async function NotificationsPage({
     <div className="space-y-6">
       <PageHeader
         title="通知"
-        description="申告依頼や申告結果を確認し、必要な対応画面へ進みます。"
+        description="申請や承認の結果を確認し、必要な対応画面へ進みます。"
       />
 
       <Card>
@@ -120,7 +120,7 @@ export default async function NotificationsPage({
               title={unreadOnly ? "未読の通知はありません" : "通知はありません"}
               description={unreadOnly
                 ? "すべて確認できています。新しい通知が届くと、ここに表示されます。"
-                : "新しい申告依頼や申告結果が届くと、ここに表示されます。"}
+                : "新しい申請や承認の結果が届くと、ここに表示されます。"}
             />
           )}
         </CardContent>

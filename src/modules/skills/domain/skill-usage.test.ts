@@ -30,7 +30,7 @@ describe("getSkillDeletionState", () => {
       })
     ).toEqual({
       isDeletable: false,
-      reason: "保有・申告・履歴・応援・ロール要件があるため削除できません。無効化してください。"
+      reason: "保有・申請・履歴・応援・ロール要件があるため削除できません。無効化してください。"
     });
   });
 });

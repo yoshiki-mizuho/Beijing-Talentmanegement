@@ -57,6 +57,21 @@ test("MANAGER の ADMIN 専用 API は 403", async ({ browser }) => {
   }
 });
 
+test("MANAGER のメンバー一覧にメンバー追加操作がない", async ({ browser }) => {
+  const { context, page } = await openLoggedInContext(
+    browser,
+    credentials.MANAGER,
+  );
+  try {
+    await page.goto("/members");
+    await expect(
+      page.getByRole("button", { name: "メンバーを追加", exact: true }),
+    ).toHaveCount(0);
+  } finally {
+    await context.close();
+  }
+});
+
 test("MEMBER のメンバー API は 403", async ({ browser }) => {
   const { context, page } = await openLoggedInContext(
     browser,

@@ -29,7 +29,7 @@ export function RecentLevelUps({ items }: { items: Profile["recent"] }) {
             </time>
             <strong className="flex-1">{item.skillName}</strong>
             <span>
-              {item.fromLevel === null ? "新規" : `Lv${item.fromLevel}`} → Lv{item.toLevel}
+              {item.fromLevel === null ? "未登録" : `Lv${item.fromLevel}`} → Lv{item.toLevel}
             </span>
           </li>
         ))}

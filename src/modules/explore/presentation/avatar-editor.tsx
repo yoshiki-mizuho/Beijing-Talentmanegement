@@ -15,8 +15,12 @@ export function AvatarEditor({ hasAvatar }: { hasAvatar: boolean }) {
 
   async function handleFile(file: File | undefined) {
     if (!file) return;
-    if (file.size > sourceMaxBytes || !acceptedTypes.has(file.type)) {
-      toast.error("10MB 以下の PNG・JPEG・WebP を選んでください。");
+    if (!acceptedTypes.has(file.type)) {
+      toast.error("写真や画像のファイル（PNG・JPEG・WebP）を選んでください。");
+      return;
+    }
+    if (file.size > sourceMaxBytes) {
+      toast.error("10MB以下の画像を選んでください。");
       return;
     }
     setPending(true);

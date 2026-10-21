@@ -48,6 +48,7 @@ type Props = {
   roles: RoleOption[];
   managerCandidates: ManagerOption[];
   targetRoles: TargetRoleOption[];
+  canCreateMembers: boolean;
   canDeactivateMembers: boolean;
   canEditGrowthSettings: boolean;
   viewerMemberId: string;
@@ -70,6 +71,7 @@ function MemberSearchTableInner({
   roles,
   managerCandidates,
   targetRoles,
+  canCreateMembers,
   canDeactivateMembers,
   canEditGrowthSettings,
   viewerMemberId,
@@ -138,12 +140,14 @@ function MemberSearchTableInner({
             {scopeName}・{members.length}名
           </span>
         </h1>
-        <MemberCreateDialog
-          departments={departments}
-          managerCandidates={managerCandidates}
-          targetRoles={targetRoles}
-          canEditGrowthSettings={canEditGrowthSettings}
-        />
+        {canCreateMembers ? (
+          <MemberCreateDialog
+            departments={departments}
+            managerCandidates={managerCandidates}
+            targetRoles={targetRoles}
+            canEditGrowthSettings={canEditGrowthSettings}
+          />
+        ) : null}
       </div>
       <div className="flex flex-wrap items-center gap-3 border-b border-[var(--border)] pb-4">
         <div className="relative min-w-56 flex-1 md:max-w-xs">

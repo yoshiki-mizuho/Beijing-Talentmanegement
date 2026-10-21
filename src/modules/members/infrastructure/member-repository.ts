@@ -750,8 +750,8 @@ export async function createSkillAssessments(
           recipientMemberId,
           type: NotificationType.SKILL_ASSESSMENT_REQUESTED,
           skillSelfAssessmentId: assessment.id,
-          title: "スキル申告の承認依頼",
-          body: `${member.name} が ${skillNames.get(assessment.skillId)} Lv.${assessment.requestedLevel} を申告しました。`
+          title: "スキル申請の承認依頼",
+          body: `${member.name} が ${skillNames.get(assessment.skillId)} Lv.${assessment.requestedLevel} を申請しました。`
         }))
     );
 
@@ -895,19 +895,19 @@ async function reviewSkillAssessmentInTransaction(
           : NotificationType.SKILL_ASSESSMENT_REJECTED;
 
     const resultBody = reviewStatus === SkillSelfAssessmentStatus.APPROVED
-      ? `${assessment.skill.name} Lv.${assessment.requestedLevel} の申告が承認されました。`
+      ? `${assessment.skill.name} Lv.${assessment.requestedLevel} の申請が承認されました。`
       : reviewStatus === SkillSelfAssessmentStatus.CORRECTED
-        ? `${assessment.skill.name} の申告が Lv${approvedLevel} に補正して承認されました。`
+        ? `${assessment.skill.name} の申請が Lv${approvedLevel} に補正して承認されました。`
         : input.managerComment
-          ? `${assessment.skill.name} の申告が差し戻されました。理由：${input.managerComment}`
-          : `${assessment.skill.name} の申告が差し戻されました。`;
+          ? `${assessment.skill.name} の申請が差し戻されました。理由：${input.managerComment}`
+          : `${assessment.skill.name} の申請が差し戻されました。`;
 
     await tx.notification.create({
       data: {
         recipientMemberId: assessment.memberId,
         type: notificationType,
         skillSelfAssessmentId: assessment.id,
-        title: "スキル申告の承認結果",
+        title: "スキル申請の承認結果",
         body: resultBody
       }
     });

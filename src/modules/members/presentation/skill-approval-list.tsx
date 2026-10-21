@@ -15,7 +15,7 @@ import {
 } from "@/modules/members/presentation/skill-approval";
 import { MemberAvatar } from "@/shared/ui/member-avatar";
 import { cn } from "@/shared/lib/utils";
-import { ActionForm, ConfirmSubmitButton } from "@/shared/ui/action-form";
+import { ActionForm } from "@/shared/ui/action-form";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
@@ -260,8 +260,9 @@ function SkillApprovalItem({
           </Button>
           <Button
             type="button"
-            variant="destructive"
+            variant="secondary"
             size="small"
+            className="text-[var(--destructive)]"
             aria-label={`${subject}を差し戻し`}
             onClick={() => setDialog("reject")}
           >
@@ -410,19 +411,14 @@ function RejectionDialog({
           <Button type="button" variant="secondary" onClick={onClose}>
             キャンセル
           </Button>
-          <ConfirmSubmitButton
+          <SubmitButton
             disabled={!reason.trim()}
             pendingLabel="差し戻し中…"
-            variant="destructive"
-            confirm={{
-              title: "スキル申請を差し戻しますか",
-              description: "入力した理由とともに申請を差し戻します。",
-              confirmLabel: "差し戻す",
-              destructive: true
-            }}
+            variant="secondary"
+            className="text-[var(--destructive)]"
           >
             差し戻す
-          </ConfirmSubmitButton>
+          </SubmitButton>
         </div>
       </ActionForm>
     </Dialog>
