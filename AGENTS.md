@@ -41,5 +41,5 @@
 
 ## 現在の状態
 
-- Phase0〜Phase5は完了済み。デモ環境の運用手順は `docs/DEMO_DEPLOYMENT.md` を確認する。
-- 次の対象はPhase6（AI評価機能）。進め方は着手時に `docs/ROADMAP.md` のPhase 6をもとに決める。
+- Phase0〜Phase6は完了済み。デモ環境の運用手順は `docs/DEMO_DEPLOYMENT.md` を確認する。
+- 次の対象は利用者と相談中（Phase 7の本番化・運用準備、またはAI活用の追加フェーズ）。
