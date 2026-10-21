@@ -20,6 +20,7 @@ export default async function MembersPage({
 }) {
   const { targetRole } = await searchParams;
   const session = await requirePageRoles(managerOrAdmin);
+  const canCreateMembers = session.user.role === "ADMIN";
   const canDeactivateMembers = session.user.role === "ADMIN";
   const canEditGrowthSettings = session.user.role === "ADMIN";
   const scope = await getMemberScope(session.user.role, session.user.memberId);
@@ -100,6 +101,7 @@ export default async function MembersPage({
             roles={roleOptions}
             managerCandidates={managerCandidates}
             targetRoles={targetRoleOptions}
+            canCreateMembers={canCreateMembers}
             canDeactivateMembers={canDeactivateMembers}
             canEditGrowthSettings={canEditGrowthSettings}
             viewerMemberId={session.user.memberId}

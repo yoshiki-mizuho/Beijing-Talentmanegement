@@ -28,8 +28,8 @@ describe("skill approval display logic", () => {
 
   it("describes owned and unowned level changes", () => {
     expect(getSkillApprovalLevelChange(2, 4)).toBe(
-      "現在 Lv2 → 申告 Lv4"
+      "現在 Lv2 → 申請 Lv4"
     );
-    expect(getSkillApprovalLevelChange(null, 3)).toBe("未保有 → Lv3");
+    expect(getSkillApprovalLevelChange(null, 3)).toBe("未登録 → Lv3");
   });
 });

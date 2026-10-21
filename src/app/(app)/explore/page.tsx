@@ -25,7 +25,7 @@ export default async function ExplorePage({
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Compass className="h-7 w-7 text-[var(--primary)]" aria-hidden="true" />
-        <h1 className="text-[26px] font-bold">探す</h1>
+        <h1 className="text-[26px] font-bold">得意な人を探す</h1>
       </div>
       <PeopleSearch data={data} selectedSkill={query.skill} level={level} />
       <div className="grid gap-5 lg:grid-cols-2">

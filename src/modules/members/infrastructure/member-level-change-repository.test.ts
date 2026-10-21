@@ -119,7 +119,7 @@ describe("member skill level change recording", () => {
     expect(mocks.notificationCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
         type: NotificationType.SKILL_ASSESSMENT_CORRECTED,
-        body: "TypeScript の申告が Lv3 に補正して承認されました。"
+        body: "TypeScript の申請が Lv3 に補正して承認されました。"
       })
     });
   });

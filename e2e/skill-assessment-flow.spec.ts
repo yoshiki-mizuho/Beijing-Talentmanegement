@@ -34,10 +34,10 @@ test("メンバーのスキル申告をマネージャーが承認できる", as
         "1件のスキルを申請しました。マネージャーの承認をお待ちください。"
       )
     ).toBeVisible();
-    await member.page.getByRole("tab", { name: "申告履歴" }).click();
+    await member.page.getByRole("tab", { name: "申請履歴" }).click();
 
     const pendingHistory = member.page.getByRole("group", {
-      name: `${skillName}の申告履歴`
+      name: `${skillName}の申請履歴`
     }).first();
     await expect(pendingHistory).toContainText("承認待ち");
 
@@ -61,7 +61,7 @@ test("メンバーのスキル申告をマネージャーが承認できる", as
 
     await member.page.goto("/my/skills?tab=history");
     const approvedHistory = member.page.getByRole("group", {
-      name: `${skillName}の申告履歴`
+      name: `${skillName}の申請履歴`
     }).first();
     await expect(approvedHistory).toContainText("承認済み");
 
@@ -73,7 +73,7 @@ test("メンバーのスキル申告をマネージャーが承認できる", as
   }
 });
 
-test("差し戻し理由を入力し、メンバーが申告履歴で確認できる", async ({ browser }) => {
+test("差し戻し理由を入力し、メンバーが申請履歴で確認できる", async ({ browser }) => {
   const member = await openLoggedInContext(browser, credentials.MEMBER);
   const rejectionReason = "実務で使った例を追記してください";
 
@@ -111,10 +111,6 @@ test("差し戻し理由を入力し、メンバーが申告履歴で確認で�
       await expect(reasonInput).toHaveValue(rejectionReason);
       await expect(reasonInput).toBeFocused();
       await manager.page.getByRole("button", { name: "差し戻す", exact: true }).click();
-      await manager.page.getByRole("dialog", { name: "スキル申請を差し戻しますか" }).getByRole("button", {
-        name: "差し戻す",
-        exact: true
-      }).click();
       await expect(manager.page.getByText("スキル申請を差し戻しました。"))
         .toBeVisible();
     } finally {
@@ -123,7 +119,7 @@ test("差し戻し理由を入力し、メンバーが申告履歴で確認で�
 
     await member.page.goto("/my/skills?tab=history");
     const rejectedHistory = member.page.getByRole("group", {
-      name: `${skillName}の申告履歴`
+      name: `${skillName}の申請履歴`
     }).first();
     await expect(rejectedHistory).toContainText("差し戻し");
     await expect(rejectedHistory).toContainText(`差し戻しの理由：${rejectionReason}`);

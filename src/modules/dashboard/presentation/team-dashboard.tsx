@@ -151,7 +151,7 @@ export function TeamDashboard({ viewModel }: { viewModel: TeamDashboardViewModel
           )}
         </TeamSection>
 
-        <TeamSection icon={CalendarClock} id="inactive-heading" title="しばらく申請のない部下" description="申告もレベル変更も60日以上ないメンバーです。">
+        <TeamSection icon={CalendarClock} id="inactive-heading" title="しばらく申請のない部下" description="申請もレベルの変化も60日以上ないメンバーです。">
           {viewModel.inactiveMembers.length > 0 ? (
             <ul className="divide-y divide-[var(--border)] border-t border-[var(--border)]">
               {viewModel.inactiveMembers.map((item) => (

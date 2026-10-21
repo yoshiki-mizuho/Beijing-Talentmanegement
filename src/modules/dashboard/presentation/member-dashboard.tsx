@@ -100,7 +100,7 @@ export function MemberDashboard({
                   <p className="text-sm font-semibold">
                     {formatShortDate(item.changedAt)} {item.skillName}{" "}
                     {item.fromLevel === null
-                      ? `新規 Lv${item.toLevel}`
+                      ? `未登録 → Lv${item.toLevel}`
                       : `Lv${item.fromLevel} → Lv${item.toLevel}`}
                   </p>
                   <p className="mt-1 text-xs text-[var(--muted-foreground)]">{item.categoryName}</p>

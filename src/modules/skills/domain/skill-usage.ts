@@ -8,7 +8,7 @@ export type SkillUsage = {
 
 const usageLabels: { key: keyof SkillUsage; label: string }[] = [
   { key: "memberSkills", label: "保有" },
-  { key: "selfAssessments", label: "申告" },
+  { key: "selfAssessments", label: "申請" },
   { key: "skillLevelChanges", label: "履歴" },
   { key: "cheers", label: "応援" },
   { key: "roleRequirements", label: "ロール要件" }

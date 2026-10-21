@@ -78,7 +78,7 @@ export default async function MySkillsPage({
       >
         {[
           { id: "apply", label: "申請", href: "/my/skills" },
-          { id: "history", label: "申告履歴", href: "/my/skills?tab=history" }
+          { id: "history", label: "申請履歴", href: "/my/skills?tab=history" }
         ].map((tab) => (
           <Link
             key={tab.id}
@@ -126,7 +126,7 @@ export default async function MySkillsPage({
           aria-labelledby="my-skills-history-tab"
         >
           <CardHeader>
-            <CardTitle>申告履歴</CardTitle>
+            <CardTitle>申請履歴</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
           {context.assessmentHistory.map((assessment) => {
@@ -139,7 +139,7 @@ export default async function MySkillsPage({
               <div
                 key={assessment.id}
                 role="group"
-                aria-label={`${assessment.skill.name}の申告履歴`}
+                aria-label={`${assessment.skill.name}の申請履歴`}
                 className="border-b border-[var(--border)] py-4 last:border-b-0"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -148,7 +148,7 @@ export default async function MySkillsPage({
                       {assessment.skill.name}
                     </p>
                     <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-                      {assessment.skill.category.name} / 申請日 {dateFormatter.format(assessment.createdAt)} / 申告 Lv{assessment.requestedLevel}
+                      {assessment.skill.category.name} / 申請日 {dateFormatter.format(assessment.createdAt)} / 申請 Lv{assessment.requestedLevel}
                     </p>
                   </div>
                   <Badge
@@ -189,7 +189,7 @@ export default async function MySkillsPage({
           {context.assessmentHistory.length === 0 ? (
             <EmptyState
               icon={ClipboardList}
-              title="申告履歴はありません"
+              title="申請履歴はありません"
               description="レベルを選んで申請すると、ここで承認状況を確認できます。"
             />
           ) : null}

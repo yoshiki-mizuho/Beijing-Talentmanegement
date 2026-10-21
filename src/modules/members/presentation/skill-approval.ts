@@ -48,8 +48,8 @@ export function getSkillApprovalLevelChange(
   requestedLevel: number
 ) {
   return currentLevel === null
-    ? `未保有 → Lv${requestedLevel}`
-    : `現在 Lv${currentLevel} → 申告 Lv${requestedLevel}`;
+    ? `未登録 → Lv${requestedLevel}`
+    : `現在 Lv${currentLevel} → 申請 Lv${requestedLevel}`;
 }
 
 export { getMemberAvatarTone, getMemberInitial } from "@/shared/ui/member-avatar";
