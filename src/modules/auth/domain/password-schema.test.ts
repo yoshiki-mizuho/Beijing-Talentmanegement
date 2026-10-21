@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { changePasswordInputSchema } from "@/modules/auth/domain/password-schema";
+import { createChangePasswordInputSchema } from "@/modules/auth/domain/password-schema";
 
 describe("changePasswordInputSchema", () => {
+  const changePasswordInputSchema = createChangePasswordInputSchema(true);
   const validInput = {
     userId: "user-1",
     currentPassword: "password",
@@ -41,5 +42,21 @@ describe("changePasswordInputSchema", () => {
         confirmPassword: "password"
       })
     ).toThrow();
+  });
+
+  it("accepts an initial change without the current password", () => {
+    expect(createChangePasswordInputSchema(false).parse({
+      userId: "user-1",
+      newPassword: "new-password",
+      confirmPassword: "new-password"
+    })).toBeTruthy();
+  });
+
+  it("requires the current password for a normal change", () => {
+    expect(() => createChangePasswordInputSchema(true).parse({
+      userId: "user-1",
+      newPassword: "new-password",
+      confirmPassword: "new-password"
+    })).toThrow();
   });
 });

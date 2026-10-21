@@ -263,7 +263,7 @@ async function applyMembers(
     };
     const saved =
       change.kind === "new"
-        ? await createMemberWithUser(tx, data, initialPasswordHash)
+        ? (await createMemberWithUser(tx, data, initialPasswordHash)).member
         : await tx.member.update({ where: { id: change.id }, data });
     await recordAuditLog(tx, {
       actorMemberId,

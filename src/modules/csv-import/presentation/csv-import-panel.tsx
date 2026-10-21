@@ -132,6 +132,11 @@ export function CsvImportPanel() {
         <p className="mt-2">
           新規 {result.created}件・更新 {result.updated}件
         </p>
+        {target === "members" && result.created > 0 ? (
+          <p className="mt-3 text-sm text-[var(--muted-foreground)]">
+            新しく登録したメンバーには、メンバー詳細から初回ログイン用のパスワードを発行してください。
+          </p>
+        ) : null}
         <div className="mt-6 flex justify-center gap-3">
           <Link
             className="inline-flex h-10 items-center rounded-lg border border-[var(--border-strong)] px-4 text-sm font-semibold"

@@ -8,6 +8,8 @@ const credentials = readDemoCredentials();
 test("管理者がメンバーを登録し、詳細で役職を更新して無効化できる", async ({
   browser,
 }) => {
+  // 登録したメンバーでの初回ログインとパスワードの設定も含むため長めにする
+  test.slow();
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
   const uniqueSuffix = `${Date.now()}-${test.info().workerIndex}`;
   const employeeNo = `E2E-${uniqueSuffix}`;
@@ -30,11 +32,27 @@ test("管理者がメンバーを登録し、詳細で役職を更新して無�
     await createDialog
       .getByRole("button", { name: "メンバーを追加", exact: true })
       .click();
-    await expect(
-      admin.page.getByText(
-        "メンバーを登録しました。初期認証情報を安全な経路で共有してください。",
-      ),
-    ).toBeVisible();
+    const resultDialog = admin.page.getByRole("dialog", {
+      name: `${memberName}さんを登録しました`,
+    });
+    const initialPassword = await resultDialog.locator("p.font-mono").textContent();
+    expect(initialPassword).toMatch(/^[A-HJ-NP-Za-km-z2-9]{4}(?:-[A-HJ-NP-Za-km-z2-9]{4}){2}$/);
+    // 右上の × も「閉じる」なので、下の「閉じる」ボタンを押す
+    await resultDialog.getByRole("button", { name: "閉じる" }).last().click();
+
+    const newMember = await openLoggedInContext(browser, {
+      email,
+      password: initialPassword as string,
+    }, /\/account\/password$/);
+    try {
+      await expect(newMember.page.getByLabel("現在のパスワード")).toHaveCount(0);
+      await newMember.page.getByLabel("新しいパスワード").fill(`Changed-${uniqueSuffix}`);
+      await newMember.page.getByLabel("もう一度入力").fill(`Changed-${uniqueSuffix}`);
+      await newMember.page.getByRole("button", { name: "決めて始める" }).click();
+      await expect(newMember.page).toHaveURL(/\/dashboard/);
+    } finally {
+      await newMember.context.close();
+    }
 
     // 絞り込みの取得が終わる前に更新すると、古い一覧で詳細が上書きされるため、結果を待つ。
     const searchResponse = admin.page.waitForResponse(
@@ -63,6 +81,11 @@ test("管理者がメンバーを登録し、詳細で役職を更新して無�
       admin.page.getByText("メンバー情報を更新しました。"),
     ).toBeVisible();
     await expect(detailDialog.getByLabel("役職")).toHaveValue(updatedJobTitle);
+
+    await detailDialog.getByRole("button", { name: "初回ログイン用のパスワードを発行" }).click();
+    await admin.page.getByRole("dialog", { name: "初回ログイン用のパスワードを発行しますか" })
+      .getByRole("button", { name: "発行する" }).click();
+    await expect(detailDialog.getByText(`${memberName}さんの初回ログイン用のパスワード`)).toBeVisible();
 
     await detailDialog
       .getByRole("button", { name: "無効化", exact: true })
@@ -96,6 +119,12 @@ test("マネージャーの一覧と更新APIは自組織の範囲に制限さ�
     await manager.page.goto("/members");
     await manager.page.getByLabel("キーワード").fill("TM0103");
     await expect(manager.page.getByText("デモメンバー03")).toHaveCount(0);
+
+    await manager.page.getByLabel("キーワード").fill("");
+    await manager.page.getByRole("button", { name: /の詳細を開く/ }).first().click();
+    await expect(
+      manager.page.getByRole("button", { name: "初回ログイン用のパスワードを発行" }),
+    ).toHaveCount(0);
 
     const forbidden = await manager.page.request.patch(
       `/api/members/${outsideMembers[0].id}`,

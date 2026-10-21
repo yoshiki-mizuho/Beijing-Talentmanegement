@@ -4,9 +4,10 @@ import { ZodError, type ZodIssue } from "zod";
 import { AuthorizationError } from "@/server/auth/authorization";
 import { UserFacingError } from "@/shared/lib/user-facing-error";
 
-export type ActionResult = {
+export type ActionResult<T = unknown> = {
   status: "success" | "error";
   message: string;
+  data?: T;
 };
 
 type SuccessMessage<T> = string | ((value: T) => string);
@@ -49,6 +50,22 @@ export async function runAction<T>(
     console.error("Server Action failed", error);
     return { status: "error", message: genericErrorMessage };
   }
+}
+
+export async function runActionWithData<T>(
+  fn: () => Promise<T>,
+  successMessage: SuccessMessage<T>
+): Promise<ActionResult<T>> {
+  let value: T | undefined;
+  const result = await runAction(async () => {
+    value = await fn();
+    return value;
+  }, successMessage);
+  if (result.status === "error") {
+    return { status: "error", message: result.message };
+  }
+
+  return { ...result, data: value as T };
 }
 
 function translateZodIssue(issue: ZodIssue | undefined) {

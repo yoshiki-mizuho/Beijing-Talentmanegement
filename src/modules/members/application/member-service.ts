@@ -41,6 +41,10 @@ export function createMember(input: unknown, actorMemberId: string | null) {
   return memberRepository.createMember(memberInputSchema.parse(input), actorMemberId);
 }
 
+export function issueInitialPassword(memberId: string, actorMemberId: string) {
+  return memberRepository.issueInitialPassword(memberId, actorMemberId);
+}
+
 export function updateMember(id: string, input: unknown, actorMemberId: string | null) {
   return memberRepository.updateMember(id, memberInputSchema.parse(input), actorMemberId);
 }

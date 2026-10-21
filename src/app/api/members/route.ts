@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const member = await createMember(await request.json(), auth.session.user.memberId);
+    const { member } = await createMember(await request.json(), auth.session.user.memberId);
     return NextResponse.json(member, { status: 201 });
   } catch (error) {
     if (error instanceof MemberUserLinkError) {

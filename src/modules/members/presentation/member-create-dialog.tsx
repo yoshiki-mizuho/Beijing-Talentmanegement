@@ -16,6 +16,8 @@ import { Button } from "@/shared/ui/button";
 import { Dialog } from "@/shared/ui/dialog";
 import { FormField, SelectField, TextareaField } from "@/shared/ui/form-field";
 import { SubmitButton } from "@/shared/ui/submit-button";
+import type { ActionResult } from "@/shared/lib/action-result";
+import { InitialPasswordNotice } from "@/modules/members/presentation/initial-password-notice";
 
 const memberStatuses = ["ACTIVE", "LEAVE", "INACTIVE"] as const;
 
@@ -32,6 +34,16 @@ export function MemberCreateDialog({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [created, setCreated] = useState<{
+    name: string;
+    email: string;
+    initialPassword: string | null;
+  } | null>(null);
+
+  function close() {
+    setOpen(false);
+    setCreated(null);
+  }
 
   return (
     <>
@@ -41,19 +53,33 @@ export function MemberCreateDialog({
       </Button>
       <Dialog
         open={open}
-        onClose={() => setOpen(false)}
-        title="メンバーを追加"
-        description="登録後、本人は初回ログイン時にパスワードの変更が必要です。"
-        className="max-w-3xl"
+        onClose={close}
+        title={created ? `${created.name}さんを登録しました` : "メンバーを追加"}
+        description={created ? undefined : "登録すると、初回ログイン用のパスワードが表示されます。"}
+        className={created ? "max-w-lg" : "max-w-3xl"}
       >
-        <p className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          初期認証情報は安全な経路で本人へ共有してください。
-        </p>
+        {created ? (
+          <div className="space-y-4">
+            {created.initialPassword ? (
+              <InitialPasswordNotice
+                email={created.email}
+                initialPassword={created.initialPassword}
+              />
+            ) : (
+              <p className="text-sm">
+                同じメールアドレスの利用者がいたため、その利用者に紐付けました。パスワードは今のままです。
+              </p>
+            )}
+            <div className="flex justify-end">
+              <Button type="button" onClick={close}>閉じる</Button>
+            </div>
+          </div>
+        ) : (<>
         <ActionForm
           action={createMemberAction}
           className="grid gap-4 md:grid-cols-2"
-          onSuccess={() => {
-            setOpen(false);
+          onSuccess={(result: ActionResult) => {
+            setCreated(result.data as typeof created);
             router.refresh();
           }}
         >
@@ -148,6 +174,7 @@ export function MemberCreateDialog({
             </SubmitButton>
           </div>
         </ActionForm>
+        </>)}
       </Dialog>
     </>
   );
