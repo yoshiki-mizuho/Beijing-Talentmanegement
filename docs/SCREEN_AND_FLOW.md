@@ -24,11 +24,12 @@
 | スキルマップ | `/skill-map` | `admin`、`manager` | 含める | メンバー x スキルのマトリクス |
 | CSV管理 | `/csv` | `admin` | 含める | import/export、プレビュー、差分確認 |
 | 監査ログ | `/audit-logs` | `admin` | 含める | 操作履歴の検索、確認 |
-| AI評価 | `/ai-evaluation` | 未定 | 後続 | Phase 6で再設計 |
+| 育成のヒント | `/members` のメンバー詳細タブ | `admin`、担当範囲内の`manager` | 含める | 承認済みスキルと目標ロールをもとに作成 |
+| AI の利用状況 | `/ai-usage` | `admin` | 含める | 実行回数、トークン数、失敗割合、月間上限を確認 |
 
 ## 画面構成
 
-初期リリースの主要画面は、認証後のアプリケーション領域に配置します。AI評価は初期ナビゲーションに置きません。
+初期リリースの主要画面は、認証後のアプリケーション領域に配置します。
 
 ```mermaid
 flowchart TD
@@ -46,7 +47,8 @@ flowchart TD
   App --> SkillMap[スキルマップ]
   App --> Csv[CSV管理]
   App --> Audit[監査ログ]
-  Ai[AI評価 Phase 6] -. 後続 .-> MemberDetail
+  MemberDetail --> GrowthHints[育成のヒント]
+  App --> AiUsage[AI の利用状況]
 ```
 
 ## `admin` ユーザーフロー
@@ -160,11 +162,11 @@ sequenceDiagram
   UI-->>Manager: 処理結果を表示
 ```
 
-## 初期リリースに含めない画面
+## Phase 6までの追加画面と後続画面
 
-| 画面 | 理由 | 後続Phase |
+| 画面 | 現在の状態 | Phase |
 | --- | --- | --- |
-| AI評価一覧 | AI評価を初期リリースから外すため | Phase 6 |
-| AI再評価操作 | APIキー保護、キャッシュ、利用ログと一体で再設計するため | Phase 6 |
+| 育成のヒント | メンバー詳細タブで作成、再利用、作り直しを実装済み | Phase 6 |
+| AI の利用状況 | `admin`向け画面として実装済み | Phase 6 |
 | CSV承認画面 | 初期はプレビューと差分確認までにするため | Phase 5以降で再検討 |
 | 外部連携設定 | 初期リリースでは外部人事システム連携を扱わないため | 未定 |

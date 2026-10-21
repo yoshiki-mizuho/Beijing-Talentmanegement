@@ -44,6 +44,14 @@ AIの環境変数はProductionだけに登録する。
 
 接続先が未決定の間はAI設定を空欄にし、アプリ側の簡易版を使う。
 
+確認済みのGemini設定例では、`AI_API_BASE_URL`に`https://generativelanguage.googleapis.com/v1beta/openai`を指定する。
+
+`AI_API_KEY`にはGoogle AI Studioで発行したキーを指定する。
+
+`AI_MODEL`には利用可能なflash系モデルを指定する。
+
+無料枠へ送信するデータの取り扱いは、利用前にGoogleの最新の利用規約を確認する。
+
 6. GitLabの **Settings → CI/CD → Variables** に次の変数を登録する。
 
 | 変数 | 設定値 | 属性 |

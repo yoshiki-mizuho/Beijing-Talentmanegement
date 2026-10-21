@@ -49,7 +49,7 @@ vi.mock("@/modules/growth/application/growth-service", () => ({
   listSkillMentorCandidates: mocks.mentors,
 }));
 
-import { generateGrowthHint } from "./growth-hint-service";
+import { generateGrowthHint, getGrowthHint } from "./growth-hint-service";
 
 const viewer = { memberId: "manager", role: "MANAGER" as const };
 const context = {
@@ -202,5 +202,44 @@ describe("generateGrowthHint", () => {
     await expect(generateGrowthHint("member", viewer)).rejects.toMatchObject({
       status: 403,
     });
+  });
+
+  it.each([
+    [
+      "取得",
+      () => getGrowthHint("member", { memberId: "member", role: "MEMBER" }),
+    ],
+    [
+      "作成",
+      () => generateGrowthHint("member", { memberId: "member", role: "MEMBER" }),
+    ],
+  ])("MEMBERは育成のヒントを%sできない", async (_label, action) => {
+    await expect(action()).rejects.toMatchObject({ status: 403 });
+  });
+
+  it.each([
+    ["取得", () => getGrowthHint("member", viewer)],
+    ["作成", () => generateGrowthHint("member", viewer)],
+  ])(
+    "担当範囲外のMANAGERは育成のヒントを%sできない",
+    async (_label, action) => {
+      mocks.getScope.mockResolvedValue({ memberIds: [] });
+      await expect(action()).rejects.toMatchObject({ status: 403 });
+    },
+  );
+
+  it.each([
+    [
+      "取得",
+      () => getGrowthHint("member", { memberId: "admin", role: "ADMIN" }),
+    ],
+    [
+      "作成",
+      () => generateGrowthHint("member", { memberId: "admin", role: "ADMIN" }),
+    ],
+  ])("ADMINは誰の育成のヒントでも%sできる", async (_label, action) => {
+    mocks.getAiConfig.mockReturnValue({ kind: "none" });
+    await action();
+    expect(mocks.getScope).not.toHaveBeenCalled();
   });
 });
