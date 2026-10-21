@@ -2,6 +2,14 @@
 
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
+import {
+  ArrowRight,
+  MessageSquare,
+  Sparkles,
+  Star,
+  Target,
+  type LucideIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import type { GrowthHintView } from "@/modules/ai-evaluation/application/growth-hint-service";
@@ -153,7 +161,12 @@ function HintContent({
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Badge>{fallback ? "簡易版（AI なし）" : "AI"}</Badge>
+          <Badge>
+            {!fallback ? (
+              <Sparkles aria-hidden className="mr-1 h-3 w-3" />
+            ) : null}
+            {fallback ? "簡易版（AI なし）" : "AI"}
+          </Badge>
           <span className="text-xs text-[var(--muted-foreground)]">
             {formatDateTime(hint.generatedAt)}作成
           </span>
@@ -180,7 +193,7 @@ function HintContent({
           </Button>
         </div>
       ) : null}
-      <HintSection title="得意なこと">
+      <HintSection title="得意なこと" icon={Star}>
         <p className="text-sm">{hint.content.strengthsSummary}</p>
         <ul className="mt-3 flex flex-wrap gap-2">
           {hint.content.strengths.map((skill) => (
@@ -192,7 +205,12 @@ function HintContent({
           ))}
         </ul>
       </HintSection>
-      <HintSection title="目標ロールまでに伸ばすとよいスキル">
+      <HintSection title="目標ロールまでに伸ばすとよいスキル" icon={Target}>
+        {hint.content.targetRoleName ? (
+          <p className="mb-3 text-xs text-[var(--muted-foreground)]">
+            {hint.content.targetRoleName}・あと {hint.content.skillGaps.length} スキル
+          </p>
+        ) : null}
         {!hint.content.targetRoleName ? (
           <p className="text-sm text-[var(--muted-foreground)]">
             目標ロールが未設定です
@@ -224,7 +242,7 @@ function HintContent({
           </ul>
         )}
       </HintSection>
-      <HintSection title="次の一歩">
+      <HintSection title="次の一歩" icon={ArrowRight}>
         <ul className="list-disc space-y-2 pl-5 text-sm">
           {hint.content.nextSteps.map((step) => (
             <li key={step}>{step}</li>
@@ -242,7 +260,7 @@ function HintContent({
           </p>
         ) : null}
       </HintSection>
-      <HintSection title="1on1 で話すとよい話題">
+      <HintSection title="1on1 で話すとよい話題" icon={MessageSquare}>
         <ul className="space-y-3">
           {hint.content.oneOnOneTopics.map((topic) => (
             <li
@@ -279,14 +297,19 @@ function HintContent({
 
 function HintSection({
   title,
+  icon: Icon,
   children,
 }: {
   title: string;
+  icon: LucideIcon;
   children: React.ReactNode;
 }) {
   return (
     <section className="rounded-xl border border-[var(--border)] p-5">
-      <h3 className="mb-3 font-semibold">{title}</h3>
+      <h3 className="mb-3 flex items-center gap-2 font-semibold">
+        <Icon aria-hidden className="h-4 w-4 text-[var(--primary)]" />
+        {title}
+      </h3>
       {children}
     </section>
   );

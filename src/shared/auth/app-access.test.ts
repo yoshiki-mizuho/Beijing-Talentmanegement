@@ -69,6 +69,12 @@ describe("application route access", () => {
     expect(canAccessAppPath("MANAGER", "/ai-usage")).toBe(false);
   });
 
+  it("AIの利用状況はADMINだけがアクセスできる", () => {
+    expect(canAccessAppPath("ADMIN", "/ai-usage")).toBe(true);
+    expect(canAccessAppPath("MANAGER", "/ai-usage")).toBe(false);
+    expect(canAccessAppPath("MEMBER", "/ai-usage")).toBe(false);
+  });
+
   it("MEMBERはメンバー向け画面へアクセスでき、管理画面へアクセスできない", () => {
     expect(canAccessAppPath("MEMBER", "/dashboard")).toBe(true);
     expect(canAccessAppPath("MEMBER", "/explore")).toBe(true);

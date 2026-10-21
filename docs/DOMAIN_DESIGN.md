@@ -24,12 +24,19 @@ Phase 2以降のDB設計、画面設計、実装設計はこの内容を前提�
 
 以下は初期リリースには含めません。
 
-- AI評価の実行、再評価、キャッシュ、利用ログ。
 - CSVによるロール要件の一括import。
 - 承認フロー付きCSV import。
 - 外部人事システム連携。
 
-AI評価は `ai-evaluation` モジュールとしてPhase 6で再設計します。初期リリースではDBや画面にAI評価結果を必須項目として持たせません。
+育成のヒントは `ai-evaluation` モジュールとしてPhase 6で実装しました。
+
+AIには承認済みのスキルとレベル、目標ロールの要件だけを送ります。
+
+氏名、メール、社員番号は送りません。
+
+生成結果と入力のハッシュを保存して再利用し、作り直しにも対応します。
+
+利用ログには実行した人、対象、状態、トークン数、所要時間、理由を保存します。
 
 ## ドメインモデル
 
@@ -209,9 +216,8 @@ flowchart LR
   skills --> audit
   roles --> audit
 
-  ai[ai-evaluation Phase 6] -. later .-> members
-  ai -. later .-> skills
-  ai -. later .-> audit
+  ai[ai-evaluation] --> members
+  ai --> skills
 ```
 
 | モジュール | 初期リリースでの責務 |
@@ -225,7 +231,7 @@ flowchart LR
 | `auth` | 認証済みユーザー、RBAC、操作可否判定 |
 | `audit` | 重要操作の記録、検索、保持方針 |
 | `notifications` | スキル申告、承認依頼、承認結果の通知 |
-| `ai-evaluation` | Phase 6で扱う後続モジュール。初期リリースでは実装しない |
+| `ai-evaluation` | 育成のヒントの生成、保存、再利用、AI利用ログの記録と集計 |
 
 ## 主要ユースケース
 
