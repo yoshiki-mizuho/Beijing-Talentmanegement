@@ -31,7 +31,7 @@ export function ActionForm({
   action: Action;
   children: ReactNode;
   confirm?: ConfirmDialogOptions;
-  onSuccess?: () => void;
+  onSuccess?: (result: ActionResult) => void;
 }) {
   const onSuccessRef = useRef(onSuccess);
   const [, formAction] = useActionState<ActionResult | null, FormData>(
@@ -40,7 +40,7 @@ export function ActionForm({
 
       if (actionResult.status === "success") {
         toast.success(actionResult.message);
-        onSuccessRef.current?.();
+        onSuccessRef.current?.(actionResult);
       } else {
         toast.error(actionResult.message);
       }

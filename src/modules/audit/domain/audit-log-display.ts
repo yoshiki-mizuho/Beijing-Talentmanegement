@@ -207,6 +207,13 @@ export function buildActionDescription(
   if (action === "member.role.update") {
     return { prefix: "", target: targetName, suffix: " の権限を変更" };
   }
+  if (action === "member.password.issue") {
+    return {
+      prefix: "",
+      target: targetName,
+      suffix: " の初回ログイン用のパスワードを発行",
+    };
+  }
   if (action.startsWith("skill_assessment.")) {
     const verb = {
       "skill_assessment.create": "申請",

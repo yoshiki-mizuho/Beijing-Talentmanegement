@@ -7,7 +7,7 @@ import {
 } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
-import { INITIAL_PASSWORD } from "@/modules/auth/domain/password-schema";
+import { generateInitialPassword } from "@/modules/auth/domain/initial-password";
 import { AUDIT_ACTION, AUDIT_TARGET_TYPE } from "@/modules/audit/domain/audit-action";
 import { diffForAudit } from "@/modules/audit/domain/audit-diff";
 import { recordAuditLog, recordAuditLogs } from "@/modules/audit/infrastructure/audit-repository";
@@ -33,8 +33,8 @@ import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement
 import { prisma } from "@/server/db/prisma";
 import { UserFacingError } from "@/shared/lib/user-facing-error";
 
-export async function hashInitialPassword() {
-  return bcrypt.hash(INITIAL_PASSWORD, 12);
+export async function hashInitialPassword(password = generateInitialPassword()) {
+  return bcrypt.hash(password, 12);
 }
 
 function memberAuditFields(member: {
@@ -266,7 +266,7 @@ export async function updateMemberRole(
 
 export async function createMember(input: MemberInput, actorMemberId: string | null) {
   return prisma.$transaction(async (tx) => {
-    const member = await createMemberWithUser(tx, input);
+    const { member, initialPassword } = await createMemberWithUser(tx, input);
     await recordAuditLog(tx, {
       actorMemberId,
       action: AUDIT_ACTION.MEMBER_CREATE,
@@ -274,7 +274,10 @@ export async function createMember(input: MemberInput, actorMemberId: string | n
       targetId: member.id,
       after: memberAuditFields(member)
     });
-    return member;
+    return {
+      member,
+      initialPassword
+    };
   });
 }
 
@@ -288,14 +291,21 @@ export async function createMemberWithUser(
   // CSV の一括登録では、時間のかかるハッシュの計算をトランザクションの外で1回だけ行い、ここに渡す
   initialPasswordHash?: string
 ) {
-  const resolveInitialPasswordHash = () =>
-    initialPasswordHash ?? hashInitialPassword();
+  const createInitialCredential = async () => {
+    if (initialPasswordHash) {
+      return { passwordHash: initialPasswordHash, initialPassword: null };
+    }
+    const initialPassword = generateInitialPassword();
+    return {
+      passwordHash: await hashInitialPassword(initialPassword),
+      initialPassword
+    };
+  };
   const member = await tx.member.create({ data: input });
   const existingUser = await tx.user.findUnique({
     where: { email: input.email },
     select: {
       id: true,
-      passwordHash: true,
       memberId: true
     }
   });
@@ -307,30 +317,51 @@ export async function createMemberWithUser(
       where: { id: existingUser.id },
       data: {
         name: input.name,
-        memberId: member.id,
-        ...(existingUser.passwordHash
-          ? {}
-          : {
-              passwordHash: await resolveInitialPasswordHash(),
-              passwordChangeRequired: true
-            })
+        memberId: member.id
       }
     });
-    return member;
+    return { member, initialPassword: null };
   }
 
+  const credential = await createInitialCredential();
   await tx.user.create({
     data: {
       email: input.email,
       name: input.name,
-      passwordHash: await resolveInitialPasswordHash(),
+      passwordHash: credential.passwordHash,
       passwordChangeRequired: true,
       role: AuthRole.MEMBER,
       memberId: member.id
     }
   });
 
-  return member;
+  return { member, initialPassword: credential.initialPassword };
+}
+
+export async function issueInitialPassword(
+  memberId: string,
+  actorMemberId: string
+) {
+  const initialPassword = generateInitialPassword();
+  const passwordHash = await hashInitialPassword(initialPassword);
+
+  await prisma.$transaction(async (tx) => {
+    const updated = await tx.user.updateMany({
+      where: { memberId },
+      data: { passwordHash, passwordChangeRequired: true }
+    });
+    if (updated.count === 0) {
+      throw new UserFacingError("このメンバーにはログイン用の利用者がありません。");
+    }
+    await recordAuditLog(tx, {
+      actorMemberId,
+      action: AUDIT_ACTION.MEMBER_PASSWORD_ISSUE,
+      targetType: AUDIT_TARGET_TYPE.MEMBER,
+      targetId: memberId
+    });
+  });
+
+  return initialPassword;
 }
 
 export async function updateMember(

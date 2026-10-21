@@ -1,23 +1,28 @@
 import { PasswordForm } from "@/modules/auth/presentation/password-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { PageHeader } from "@/shared/ui/page-header";
+import { requireAuthenticatedMember } from "@/server/auth/authorization";
 
 export const dynamic = "force-dynamic";
 
-export default function PasswordPage() {
+export default async function PasswordPage() {
+  const session = await requireAuthenticatedMember();
+  const initialChange = session.user.passwordChangeRequired;
   return (
     <div className="mx-auto max-w-xl space-y-6">
       <PageHeader
-        title="パスワード変更"
-        description="初期パスワードでログインした場合は、業務機能を利用する前にパスワード変更が必要です。"
+        title={initialChange ? "ようこそ。パスワードを決めましょう" : "パスワード変更"}
+        description={initialChange ? "8文字以上。次回からこのパスワードでログインします。" : "現在のパスワードを確認して、新しいパスワードへ変更します。"}
       />
 
       <Card>
-        <CardHeader>
-          <CardTitle>新しいパスワード</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <PasswordForm />
+        {initialChange ? null : (
+          <CardHeader>
+            <CardTitle>新しいパスワード</CardTitle>
+          </CardHeader>
+        )}
+        <CardContent className={initialChange ? "pt-5" : undefined}>
+          <PasswordForm initialChange={initialChange} />
         </CardContent>
       </Card>
     </div>

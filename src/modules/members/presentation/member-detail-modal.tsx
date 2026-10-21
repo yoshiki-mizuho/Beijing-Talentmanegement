@@ -1,6 +1,6 @@
 "use client";
 
-import { Trash2, UserRound } from "lucide-react";
+import { KeyRound, Trash2, UserRound } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import Link from "next/link";
 import type { Route } from "next";
@@ -15,6 +15,7 @@ import {
 
 import {
   deactivateMemberAction,
+  issueInitialPasswordAction,
   removeMemberSkillAction,
   setMemberSkillLevelAction,
   updateMemberAction,
@@ -40,6 +41,8 @@ import { EmptyState } from "@/shared/ui/empty-state";
 import { FormField, SelectField, TextareaField } from "@/shared/ui/form-field";
 import { Button } from "@/shared/ui/button";
 import { SubmitButton } from "@/shared/ui/submit-button";
+import type { ActionResult } from "@/shared/lib/action-result";
+import { InitialPasswordNotice } from "@/modules/members/presentation/initial-password-notice";
 
 const memberStatuses = ["ACTIVE", "LEAVE", "INACTIVE"] as const;
 const skillLevels = [1, 2, 3, 4, 5] as const;
@@ -297,6 +300,7 @@ function BasicInformationPanel({
   tabId: string;
 }) {
   const [selectedRole, setSelectedRole] = useState(member.role ?? "MEMBER");
+  const [issuedPassword, setIssuedPassword] = useState<string | null>(null);
   const basicFormKey = [
     member.employeeNo,
     member.name,
@@ -491,6 +495,32 @@ function BasicInformationPanel({
       )}
 
       {canDeactivateMembers ? (
+        <>
+        {member.id !== viewerMemberId ? (
+          issuedPassword ? (
+            <div className="space-y-3 border-t border-[var(--border)] pt-5 md:col-span-3">
+              <p className="font-semibold">{member.name}さんの初回ログイン用のパスワード</p>
+              <InitialPasswordNotice email={member.email} initialPassword={issuedPassword} />
+            </div>
+          ) : (
+            <ActionForm
+              action={issueInitialPasswordAction}
+              className="border-t border-[var(--border)] pt-5 md:col-span-3"
+              onSuccess={(result: ActionResult) => setIssuedPassword((result.data as { initialPassword: string }).initialPassword)}
+              confirm={{
+                title: "初回ログイン用のパスワードを発行しますか",
+                description: "今のパスワードは使えなくなります。",
+                confirmLabel: "発行する"
+              }}
+            >
+              <input type="hidden" name="memberId" value={member.id} />
+              <SubmitButton pendingLabel="発行中…">
+                <KeyRound className="h-4 w-4" aria-hidden="true" />
+                初回ログイン用のパスワードを発行
+              </SubmitButton>
+            </ActionForm>
+          )
+        ) : null}
         <ActionForm
           action={deactivateMemberAction}
           className="border-t border-[var(--border)] pt-5 md:col-span-3"
@@ -511,6 +541,7 @@ function BasicInformationPanel({
             {member.status === "INACTIVE" ? "無効化済み" : "無効化"}
           </SubmitButton>
         </ActionForm>
+        </>
       ) : null}
     </section>
   );

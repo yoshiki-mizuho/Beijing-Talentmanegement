@@ -4,7 +4,18 @@ import type { ChangePasswordInput } from "@/modules/auth/domain/password-schema"
 import { prisma } from "@/server/db/prisma";
 import { UserFacingError } from "@/shared/lib/user-facing-error";
 
-export async function changePassword(input: ChangePasswordInput) {
+export async function isPasswordChangeRequired(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { passwordChangeRequired: true }
+  });
+  return user?.passwordChangeRequired === true;
+}
+
+export async function changePassword(
+  input: ChangePasswordInput,
+  passwordChangeRequired: boolean
+) {
   const user = await prisma.user.findUnique({
     where: { id: input.userId },
     select: {
@@ -19,8 +30,8 @@ export async function changePassword(input: ChangePasswordInput) {
     );
   }
 
-  const isCurrentPasswordValid = await bcrypt.compare(
-    input.currentPassword,
+  const isCurrentPasswordValid = passwordChangeRequired || await bcrypt.compare(
+    input.currentPassword ?? "",
     user.passwordHash
   );
 

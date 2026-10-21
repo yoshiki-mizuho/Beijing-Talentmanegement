@@ -9,6 +9,7 @@ import {
   createSkillAssessments,
   createMember,
   deactivateMember,
+  issueInitialPassword,
   removeMemberSkill,
   reviewSkillAssessment,
   setMemberSkillLevel,
@@ -26,7 +27,7 @@ import {
   requirePasswordReadyMember,
   requireRoles
 } from "@/server/auth/authorization";
-import { runAction, type ActionResult } from "@/shared/lib/action-result";
+import { runAction, runActionWithData, type ActionResult } from "@/shared/lib/action-result";
 import { getNumber, getOptionalString, getString } from "@/shared/lib/form-data";
 
 function parseMemberForm(formData: FormData) {
@@ -42,9 +43,10 @@ function parseMemberForm(formData: FormData) {
 }
 
 export async function createMemberAction(formData: FormData): Promise<ActionResult> {
-  return runAction(async () => {
+  return runActionWithData(async () => {
     const session = await requireRoles(adminOnly);
-    const member = await createMember(parseMemberForm(formData), session.user.memberId);
+    const result = await createMember(parseMemberForm(formData), session.user.memberId);
+    const member = result.member;
 
     if (session.user.role === "ADMIN") {
       await updateMemberManager({
@@ -57,7 +59,25 @@ export async function createMemberAction(formData: FormData): Promise<ActionResu
       }, session.user.memberId);
     }
     revalidatePath("/members");
-  }, "メンバーを登録しました。初期認証情報を安全な経路で共有してください。");
+    return {
+      name: member.name,
+      email: member.email,
+      initialPassword: result.initialPassword
+    };
+  }, "メンバーを登録しました。");
+}
+
+export async function issueInitialPasswordAction(formData: FormData): Promise<ActionResult> {
+  return runActionWithData(async () => {
+    const session = await requireRoles(adminOnly);
+    const memberId = getString(formData, "memberId");
+    if (memberId === session.user.memberId) {
+      throw new AuthorizationError("自分自身のパスワードは発行できません。", 403);
+    }
+    const initialPassword = await issueInitialPassword(memberId, session.user.memberId);
+    revalidatePath("/members");
+    return { initialPassword };
+  }, "初回ログイン用のパスワードを発行しました。");
 }
 
 export async function updateMemberRoleAction(
