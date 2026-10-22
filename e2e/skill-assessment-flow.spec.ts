@@ -6,11 +6,88 @@ import { dismissExistingLevelUpDialogs } from "./helpers/level-up";
 
 const credentials = readDemoCredentials();
 
+async function getUnreadNotificationCount(page: import("@playwright/test").Page) {
+  const label = await page.getByLabel(/通知を開く/).getAttribute("aria-label");
+  const count = label?.match(/未読通知(\d+)件/)?.[1];
+  return count ? Number(count) : 0;
+}
+
+test("複数のスキル申告を上司への通知1件にまとめ、承認後に既読にする", async ({ browser }) => {
+  const member = await openLoggedInContext(browser, credentials.MEMBER);
+  const manager = await openLoggedInContext(browser, credentials.MANAGER);
+  const admin = await openLoggedInContext(browser, credentials.ADMIN);
+
+  try {
+    const managerUnreadBefore = await getUnreadNotificationCount(manager.page);
+    const adminUnreadBefore = await getUnreadNotificationCount(admin.page);
+
+    await member.page.goto("/my/skills");
+    await dismissExistingLevelUpDialogs(member.page);
+    const levelGroups = member.page.locator('[role="group"][aria-label$="のレベル"]');
+    const selectedSkills: string[] = [];
+
+    for (let index = 0; index < await levelGroups.count() && selectedSkills.length < 2; index += 1) {
+      const group = levelGroups.nth(index);
+      const selectableLevel = group.locator('button:not(:disabled)[aria-pressed="false"]').first();
+      if (await selectableLevel.count() === 0) {
+        continue;
+      }
+      const groupName = await group.getAttribute("aria-label");
+      const skillName = groupName?.replace(/のレベル$/, "");
+      if (!skillName) {
+        continue;
+      }
+      await selectableLevel.click();
+      selectedSkills.push(skillName);
+    }
+
+    expect(selectedSkills).toHaveLength(2);
+    await member.page.getByRole("button", { name: "2件を申請", exact: true }).click();
+    await expect(
+      member.page.getByText(
+        "2件のスキルを申請しました。マネージャーの承認をお待ちください。"
+      )
+    ).toBeVisible();
+
+    await manager.page.goto("/notifications?view=unread");
+    await expect(manager.page.getByLabel(/通知を開く、未読通知/)).toHaveAttribute(
+      "aria-label",
+      `通知を開く、未読通知${managerUnreadBefore + 1}件`
+    );
+    await expect(
+      manager.page.getByText("2件の申請が届きました", { exact: false })
+    ).toHaveCount(1);
+
+    await admin.page.goto("/dashboard");
+    expect(await getUnreadNotificationCount(admin.page)).toBe(adminUnreadBefore);
+
+    await manager.page.goto("/skill-approvals");
+    for (const skillName of selectedSkills) {
+      await manager.page.getByLabel(`Member Userの${skillName}申請を選択`).check();
+    }
+    await manager.page.getByRole("button", { name: "選択した 2件を承認" }).click();
+    await manager.page.getByRole("button", { name: "承認する", exact: true }).click();
+    await expect(manager.page.getByText("2件の申請を承認しました。"))
+      .toBeVisible();
+
+    await manager.page.goto("/dashboard");
+    expect(await getUnreadNotificationCount(manager.page)).toBe(managerUnreadBefore);
+
+    await member.page.goto("/dashboard");
+    await dismissExistingLevelUpDialogs(member.page);
+  } finally {
+    await admin.context.close();
+    await manager.context.close();
+    await member.context.close();
+  }
+});
+
 test("メンバーのスキル申告をマネージャーが承認できる", async ({ browser }) => {
   const member = await openLoggedInContext(browser, credentials.MEMBER);
 
   try {
     await member.page.goto("/my/skills");
+    await dismissExistingLevelUpDialogs(member.page);
 
     const selectableLevel = member.page.locator(
       '[role="group"][aria-label$="のレベル"] button:not(:disabled)[aria-pressed="false"]'
@@ -79,6 +156,7 @@ test("差し戻し理由を入力し、メンバーが申請履歴で確認で�
 
   try {
     await member.page.goto("/my/skills");
+    await dismissExistingLevelUpDialogs(member.page);
     const selectableLevel = member.page.locator(
       '[role="group"][aria-label$="のレベル"] button:not(:disabled)[aria-pressed="false"]'
     ).first();

@@ -12,7 +12,9 @@ const mocks = vi.hoisted(() => ({
   levelChangeCreate: vi.fn(),
   assessmentFind: vi.fn(),
   assessmentUpdate: vi.fn(),
+  assessmentCount: vi.fn().mockResolvedValue(0),
   notificationCreate: vi.fn(),
+  notificationUpdateMany: vi.fn(),
   auditLogCreate: vi.fn()
 }));
 
@@ -33,9 +35,13 @@ const transactionClient = {
   skillLevelChange: { create: mocks.levelChangeCreate },
   skillSelfAssessment: {
     findUnique: mocks.assessmentFind,
-    update: mocks.assessmentUpdate
+    update: mocks.assessmentUpdate,
+    count: mocks.assessmentCount
   },
-  notification: { create: mocks.notificationCreate },
+  notification: {
+    create: mocks.notificationCreate,
+    updateMany: mocks.notificationUpdateMany
+  },
   auditLog: { create: mocks.auditLogCreate }
 };
 

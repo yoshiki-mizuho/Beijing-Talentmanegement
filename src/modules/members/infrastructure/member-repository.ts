@@ -1,7 +1,9 @@
 import {
   AuthRole,
+  NotificationStatus,
   NotificationType,
   Prisma,
+  type SkillSelfAssessment,
   SkillLevelChangeSource,
   SkillSelfAssessmentStatus,
 } from "@prisma/client";
@@ -727,19 +729,17 @@ export async function createSkillAssessments(
         select: { skillId: true }
       }),
       tx.user.findMany({
-        where: member.managerId
-          ? {
-              OR: [
-                { role: AuthRole.ADMIN },
-                { memberId: member.managerId }
-              ],
-              memberId: { not: null }
+        where: {
+          OR: [
+            ...(member.managerId ? [{ memberId: member.managerId }] : []),
+            {
+              role: AuthRole.ADMIN,
+              member: { status: "ACTIVE" }
             }
-          : {
-              role: { in: [AuthRole.ADMIN, AuthRole.MANAGER] },
-              memberId: { not: null }
-            },
-        select: { memberId: true }
+          ],
+          memberId: { not: input.memberId }
+        },
+        select: { memberId: true, role: true }
       })
     ]);
 
@@ -753,7 +753,7 @@ export async function createSkillAssessments(
     }
 
     const skillNames = new Map(skills.map((skill) => [skill.id, skill.name]));
-    const assessments = [];
+    const assessments: SkillSelfAssessment[] = [];
 
     for (const item of input.assessments) {
       assessments.push(await tx.skillSelfAssessment.create({
@@ -768,23 +768,32 @@ export async function createSkillAssessments(
       }));
     }
 
+    const managerReviewer = reviewerMembers.find(
+      (reviewer) => reviewer.memberId === member.managerId
+    );
+    const selectedReviewers = managerReviewer
+      ? [managerReviewer]
+      : reviewerMembers.filter((reviewer) => reviewer.role === AuthRole.ADMIN);
     const reviewerMemberIds = [
       ...new Set(
-        reviewerMembers
+        selectedReviewers
           .map((reviewer) => reviewer.memberId)
           .filter((memberId): memberId is string => Boolean(memberId))
       )
     ];
-    const notifications = assessments.flatMap((assessment) =>
-      reviewerMemberIds
-        .map((recipientMemberId) => ({
-          recipientMemberId,
-          type: NotificationType.SKILL_ASSESSMENT_REQUESTED,
-          skillSelfAssessmentId: assessment.id,
-          title: "スキル申請の承認依頼",
-          body: `${member.name} が ${skillNames.get(assessment.skillId)} Lv.${assessment.requestedLevel} を申請しました。`
-        }))
+    const assessmentLabels = assessments.map(
+      (assessment) => `${skillNames.get(assessment.skillId)} Lv${assessment.requestedLevel}`
     );
+    const notificationBody = assessments.length === 1
+      ? `${member.name}さんが ${assessmentLabels[0]} を申請しました。`
+      : `${member.name}さんから ${assessments.length}件の申請が届きました（${assessmentLabels.slice(0, 2).join("・")}${assessments.length >= 3 ? " ほか" : ""}）。`;
+    const notifications = reviewerMemberIds.map((recipientMemberId) => ({
+      recipientMemberId,
+      type: NotificationType.SKILL_ASSESSMENT_REQUESTED,
+      skillSelfAssessmentId: assessments[0].id,
+      title: "スキル申請の承認依頼",
+      body: notificationBody
+    }));
 
     if (notifications.length > 0) {
       await tx.notification.createMany({ data: notifications });
@@ -918,6 +927,25 @@ async function reviewSkillAssessmentInTransaction(
         reviewedAt
       }
     });
+    const remainingPendingAssessments = await tx.skillSelfAssessment.count({
+      where: {
+        memberId: assessment.memberId,
+        status: SkillSelfAssessmentStatus.PENDING
+      }
+    });
+    if (remainingPendingAssessments === 0) {
+      await tx.notification.updateMany({
+        where: {
+          type: NotificationType.SKILL_ASSESSMENT_REQUESTED,
+          status: NotificationStatus.UNREAD,
+          skillSelfAssessment: { memberId: assessment.memberId }
+        },
+        data: {
+          status: NotificationStatus.READ,
+          readAt: reviewedAt
+        }
+      });
+    }
     const notificationType =
       reviewStatus === SkillSelfAssessmentStatus.APPROVED
         ? NotificationType.SKILL_ASSESSMENT_APPROVED
