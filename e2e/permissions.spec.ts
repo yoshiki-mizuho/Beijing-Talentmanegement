@@ -13,8 +13,8 @@ const pages = [
   { path: "/skill-approvals", roles: ["ADMIN", "MANAGER"] },
   { path: "/members", roles: ["ADMIN", "MANAGER"] },
   { path: "/skill-map", roles: ["ADMIN", "MANAGER"] },
-  { path: "/skills", roles: ["ADMIN", "MANAGER"] },
-  { path: "/roles", roles: ["ADMIN", "MANAGER"] },
+  { path: "/skills", roles: ["ADMIN"] },
+  { path: "/roles", roles: ["ADMIN", "MANAGER", "MEMBER"] },
   { path: "/csv", roles: ["ADMIN"] },
   { path: "/audit-logs", roles: ["ADMIN"] },
 ] satisfies Array<{ path: string; roles: DemoRole[] }>;
@@ -69,6 +69,34 @@ test("MANAGER のメンバー一覧にメンバー追加操作がない", async 
     await expect(
       page.getByRole("button", { name: "メンバーを追加", exact: true }),
     ).toHaveCount(0);
+  } finally {
+    await context.close();
+  }
+});
+
+test("MANAGER のナビにスキル管理がなくロールで担当状況を確認できる", async ({ browser }) => {
+  const { context, page } = await openLoggedInContext(browser, credentials.MANAGER);
+  try {
+    await page.goto("/dashboard");
+    await expect(page.getByRole("link", { name: "スキル管理" })).toHaveCount(0);
+    await page.goto("/skills");
+    await expect(page).toHaveURL(/\/dashboard(?:\?.*)?$/);
+    await page.goto("/roles");
+    await expect(page.getByRole("heading", { name: "担当メンバーの状況" })).toBeVisible();
+  } finally {
+    await context.close();
+  }
+});
+
+test("MEMBER がロールと自分の達成状況を確認できる", async ({ browser }) => {
+  const { context, page } = await openLoggedInContext(browser, credentials.MEMBER);
+  try {
+    await page.goto("/roles");
+    await dismissExistingLevelUpDialogs(page);
+    await expect(page.getByRole("heading", { name: "ロール", level: 1 })).toBeVisible();
+    await expect(page.getByText(/あなた：/).first()).toBeVisible();
+    await expect(page.getByText("担当メンバーの状況")).toHaveCount(0);
+    await expect(page.getByText("全社の状況")).toHaveCount(0);
   } finally {
     await context.close();
   }

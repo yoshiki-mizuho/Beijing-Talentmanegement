@@ -52,7 +52,11 @@ export function TargetRoleCard({ viewModel }: { viewModel: MemberDashboardViewMo
               <span className="absolute inset-0 grid place-items-center text-lg font-bold">{role.satisfiedSkillCount}/{role.requiredSkillCount}</span>
             </div>
             <div>
-              <h3 className="text-xl font-semibold">{role.name}</h3>
+              <h3 className="text-xl font-semibold">
+                <Link href={`/roles?role=${encodeURIComponent(role.id)}`} className="hover:underline">
+                  {role.name}
+                </Link>
+              </h3>
               {role.achieved ? (
                 <p className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-50 p-3 text-sm font-medium text-emerald-800"><CheckCircle2 className="h-4 w-4" aria-hidden="true" />必須要件をすべて達成しています。</p>
               ) : (
