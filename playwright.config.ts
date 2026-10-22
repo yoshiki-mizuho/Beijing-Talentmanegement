@@ -4,6 +4,7 @@ const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 
 export default defineConfig({
   testDir: "e2e",
+  globalTeardown: "./e2e/global-teardown.ts",
   workers: 1,
   retries: process.env.CI ? 1 : 0,
   // 社内ランナーは遅いので、CI では待ち時間を延ばす。
