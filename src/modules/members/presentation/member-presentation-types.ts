@@ -21,6 +21,7 @@ export type MemberRow = {
   pendingAssessments?: {
     skillId: string;
     requestedLevel: number;
+    skill: { name: string; category: { name: string } };
   }[];
   memberSkills: {
     id: string;

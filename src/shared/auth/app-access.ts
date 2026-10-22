@@ -44,6 +44,7 @@ export const appNavigationGroups: readonly AppNavigationGroup[] = [
     items: [
       { href: "/my/skills", label: "自分のスキル", icon: "mySkills", allowedRoles: allRoles },
       { href: "/explore", label: "得意な人を探す", icon: "explore", allowedRoles: allRoles },
+      { href: "/roles", label: "ロール", icon: "roles", allowedRoles: allRoles },
       { href: "/people/:memberId", label: "プロフィール", icon: "profile", allowedRoles: allRoles }
     ]
   },
@@ -52,14 +53,13 @@ export const appNavigationGroups: readonly AppNavigationGroup[] = [
     items: [
       { href: "/skill-approvals", label: "スキル承認", icon: "approvals", allowedRoles: managementRoles },
       { href: "/members", label: "メンバー", icon: "members", allowedRoles: managementRoles },
-      { href: "/skill-map", label: "スキルマップ", icon: "skillMap", allowedRoles: managementRoles },
-      { href: "/skills", label: "スキル管理", icon: "skills", allowedRoles: managementRoles },
-      { href: "/roles", label: "ロール管理", icon: "roles", allowedRoles: managementRoles }
+      { href: "/skill-map", label: "スキルマップ", icon: "skillMap", allowedRoles: managementRoles }
     ]
   },
   {
     label: "管理者の機能",
     items: [
+      { href: "/skills", label: "スキル管理", icon: "skills", allowedRoles: adminOnly },
       { href: "/csv", label: "CSV", icon: "csv", allowedRoles: adminOnly },
       { href: "/audit-logs", label: "監査ログ", icon: "auditLogs", allowedRoles: adminOnly },
       { href: "/ai-usage", label: "AI の利用状況", icon: "aiUsage", allowedRoles: adminOnly }

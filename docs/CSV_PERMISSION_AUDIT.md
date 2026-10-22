@@ -40,7 +40,9 @@ CSV対象は主要マスタに限定します。
 | 画面 | `admin` | `manager` | `member` |
 | --- | --- | --- | --- |
 | ダッシュボード | 可 | 可 | 可 |
-| メンバー、スキル、スキルマップ、ロール | 可 | 可 | 不可 |
+| メンバー、スキルマップ | 可 | 可 | 不可 |
+| スキル管理 | 可 | 不可 | 不可 |
+| ロール | 全社の状況を含めて可 | 担当範囲の状況を含めて可 | 自分の達成状況を閲覧可 |
 | 自分のスキル、通知 | 可 | 可 | 可 |
 | スキル承認 | 可 | 可 | 不可 |
 | CSV、監査ログ | 可 | 不可 | 不可 |
@@ -222,7 +224,9 @@ flowchart TD
 | --- | --- | --- |
 | ダッシュボード | admin、manager、member | member は本人表示。manager は担当範囲。 |
 | メンバー | admin、manager | manager は担当範囲の一覧だけを取得。 |
-| スキル、スキルマップ、ロール | admin、manager | manager は参照のみ。スキルマップは担当範囲。 |
+| スキル管理 | admin | なし。 |
+| スキルマップ | admin、manager | manager は担当範囲。 |
+| ロール | admin、manager、member | member は本人、manager は担当範囲、admin は全社の達成状況を表示。 |
 | 自分のスキル、通知、探す、プロフィール | admin、manager、member | セッションの memberId または公開範囲を使用。 |
 | スキル承認 | admin、manager | manager は担当範囲。 |
 | CSV、監査ログ | admin | なし。 |

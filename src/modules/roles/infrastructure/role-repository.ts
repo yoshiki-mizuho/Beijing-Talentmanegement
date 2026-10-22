@@ -52,6 +52,54 @@ export async function createRole(input: RoleInput, actorMemberId: string | null)
   });
 }
 
+export async function createRoleWithRequirements(
+  input: RoleInput,
+  requirements: { skillId: string; requiredLevel: number }[],
+  actorMemberId: string | null
+) {
+  return prisma.$transaction(async (tx) => {
+    const role = await tx.role.create({ data: input });
+    if (requirements.length > 0) {
+      await tx.roleRequirement.createMany({
+        data: requirements.map((requirement) => ({
+          roleId: role.id,
+          skillId: requirement.skillId,
+          requiredLevel: requirement.requiredLevel,
+          isRequired: true
+        }))
+      });
+    }
+    await recordAuditLog(tx, {
+      actorMemberId,
+      action: AUDIT_ACTION.ROLE_CREATE,
+      targetType: AUDIT_TARGET_TYPE.ROLE,
+      targetId: role.id,
+      after: roleAuditFields(role),
+      metadata: {
+        requirements: requirements.map((requirement) => ({
+          skillId: requirement.skillId,
+          requiredLevel: requirement.requiredLevel,
+          isRequired: true
+        }))
+      }
+    });
+    for (const requirement of requirements) {
+      await recordAuditLog(tx, {
+        actorMemberId,
+        action: AUDIT_ACTION.ROLE_REQUIREMENT_SET,
+        targetType: AUDIT_TARGET_TYPE.ROLE,
+        targetId: role.id,
+        after: {
+          requiredLevel: requirement.requiredLevel,
+          isRequired: true
+        },
+        metadata: { skillId: requirement.skillId }
+      });
+    }
+    return role;
+  });
+}
+
 export async function updateRole(id: string, input: RoleInput, actorMemberId: string | null) {
   return prisma.$transaction(async (tx) => {
     const before = await tx.role.findUniqueOrThrow({ where: { id } });

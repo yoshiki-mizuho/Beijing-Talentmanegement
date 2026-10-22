@@ -17,9 +17,9 @@
 | メンバー詳細 | `/members` のモーダル | `admin`、`manager` | 含める | 基本情報の編集、保有スキルの追加・削除 |
 | 自分のスキル申告 | `/my/skills` | `member`、`manager`、`admin` | 含める | 複数スキルの追加、スライダーによるレベル設定、一括申請 |
 | スキル承認 | `/skill-approvals` | `manager`、`admin` | 含める | 申告スキルの承認、補正承認、差し戻し |
-| スキル管理 | `/skills` | `admin`、`manager` | 含める | `admin`は登録・編集、`manager`は検索・参照 |
+| スキル管理 | `/skills` | `admin` | 含める | スキルの登録・編集 |
 | スキル編集 | `/skills/[id]/edit` | `admin` | 含める | スキル定義の作成、更新、無効化 |
-| ロール管理 | `/roles` | `admin`、`manager` | 含める | ロール一覧、必要スキル、達成判定 |
+| ロール | `/roles` | 全ロール | 含める | ロール一覧、必要スキル、自分の達成状況。`manager`は担当範囲、`admin`は全社の状況と編集機能も表示 |
 | ロール編集 | `/roles/[id]/edit` | `admin` | 含める | ロールと必要スキル条件の編集 |
 | スキルマップ | `/skill-map` | `admin`、`manager` | 含める | メンバー x スキルのマトリクス |
 | CSV管理 | `/csv` | `admin` | 含める | import/export、プレビュー、差分確認 |
@@ -42,7 +42,7 @@ flowchart TD
   App --> SkillApprovals[スキル承認]
   App --> Skills[スキル管理]
   Skills --> SkillEdit[スキル編集]
-  App --> Roles[ロール管理]
+  App --> Roles[ロール]
   Roles --> RoleEdit[ロール編集]
   App --> SkillMap[スキルマップ]
   App --> Csv[CSV管理]

@@ -1,6 +1,7 @@
 "use client";
 
 import { KeyRound } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 
 import {
@@ -71,6 +72,13 @@ export function MemberOverviewPanel({
       assessment.requestedLevel,
     ]),
   );
+  // まだ持っていないスキルの申請は、承認済みの行がないので別の行として出す
+  const ownedSkillIds = new Set(
+    member.memberSkills.map((memberSkill) => memberSkill.skillId),
+  );
+  const pendingNewSkills = (member.pendingAssessments ?? []).filter(
+    (assessment) => !ownedSkillIds.has(assessment.skillId),
+  );
   const targetRole = roles.find((role) => role.id === member.targetRoleId);
   const levels = new Map(
     member.memberSkills.map((memberSkill) => [
@@ -126,9 +134,15 @@ export function MemberOverviewPanel({
                 {member.targetRole?.name ?? "未設定"}
               </p>
               {member.targetRole ? (
-                <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-                  あと {remainingSkillCount} スキル
-                </p>
+                <div className="mt-1 text-sm text-[var(--muted-foreground)]">
+                  <p>あと {remainingSkillCount} スキル</p>
+                  <Link
+                    href={`/roles?role=${encodeURIComponent(member.targetRole.id)}`}
+                    className="inline-flex min-h-11 items-center font-semibold text-[var(--primary)] hover:underline"
+                  >
+                    ロールの詳細を見る
+                  </Link>
+                </div>
               ) : null}
             </div>
             <ActionForm
@@ -166,6 +180,32 @@ export function MemberOverviewPanel({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {pendingNewSkills.length > 0 ? (
+            <div className="divide-y divide-[var(--border)] rounded-md border border-amber-200 bg-amber-50 px-3">
+              {pendingNewSkills.map((assessment) => (
+                <div
+                  key={assessment.skillId}
+                  className="flex min-h-11 items-center gap-3 py-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="break-words text-sm font-medium">
+                      {assessment.skill.name}
+                    </p>
+                    <p className="text-xs text-[var(--muted-foreground)]">
+                      {assessment.skill.category.name}
+                    </p>
+                  </div>
+                  <Badge>未登録 → Lv{assessment.requestedLevel} を申請中</Badge>
+                  <Link
+                    href="/skill-approvals"
+                    className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--primary)] hover:underline"
+                  >
+                    承認画面へ
+                  </Link>
+                </div>
+              ))}
+            </div>
+          ) : null}
           {sortedSkills.length === 0 ? (
             <p className="rounded-md bg-[var(--surface-subtle)] px-3 py-4 text-sm text-[var(--muted-foreground)]">
               承認済みのスキルはありません。

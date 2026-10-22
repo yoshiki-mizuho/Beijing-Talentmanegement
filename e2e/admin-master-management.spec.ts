@@ -103,19 +103,10 @@ test("管理者がスキルを作成・編集・無効化し、ロール要件�
     ).toBeVisible();
 
     await admin.page.goto("/roles");
-    const editRoleButton = admin.page
-      .getByRole("button", { name: /の編集を開く$/ })
-      .first();
-    const editRoleLabel = await editRoleButton.getAttribute("aria-label");
-    const roleName = editRoleLabel?.replace(/の編集を開く$/, "");
-
-    if (!roleName) {
-      throw new Error("編集対象のロール名を取得できませんでした。");
-    }
-
-    await editRoleButton.click();
-    const roleDialog = admin.page.getByRole("dialog", { name: roleName });
-    const skillSelect = roleDialog.getByLabel("追加するスキル");
+    await admin.page.locator('a[href^="/roles?role="]').first().click();
+    await admin.page.getByRole("button", { name: "編集" }).click();
+    const roleDialog = admin.page.getByRole("dialog", { name: /を編集$/ });
+    const skillSelect = roleDialog.getByLabel("スキル");
     const skillOptionValue = await skillSelect
       .locator("option")
       .filter({ hasText: editedSkillName })
@@ -126,30 +117,23 @@ test("管理者がスキルを作成・編集・無効化し、ロール要件�
     }
 
     await skillSelect.selectOption(skillOptionValue);
-    await roleDialog.getByLabel("区分").selectOption("false");
     await roleDialog
-      .getByRole("button", { name: "要件を追加", exact: true })
+      .getByRole("button", { name: "追加", exact: true })
       .click();
     await expect(admin.page.getByText("ロール要件を設定しました。")).toBeVisible();
 
-    const requirement = roleDialog.getByRole("group", {
-      name: `${editedSkillName}のロール要件`
-    });
-    await expect(requirement).toContainText("任意");
+    // 外した後は候補の選択肢に名前が戻るので、要件の行（外すボタンを持つ行）に絞る
+    const requirement = roleDialog
+      .locator("div.border-b")
+      .filter({ hasText: editedSkillName });
+    await expect(requirement).toContainText(editedSkillName);
     await expect(
       roleDialog
-        .getByLabel("追加するスキル")
+        .getByLabel("スキル")
         .locator("option")
         .filter({ hasText: editedSkillName })
     ).toHaveCount(0);
-    await requirement.getByRole("button", { name: "削除", exact: true }).click();
-
-    const deleteDialog = admin.page.getByRole("dialog", {
-      name: "ロール要件を削除しますか"
-    });
-    await deleteDialog
-      .getByRole("button", { name: "削除する", exact: true })
-      .click();
+    await requirement.getByRole("button", { name: "外す", exact: true }).click();
     await expect(admin.page.getByText("ロール要件を削除しました。")).toBeVisible();
     await expect(requirement).toHaveCount(0);
 
@@ -253,22 +237,11 @@ test("管理者がスキルを検索・削除し、要件付きロールも削�
     await createRoleDialog.getByRole("button", { name: "ロールを登録" }).click();
     await expect(admin.page.getByText("ロールを登録しました。")).toBeVisible();
 
-    await admin.page.getByRole("button", { name: `${roleName}の編集を開く` }).click();
-    const roleDialog = admin.page.getByRole("dialog", { name: roleName });
-    const typeScriptOption = roleDialog
-      .getByLabel("追加するスキル")
-      .locator("option")
-      .filter({ hasText: "TypeScript" });
-    const typeScriptOptionValue = await typeScriptOption.getAttribute("value");
-    if (!typeScriptOptionValue) {
-      throw new Error("TypeScriptがロール要件の候補にありません。");
-    }
-    await roleDialog.getByLabel("追加するスキル").selectOption(typeScriptOptionValue);
-    await roleDialog.getByRole("button", { name: "要件を追加" }).click();
-    await expect(admin.page.getByText("ロール要件を設定しました。")).toBeVisible();
-    await roleDialog.getByRole("button", { name: "ロールを削除" }).click();
+    await admin.page.getByRole("link", { name: new RegExp(roleName) }).click();
+    await admin.page.getByRole("button", { name: "編集" }).click();
+    const roleDialog = admin.page.getByRole("dialog", { name: `${roleName}を編集` });
+    await roleDialog.getByRole("button", { name: "削除", exact: true }).last().click();
     const deleteRoleDialog = admin.page.getByRole("dialog", { name: "ロールを削除しますか" });
-    await expect(deleteRoleDialog).toContainText("必要スキルの設定も削除されます");
     await deleteRoleDialog.getByRole("button", { name: "削除する" }).click();
     await expect(admin.page.getByText("ロールを削除しました。")).toBeVisible();
     await expect(admin.page.getByText(roleName)).toHaveCount(0);
@@ -296,24 +269,12 @@ test("スキル検索をクリアして一覧を元に戻せる", async ({ brows
   }
 });
 
-test("ロール詳細の達成状況を全員に切り替えられる", async ({ browser }) => {
+test("ロール詳細の全社の状況を切り替えられる", async ({ browser }) => {
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
   try {
     await admin.page.goto("/roles");
-    await admin.page.getByRole("button", { name: /の編集を開く$/ }).first().click();
-    const dialog = admin.page.getByRole("dialog");
-    const filters = dialog.getByRole("group", { name: "達成状況の表示範囲" });
-    const targetButton = filters.getByRole("button", { name: /^目標にしている \d+$/ });
-    const allButton = filters.getByRole("button", { name: /^全員 \d+$/ });
-    const targetCount = Number((await targetButton.innerText()).match(/\d+/)?.[0] ?? 0);
-    const allCount = Number((await allButton.innerText()).match(/\d+/)?.[0] ?? 0);
-
-    expect(allCount).toBeGreaterThanOrEqual(targetCount);
-    await allButton.click();
-    await expect(allButton).toHaveAttribute("aria-pressed", "true");
-    if (allCount > 10) {
-      await expect(dialog.getByRole("button", { name: /さらに表示/ })).toBeVisible();
-    }
+    await expect(admin.page.getByRole("heading", { name: "全社の状況" })).toBeVisible();
+    await admin.page.getByRole("button", { name: /^達成 \d+$/ }).click();
   } finally {
     await admin.context.close();
   }

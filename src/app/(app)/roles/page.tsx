@@ -1,85 +1,48 @@
+import { AuthRole } from "@prisma/client";
+
+import { getMemberScope } from "@/modules/members/application/member-scope";
 import { listMembers } from "@/modules/members/application/member-service";
-import {
-  evaluateMemberForRole,
-  listRoles
-} from "@/modules/roles/application/role-service";
+import { listRoles } from "@/modules/roles/application/role-service";
 import { canManageRoles } from "@/modules/roles/presentation/role-permissions";
-import { RoleManagement } from "@/modules/roles/presentation/role-management";
-import { calculateRoleStatistics } from "@/modules/roles/domain/role-statistics";
+import { RolePage } from "@/modules/roles/presentation/role-page";
+import { buildRolePageViewModel } from "@/modules/roles/presentation/role-page-view-model";
 import { listSkills } from "@/modules/skills/application/skill-service";
-import { managerOrAdmin, requirePageRoles } from "@/server/auth/authorization";
+import { requirePageRoles } from "@/server/auth/authorization";
 
 export const dynamic = "force-dynamic";
 
-export default async function RolesPage() {
-  const session = await requirePageRoles(managerOrAdmin);
+const allRoles = [AuthRole.ADMIN, AuthRole.MANAGER, AuthRole.MEMBER] as const;
+
+export default async function RolesPage({
+  searchParams
+}: {
+  searchParams: Promise<{ role?: string }>;
+}) {
+  const session = await requirePageRoles(allRoles);
   const canManage = canManageRoles(session.user.role);
-  const [roles, skills, members] = await Promise.all([
+  const scope = session.user.role === "MEMBER"
+    ? null
+    : await getMemberScope(session.user.role, session.user.memberId);
+  const [roles, skills, activeMembers, params] = await Promise.all([
     listRoles(),
-    listSkills(),
-    listMembers()
+    canManage ? listSkills() : Promise.resolve([]),
+    listMembers({ status: "ACTIVE" }),
+    searchParams
   ]);
-
-  const roleItems = roles.map((role) => {
-    const requirements = role.roleRequirements.map((requirement) => ({
-      skillId: requirement.skillId,
-      requiredLevel: requirement.requiredLevel,
-      isRequired: requirement.isRequired,
-      skillName: requirement.skill.name
-    }));
-    const memberStatuses = members.filter((member) => member.status === "ACTIVE").map((member) => {
-      const result = evaluateMemberForRole(
-        requirements,
-        member.memberSkills.map((memberSkill) => ({
-          skillId: memberSkill.skillId,
-          level: memberSkill.level,
-          skillName: memberSkill.skill.name
-        }))
-      );
-
-      return {
-        id: member.id,
-        name: member.name,
-        avatarUpdatedAt: member.avatarUpdatedAt?.toISOString() ?? null,
-        departmentName: member.department.name,
-        jobTitle: member.jobTitle,
-        isTarget: member.targetRoleId === role.id,
-        achieved: result.achieved,
-        achievementRate: result.achievementRate,
-        missingRequirements: result.missingRequirements.map((requirement) => ({
-          skillId: requirement.skillId,
-          skillName: requirement.skillName ?? requirement.skillId,
-          requiredLevel: requirement.requiredLevel,
-          memberLevel: requirement.memberLevel
-        }))
-      };
-    });
-
-    const statistics = calculateRoleStatistics(role.id, requirements, members);
-    return {
-      id: role.id,
-      name: role.name,
-      description: role.description,
-      isActive: role.isActive,
-      requirements: role.roleRequirements.map((requirement) => ({
-        id: requirement.id,
-        skillId: requirement.skillId,
-        requiredLevel: requirement.requiredLevel,
-        isRequired: requirement.isRequired,
-        skill: {
-          name: requirement.skill.name,
-          categoryName: requirement.skill.category.name
-        }
-      })),
-      memberStatuses,
-      achievedMemberCount: statistics.achievedCount,
-      targetMemberCount: statistics.targetCount
-    };
+  const roleItems = buildRolePageViewModel({
+    viewerRole: session.user.role,
+    viewerMemberId: session.user.memberId,
+    scopedMemberIds: scope?.memberIds ?? [session.user.memberId],
+    roles,
+    activeMembers
   });
 
   return (
-    <RoleManagement
+    <RolePage
       roles={roleItems}
+      selectedRoleId={params.role}
+      viewerMemberId={session.user.memberId}
+      scopeLabel={session.user.role === "ADMIN" ? "全社の状況" : "担当メンバーの状況"}
       skills={skills
         .filter((skill) => skill.isActive)
         .map((skill) => ({
@@ -88,6 +51,7 @@ export default async function RolesPage() {
           categoryName: skill.category.name
         }))}
       canManage={canManage}
+      showMemberStatus={session.user.role !== "MEMBER"}
     />
   );
 }

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import {
-  createRole,
+  createRoleWithRequirements,
   deactivateRole,
   deleteRole,
   removeRoleRequirement,
@@ -25,7 +25,14 @@ function parseRoleForm(formData: FormData) {
 export async function createRoleAction(formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
     const session = await requireRoles(adminOnly);
-    await createRole(parseRoleForm(formData), session.user.memberId);
+    const requirements = JSON.parse(
+      getOptionalString(formData, "requirements") ?? "[]"
+    ) as unknown;
+    await createRoleWithRequirements(
+      parseRoleForm(formData),
+      requirements,
+      session.user.memberId
+    );
     revalidatePath("/roles");
   }, "ロールを登録しました。");
 }

@@ -12,12 +12,12 @@ const expectedNavigation = {
     "/dashboard",
     "/my/skills",
     "/explore",
+    "/roles",
     "/people/member-admin",
     "/skill-approvals",
     "/members",
     "/skill-map",
     "/skills",
-    "/roles",
     "/csv",
     "/audit-logs",
     "/ai-usage"
@@ -26,14 +26,13 @@ const expectedNavigation = {
     "/dashboard",
     "/my/skills",
     "/explore",
+    "/roles",
     "/people/member-manager",
     "/skill-approvals",
     "/members",
-    "/skill-map",
-    "/skills",
-    "/roles"
+    "/skill-map"
   ],
-  MEMBER: ["/dashboard", "/my/skills", "/explore", "/people/member-member"]
+  MEMBER: ["/dashboard", "/my/skills", "/explore", "/roles", "/people/member-member"]
 } satisfies Record<AppRole, string[]>;
 
 describe("application route access", () => {
@@ -67,6 +66,8 @@ describe("application route access", () => {
     expect(canAccessAppPath("MANAGER", "/csv")).toBe(false);
     expect(canAccessAppPath("MANAGER", "/audit-logs/2026")).toBe(false);
     expect(canAccessAppPath("MANAGER", "/ai-usage")).toBe(false);
+    expect(canAccessAppPath("MANAGER", "/skills")).toBe(false);
+    expect(canAccessAppPath("MANAGER", "/roles")).toBe(true);
   });
 
   it("AIの利用状況はADMINだけがアクセスできる", () => {
@@ -81,6 +82,7 @@ describe("application route access", () => {
     expect(canAccessAppPath("MEMBER", "/people/member-id")).toBe(true);
     expect(canAccessAppPath("MEMBER", "/my/skills/history")).toBe(true);
     expect(canAccessAppPath("MEMBER", "/notifications")).toBe(true);
+    expect(canAccessAppPath("MEMBER", "/roles")).toBe(true);
     expect(canAccessAppPath("MEMBER", "/members")).toBe(false);
     expect(canAccessAppPath("MEMBER", "/skill-approvals")).toBe(false);
   });

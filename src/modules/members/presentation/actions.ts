@@ -259,6 +259,7 @@ export async function updateMemberTargetRoleAction(
     }, session.user.memberId);
     revalidatePath("/members");
     revalidatePath("/dashboard");
+    revalidatePath("/roles");
     revalidatePath("/", "layout");
   }, "目標ロールを更新しました。");
 }
