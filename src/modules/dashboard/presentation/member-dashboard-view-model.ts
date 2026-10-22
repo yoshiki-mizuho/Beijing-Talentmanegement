@@ -47,10 +47,23 @@ export function buildMemberDashboardViewModel(
       parts.month === nowParts.month
     );
   }).length;
+  const pendingAssessmentCount = data.assessments.filter(
+    (assessment) => assessment.status === "PENDING"
+  ).length;
+  const approvedSkillCount = skills.length;
+  const onboardingState = approvedSkillCount > 0
+    ? "regular"
+    : pendingAssessmentCount > 0
+      ? "pending"
+      : "empty";
 
   return {
     memberId: data.member.id,
     memberName: data.member.name,
+    managerName: data.member.manager?.name ?? null,
+    approvedSkillCount,
+    pendingAssessmentCount,
+    onboardingState,
     encouragement: getMonthlyEncouragement(monthlyLevelUps),
     targetRole,
     roleOptions: data.roles,

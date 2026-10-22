@@ -6,8 +6,7 @@ import type { ReactNode } from "react";
 import {
   countMemberSkillAssessments,
   countMemberSkills,
-  countPendingSkillAssessments,
-  hasMemberTargetRole
+  countPendingSkillAssessments
 } from "@/modules/members/application/member-service";
 import { getMyAvatarUpdatedAt } from "@/modules/members/application/member-avatar-service";
 import {
@@ -53,7 +52,6 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     assessmentCount,
     pendingApprovalCount,
     approvedSkillCount,
-    hasTargetRole,
     levelUpCelebrations,
     cheerCelebrations,
     avatarUpdatedAt
@@ -76,9 +74,6 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     session.user.memberId
       ? countMemberSkills(session.user.memberId)
       : Promise.resolve(0),
-    session.user.memberId
-      ? hasMemberTargetRole(session.user.memberId)
-      : Promise.resolve(false),
     session.user.memberId && !session.user.passwordChangeRequired
       ? getLevelUpCelebrations(session.user.memberId)
       : Promise.resolve([]),
@@ -93,8 +88,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     ? buildSetupProgress({
         passwordChangeRequired: session.user.passwordChangeRequired,
         assessmentCount,
-        approvedSkillCount,
-        hasTargetRole
+        approvedSkillCount
       })
     : null;
 

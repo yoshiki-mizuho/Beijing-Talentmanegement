@@ -4,7 +4,7 @@ import type {
   SkillInput,
   SkillLevelGuidesInput
 } from "@/modules/skills/domain/skill-schema";
-import type { Prisma } from "@prisma/client";
+import { MemberStatus, type Prisma } from "@prisma/client";
 import { generateNextSkillCodeFromExistingCodes } from "@/modules/skills/domain/skill-code";
 import {
   SkillCategoryNotFoundError,
@@ -95,6 +95,69 @@ export async function listActiveSkillsForSkillSheet() {
     },
     orderBy: [{ category: { displayOrder: "asc" } }, { name: "asc" }]
   });
+}
+
+export async function listPopularSkillsForMember(memberId: string) {
+  const member = await prisma.member.findUnique({
+    where: { id: memberId },
+    select: { departmentId: true, department: { select: { name: true } } }
+  });
+  const departmentCounts = member?.departmentId
+    ? await countPopularSkills({ departmentId: member.departmentId })
+    : [];
+  const useDepartment = departmentCounts.reduce(
+    (total, item) => total + item.count,
+    0
+  ) >= 3;
+  const counts = useDepartment
+    ? departmentCounts
+    : await countPopularSkills({});
+
+  return {
+    departmentName: useDepartment ? member?.department.name ?? null : null,
+    skillIds: counts
+      .sort((left, right) => right.count - left.count || left.name.localeCompare(right.name, "ja"))
+      .slice(0, 8)
+      .map((item) => item.skillId)
+  };
+}
+
+async function countPopularSkills({ departmentId }: { departmentId?: string }) {
+  const skills = await prisma.skill.findMany({
+    where: {
+      isActive: true,
+      memberSkills: {
+        some: {
+          member: {
+            status: MemberStatus.ACTIVE,
+            ...(departmentId ? { departmentId } : {})
+          }
+        }
+      }
+    },
+    select: {
+      id: true,
+      name: true,
+      _count: {
+        select: {
+          memberSkills: {
+            where: {
+              member: {
+                status: MemberStatus.ACTIVE,
+                ...(departmentId ? { departmentId } : {})
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+
+  return skills.map((skill) => ({
+    skillId: skill.id,
+    name: skill.name,
+    count: skill._count.memberSkills
+  }));
 }
 
 export async function createSkillCategory(

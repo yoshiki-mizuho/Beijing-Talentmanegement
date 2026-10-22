@@ -13,7 +13,7 @@ import { Select } from "@/shared/ui/select";
 import { SubmitButton } from "@/shared/ui/submit-button";
 
 export function TargetRoleCard({ viewModel }: { viewModel: MemberDashboardViewModel }) {
-  const [editing, setEditing] = useState(viewModel.targetRole === null);
+  const [editing, setEditing] = useState(false);
   const role = viewModel.targetRole;
   const circumference = 2 * Math.PI * 42;
   const dashOffset = circumference * (1 - (role?.achievementRate ?? 0) / 100);
@@ -34,6 +34,14 @@ export function TargetRoleCard({ viewModel }: { viewModel: MemberDashboardViewMo
         ) : null}
       </div>
       <div className="p-5">
+        {!role && !editing ? (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-[var(--muted-foreground)]">
+              目標ロールを設定すると、必要なスキルとの差が分かります。
+            </p>
+            <Button onClick={() => setEditing(true)}>設定する</Button>
+          </div>
+        ) : null}
         {role && !editing ? (
           <div className="grid gap-5 sm:grid-cols-[120px_minmax(0,1fr)] sm:items-center">
             <div className="relative mx-auto h-28 w-28">
@@ -85,13 +93,13 @@ export function TargetRoleCard({ viewModel }: { viewModel: MemberDashboardViewMo
               ))}
             </ul>
           </details>
-        ) : (
+        ) : editing ? (
           <TargetRoleForm
             viewModel={viewModel}
             onSaved={() => setEditing(false)}
             onCancel={role ? () => setEditing(false) : undefined}
           />
-        )}
+        ) : null}
       </div>
     </section>
   );

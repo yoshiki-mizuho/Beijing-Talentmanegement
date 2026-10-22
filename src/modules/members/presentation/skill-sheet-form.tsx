@@ -1,6 +1,7 @@
 "use client";
 
-import { RotateCcw, Search, SearchX, Send } from "lucide-react";
+import { ChevronDown, RotateCcw, Search, SearchX, Send } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { createSkillAssessmentsAction } from "@/modules/members/presentation/actions";
@@ -32,17 +33,28 @@ const filters: Array<{ value: SkillSheetFilter; label: string }> = [
 export function SkillSheetForm({
   rows,
   levels,
-  encouragement
+  encouragement,
+  initial = false,
+  popularSkillIds = [],
+  popularHeading = "よく登録されているスキル"
 }: {
   rows: SkillSheetRow[];
   levels: Array<{ level: number; description: string }>;
   encouragement: string;
+  initial?: boolean;
+  popularSkillIds?: string[];
+  popularHeading?: string;
 }) {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<SkillSheetFilter>("all");
   const [categoryId, setCategoryId] = useState("all");
   const [selectedLevels, setSelectedLevels] = useState<Record<string, number>>(
     {}
+  );
+  // よく登録されているスキルがまだ無いときは、最初から全件を出す
+  const [showAllSkills, setShowAllSkills] = useState(
+    !initial || popularSkillIds.length === 0
   );
   const changedSkillIds = useMemo(
     () => new Set(Object.keys(selectedLevels)),
@@ -52,8 +64,9 @@ export function SkillSheetForm({
 
   const filteredRows = useMemo(
     () =>
-      filterSkillSheetRows(rows, { query, filter, categoryId, changedSkillIds }),
-    [categoryId, changedSkillIds, filter, query, rows]
+      filterSkillSheetRows(rows, { query, filter, categoryId, changedSkillIds })
+        .filter((row) => showAllSkills || popularSkillIds.includes(row.skillId)),
+    [categoryId, changedSkillIds, filter, popularSkillIds, query, rows, showAllSkills]
   );
 
   const categoryOptions = useMemo(() => {
@@ -117,15 +130,36 @@ export function SkillSheetForm({
     <ActionForm
       action={createSkillAssessmentsAction}
       className="space-y-5"
-      onSuccess={() => setSelectedLevels({})}
+      onSuccess={() => {
+        setSelectedLevels({});
+        if (initial) router.push("/dashboard");
+      }}
     >
       <input type="hidden" name="assessments" value={JSON.stringify(payload)} />
 
-      <p className="rounded-lg bg-[var(--primary-subtle)] px-4 py-3 text-sm font-medium leading-6 text-[var(--foreground)]">
-        {encouragement}
-      </p>
+      {initial ? (
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-xl font-bold">得意なスキルを3つ選びましょう</h2>
+            <p className="mt-1 text-sm text-[var(--muted-foreground)]">迷ったら「一人でできる」を目安に。あとから何度でも変えられます。</p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-5" aria-label="レベルの目安">
+            {levels.map((level) => (
+              <div key={level.level} className="rounded-lg border border-[var(--border)] p-3 text-sm">
+                <p className="font-semibold">Lv{level.level}</p>
+                <p className="mt-1 text-xs leading-5 text-[var(--muted-foreground)]">{level.description}</p>
+              </div>
+            ))}
+          </div>
+          <h3 className="text-base font-semibold">{popularHeading}</h3>
+        </div>
+      ) : (
+        <p className="rounded-lg bg-[var(--primary-subtle)] px-4 py-3 text-sm font-medium leading-6 text-[var(--foreground)]">
+          {encouragement}
+        </p>
+      )}
 
-      <div className="grid gap-4 md:grid-cols-[minmax(240px,1fr)_minmax(180px,0.6fr)_auto] md:items-end">
+      {showAllSkills ? <div className="grid gap-4 md:grid-cols-[minmax(240px,1fr)_minmax(180px,0.6fr)_auto] md:items-end">
         <div>
           <label htmlFor="skill-sheet-search" className="sr-only">
             スキルを検索
@@ -182,7 +216,7 @@ export function SkillSheetForm({
             ))}
           </div>
         </div>
-      </div>
+      </div> : null}
 
       {categories.length === 0 ? (
         <div className="rounded-lg border border-dashed border-[var(--border-strong)]">
@@ -337,9 +371,23 @@ export function SkillSheetForm({
         </div>
       )}
 
+      {initial && !showAllSkills ? (
+        <Button
+          type="button"
+          variant="secondary"
+          className="w-full justify-between"
+          onClick={() => setShowAllSkills(true)}
+        >
+          ほかのスキルを探す（全 {rows.length}件）
+          <ChevronDown className="h-4 w-4" aria-hidden="true" />
+        </Button>
+      ) : null}
+
       <div className="sticky bottom-4 z-20 flex flex-col gap-3 rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] p-3 shadow-lg sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm font-semibold text-[var(--foreground)]" aria-live="polite">
-          {changedCount}件のスキルを変更しています
+          {initial
+            ? `${changedCount}件を選んでいます${payload.length > 0 ? `（${payload.slice(0, 2).map((item) => `${rows.find((row) => row.skillId === item.skillId)?.skillName} Lv${item.requestedLevel}`).join("・")}${payload.length > 2 ? "・…" : ""}）` : ""}`
+            : `${changedCount}件のスキルを変更しています`}
         </p>
         <div className="flex flex-col gap-2 sm:flex-row">
           <Button
@@ -356,7 +404,7 @@ export function SkillSheetForm({
             disabled={changedCount === 0}
           >
             <Send className="h-4 w-4" aria-hidden="true" />
-            {changedCount}件を申請
+            {initial ? "上司に申請する" : `${changedCount}件を申請`}
           </SubmitButton>
         </div>
       </div>
