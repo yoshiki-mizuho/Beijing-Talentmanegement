@@ -79,6 +79,15 @@ Remove-Item Env:DEMO_ADMIN_PASSWORD, Env:DEMO_MANAGER_PASSWORD, Env:DEMO_MEMBER_
 
 E2Eテストはスキル申告と承認を行い、ローカルDBのデータを変更する。共有DBでは実行せず、使い捨て可能なローカルDBを使用する。
 
+ローカルでのE2Eテスト終了時には、テストや画面確認が作成したデータを自動で掃除する。CIでは自動掃除を行わない。手動で掃除する場合は、まず削除候補の件数だけを確認し、問題がなければ `--yes` を付けて実行する。
+
+```powershell
+npm.cmd run db:cleanup-e2e
+npm.cmd run db:cleanup-e2e -- --yes
+```
+
+掃除コマンドは接続先のホスト名が `localhost`、`127.0.0.1`、`::1`、`postgres` のいずれかでなければ削除しない。seedで作成したデモアカウントとデモメンバーも削除対象から除外する。デモアカウントに関連付いた申告や履歴まで消したい場合は、このコマンドではなくローカルDBを作り直す。
+
 ## 画面確認
 
 `.env` の `DEMO_ADMIN_PASSWORD`、`DEMO_MANAGER_PASSWORD`、`DEMO_MEMBER_PASSWORD` を使い、`npm.cmd run ui:check` で3ロールの主要画面を撮影する。`$env:UI_CHECK_ONLY = "MANAGER"` のように指定すると対象ロールを絞れる。スクリーンショットは `test-results/ui-check/` に保存され、Git管理には含まれない。
