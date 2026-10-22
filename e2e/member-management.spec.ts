@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { login, openLoggedInContext } from "./helpers/auth";
 import { readDemoCredentials } from "./helpers/credentials";
+import { dismissExistingLevelUpDialogs } from "./helpers/level-up";
 
 const credentials = readDemoCredentials();
 
@@ -19,6 +20,7 @@ test("管理者がメンバーを登録し、詳細で役職を更新して無�
 
   try {
     await admin.page.goto("/members");
+    await dismissExistingLevelUpDialogs(admin.page);
     await admin.page
       .getByRole("button", { name: "メンバーを追加", exact: true })
       .click();
@@ -73,19 +75,24 @@ test("管理者がメンバーを登録し、詳細で役職を更新して無�
     const detailDialog = admin.page.getByRole("dialog", {
       name: `${memberName}の詳細`,
     });
+    await expect(detailDialog.getByRole("tab", { name: "概要" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await detailDialog.getByRole("tab", { name: "アカウント" }).click();
     await detailDialog.getByLabel("役職").fill(updatedJobTitle);
     await detailDialog
-      .getByRole("button", { name: "基本情報を更新", exact: true })
+      .getByRole("button", { name: "基本情報を保存", exact: true })
       .click();
     await expect(
       admin.page.getByText("メンバー情報を更新しました。"),
     ).toBeVisible();
     await expect(detailDialog.getByLabel("役職")).toHaveValue(updatedJobTitle);
 
-    await detailDialog.getByRole("button", { name: "初回ログイン用のパスワードを発行" }).click();
+    await detailDialog.getByRole("button", { name: "パスワードを発行" }).click();
     await admin.page.getByRole("dialog", { name: "初回ログイン用のパスワードを発行しますか" })
       .getByRole("button", { name: "発行する" }).click();
-    await expect(detailDialog.getByText(`${memberName}さんの初回ログイン用のパスワード`)).toBeVisible();
+    await expect(detailDialog.getByLabel("初回ログイン用のパスワード")).toBeVisible();
 
     await detailDialog
       .getByRole("button", { name: "無効化", exact: true })
@@ -117,14 +124,47 @@ test("マネージャーの一覧と更新APIは自組織の範囲に制限さ�
     expect(outsideMembers).toHaveLength(1);
 
     await manager.page.goto("/members");
+    await dismissExistingLevelUpDialogs(manager.page);
     await manager.page.getByLabel("キーワード").fill("TM0103");
     await expect(manager.page.getByText("デモメンバー03")).toHaveCount(0);
 
-    await manager.page.getByLabel("キーワード").fill("");
-    await manager.page.getByRole("button", { name: /の詳細を開く/ }).first().click();
+    await manager.page.getByLabel("キーワード").fill("TM0003");
+    const reportRow = manager.page.getByRole("row").filter({ hasText: "TM0003" });
+    await expect(reportRow).toBeVisible();
+    await reportRow.getByRole("button", { name: /の詳細を開く/ }).click();
+    const managerDetail = manager.page.getByRole("dialog");
+    await expect(managerDetail.getByRole("tab", { name: "概要" })).toBeVisible();
+    await expect(managerDetail.getByRole("tab", { name: "育成のヒント" })).toBeVisible();
+    await expect(managerDetail.getByRole("tab", { name: "1on1 メモ" })).toBeVisible();
+    await expect(managerDetail.getByRole("tab", { name: "アカウント" })).toHaveCount(0);
     await expect(
-      manager.page.getByRole("button", { name: "初回ログイン用のパスワードを発行" }),
+      manager.page.getByRole("button", { name: "パスワードを発行" }),
     ).toHaveCount(0);
+
+    // レベルを変えると並び順が変わるため、スキル名で行を特定する
+    const skillName = (await managerDetail.locator("p.break-words").first().textContent()) ?? "";
+    const skillRow = managerDetail.locator("div.py-3").filter({ hasText: skillName });
+    // レベルの選択肢は見えない radio を label で包んでいるので、label を押す
+    const levelLabel = (level: string) =>
+      skillRow.locator("label").filter({ has: manager.page.locator(`input[value="${level}"]`) });
+    await skillRow.getByRole("button", { name: "訂正", exact: true }).click();
+    const checkedLevel = (await skillRow.locator('input[name="level"]:checked').getAttribute("value")) ?? "1";
+    const correctedLevel = checkedLevel === "1" ? "2" : "1";
+    await levelLabel(correctedLevel).click();
+    await skillRow.getByRole("button", { name: "訂正する", exact: true }).click();
+    await expect(manager.page.getByText("メンバーのスキルを設定しました。")).toBeVisible();
+    await skillRow.getByRole("button", { name: "訂正", exact: true }).click();
+    await levelLabel(checkedLevel).click();
+    await skillRow.getByRole("button", { name: "訂正する", exact: true }).click();
+    await expect(manager.page.getByText("メンバーのスキルを設定しました。").first()).toBeVisible();
+
+    const inScopeResponse = await manager.page.request.get("/api/members");
+    const inScopeMembers = (await inScopeResponse.json()) as { id: string }[];
+    const forbiddenInScope = await manager.page.request.patch(
+      `/api/members/${inScopeMembers[0].id}`,
+      { data: {} },
+    );
+    expect(forbiddenInScope.status()).toBe(403);
 
     const forbidden = await manager.page.request.patch(
       `/api/members/${outsideMembers[0].id}`,

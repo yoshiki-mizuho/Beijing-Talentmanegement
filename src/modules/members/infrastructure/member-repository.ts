@@ -118,6 +118,10 @@ export async function listMembers(input?: MemberSearchInput, memberIds?: string[
       manager: { select: { id: true, name: true } },
       targetRole: { select: { id: true, name: true, isActive: true } },
       growthHint: { select: { generatedAt: true } },
+      selfAssessments: {
+        where: { status: SkillSelfAssessmentStatus.PENDING },
+        select: { skillId: true, requestedLevel: true }
+      },
       memberSkills: {
         include: {
           skill: {

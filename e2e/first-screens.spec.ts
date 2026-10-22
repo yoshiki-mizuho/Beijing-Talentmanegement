@@ -75,6 +75,7 @@ test("初めてのメンバーを3ステップで案内し、複数承認を1回
     if (await row.count()) {
       await row.getByRole("button", { name: `${memberName}の詳細を開く` }).click();
       const detail = admin.page.getByRole("dialog", { name: `${memberName}の詳細` });
+      await detail.getByRole("tab", { name: "アカウント" }).click();
       await detail.getByRole("button", { name: "無効化", exact: true }).click();
       await admin.page.getByRole("dialog", { name: "メンバーを無効化しますか" })
         .getByRole("button", { name: "無効化する" }).click();

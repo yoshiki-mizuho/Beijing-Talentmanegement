@@ -54,6 +54,7 @@ export default async function MembersPage({
       ? { generatedAt: member.growthHint.generatedAt.toISOString() }
       : null,
     role: member.users[0]?.role ?? null,
+    pendingAssessments: member.selfAssessments,
     memberSkills: member.memberSkills.map((memberSkill) => ({
       id: memberSkill.id,
       skillId: memberSkill.skillId,

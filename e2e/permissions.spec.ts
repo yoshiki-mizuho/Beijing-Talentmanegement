@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { openLoggedInContext } from "./helpers/auth";
 import { readDemoCredentials, type DemoRole } from "./helpers/credentials";
+import { dismissExistingLevelUpDialogs } from "./helpers/level-up";
 
 const credentials = readDemoCredentials();
 
@@ -64,6 +65,7 @@ test("MANAGER のメンバー一覧にメンバー追加操作がない", async 
   );
   try {
     await page.goto("/members");
+    await dismissExistingLevelUpDialogs(page);
     await expect(
       page.getByRole("button", { name: "メンバーを追加", exact: true }),
     ).toHaveCount(0);
@@ -99,6 +101,7 @@ test("ADMIN が権限を変更し監査ログを確認できる", async ({ brows
       .getByRole("button", { name: "Member Userの詳細を開く" })
       .click();
     const detail = page.getByRole("dialog", { name: "Member Userの詳細" });
+    await detail.getByRole("tab", { name: "アカウント" }).click();
     const permission = detail.getByLabel("権限");
     await permission.selectOption("MANAGER");
     await detail.getByRole("button", { name: "変更", exact: true }).click();
@@ -120,6 +123,7 @@ test("ADMIN が権限を変更し監査ログを確認できる", async ({ brows
       .getByRole("button", { name: "Member Userの詳細を開く" })
       .click();
     const resetDetail = page.getByRole("dialog", { name: "Member Userの詳細" });
+    await resetDetail.getByRole("tab", { name: "アカウント" }).click();
     await resetDetail.getByLabel("権限").selectOption("MEMBER");
     await resetDetail
       .getByRole("button", { name: "変更", exact: true })
@@ -134,6 +138,10 @@ test("ADMIN が権限を変更し監査ログを確認できる", async ({ brows
     const selfRow = page.getByRole("row").filter({ hasText: "TM0001" });
     await selfRow
       .getByRole("button", { name: "Admin Userの詳細を開く" })
+      .click();
+    await page
+      .getByRole("dialog", { name: "Admin Userの詳細" })
+      .getByRole("tab", { name: "アカウント" })
       .click();
     await expect(
       page.getByRole("dialog", { name: "Admin Userの詳細" }).getByLabel("権限"),

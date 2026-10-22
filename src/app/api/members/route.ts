@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       members.map((member) => ({
         ...member,
+        pendingAssessments: member.selfAssessments,
         role: member.users[0]?.role ?? null
       }))
     );

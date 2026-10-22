@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyRound, Trash2, UserRound } from "lucide-react";
+import { UserRound } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import Link from "next/link";
 import type { Route } from "next";
@@ -13,53 +13,33 @@ import {
   updateOneOnOneNoteAction
 } from "@/modules/growth/presentation/actions";
 
-import {
-  deactivateMemberAction,
-  issueInitialPasswordAction,
-  removeMemberSkillAction,
-  setMemberSkillLevelAction,
-  updateMemberAction,
-  updateMemberManagerAction,
-  updateMemberRoleAction,
-  updateMemberTargetRoleAction
-} from "@/modules/members/presentation/actions";
-import {
-  getMemberStatusLabel,
-  sortMemberSkillsByLevel
-} from "@/modules/members/presentation/member-display";
 import type {
   DepartmentOption,
   ManagerOption,
   MemberRow,
+  RoleOption,
   SkillOption,
   TargetRoleOption
 } from "@/modules/members/presentation/member-presentation-types";
 import { ActionForm } from "@/shared/ui/action-form";
-import { Badge } from "@/shared/ui/badge";
 import { Dialog } from "@/shared/ui/dialog";
 import { EmptyState } from "@/shared/ui/empty-state";
-import { FormField, SelectField, TextareaField } from "@/shared/ui/form-field";
+import { TextareaField } from "@/shared/ui/form-field";
 import { Button } from "@/shared/ui/button";
 import { SubmitButton } from "@/shared/ui/submit-button";
-import type { ActionResult } from "@/shared/lib/action-result";
-import { InitialPasswordNotice } from "@/modules/members/presentation/initial-password-notice";
+import {
+  MemberAccountPanel,
+  MemberOverviewPanel
+} from "@/modules/members/presentation/member-detail-panels";
 
-const memberStatuses = ["ACTIVE", "LEAVE", "INACTIVE"] as const;
-const skillLevels = [1, 2, 3, 4, 5] as const;
-const roleLabels = {
-  ADMIN: "管理者",
-  MANAGER: "マネージャー",
-  MEMBER: "メンバー"
-} as const;
-type DetailTabId = "basic" | "skills" | "one-on-one" | "growth-hint";
+type DetailTabId = "overview" | "growth-hint" | "one-on-one" | "account";
 
 export function MemberDetailModal({
   member,
   departments,
-  skills,
   managerCandidates,
   targetRoles,
-  canDeactivateMembers,
+  roles,
   canEditGrowthSettings,
   viewerMemberId,
   onClose,
@@ -70,18 +50,19 @@ export function MemberDetailModal({
   skills: SkillOption[];
   managerCandidates: ManagerOption[];
   targetRoles: TargetRoleOption[];
+  roles: RoleOption[];
   canDeactivateMembers: boolean;
   canEditGrowthSettings: boolean;
   viewerMemberId: string;
   onClose: () => void;
   onMemberChanged: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<DetailTabId>("basic");
+  const [activeTab, setActiveTab] = useState<DetailTabId>("overview");
   const detailTabs: Array<{ id: DetailTabId; label: string }> = [
-    { id: "basic", label: "基本情報" },
-    { id: "skills", label: "スキル" },
+    { id: "overview", label: "概要" },
+    { id: "growth-hint", label: "育成のヒント" },
     ...(member.managerId === viewerMemberId ? [{ id: "one-on-one" as const, label: "1on1 メモ" }] : []),
-    { id: "growth-hint", label: "育成のヒント" }
+    ...(canEditGrowthSettings ? [{ id: "account" as const, label: "アカウント" }] : [])
   ];
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const titleId = `member-detail-${member.id}`;
@@ -154,35 +135,33 @@ export function MemberDetailModal({
         ))}
       </div>
 
-      {activeTab === "basic" ? (
-        <BasicInformationPanel
+      {activeTab === "overview" ? (
+        <MemberOverviewPanel
           member={member}
-          departments={departments}
-          managerCandidates={managerCandidates}
           targetRoles={targetRoles}
-          canDeactivateMembers={canDeactivateMembers}
-          canEditGrowthSettings={canEditGrowthSettings}
-          viewerMemberId={viewerMemberId}
+          roles={roles}
           onMemberChanged={onMemberChanged}
-          panelId={`${titleId}-basic-panel`}
-          tabId={`${titleId}-basic-tab`}
+          panelId={`${titleId}-overview-panel`}
+          tabId={`${titleId}-overview-tab`}
         />
-      ) : activeTab === "skills" ? (
-        <MemberSkillsPanel
-          member={member}
-          skills={skills}
-          onMemberChanged={onMemberChanged}
-          panelId={`${titleId}-skills-panel`}
-          tabId={`${titleId}-skills-tab`}
-        />
-      ) : activeTab === "one-on-one" ? (
-        <OneOnOneNotesPanel memberId={member.id} panelId={`${titleId}-one-on-one-panel`} tabId={`${titleId}-one-on-one-tab`} />
-      ) : (
+      ) : activeTab === "growth-hint" ? (
         <GrowthHintPanel
           memberId={member.id}
           panelId={`${titleId}-growth-hint-panel`}
           tabId={`${titleId}-growth-hint-tab`}
           onGenerated={onMemberChanged}
+        />
+      ) : activeTab === "one-on-one" ? (
+        <OneOnOneNotesPanel memberId={member.id} panelId={`${titleId}-one-on-one-panel`} tabId={`${titleId}-one-on-one-tab`} />
+      ) : (
+        <MemberAccountPanel
+          member={member}
+          departments={departments}
+          managerCandidates={managerCandidates}
+          viewerMemberId={viewerMemberId}
+          onMemberChanged={onMemberChanged}
+          panelId={`${titleId}-account-panel`}
+          tabId={`${titleId}-account-tab`}
         />
       )}
     </Dialog>
@@ -276,374 +255,3 @@ function formatOneOnOneDate(value: string) {
   return new Intl.DateTimeFormat("ja-JP", { timeZone: "Asia/Tokyo", year: "numeric", month: "numeric", day: "numeric" }).format(new Date(value));
 }
 
-function BasicInformationPanel({
-  member,
-  departments,
-  managerCandidates,
-  targetRoles,
-  canDeactivateMembers,
-  canEditGrowthSettings,
-  viewerMemberId,
-  onMemberChanged,
-  panelId,
-  tabId
-}: {
-  member: MemberRow;
-  departments: DepartmentOption[];
-  managerCandidates: ManagerOption[];
-  targetRoles: TargetRoleOption[];
-  canDeactivateMembers: boolean;
-  canEditGrowthSettings: boolean;
-  viewerMemberId: string;
-  onMemberChanged: () => void;
-  panelId: string;
-  tabId: string;
-}) {
-  const [selectedRole, setSelectedRole] = useState(member.role ?? "MEMBER");
-  const [issuedPassword, setIssuedPassword] = useState<string | null>(null);
-  const basicFormKey = [
-    member.employeeNo,
-    member.name,
-    member.email,
-    member.departmentId,
-    member.jobTitle,
-    member.status,
-    member.profile
-  ].join(":");
-
-  return (
-    <section
-      id={panelId}
-      role="tabpanel"
-      aria-labelledby={tabId}
-      className="grid gap-5 md:grid-cols-3"
-    >
-      <ActionForm
-        key={basicFormKey}
-        action={updateMemberAction}
-        className="contents"
-        onSuccess={onMemberChanged}
-      >
-        <input type="hidden" name="id" value={member.id} />
-        <FormField
-          id={`employee-no-${member.id}`}
-          label="社員番号"
-          name="employeeNo"
-          defaultValue={member.employeeNo}
-          required
-        />
-        <FormField
-          id={`member-name-${member.id}`}
-          label="氏名"
-          name="name"
-          defaultValue={member.name}
-          required
-        />
-        <FormField
-          id={`member-email-${member.id}`}
-          label="メール"
-          name="email"
-          type="email"
-          defaultValue={member.email}
-          required
-        />
-        <SelectField
-          id={`member-department-${member.id}`}
-          label="部署"
-          name="departmentId"
-          defaultValue={member.departmentId}
-        >
-          {departments.map((department) => (
-            <option key={department.id} value={department.id}>
-              {department.name}
-            </option>
-          ))}
-        </SelectField>
-        <FormField
-          id={`member-job-title-${member.id}`}
-          label="役職"
-          name="jobTitle"
-          defaultValue={member.jobTitle ?? ""}
-        />
-        <SelectField
-          id={`member-status-${member.id}`}
-          label="状態"
-          name="status"
-          defaultValue={member.status}
-        >
-          {memberStatuses.map((status) => (
-            <option key={status} value={status}>
-              {getMemberStatusLabel(status)}
-            </option>
-          ))}
-        </SelectField>
-        <TextareaField
-          id={`member-profile-${member.id}`}
-          label="プロフィール"
-          name="profile"
-          defaultValue={member.profile ?? ""}
-          className="md:col-span-3"
-        />
-        <div className="flex justify-end md:col-span-3">
-          <SubmitButton pendingLabel="更新中…">基本情報を更新</SubmitButton>
-        </div>
-      </ActionForm>
-
-      {canEditGrowthSettings ? (
-        <>
-          {member.role ? (
-            <ActionForm
-              key={`permission-${member.role}`}
-              action={updateMemberRoleAction}
-              className="grid gap-3 md:col-span-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end"
-              onSuccess={onMemberChanged}
-              confirm={{
-                title: "権限を変更しますか",
-                description: `${member.name}さんの権限を ${roleLabels[member.role]} → ${roleLabels[selectedRole]} に変更します`,
-                confirmLabel: "変更する"
-              }}
-            >
-              <input type="hidden" name="memberId" value={member.id} />
-              <SelectField
-                id={`member-permission-${member.id}`}
-                label="権限"
-                name="role"
-                value={selectedRole}
-                disabled={member.id === viewerMemberId}
-                onChange={(event) =>
-                  setSelectedRole(event.target.value as keyof typeof roleLabels)
-                }
-              >
-                {Object.entries(roleLabels).map(([role, label]) => (
-                  <option key={role} value={role}>
-                    {label}
-                  </option>
-                ))}
-              </SelectField>
-              <SubmitButton
-                pendingLabel="変更中…"
-                disabled={
-                  member.id === viewerMemberId || selectedRole === member.role
-                }
-              >
-                変更
-              </SubmitButton>
-            </ActionForm>
-          ) : null}
-          <ActionForm
-            key={`manager-${member.managerId ?? "none"}`}
-            action={updateMemberManagerAction}
-            className="grid gap-3 md:col-span-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end"
-            onSuccess={onMemberChanged}
-          >
-            <input type="hidden" name="memberId" value={member.id} />
-            <SelectField
-              id={`member-manager-${member.id}`}
-              label="上司"
-              name="managerId"
-              defaultValue={member.managerId ?? ""}
-            >
-              <option value="">未設定</option>
-              {managerCandidates
-                .filter((candidate) => candidate.id !== member.id)
-                .map((candidate) => (
-                  <option key={candidate.id} value={candidate.id}>
-                    {candidate.employeeNo} / {candidate.name}
-                  </option>
-                ))}
-            </SelectField>
-            <SubmitButton pendingLabel="更新中…">上司を更新</SubmitButton>
-          </ActionForm>
-          <ActionForm
-            key={`target-role-${member.targetRoleId ?? "none"}`}
-            action={updateMemberTargetRoleAction}
-            className="grid gap-3 md:col-span-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end"
-            onSuccess={onMemberChanged}
-          >
-            <input type="hidden" name="memberId" value={member.id} />
-            <SelectField
-              id={`member-target-role-${member.id}`}
-              label="目標ロール"
-              name="targetRoleId"
-              defaultValue={member.targetRoleId ?? ""}
-            >
-              <option value="">未設定</option>
-              {targetRoles.map((role) => (
-                <option key={role.id} value={role.id}>
-                  {role.name}
-                </option>
-              ))}
-            </SelectField>
-            <SubmitButton pendingLabel="更新中…">目標ロールを更新</SubmitButton>
-          </ActionForm>
-        </>
-      ) : (
-        <dl className="grid gap-3 md:col-span-3 md:grid-cols-2">
-          <div className="rounded-md bg-[var(--surface-subtle)] px-3 py-2">
-            <dt className="text-xs text-[var(--muted-foreground)]">上司</dt>
-            <dd className="text-sm font-medium text-[var(--foreground)]">
-              {member.manager?.name ?? "未設定"}
-            </dd>
-          </div>
-          <div className="rounded-md bg-[var(--surface-subtle)] px-3 py-2">
-            <dt className="text-xs text-[var(--muted-foreground)]">目標ロール</dt>
-            <dd className="text-sm font-medium text-[var(--foreground)]">
-              {member.targetRole?.name ?? "未設定"}
-            </dd>
-          </div>
-        </dl>
-      )}
-
-      {canDeactivateMembers ? (
-        <>
-        {member.id !== viewerMemberId ? (
-          issuedPassword ? (
-            <div className="space-y-3 border-t border-[var(--border)] pt-5 md:col-span-3">
-              <p className="font-semibold">{member.name}さんの初回ログイン用のパスワード</p>
-              <InitialPasswordNotice email={member.email} initialPassword={issuedPassword} />
-            </div>
-          ) : (
-            <ActionForm
-              action={issueInitialPasswordAction}
-              className="border-t border-[var(--border)] pt-5 md:col-span-3"
-              onSuccess={(result: ActionResult) => setIssuedPassword((result.data as { initialPassword: string }).initialPassword)}
-              confirm={{
-                title: "初回ログイン用のパスワードを発行しますか",
-                description: "今のパスワードは使えなくなります。",
-                confirmLabel: "発行する"
-              }}
-            >
-              <input type="hidden" name="memberId" value={member.id} />
-              <SubmitButton pendingLabel="発行中…">
-                <KeyRound className="h-4 w-4" aria-hidden="true" />
-                初回ログイン用のパスワードを発行
-              </SubmitButton>
-            </ActionForm>
-          )
-        ) : null}
-        <ActionForm
-          action={deactivateMemberAction}
-          className="border-t border-[var(--border)] pt-5 md:col-span-3"
-          onSuccess={onMemberChanged}
-          confirm={{
-            title: "メンバーを無効化しますか",
-            description: `「${member.name}」を無効化します。本人は業務機能を利用できなくなります。`,
-            confirmLabel: "無効化する",
-            destructive: true
-          }}
-        >
-          <input type="hidden" name="id" value={member.id} />
-          <SubmitButton
-            pendingLabel="無効化中…"
-            variant="destructive"
-            disabled={member.status === "INACTIVE"}
-          >
-            {member.status === "INACTIVE" ? "無効化済み" : "無効化"}
-          </SubmitButton>
-        </ActionForm>
-        </>
-      ) : null}
-    </section>
-  );
-}
-
-function MemberSkillsPanel({
-  member,
-  skills,
-  onMemberChanged,
-  panelId,
-  tabId
-}: {
-  member: MemberRow;
-  skills: SkillOption[];
-  onMemberChanged: () => void;
-  panelId: string;
-  tabId: string;
-}) {
-  const sortedMemberSkills = sortMemberSkillsByLevel(member.memberSkills);
-
-  return (
-    <section id={panelId} role="tabpanel" aria-labelledby={tabId}>
-      {sortedMemberSkills.length === 0 ? (
-        <p className="rounded-md bg-[var(--surface-subtle)] px-3 py-4 text-sm text-[var(--muted-foreground)]">
-          保有スキルは未設定です。下のフォームから最初のスキルを設定できます。
-        </p>
-      ) : (
-        <div className="grid gap-2">
-          {sortedMemberSkills.map((memberSkill) => (
-            <div
-              key={memberSkill.id}
-              className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 rounded-md border border-[var(--border)] p-3"
-            >
-              <div className="min-w-0">
-                <p className="break-words text-sm font-medium text-[var(--foreground)]">
-                  {memberSkill.skill.name}
-                </p>
-                <p className="break-words text-xs text-[var(--muted-foreground)]">
-                  {memberSkill.skill.category.name}
-                </p>
-              </div>
-              <Badge variant="primary">Lv.{memberSkill.level}</Badge>
-              <ActionForm
-                action={removeMemberSkillAction}
-                onSuccess={onMemberChanged}
-                confirm={{
-                  title: "メンバーのスキルを削除しますか",
-                  description: `「${memberSkill.skill.name}」を${member.name}の保有スキルから削除します。`,
-                  confirmLabel: "削除する",
-                  destructive: true
-                }}
-              >
-                <input type="hidden" name="memberId" value={member.id} />
-                <input type="hidden" name="skillId" value={memberSkill.skillId} />
-                <SubmitButton
-                  pendingLabel="削除中…"
-                  variant="ghost"
-                  size="icon"
-                  className="h-11 w-11"
-                  aria-label={`${memberSkill.skill.name}を削除`}
-                >
-                  <Trash2 className="h-4 w-4" aria-hidden="true" />
-                </SubmitButton>
-              </ActionForm>
-            </div>
-          ))}
-        </div>
-      )}
-      <ActionForm
-        action={setMemberSkillLevelAction}
-        className="mt-5 grid gap-3 border-t border-[var(--border)] pt-5 sm:grid-cols-[minmax(0,1fr)_120px_auto] sm:items-end"
-        onSuccess={onMemberChanged}
-      >
-        <input type="hidden" name="memberId" value={member.id} />
-        <SelectField
-          id={`new-member-skill-${member.id}`}
-          label="スキル"
-          name="skillId"
-          required
-        >
-          {skills.map((skill) => (
-            <option key={skill.id} value={skill.id}>
-              {skill.category.name} / {skill.name}
-            </option>
-          ))}
-        </SelectField>
-        <SelectField
-          id={`new-member-skill-level-${member.id}`}
-          label="レベル"
-          name="level"
-          required
-        >
-          {skillLevels.map((level) => (
-            <option key={level} value={level}>
-              Lv.{level}
-            </option>
-          ))}
-        </SelectField>
-        <SubmitButton pendingLabel="設定中…" className="w-full sm:w-auto">
-          スキル設定
-        </SubmitButton>
-      </ActionForm>
-    </section>
-  );
-}
