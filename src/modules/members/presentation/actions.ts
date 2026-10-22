@@ -97,10 +97,8 @@ export async function updateMemberRoleAction(
 
 export async function updateMemberAction(formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    const session = await requireRoles(managerOrAdmin);
+    const session = await requireRoles(adminOnly);
     const memberId = getString(formData, "id");
-    const scope = await getMemberScope(session.user.role, session.user.memberId);
-    if (!memberIsInScope(scope, memberId)) throw new AuthorizationError("このメンバーを操作する権限がありません。", 403);
     await updateMember(memberId, parseMemberForm(formData), session.user.memberId);
     revalidatePath("/members");
   }, "メンバー情報を更新しました。");

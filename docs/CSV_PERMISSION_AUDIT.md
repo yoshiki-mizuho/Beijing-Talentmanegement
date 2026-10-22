@@ -17,13 +17,13 @@ CSV対象は主要マスタに限定します。
 | ダッシュボード閲覧 | 可 | 可 | 可（本人向け表示） |
 | メンバー閲覧 | 可 | 可 | 不可（本人情報は自分のスキル画面で確認） |
 | メンバー作成 | 可 | 不可 | 不可 |
-| メンバー更新 | 可 | 担当範囲のみ可 | 不可 |
+| メンバー更新 | 可 | 不可 | 不可 |
 | メンバー削除/無効化 | 可 | 不可 | 不可 |
 | スキル閲覧 | 可 | 可 | 自分のスキルのみ可 |
 | スキル作成/更新/無効化 | 可 | 不可 | 不可 |
 | 自分のスキル申告 | 可 | 可 | 可 |
 | 申告スキルの承認・補正 | 可 | 担当範囲のみ可 | 不可 |
-| 承認済みメンバースキルの直接更新 | 可 | 不可 | 不可 |
+| 承認済みメンバースキルの訂正（設定・削除） | 可 | 担当範囲のみ可 | 不可 |
 | ロール閲覧 | 可 | 可 | 不可 |
 | ロール作成/更新/無効化 | 可 | 不可 | 不可 |
 | 通知閲覧 | 可 | 自分宛のみ可 | 自分宛のみ可 |
@@ -234,7 +234,7 @@ flowchart TD
 | --- | --- | --- |
 | `GET /api/members` | admin、manager | manager は担当範囲。 |
 | `POST /api/members`、`DELETE /api/members/[memberId]` | admin | なし。 |
-| `PATCH /api/members/[memberId]` | admin、manager | manager は担当範囲。 |
+| `PATCH /api/members/[memberId]` | admin | なし。 |
 | `/api/members/[memberId]/skills` | admin、manager | manager は担当範囲。 |
 | `/api/members/[memberId]/avatar` | admin、manager、member | サービスで本人だけを許可。 |
 | `/api/skill-assessments` | admin、manager、member | 作成対象はセッション本人。参照は manager の担当範囲。 |
@@ -251,7 +251,8 @@ flowchart TD
 | --- | --- | --- |
 | メンバー作成、無効化、上司設定、権限変更 | admin | 権限変更は自分自身、最後の在籍中 admin、部下がいる対象を追加判定。 |
 | 初回ログイン用のパスワード発行 | admin | 自分自身には発行不可。発行値は応答で一度だけ表示し、監査ログには記録しない。 |
-| メンバー更新、メンバースキル設定・削除 | admin、manager | manager は担当範囲。 |
+| メンバー更新 | admin | なし。 |
+| メンバースキルの訂正（設定・削除） | admin、manager | manager は担当範囲。 |
 | 目標ロール更新 | admin、manager、member | member は本人だけ。 |
 | スキル申告 | admin、manager、member | セッション本人だけ。 |
 | 申告審査、一括承認 | admin、manager | manager は担当範囲。 |

@@ -398,6 +398,7 @@ function MemberSearchTableInner({
           skills={skills}
           managerCandidates={managerCandidates}
           targetRoles={targetRoles}
+          roles={roles}
           canDeactivateMembers={canDeactivateMembers}
           canEditGrowthSettings={canEditGrowthSettings}
           viewerMemberId={viewerMemberId}
