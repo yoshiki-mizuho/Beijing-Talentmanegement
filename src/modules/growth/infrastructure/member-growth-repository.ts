@@ -14,6 +14,7 @@ export async function getMemberGrowthData(memberId: string) {
         select: {
           id: true,
           name: true,
+          manager: { select: { name: true } },
           targetRoleId: true,
           targetRole: {
             select: {
@@ -62,7 +63,7 @@ export async function getMemberGrowthData(memberId: string) {
       }),
       prisma.skillSelfAssessment.findMany({
         where: { memberId },
-        select: { createdAt: true },
+        select: { createdAt: true, status: true },
         orderBy: { createdAt: "asc" }
       }),
       prisma.skillLevelChange.findMany({

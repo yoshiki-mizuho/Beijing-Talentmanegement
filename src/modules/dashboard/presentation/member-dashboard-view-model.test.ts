@@ -8,6 +8,7 @@ function fixture(overrides: Partial<MemberGrowthData> = {}): MemberGrowthData {
     member: {
       id: "member-1",
       name: "山田 太郎",
+      manager: { name: "佐藤 花子" },
       targetRoleId: "role-1",
       targetRole: {
         id: "role-1",
@@ -76,6 +77,42 @@ describe("buildMemberDashboardViewModel", () => {
     );
     expect(result?.targetRole).toBeNull();
     expect(result?.roleOptions).toEqual([{ id: "role-1", name: "テックリード" }]);
+  });
+
+  it("承認済みも承認待ちもなければ初回の空状態にする", () => {
+    const source = fixture();
+    const result = buildMemberDashboardViewModel(fixture({
+      member: source.member ? { ...source.member, memberSkills: [] } : null,
+      assessments: []
+    }));
+
+    expect(result).toMatchObject({
+      onboardingState: "empty",
+      approvedSkillCount: 0,
+      pendingAssessmentCount: 0,
+      managerName: "佐藤 花子"
+    });
+  });
+
+  it("承認済みがなく承認待ちがあれば待機状態にする", () => {
+    const source = fixture();
+    const result = buildMemberDashboardViewModel(fixture({
+      member: source.member ? { ...source.member, memberSkills: [] } : null,
+      assessments: [{ createdAt: new Date("2026-10-10T00:00:00Z"), status: "PENDING" }]
+    }));
+
+    expect(result).toMatchObject({
+      onboardingState: "pending",
+      approvedSkillCount: 0,
+      pendingAssessmentCount: 1
+    });
+  });
+
+  it("承認済みスキルがあれば通常状態にする", () => {
+    expect(buildMemberDashboardViewModel(fixture())).toMatchObject({
+      onboardingState: "regular",
+      approvedSkillCount: 2
+    });
   });
 
   it("メンバーが存在しない場合はnullを返す", () => {

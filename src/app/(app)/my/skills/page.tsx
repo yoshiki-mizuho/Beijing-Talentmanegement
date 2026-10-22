@@ -11,6 +11,7 @@ import {
 } from "@/modules/members/presentation/skill-sheet";
 import {
   listActiveSkillsForSkillSheet,
+  listPopularSkillsForMember,
   listSkillLevels
 } from "@/modules/skills/application/skill-service";
 import { getCurrentSession } from "@/server/auth/session";
@@ -52,10 +53,11 @@ export default async function MySkillsPage({
     redirect("/login");
   }
 
-  const [context, skills, levels] = await Promise.all([
+  const [context, skills, levels, popularSkills] = await Promise.all([
     getMemberSkillSheetContext(session.user.memberId),
     listActiveSkillsForSkillSheet(),
-    listSkillLevels()
+    listSkillLevels(),
+    listPopularSkillsForMember(session.user.memberId)
   ]);
   const rows = buildSkillSheetRows({
     skills,
@@ -67,6 +69,8 @@ export default async function MySkillsPage({
   const encouragement = selectSkillSheetEncouragement(
     context.assessmentHistory[0]?.createdAt ?? null
   );
+  const initial = context.memberSkills.length === 0 &&
+    context.pendingAssessments.length === 0;
 
   return (
     <div className="space-y-6">
@@ -114,6 +118,11 @@ export default async function MySkillsPage({
                 description: level.description
               }))}
               encouragement={encouragement}
+              initial={initial}
+              popularSkillIds={popularSkills.skillIds}
+              popularHeading={popularSkills.departmentName
+                ? `${popularSkills.departmentName}でよく登録されているスキル`
+                : "よく登録されているスキル"}
             />
           </CardContent>
         </Card>

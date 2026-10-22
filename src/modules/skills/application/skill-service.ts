@@ -26,6 +26,10 @@ export function listActiveSkillsForSkillSheet() {
   return skillRepository.listActiveSkillsForSkillSheet();
 }
 
+export function listPopularSkillsForMember(memberId: string) {
+  return skillRepository.listPopularSkillsForMember(memberId);
+}
+
 export function createSkillCategory(input: unknown, actorMemberId: string | null) {
   return skillRepository.createSkillCategory(
     skillCategoryInputSchema.parse(input),

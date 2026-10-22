@@ -3,19 +3,17 @@ import { describe, expect, it } from "vitest";
 import { buildSetupProgress } from "@/shared/ui/setup-progress";
 
 describe("buildSetupProgress", () => {
-  it("未完了の初期状態を4項目で返す", () => {
+  it("未完了の初期状態を3項目で返す", () => {
     const progress = buildSetupProgress({
       passwordChangeRequired: true,
       assessmentCount: 0,
-      approvedSkillCount: 0,
-      hasTargetRole: false
+      approvedSkillCount: 0
     });
 
     expect(progress.completedCount).toBe(0);
-    expect(progress.totalCount).toBe(4);
+    expect(progress.totalCount).toBe(3);
     expect(progress.isComplete).toBe(false);
     expect(progress.items.map((item) => item.completed)).toEqual([
-      false,
       false,
       false,
       false
@@ -26,39 +24,36 @@ describe("buildSetupProgress", () => {
     const progress = buildSetupProgress({
       passwordChangeRequired: false,
       assessmentCount: 1,
-      approvedSkillCount: 5,
-      hasTargetRole: true
+      approvedSkillCount: 1
     });
 
-    expect(progress.completedCount).toBe(4);
+    expect(progress.completedCount).toBe(3);
     expect(progress.isComplete).toBe(true);
     expect(progress.items.every((item) => item.completed)).toBe(true);
   });
 
-  it("承認済みスキルが4件なら登録項目は未完了にする", () => {
+  it("申請していなくてもスキルを登録済みなら全て完了にする", () => {
+    const progress = buildSetupProgress({
+      passwordChangeRequired: false,
+      assessmentCount: 0,
+      approvedSkillCount: 3
+    });
+
+    expect(progress.isComplete).toBe(true);
+  });
+
+  it("申請済みでも承認済みスキルがなければ承認項目は未完了にする", () => {
     const progress = buildSetupProgress({
       passwordChangeRequired: false,
       assessmentCount: 2,
-      approvedSkillCount: 4,
-      hasTargetRole: true
+      approvedSkillCount: 0
     });
 
-    expect(progress.completedCount).toBe(3);
-    expect(progress.items.find((item) => item.id === "five-skills")?.completed).toBe(false);
-  });
-
-  it("目標ロール未設定ならダッシュボードへの項目を未完了にする", () => {
-    const progress = buildSetupProgress({
-      passwordChangeRequired: false,
-      assessmentCount: 1,
-      approvedSkillCount: 5,
-      hasTargetRole: false
-    });
-
-    expect(progress.items.find((item) => item.id === "target-role")).toEqual({
-      id: "target-role",
-      label: "目標ロールを設定",
-      href: "/dashboard#target-role",
+    expect(progress.completedCount).toBe(2);
+    expect(progress.items.find((item) => item.id === "first-approval")).toEqual({
+      id: "first-approval",
+      label: "上司の承認を待つ",
+      href: "/dashboard#first-steps",
       completed: false
     });
   });

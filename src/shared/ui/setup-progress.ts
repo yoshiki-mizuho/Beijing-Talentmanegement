@@ -2,13 +2,12 @@ export type SetupProgressInput = {
   passwordChangeRequired: boolean;
   assessmentCount: number;
   approvedSkillCount: number;
-  hasTargetRole: boolean;
 };
 
 export type SetupProgressItem = {
-  id: "password" | "first-assessment" | "five-skills" | "target-role";
+  id: "password" | "first-assessment" | "first-approval";
   label: string;
-  href: "/account/password" | "/my/skills" | "/dashboard#target-role";
+  href: "/account/password" | "/my/skills" | "/dashboard#first-steps";
   completed: boolean;
 };
 
@@ -22,27 +21,23 @@ export type SetupProgress = {
 const setupItemDefinitions = [
   {
     id: "password",
-    label: "初回パスワードを変更",
+    label: "パスワードを決める",
     href: "/account/password",
     isCompleted: (input: SetupProgressInput) => !input.passwordChangeRequired
   },
   {
     id: "first-assessment",
-    label: "はじめてのスキル申請",
+    label: "得意なスキルを申請する",
     href: "/my/skills",
-    isCompleted: (input: SetupProgressInput) => input.assessmentCount >= 1
+    // CSV や seed でスキルを登録済みの人は、申請していなくても済んだとみなす
+    isCompleted: (input: SetupProgressInput) =>
+      input.assessmentCount >= 1 || input.approvedSkillCount >= 1
   },
   {
-    id: "five-skills",
-    label: "スキルを5件登録",
-    href: "/my/skills",
-    isCompleted: (input: SetupProgressInput) => input.approvedSkillCount >= 5
-  },
-  {
-    id: "target-role",
-    label: "目標ロールを設定",
-    href: "/dashboard#target-role",
-    isCompleted: (input: SetupProgressInput) => input.hasTargetRole
+    id: "first-approval",
+    label: "上司の承認を待つ",
+    href: "/dashboard#first-steps",
+    isCompleted: (input: SetupProgressInput) => input.approvedSkillCount >= 1
   }
 ] as const;
 

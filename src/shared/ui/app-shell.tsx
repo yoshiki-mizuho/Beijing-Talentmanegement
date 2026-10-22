@@ -272,13 +272,13 @@ function SetupProgressIndicator({ progress }: { progress: SetupProgress }) {
     <details ref={detailsRef} className="group relative">
       <summary className="flex h-11 min-w-[88px] cursor-pointer list-none flex-col justify-center rounded-md px-1.5 hover:bg-[var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] sm:min-w-36 sm:px-2 [&::-webkit-details-marker]:hidden">
         <span className="flex items-center justify-between gap-2 text-xs font-semibold">
-          セットアップ {progress.completedCount}/{progress.totalCount}
+          はじめの3ステップ {progress.completedCount} / {progress.totalCount}
           <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" aria-hidden="true" />
         </span>
         <span
           className="mt-1 h-1.5 overflow-hidden rounded-full bg-[var(--muted)]"
           role="progressbar"
-          aria-label="セットアップ進捗"
+          aria-label="はじめの3ステップ進捗"
           aria-valuemin={0}
           aria-valuemax={progress.totalCount}
           aria-valuenow={progress.completedCount}
@@ -290,9 +290,9 @@ function SetupProgressIndicator({ progress }: { progress: SetupProgress }) {
         </span>
       </summary>
       <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-72 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-xl">
-        <p className="text-sm font-semibold">セットアップ</p>
+        <p className="text-sm font-semibold">はじめの3ステップ</p>
         <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-          TalentHubを使い始める準備を進めましょう。
+          得意なスキルは3つほど選ぶと1分ほどで終わります。あとから増やせます。
         </p>
         <ul className="mt-3 space-y-1">
           {progress.items.map((item) => (

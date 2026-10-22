@@ -44,16 +44,25 @@ export async function confirmLevelUpNotificationAction(
 ): Promise<ActionResult> {
   return runAction(async () => {
     const session = await requirePasswordReadyMember();
-    const id = getString(formData, "id");
-    const notification = await findNotification(id, session.user.memberId);
-    if (
-      !notification ||
-      notification.type !== NotificationType.SKILL_ASSESSMENT_APPROVED &&
-      notification.type !== NotificationType.SKILL_ASSESSMENT_CORRECTED
-    ) {
+    const ids = formData.getAll("id").filter(
+      (value): value is string => typeof value === "string"
+    );
+    if (ids.length === 0) {
       throw new UserFacingError("レベルアップ通知が見つかりません。");
     }
-    await markNotificationRead(id, session.user.memberId);
+    for (const id of ids) {
+      const notification = await findNotification(id, session.user.memberId);
+      if (
+        !notification ||
+        notification.type !== NotificationType.SKILL_ASSESSMENT_APPROVED &&
+        notification.type !== NotificationType.SKILL_ASSESSMENT_CORRECTED
+      ) {
+        throw new UserFacingError("レベルアップ通知が見つかりません。");
+      }
+    }
+    for (const id of ids) {
+      await markNotificationRead(id, session.user.memberId);
+    }
   }, "レベルアップ通知を確認しました。");
 }
 
