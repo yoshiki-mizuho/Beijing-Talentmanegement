@@ -24,7 +24,7 @@ MVPでは、Next.js、TypeScript、Tailwind CSS、localStorage、Repositoryパ�
 | --- | --- | --- |
 | フレームワーク | Next.js 16系 App Router | フロントエンドとBFF/APIを同一リポジトリで管理する |
 | 言語 | TypeScript | 型安全性を前提に開発する |
-| Runtime | Node.js 24 LTS | LTS系を利用し、長期運用に備える |
+| Runtime | Node.js 24 LTS | LTS系を利用し、長期運用に備える。セキュリティの修正版を下限にする（2026-10-23 時点で 24.22.1 以上。`package.json` の `engines` と CI のイメージで固定） |
 | スタイリング | Tailwind CSS | MVPの流れを継承し、画面実装速度を保つ |
 | UIコンポーネント | shadcn/ui | フォーム、Dialog、TableなどのUIを標準化する |
 | アイコン | lucide-react | 一貫したアイコン体系を利用する |

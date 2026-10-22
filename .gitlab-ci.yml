@@ -16,7 +16,8 @@ stages:
 default:
   # 社内のランナー（日報アプリと共用）で動かし、GitLab.com のクレジットを消費しない。
   tags: [$RUNNER_TAG]
-  image: node:24-bookworm-slim
+  # 脆弱性の修正版（2026-10-21）に固定する。社内ランナーは取得済みの古いイメージを使い続けることがあるため
+  image: node:24.22.1-bookworm-slim
   # 同じ MR に続けて push したら、古いパイプラインは止める。
   interruptible: true
   before_script:

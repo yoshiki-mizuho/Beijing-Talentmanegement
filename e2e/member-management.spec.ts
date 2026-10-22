@@ -142,7 +142,12 @@ test("マネージャーの一覧と更新APIは自組織の範囲に制限さ�
     ).toHaveCount(0);
 
     // レベルを変えると並び順が変わるため、スキル名で行を特定する
-    const skillName = (await managerDetail.locator("p.break-words").first().textContent()) ?? "";
+    // 申請中の行（訂正なし）が上に出ることがあるので、「訂正」のある行から選ぶ
+    const firstEditableRow = managerDetail
+      .locator("div.py-3")
+      .filter({ has: manager.page.getByRole("button", { name: "訂正", exact: true }) })
+      .first();
+    const skillName = (await firstEditableRow.locator("p.break-words").first().textContent()) ?? "";
     const skillRow = managerDetail.locator("div.py-3").filter({ hasText: skillName });
     // レベルの選択肢は見えない radio を label で包んでいるので、label を押す
     const levelLabel = (level: string) =>
