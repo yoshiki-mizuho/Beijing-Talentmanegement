@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { SkillSelfAssessmentStatus } from "@prisma/client";
+import {
+  NotificationStatus,
+  NotificationType,
+  SkillSelfAssessmentStatus
+} from "@prisma/client";
 
 const mocks = vi.hoisted(() => ({
   transaction: vi.fn(),
@@ -10,9 +14,11 @@ const mocks = vi.hoisted(() => ({
   assessmentFindUnique: vi.fn(),
   assessmentCreate: vi.fn(),
   assessmentUpdate: vi.fn(),
+  assessmentCount: vi.fn(),
   userFindMany: vi.fn(),
   notificationCreateMany: vi.fn(),
   notificationCreate: vi.fn(),
+  notificationUpdateMany: vi.fn(),
   memberSkillFindUnique: vi.fn(),
   memberSkillUpsert: vi.fn(),
   skillLevelChangeCreate: vi.fn(),
@@ -43,12 +49,14 @@ const transactionClient = {
     findMany: mocks.assessmentFindMany,
     findUnique: mocks.assessmentFindUnique,
     update: mocks.assessmentUpdate,
-    create: mocks.assessmentCreate
+    create: mocks.assessmentCreate,
+    count: mocks.assessmentCount
   },
   user: { findMany: mocks.userFindMany },
   notification: {
     createMany: mocks.notificationCreateMany,
-    create: mocks.notificationCreate
+    create: mocks.notificationCreate,
+    updateMany: mocks.notificationUpdateMany
   },
   memberSkill: {
     findUnique: mocks.memberSkillFindUnique,
@@ -132,51 +140,101 @@ describe("createSkillAssessments transaction boundary", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.transaction.mockImplementation(async (callback) => callback(transactionClient));
-    mocks.memberFindUniqueOrThrow.mockResolvedValue({ name: "テスト太郎" });
-    mocks.skillFindMany.mockResolvedValue([
-      { id: "skill-1", name: "TypeScript" },
-      { id: "skill-2", name: "設計" }
-    ]);
+    mocks.memberFindUniqueOrThrow.mockResolvedValue({
+      name: "テスト太郎",
+      managerId: "manager-1"
+    });
+    // 申請したスキルだけを返す（件数が合わないと無効なスキルとして扱われる）
+    mocks.skillFindMany.mockImplementation(({ where }) =>
+      Promise.resolve(
+        [
+          { id: "skill-1", name: "React" },
+          { id: "skill-2", name: "TypeScript" },
+          { id: "skill-3", name: "設計" }
+        ].filter((skill) => where.id.in.includes(skill.id))
+      )
+    );
     mocks.assessmentFindMany.mockResolvedValue([]);
-    mocks.userFindMany.mockResolvedValue([{ memberId: "manager-1" }]);
-    mocks.assessmentCreate
-      .mockResolvedValueOnce({
-        id: "assessment-1",
-        skillId: "skill-1",
-        requestedLevel: 3
-      })
-      .mockResolvedValueOnce({
-        id: "assessment-2",
-        skillId: "skill-2",
-        requestedLevel: 4
+    mocks.userFindMany.mockResolvedValue([
+      { memberId: "manager-1", role: "MANAGER" },
+      { memberId: "admin-1", role: "ADMIN" }
+    ]);
+    mocks.assessmentCreate.mockImplementation(({ data }) => {
+      const assessmentNumber = data.skillId.replace("skill-", "");
+      return Promise.resolve({
+        id: `assessment-${assessmentNumber}`,
+        ...data
       });
-    mocks.notificationCreateMany.mockResolvedValue({ count: 2 });
+    });
+    mocks.notificationCreateMany.mockResolvedValue({ count: 1 });
   });
 
-  it("creates every assessment and notification in one transaction", async () => {
+  it("creates one notification for the manager with the batch summary", async () => {
     const result = await createSkillAssessments({
       memberId: "member-1",
       assessments: [
         { skillId: "skill-1", requestedLevel: 3 },
-        { skillId: "skill-2", requestedLevel: 4 }
+        { skillId: "skill-2", requestedLevel: 4 },
+        { skillId: "skill-3", requestedLevel: 2 }
       ]
     }, null);
 
     expect(mocks.transaction).toHaveBeenCalledTimes(1);
-    expect(mocks.assessmentCreate).toHaveBeenCalledTimes(2);
+    expect(mocks.assessmentCreate).toHaveBeenCalledTimes(3);
     expect(mocks.notificationCreateMany).toHaveBeenCalledWith({
-      data: expect.arrayContaining([
-        expect.objectContaining({
+      data: [
+        {
           skillSelfAssessmentId: "assessment-1",
-          recipientMemberId: "manager-1"
+          recipientMemberId: "manager-1",
+          type: NotificationType.SKILL_ASSESSMENT_REQUESTED,
+          title: "スキル申請の承認依頼",
+          body: "テスト太郎さんから 3件の申請が届きました（React Lv3・TypeScript Lv4 ほか）。"
+        }
+      ]
+    });
+    expect(result).toHaveLength(3);
+  });
+
+  it("falls back to active admins when the member has no manager user", async () => {
+    mocks.memberFindUniqueOrThrow.mockResolvedValue({
+      name: "テスト太郎",
+      managerId: null
+    });
+    mocks.skillFindMany.mockResolvedValue([{ id: "skill-1", name: "React" }]);
+    mocks.userFindMany.mockResolvedValue([
+      { memberId: "admin-1", role: "ADMIN" },
+      { memberId: "admin-2", role: "ADMIN" }
+    ]);
+
+    await createSkillAssessments({
+      memberId: "member-1",
+      assessments: [{ skillId: "skill-1", requestedLevel: 3 }]
+    }, null);
+
+    expect(mocks.userFindMany).toHaveBeenCalledWith({
+      where: {
+        OR: [
+          {
+            role: "ADMIN",
+            member: { status: "ACTIVE" }
+          }
+        ],
+        memberId: { not: "member-1" }
+      },
+      select: { memberId: true, role: true }
+    });
+    expect(mocks.notificationCreateMany).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({
+          recipientMemberId: "admin-1",
+          body: "テスト太郎さんが React Lv3 を申請しました。"
         }),
         expect.objectContaining({
-          skillSelfAssessmentId: "assessment-2",
-          recipientMemberId: "manager-1"
+          recipientMemberId: "admin-2",
+          body: "テスト太郎さんが React Lv3 を申請しました。"
         })
-      ])
+      ]
     });
-    expect(result).toHaveLength(2);
   });
 
   it("rejects the transaction when notification creation fails", async () => {
@@ -219,7 +277,9 @@ describe("approveSkillAssessments transaction boundary", () => {
     mocks.assessmentUpdate.mockImplementation(({ where: { id }, data }) =>
       Promise.resolve({ id, ...data })
     );
+    mocks.assessmentCount.mockResolvedValue(0);
     mocks.notificationCreate.mockResolvedValue({});
+    mocks.notificationUpdateMany.mockResolvedValue({ count: 1 });
     mocks.auditLogCreate.mockResolvedValue({});
   });
 
@@ -235,6 +295,7 @@ describe("approveSkillAssessments transaction boundary", () => {
     expect(mocks.memberSkillUpsert).toHaveBeenCalledTimes(2);
     expect(mocks.skillLevelChangeCreate).toHaveBeenCalledTimes(2);
     expect(mocks.notificationCreate).toHaveBeenCalledTimes(2);
+    expect(mocks.notificationUpdateMany).toHaveBeenCalledTimes(2);
     expect(mocks.auditLogCreate).toHaveBeenCalledTimes(2);
     expect(mocks.auditLogCreate).toHaveBeenNthCalledWith(
       1,
@@ -245,6 +306,38 @@ describe("approveSkillAssessments transaction boundary", () => {
       { data: expect.objectContaining({ targetId: "assessment-2" }) }
     );
     expect(result).toHaveLength(2);
+  });
+
+  it("marks assessment request notifications as read when no pending assessment remains", async () => {
+    await approveSkillAssessments({
+      assessmentIds: ["assessment-1"],
+      reviewerMemberId: "manager-1",
+      reviewerRole: "MANAGER"
+    });
+
+    expect(mocks.notificationUpdateMany).toHaveBeenCalledWith({
+      where: {
+        type: NotificationType.SKILL_ASSESSMENT_REQUESTED,
+        status: NotificationStatus.UNREAD,
+        skillSelfAssessment: { memberId: "member-assessment-1" }
+      },
+      data: {
+        status: NotificationStatus.READ,
+        readAt: expect.any(Date)
+      }
+    });
+  });
+
+  it("keeps assessment request notifications unread while pending assessments remain", async () => {
+    mocks.assessmentCount.mockResolvedValue(1);
+
+    await approveSkillAssessments({
+      assessmentIds: ["assessment-1"],
+      reviewerMemberId: "manager-1",
+      reviewerRole: "MANAGER"
+    });
+
+    expect(mocks.notificationUpdateMany).not.toHaveBeenCalled();
   });
 
   it("identifies the out-of-scope assessment and rejects the transaction", async () => {

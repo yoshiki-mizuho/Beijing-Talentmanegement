@@ -1,4 +1,8 @@
-import { NotificationStatus } from "@prisma/client";
+import {
+  NotificationStatus,
+  NotificationType,
+  SkillSelfAssessmentStatus
+} from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -19,11 +23,29 @@ vi.mock("@/server/db/prisma", () => ({
 
 import {
   countUnreadNotifications,
+  listNotifications,
   listLatestUnreadNotifications,
   markAllNotificationsRead
 } from "@/modules/notifications/infrastructure/notification-repository";
 
 describe("countUnreadNotifications", () => {
+  const actionableUnreadWhere = {
+    status: NotificationStatus.UNREAD,
+    OR: [
+      { type: { not: NotificationType.SKILL_ASSESSMENT_REQUESTED } },
+      {
+        type: NotificationType.SKILL_ASSESSMENT_REQUESTED,
+        skillSelfAssessment: {
+          member: {
+            selfAssessments: {
+              some: { status: SkillSelfAssessmentStatus.PENDING }
+            }
+          }
+        }
+      }
+    ]
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.notificationCount.mockResolvedValue(3);
@@ -37,7 +59,7 @@ describe("countUnreadNotifications", () => {
     expect(mocks.notificationFindMany).toHaveBeenCalledWith({
       where: {
         recipientMemberId: "member-1",
-        status: NotificationStatus.UNREAD
+        ...actionableUnreadWhere
       },
       orderBy: { createdAt: "desc" },
       take: 5
@@ -50,8 +72,22 @@ describe("countUnreadNotifications", () => {
     expect(mocks.notificationCount).toHaveBeenCalledWith({
       where: {
         recipientMemberId: "member-1",
-        status: NotificationStatus.UNREAD
+        ...actionableUnreadWhere
       }
+    });
+  });
+
+  it("未読一覧では承認待ちが残っている承認依頼だけを取得する", async () => {
+    await expect(
+      listNotifications("member-1", { unreadOnly: true })
+    ).resolves.toEqual([]);
+
+    expect(mocks.notificationFindMany).toHaveBeenCalledWith({
+      where: {
+        recipientMemberId: "member-1",
+        ...actionableUnreadWhere
+      },
+      orderBy: { createdAt: "desc" }
     });
   });
 

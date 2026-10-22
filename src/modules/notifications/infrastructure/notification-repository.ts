@@ -1,6 +1,28 @@
-import { NotificationStatus } from "@prisma/client";
+import {
+  NotificationStatus,
+  NotificationType,
+  Prisma,
+  SkillSelfAssessmentStatus
+} from "@prisma/client";
 
 import { prisma } from "@/server/db/prisma";
+
+const actionableUnreadNotificationWhere: Prisma.NotificationWhereInput = {
+  status: NotificationStatus.UNREAD,
+  OR: [
+    { type: { not: NotificationType.SKILL_ASSESSMENT_REQUESTED } },
+    {
+      type: NotificationType.SKILL_ASSESSMENT_REQUESTED,
+      skillSelfAssessment: {
+        member: {
+          selfAssessments: {
+            some: { status: SkillSelfAssessmentStatus.PENDING }
+          }
+        }
+      }
+    }
+  ]
+};
 
 export async function listNotifications(
   memberId: string,
@@ -9,7 +31,7 @@ export async function listNotifications(
   return prisma.notification.findMany({
     where: {
       recipientMemberId: memberId,
-      ...(options.unreadOnly ? { status: NotificationStatus.UNREAD } : {})
+      ...(options.unreadOnly ? actionableUnreadNotificationWhere : {})
     },
     orderBy: { createdAt: "desc" }
   });
@@ -19,7 +41,7 @@ export async function countUnreadNotifications(memberId: string) {
   return prisma.notification.count({
     where: {
       recipientMemberId: memberId,
-      status: NotificationStatus.UNREAD
+      ...actionableUnreadNotificationWhere
     }
   });
 }
@@ -28,7 +50,7 @@ export async function listLatestUnreadNotifications(memberId: string, limit = 5)
   return prisma.notification.findMany({
     where: {
       recipientMemberId: memberId,
-      status: NotificationStatus.UNREAD
+      ...actionableUnreadNotificationWhere
     },
     orderBy: { createdAt: "desc" },
     take: limit
