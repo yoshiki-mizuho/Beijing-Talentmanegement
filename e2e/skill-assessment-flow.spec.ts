@@ -20,6 +20,11 @@ test("複数のスキル申告を上司への通知1件にまとめ、承認後�
   try {
     const managerUnreadBefore = await getUnreadNotificationCount(manager.page);
     const adminUnreadBefore = await getUnreadNotificationCount(admin.page);
+    // 前の実行の未読が残っていることがあるので、申請の前の件数と比べる
+    await manager.page.goto("/notifications?view=unread");
+    const batchNoticesBefore = await manager.page
+      .getByText("2件の申請が届きました", { exact: false })
+      .count();
 
     await member.page.goto("/my/skills");
     await dismissExistingLevelUpDialogs(member.page);
@@ -56,7 +61,7 @@ test("複数のスキル申告を上司への通知1件にまとめ、承認後�
     );
     await expect(
       manager.page.getByText("2件の申請が届きました", { exact: false })
-    ).toHaveCount(1);
+    ).toHaveCount(batchNoticesBefore + 1);
 
     await admin.page.goto("/dashboard");
     expect(await getUnreadNotificationCount(admin.page)).toBe(adminUnreadBefore);
@@ -70,8 +75,16 @@ test("複数のスキル申告を上司への通知1件にまとめ、承認後�
     await expect(manager.page.getByText("2件の申請を承認しました。"))
       .toBeVisible();
 
+    // 承認依頼が既読になるのは、そのメンバーの承認待ちが0件になったとき。
+    // デモデータに Member User の承認待ちが残っていれば、未読のままが正しい。
+    await manager.page.goto("/skill-approvals");
+    const remainingPending = await manager.page
+      .getByRole("checkbox", { name: /^Member Userの.+申請を選択$/ })
+      .count();
     await manager.page.goto("/dashboard");
-    expect(await getUnreadNotificationCount(manager.page)).toBe(managerUnreadBefore);
+    expect(await getUnreadNotificationCount(manager.page)).toBe(
+      remainingPending === 0 ? managerUnreadBefore : managerUnreadBefore + 1
+    );
 
     await member.page.goto("/dashboard");
     await dismissExistingLevelUpDialogs(member.page);
