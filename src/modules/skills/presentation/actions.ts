@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import {
-  createSkill,
+  createSkillWithLevelGuides,
   createSkillCategory,
   deleteSkillCategory,
   deleteSkill,
@@ -57,7 +57,16 @@ export async function deleteSkillCategoryAction(formData: FormData): Promise<Act
 export async function createSkillAction(formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
     const session = await requireRoles(adminOnly);
-    await createSkill(parseSkillForm(formData), session.user.memberId);
+    await createSkillWithLevelGuides(
+      parseSkillForm(formData),
+      {
+        guides: [1, 2, 3, 4, 5].map((level) => ({
+          level,
+          description: getString(formData, `levelGuide${level}`)
+        }))
+      },
+      session.user.memberId
+    );
     revalidatePath("/skills");
   }, "スキルを登録しました。");
 }

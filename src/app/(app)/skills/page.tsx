@@ -25,6 +25,7 @@ export default async function SkillsPage() {
         categories={categories}
         canManage={canManageSkills}
         skillCount={skills.length}
+        levels={levels}
       />
 
       <Card>

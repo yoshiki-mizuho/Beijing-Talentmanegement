@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   transaction: vi.fn(),
   skillCreate: vi.fn(),
+  levelGuideCreateMany: vi.fn(),
   skillFindMany: vi.fn(),
   memberFindUnique: vi.fn(),
   memberSkillCount: vi.fn(),
@@ -25,6 +26,7 @@ vi.mock("@/server/db/prisma", () => ({
 import { SkillNameConflictError } from "@/modules/skills/domain/skill-errors";
 import {
   createSkill,
+  createSkillWithLevelGuides,
   deleteSkill,
   listPopularSkillsForMember
 } from "@/modules/skills/infrastructure/skill-repository";
@@ -40,6 +42,7 @@ const transactionClient = {
     findMany: mocks.skillFindMany,
     delete: mocks.skillDelete
   },
+  skillLevelGuide: { createMany: mocks.levelGuideCreateMany },
   auditLog: { create: mocks.auditLogCreate }
 };
 
@@ -165,6 +168,39 @@ describe("createSkill", () => {
       categoryId: "category-1",
       isActive: true
     }, null)).rejects.toBeInstanceOf(SkillNameConflictError);
+  });
+
+  it("空欄を除いたレベルの目安をスキルと同時に登録する", async () => {
+    mocks.skillCreate.mockResolvedValue({
+      id: "skill-2",
+      code: "SKILL-0002",
+      name: "システム設計",
+      categoryId: "category-1",
+      description: null,
+      isActive: true
+    });
+
+    await createSkillWithLevelGuides(
+      { name: "システム設計", categoryId: "category-1", isActive: true },
+      {
+        guides: [
+          { level: 1, description: "基礎を理解している" },
+          { level: 2, description: "" },
+          { level: 3, description: "一人で設計できる" },
+          { level: 4, description: "" },
+          { level: 5, description: "" }
+        ]
+      },
+      "actor-1"
+    );
+
+    expect(mocks.levelGuideCreateMany).toHaveBeenCalledWith({
+      data: [
+        { skillId: "skill-2", level: 1, description: "基礎を理解している" },
+        { skillId: "skill-2", level: 3, description: "一人で設計できる" }
+      ]
+    });
+    expect(mocks.auditLogCreate).toHaveBeenCalledTimes(2);
   });
 });
 
