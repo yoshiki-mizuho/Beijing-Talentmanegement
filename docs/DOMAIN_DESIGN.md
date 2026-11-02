@@ -90,6 +90,7 @@ erDiagram
     string categoryId
     string description
     boolean isActive
+    int displayOrder
   }
 
   SkillLevel {
@@ -166,7 +167,7 @@ erDiagram
 | `Department` | 部署、部門、チームなどの所属単位 | `code` は一意。無効化しても過去メンバーとの関連は保持する |
 | `Member` | スキル管理対象者 | `employeeNo` と `email` は一意。在籍状態を持つ |
 | `SkillCategory` | スキルの分類 | 表示順を持つ |
-| `Skill` | 管理対象スキル | 同一カテゴリ内で名称重複を避ける |
+| `Skill` | 管理対象スキル | 同一カテゴリ内で名称重複を避け、カテゴリ内の表示順を持つ |
 | `SkillLevel` | 1から5のレベル定義 | 初期値は固定マスタとして扱う |
 | `MemberSkill` | 承認済みのメンバーとスキルの紐付け | `memberId` と `skillId` の組み合わせは一意。manager承認後の値を保持する |
 | `SkillSelfAssessment` | メンバー自身が申告したスキル更新依頼 | `pending`、`approved`、`corrected`、`rejected` の状態を持つ |

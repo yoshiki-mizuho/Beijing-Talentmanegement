@@ -27,8 +27,8 @@ export async function getExploreSourceData(viewer: ProfileViewer, since: Date) {
     }),
     prisma.skill.findMany({
       where: { isActive: true },
-      select: { id: true, name: true, category: { select: { name: true } } },
-      orderBy: [{ category: { displayOrder: "asc" } }, { name: "asc" }]
+      select: { id: true, name: true, displayOrder: true, category: { select: { name: true } } },
+      orderBy: [{ category: { displayOrder: "asc" } }, { displayOrder: "asc" }, { name: "asc" }]
     }),
     prisma.skillLevelChange.findMany({
       where: { changedAt: { gte: since } },

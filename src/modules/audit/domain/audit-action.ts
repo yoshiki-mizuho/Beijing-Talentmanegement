@@ -15,6 +15,7 @@ export const AUDIT_ACTION = {
   SKILL_ASSESSMENT_REJECT: "skill_assessment.reject",
   SKILL_CREATE: "skill.create",
   SKILL_UPDATE: "skill.update",
+  SKILL_REORDER: "skill.reorder",
   SKILL_DEACTIVATE: "skill.deactivate",
   SKILL_DELETE: "skill.delete",
   SKILL_LEVEL_GUIDES_UPDATE: "skill.level_guides.update",

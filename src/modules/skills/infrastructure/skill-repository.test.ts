@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   transaction: vi.fn(),
   skillCreate: vi.fn(),
+  skillFindFirst: vi.fn(),
+  skillUpdate: vi.fn(),
+  categoryFindMany: vi.fn(),
+  categoryUpdate: vi.fn(),
   levelGuideCreateMany: vi.fn(),
   skillFindMany: vi.fn(),
   memberFindUnique: vi.fn(),
@@ -28,7 +32,8 @@ import {
   createSkill,
   createSkillWithLevelGuides,
   deleteSkill,
-  listPopularSkillsForMember
+  listPopularSkillsForMember,
+  reorderSkills
 } from "@/modules/skills/infrastructure/skill-repository";
 
 const transactionClient = {
@@ -39,8 +44,14 @@ const transactionClient = {
   roleRequirement: { count: mocks.requirementCount },
   skill: {
     create: mocks.skillCreate,
+    findFirst: mocks.skillFindFirst,
     findMany: mocks.skillFindMany,
+    update: mocks.skillUpdate,
     delete: mocks.skillDelete
+  },
+  skillCategory: {
+    findMany: mocks.categoryFindMany,
+    update: mocks.categoryUpdate
   },
   skillLevelGuide: { createMany: mocks.levelGuideCreateMany },
   auditLog: { create: mocks.auditLogCreate }
@@ -90,6 +101,7 @@ describe("createSkill", () => {
     vi.clearAllMocks();
     mocks.transaction.mockImplementation(async (callback) => callback(transactionClient));
     mocks.skillFindMany.mockResolvedValue([{ code: "SKILL-0001" }]);
+    mocks.skillFindFirst.mockResolvedValue(null);
     mocks.auditLogCreate.mockResolvedValue({});
   });
 
@@ -114,6 +126,7 @@ describe("createSkill", () => {
         name: "システム設計",
         categoryId: "category-1",
         isActive: true,
+        displayOrder: 0,
         code: "SKILL-0002"
       }
     });
@@ -246,5 +259,65 @@ describe("deleteSkill audit log", () => {
         }
       }
     });
+  });
+});
+
+describe("reorderSkills", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.transaction.mockImplementation(async (callback) => callback(transactionClient));
+    mocks.categoryFindMany.mockResolvedValue([
+      { id: "category-1", displayOrder: 0 },
+      { id: "category-2", displayOrder: 1 }
+    ]);
+    mocks.skillFindMany.mockResolvedValue([
+      { id: "skill-1", categoryId: "category-1", displayOrder: 0, code: "S1", name: "A", description: null, isActive: true },
+      { id: "skill-2", categoryId: "category-2", displayOrder: 0, code: "S2", name: "B", description: null, isActive: true }
+    ]);
+    mocks.categoryUpdate.mockResolvedValue({});
+    mocks.skillUpdate.mockResolvedValue({});
+    mocks.auditLogCreate.mockResolvedValue({});
+  });
+
+  it("変更された行だけを更新し、移動と並び替えを監査ログへ記録する", async () => {
+    await expect(reorderSkills({
+      categories: [
+        { categoryId: "category-2", skillIds: ["skill-2", "skill-1"] },
+        { categoryId: "category-1", skillIds: [] }
+      ]
+    }, "actor-1")).resolves.toEqual({
+      changedCategoryCount: 2,
+      changedSkillCount: 1,
+      movedSkillCount: 1
+    });
+
+    expect(mocks.categoryUpdate).toHaveBeenCalledTimes(2);
+    expect(mocks.skillUpdate).toHaveBeenCalledOnce();
+    expect(mocks.skillUpdate).toHaveBeenCalledWith({
+      where: { id: "skill-1" },
+      data: { categoryId: "category-2", displayOrder: 1 }
+    });
+    expect(mocks.auditLogCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: "skill.reorder",
+        metadata: {
+          changedCategoryCount: 2,
+          changedSkillCount: 1,
+          movedSkillCount: 1
+        }
+      })
+    });
+  });
+
+  it.each([
+    { categories: [{ categoryId: "category-1", skillIds: ["skill-1", "skill-2"] }] },
+    { categories: [
+      { categoryId: "category-1", skillIds: ["skill-1", "skill-1"] },
+      { categoryId: "category-2", skillIds: [] }
+    ] }
+  ])("不足または重複した一覧を拒否する", async (input) => {
+    await expect(reorderSkills(input, null)).rejects.toThrow(
+      "一覧が更新されています。画面を開き直してください。"
+    );
   });
 });

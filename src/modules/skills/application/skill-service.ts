@@ -1,5 +1,6 @@
 import {
   createSkillInputSchema,
+  reorderSkillsInputSchema,
   skillCategoryInputSchema,
   skillInputSchema,
   skillLevelGuidesInputSchema
@@ -95,4 +96,11 @@ export function deactivateSkill(id: string, actorMemberId: string | null) {
 
 export function deleteSkill(id: string, actorMemberId: string | null) {
   return skillRepository.deleteSkill(id, actorMemberId);
+}
+
+export function reorderSkills(input: unknown, actorMemberId: string | null) {
+  return skillRepository.reorderSkills(
+    reorderSkillsInputSchema.parse(input),
+    actorMemberId
+  );
 }

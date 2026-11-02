@@ -8,12 +8,13 @@ import {
   deleteSkillCategory,
   deleteSkill,
   deactivateSkill,
+  reorderSkills,
   updateSkillCategory,
   updateSkillWithLevelGuides
 } from "@/modules/skills/application/skill-service";
 import { adminOnly, requireRoles } from "@/server/auth/authorization";
 import { runAction, type ActionResult } from "@/shared/lib/action-result";
-import { getNumber, getOptionalString, getString } from "@/shared/lib/form-data";
+import { getOptionalString, getString } from "@/shared/lib/form-data";
 
 function parseSkillForm(formData: FormData) {
   return {
@@ -28,8 +29,7 @@ export async function createSkillCategoryAction(formData: FormData): Promise<Act
   return runAction(async () => {
     const session = await requireRoles(adminOnly);
     await createSkillCategory({
-      name: getString(formData, "name"),
-      displayOrder: getNumber(formData, "displayOrder")
+      name: getString(formData, "name")
     }, session.user.memberId);
     revalidatePath("/skills");
   }, "カテゴリを登録しました。");
@@ -39,8 +39,7 @@ export async function updateSkillCategoryAction(formData: FormData): Promise<Act
   return runAction(async () => {
     const session = await requireRoles(adminOnly);
     await updateSkillCategory(getString(formData, "id"), {
-      name: getString(formData, "name"),
-      displayOrder: getNumber(formData, "displayOrder")
+      name: getString(formData, "name")
     }, session.user.memberId);
     revalidatePath("/skills");
   }, "カテゴリを更新しました。");
@@ -113,4 +112,16 @@ export async function deleteSkillAction(formData: FormData): Promise<ActionResul
     revalidatePath("/members");
     revalidatePath("/roles");
   }, "スキルを削除しました。");
+}
+
+export async function reorderSkillsAction(input: {
+  categories: { categoryId: string; skillIds: string[] }[];
+}): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requireRoles(adminOnly);
+    await reorderSkills(input, session.user.memberId);
+    revalidatePath("/skills");
+    revalidatePath("/my/skills");
+    revalidatePath("/skill-map");
+  }, "並び順を保存しました");
 }

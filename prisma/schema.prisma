@@ -210,6 +210,7 @@ model Skill {
   category          SkillCategory         @relation(fields: [categoryId], references: [id])
   description       String?
   isActive          Boolean               @default(true)
+  displayOrder      Int                   @default(0)
   memberSkills      MemberSkill[]
   selfAssessments   SkillSelfAssessment[]
   roleRequirements  RoleRequirement[]

@@ -17,6 +17,7 @@ describe("skill sheet display logic", () => {
         {
           id: "skill-react",
           name: "React",
+          displayOrder: 1,
           category: {
             id: "frontend",
             name: "フロントエンド",
@@ -26,6 +27,7 @@ describe("skill sheet display logic", () => {
         {
           id: "skill-sql",
           name: "SQL",
+          displayOrder: 0,
           category: {
             id: "database",
             name: "データベース",
@@ -79,8 +81,8 @@ describe("skill sheet display logic", () => {
   it("combines keyword, status, and category filters", () => {
     const rows = buildSkillSheetRows({
       skills: [
-        { id: "react", name: "React", category: { id: "front", name: "フロント", displayOrder: 1 } },
-        { id: "sql", name: "SQL", category: { id: "data", name: "データ", displayOrder: 2 } }
+        { id: "react", name: "React", displayOrder: 0, category: { id: "front", name: "フロント", displayOrder: 1 } },
+        { id: "sql", name: "SQL", displayOrder: 0, category: { id: "data", name: "データ", displayOrder: 2 } }
       ],
       memberSkills: [{ skillId: "react", level: 2 }],
       pendingAssessments: [],

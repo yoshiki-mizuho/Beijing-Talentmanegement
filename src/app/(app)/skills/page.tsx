@@ -3,10 +3,8 @@ import {
   listSkillLevels,
   listSkills
 } from "@/modules/skills/application/skill-service";
-import { SkillPageHeader } from "@/modules/skills/presentation/skill-page-header";
+import { SkillManagement } from "@/modules/skills/presentation/skill-management";
 import { canManageSkillMaster } from "@/modules/skills/presentation/skill-permissions";
-import { SkillSearchTable } from "@/modules/skills/presentation/skill-search-table";
-import { Card, CardContent } from "@/shared/ui/card";
 import { adminOnly, requirePageRoles } from "@/server/auth/authorization";
 
 export const dynamic = "force-dynamic";
@@ -19,25 +17,5 @@ export default async function SkillsPage() {
     listSkills(),
     listSkillLevels()
   ]);
-  return (
-    <div className="space-y-6">
-      <SkillPageHeader
-        categories={categories}
-        canManage={canManageSkills}
-        skillCount={skills.length}
-        levels={levels}
-      />
-
-      <Card>
-        <CardContent className="pt-5">
-          <SkillSearchTable
-            initialSkills={skills}
-            categories={categories}
-            levels={levels}
-            canManage={canManageSkills}
-          />
-        </CardContent>
-      </Card>
-    </div>
-  );
+  return <SkillManagement categories={categories} skills={skills} levels={levels} canManage={canManageSkills} />;
 }
