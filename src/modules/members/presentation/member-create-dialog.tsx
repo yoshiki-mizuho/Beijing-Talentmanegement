@@ -14,7 +14,7 @@ import type {
 import { ActionForm } from "@/shared/ui/action-form";
 import { Button } from "@/shared/ui/button";
 import { Dialog } from "@/shared/ui/dialog";
-import { FormField, SelectField, TextareaField } from "@/shared/ui/form-field";
+import { FormField, SelectField } from "@/shared/ui/form-field";
 import { SubmitButton } from "@/shared/ui/submit-button";
 import type { ActionResult } from "@/shared/lib/action-result";
 import { InitialPasswordNotice } from "@/modules/members/presentation/initial-password-notice";
@@ -161,12 +161,6 @@ export function MemberCreateDialog({
               </SelectField>
             </>
           ) : null}
-          <TextareaField
-            id="create-member-profile"
-            label="プロフィール"
-            name="profile"
-            className="md:col-span-2"
-          />
           <div className="flex justify-end md:col-span-2">
             <SubmitButton pendingLabel="登録中…">
               <Plus className="h-4 w-4" aria-hidden="true" />

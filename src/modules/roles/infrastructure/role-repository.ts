@@ -118,6 +118,89 @@ export async function updateRole(id: string, input: RoleInput, actorMemberId: st
   });
 }
 
+export async function updateRoleWithRequirements(
+  id: string,
+  input: RoleInput,
+  requirements: { skillId: string; requiredLevel: number }[],
+  actorMemberId: string | null
+) {
+  return prisma.$transaction(async (tx) => {
+    const before = await tx.role.findUniqueOrThrow({
+      where: { id },
+      include: { roleRequirements: true }
+    });
+    const role = await tx.role.update({ where: { id }, data: input });
+    const roleDiff = diffForAudit(roleAuditFields(before), roleAuditFields(role));
+    if (roleDiff) {
+      await recordAuditLog(tx, {
+        actorMemberId,
+        action: AUDIT_ACTION.ROLE_UPDATE,
+        targetType: AUDIT_TARGET_TYPE.ROLE,
+        targetId: id,
+        ...roleDiff
+      });
+    }
+
+    const nextBySkillId = new Map(
+      requirements.map((requirement) => [requirement.skillId, requirement])
+    );
+    for (const current of before.roleRequirements) {
+      const next = nextBySkillId.get(current.skillId);
+      if (!next) {
+        await tx.roleRequirement.delete({
+          where: { roleId_skillId: { roleId: id, skillId: current.skillId } }
+        });
+        await recordAuditLog(tx, {
+          actorMemberId,
+          action: AUDIT_ACTION.ROLE_REQUIREMENT_REMOVE,
+          targetType: AUDIT_TARGET_TYPE.ROLE,
+          targetId: id,
+          before: {
+            requiredLevel: current.requiredLevel,
+            isRequired: current.isRequired
+          },
+          metadata: { skillId: current.skillId }
+        });
+        continue;
+      }
+      nextBySkillId.delete(current.skillId);
+      // 画面では必須・任意を変えないので、既存の要件の isRequired はそのまま残す
+      const requirementDiff = diffForAudit(
+        { requiredLevel: current.requiredLevel, isRequired: current.isRequired },
+        { requiredLevel: next.requiredLevel, isRequired: current.isRequired }
+      );
+      if (requirementDiff) {
+        await tx.roleRequirement.update({
+          where: { roleId_skillId: { roleId: id, skillId: current.skillId } },
+          data: { requiredLevel: next.requiredLevel }
+        });
+        await recordAuditLog(tx, {
+          actorMemberId,
+          action: AUDIT_ACTION.ROLE_REQUIREMENT_SET,
+          targetType: AUDIT_TARGET_TYPE.ROLE,
+          targetId: id,
+          ...requirementDiff,
+          metadata: { skillId: current.skillId }
+        });
+      }
+    }
+    for (const requirement of nextBySkillId.values()) {
+      await tx.roleRequirement.create({
+        data: { roleId: id, ...requirement, isRequired: true }
+      });
+      await recordAuditLog(tx, {
+        actorMemberId,
+        action: AUDIT_ACTION.ROLE_REQUIREMENT_SET,
+        targetType: AUDIT_TARGET_TYPE.ROLE,
+        targetId: id,
+        after: { requiredLevel: requirement.requiredLevel, isRequired: true },
+        metadata: { skillId: requirement.skillId }
+      });
+    }
+    return role;
+  });
+}
+
 export async function deactivateRole(id: string, actorMemberId: string | null) {
   return prisma.$transaction(async (tx) => {
     const before = await tx.role.findUniqueOrThrow({ where: { id } });
@@ -200,35 +283,6 @@ export async function upsertRoleRequirement(
         metadata: { skillId: input.skillId }
       });
     }
-    return requirement;
-  });
-}
-
-export async function removeRoleRequirement(
-  roleId: string,
-  skillId: string,
-  actorMemberId: string | null
-) {
-  return prisma.$transaction(async (tx) => {
-    const requirement = await tx.roleRequirement.delete({
-      where: {
-        roleId_skillId: {
-          roleId,
-          skillId
-        }
-      }
-    });
-    await recordAuditLog(tx, {
-      actorMemberId,
-      action: AUDIT_ACTION.ROLE_REQUIREMENT_REMOVE,
-      targetType: AUDIT_TARGET_TYPE.ROLE,
-      targetId: roleId,
-      before: {
-        requiredLevel: requirement.requiredLevel,
-        isRequired: requirement.isRequired
-      },
-      metadata: { skillId }
-    });
     return requirement;
   });
 }

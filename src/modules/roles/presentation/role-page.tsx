@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Plus, Target } from "lucide-react";
+import { Check, Plus, Target, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -10,8 +10,6 @@ import {
   createRoleAction,
   deactivateRoleAction,
   deleteRoleAction,
-  removeRoleRequirementAction,
-  setRoleRequirementAction,
   updateRoleAction,
 } from "@/modules/roles/presentation/actions";
 import { ActionForm, ConfirmSubmitButton } from "@/shared/ui/action-form";
@@ -20,7 +18,7 @@ import { Button } from "@/shared/ui/button";
 import { Card, CardContent } from "@/shared/ui/card";
 import { Dialog } from "@/shared/ui/dialog";
 import { EmptyState } from "@/shared/ui/empty-state";
-import { FormField, SelectField, TextareaField } from "@/shared/ui/form-field";
+import { FormField, TextareaField } from "@/shared/ui/form-field";
 import { MemberAvatar } from "@/shared/ui/member-avatar";
 import { PageHeader } from "@/shared/ui/page-header";
 import { SubmitButton } from "@/shared/ui/submit-button";
@@ -98,7 +96,9 @@ export function RolePage({
       )}
 
       {canManage ? (
-        <CreateRoleDialog
+        <RoleFormDialog
+          key={`create-${createOpen}`}
+          mode="create"
           open={createOpen}
           skills={skills}
           onClose={() => setCreateOpen(false)}
@@ -109,7 +109,9 @@ export function RolePage({
         />
       ) : null}
       {canManage && selectedRole ? (
-        <EditRoleDialog
+        <RoleFormDialog
+          key={`edit-${selectedRole.id}-${editOpen}`}
+          mode="edit"
           open={editOpen}
           role={selectedRole}
           skills={skills}
@@ -352,273 +354,197 @@ function MemberStatus({ role, title }: { role: RoleItem; title: string }) {
   );
 }
 
-function CreateRoleDialog({
+function RoleFormDialog({
+  mode,
   open,
+  role,
   skills,
   onClose,
   onSuccess,
+  onRefresh,
 }: {
+  mode: "create" | "edit";
   open: boolean;
+  role?: RoleItem;
   skills: SkillOption[];
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess?: () => void;
+  onRefresh?: () => void;
 }) {
-  const [nextKey, setNextKey] = useState(1);
-  const [requirements, setRequirements] = useState<DraftRequirement[]>([]);
+  const initialRequirements =
+    mode === "edit" && role
+      ? role.requirements.map((requirement, index) => ({
+          key: index + 1,
+          skillId: requirement.skillId,
+          requiredLevel: requirement.requiredLevel,
+        }))
+      : [];
+  const [nextKey, setNextKey] = useState(initialRequirements.length + 1);
+  const [requirements, setRequirements] =
+    useState<DraftRequirement[]>(initialRequirements);
   const selected = useMemo(
     () => new Set(requirements.map((item) => item.skillId).filter(Boolean)),
     [requirements],
   );
   return (
-    <Dialog open={open} onClose={onClose} title="新規ロール">
-      <ActionForm
-        action={createRoleAction}
-        className="space-y-4"
-        onSuccess={onSuccess}
-      >
-        <FormField
-          id="create-role-name"
-          label="ロール名"
-          name="name"
-          required
-        />
-        <TextareaField
-          id="create-role-description"
-          label="説明"
-          name="description"
-        />
-        <input
-          type="hidden"
-          name="requirements"
-          value={JSON.stringify(requirements.filter((item) => item.skillId))}
-        />
-        <section className="space-y-3">
-          <h3 className="font-semibold">必要なスキル</h3>
-          {requirements.map((requirement) => (
-            <div
-              key={requirement.key}
-              className="grid gap-2 sm:grid-cols-[1fr_8rem_auto]"
-            >
-              <select
-                className="min-h-11 rounded-md border bg-[var(--surface)] px-3"
-                aria-label="必要なスキル"
-                value={requirement.skillId}
-                onChange={(event) =>
-                  setRequirements((items) =>
-                    items.map((item) =>
-                      item.key === requirement.key
-                        ? { ...item, skillId: event.target.value }
-                        : item,
-                    ),
-                  )
-                }
-              >
-                <option value="">選んでください</option>
-                {skills
-                  .filter(
-                    (skill) =>
-                      skill.id === requirement.skillId ||
-                      !selected.has(skill.id),
-                  )
-                  .map((skill) => (
-                    <option key={skill.id} value={skill.id}>
-                      {skill.categoryName} / {skill.name}
-                    </option>
-                  ))}
-              </select>
-              <select
-                className="min-h-11 rounded-md border bg-[var(--surface)] px-3"
-                aria-label="必要レベル"
-                value={requirement.requiredLevel}
-                onChange={(event) =>
-                  setRequirements((items) =>
-                    items.map((item) =>
-                      item.key === requirement.key
-                        ? { ...item, requiredLevel: Number(event.target.value) }
-                        : item,
-                    ),
-                  )
-                }
-              >
-                {[1, 2, 3, 4, 5].map((level) => (
-                  <option key={level} value={level}>
-                    Lv{level}
-                  </option>
-                ))}
-              </select>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() =>
-                  setRequirements((items) =>
-                    items.filter((item) => item.key !== requirement.key),
-                  )
-                }
-              >
-                外す
-              </Button>
-            </div>
-          ))}
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={selected.size >= skills.length}
-            onClick={() => {
-              setRequirements((items) => [
-                ...items,
-                { key: nextKey, skillId: "", requiredLevel: 1 },
-              ]);
-              setNextKey((value) => value + 1);
-            }}
-          >
-            ＋ スキルを追加
-          </Button>
-        </section>
-        <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
-          <input type="checkbox" name="isActive" defaultChecked />
-          有効
-        </label>
-        <div className="flex justify-end">
-          <SubmitButton pendingLabel="登録中…">ロールを登録</SubmitButton>
-        </div>
-      </ActionForm>
-    </Dialog>
-  );
-}
-
-function EditRoleDialog({
-  open,
-  role,
-  skills,
-  onClose,
-  onRefresh,
-}: {
-  open: boolean;
-  role: RoleItem;
-  skills: SkillOption[];
-  onClose: () => void;
-  onRefresh: () => void;
-}) {
-  const availableSkills = skills.filter(
-    (skill) => !role.requirements.some((item) => item.skillId === skill.id),
-  );
-  return (
-    <Dialog open={open} onClose={onClose} title={`${role.name}を編集`}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      title={
+        mode === "create" ? "新規ロール" : `${role?.name ?? "ロール"}を編集`
+      }
+    >
       <div className="space-y-6">
         <ActionForm
-          action={updateRoleAction}
+          action={mode === "create" ? createRoleAction : updateRoleAction}
           className="space-y-4"
-          onSuccess={onRefresh}
+          onSuccess={mode === "create" ? onSuccess : onRefresh}
         >
-          <input type="hidden" name="id" value={role.id} />
+          {mode === "edit" && role ? (
+            <input type="hidden" name="id" value={role.id} />
+          ) : null}
           <FormField
-            id={`role-name-${role.id}`}
+            id={`${mode}-role-name`}
             label="ロール名"
             name="name"
-            defaultValue={role.name}
+            defaultValue={role?.name}
             required
           />
           <TextareaField
-            id={`role-description-${role.id}`}
+            id={`${mode}-role-description`}
             label="説明"
             name="description"
-            defaultValue={role.description ?? ""}
+            defaultValue={role?.description ?? ""}
           />
-          <label className="flex items-center gap-2">
+          <input
+            type="hidden"
+            name="requirements"
+            value={JSON.stringify(requirements.filter((item) => item.skillId))}
+          />
+          <section className="space-y-3">
+            <h3 className="font-semibold">必要なスキル</h3>
+            {requirements.map((requirement) => (
+              <div
+                key={requirement.key}
+                className="grid grid-cols-[minmax(0,1fr)_7rem_auto] items-center gap-2"
+              >
+                <select
+                  className="min-h-11 rounded-md border bg-[var(--surface)] px-3"
+                  aria-label="必要なスキル"
+                  value={requirement.skillId}
+                  onChange={(event) =>
+                    setRequirements((items) =>
+                      items.map((item) =>
+                        item.key === requirement.key
+                          ? { ...item, skillId: event.target.value }
+                          : item,
+                      ),
+                    )
+                  }
+                >
+                  <option value="">選んでください</option>
+                  {skills
+                    .filter(
+                      (skill) =>
+                        skill.id === requirement.skillId ||
+                        !selected.has(skill.id),
+                    )
+                    .map((skill) => (
+                      <option key={skill.id} value={skill.id}>
+                        {skill.categoryName} / {skill.name}
+                      </option>
+                    ))}
+                </select>
+                <select
+                  className="min-h-11 rounded-md border bg-[var(--surface)] px-3"
+                  aria-label="必要レベル"
+                  value={requirement.requiredLevel}
+                  onChange={(event) =>
+                    setRequirements((items) =>
+                      items.map((item) =>
+                        item.key === requirement.key
+                          ? {
+                              ...item,
+                              requiredLevel: Number(event.target.value),
+                            }
+                          : item,
+                      ),
+                    )
+                  }
+                >
+                  {[1, 2, 3, 4, 5].map((level) => (
+                    <option key={level} value={level}>
+                      Lv{level}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="min-h-11 min-w-11 px-0"
+                  aria-label={`${skills.find((skill) => skill.id === requirement.skillId)?.name ?? "この行"}を外す`}
+                  onClick={() =>
+                    setRequirements((items) =>
+                      items.filter((item) => item.key !== requirement.key),
+                    )
+                  }
+                >
+                  <X className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={selected.size >= skills.length}
+              onClick={() => {
+                setRequirements((items) => [
+                  ...items,
+                  { key: nextKey, skillId: "", requiredLevel: 1 },
+                ]);
+                setNextKey((value) => value + 1);
+              }}
+            >
+              ＋ スキルを追加
+            </Button>
+          </section>
+          <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
             <input
               type="checkbox"
               name="isActive"
-              defaultChecked={role.isActive}
+              defaultChecked={role?.isActive ?? true}
             />
             有効
           </label>
-          <SubmitButton pendingLabel="更新中…">更新</SubmitButton>
+          <div className="flex justify-end">
+            <SubmitButton pendingLabel="保存中…">保存</SubmitButton>
+          </div>
         </ActionForm>
-        <section className="space-y-3">
-          <h3 className="font-semibold">必要なスキル</h3>
-          {role.requirements.map((requirement) => (
-            <div
-              key={requirement.id}
-              className="flex items-center justify-between gap-3 border-b py-2"
-            >
-              <span>
-                {requirement.skill.name} Lv{requirement.requiredLevel}
-              </span>
-              <ActionForm
-                action={removeRoleRequirementAction}
-                onSuccess={onRefresh}
-              >
-                <input type="hidden" name="roleId" value={role.id} />
-                <input
-                  type="hidden"
-                  name="skillId"
-                  value={requirement.skillId}
-                />
-                <SubmitButton variant="destructive" pendingLabel="削除中…">
-                  外す
-                </SubmitButton>
-              </ActionForm>
-            </div>
-          ))}
-          {availableSkills.length ? (
-            <ActionForm
-              action={setRoleRequirementAction}
-              className="grid gap-2 sm:grid-cols-[1fr_8rem_auto]"
-              onSuccess={onRefresh}
-            >
-              <input type="hidden" name="roleId" value={role.id} />
-              <input type="hidden" name="isRequired" value="true" />
-              <SelectField
-                id={`skill-${role.id}`}
-                label="スキル"
-                name="skillId"
-                required
-              >
-                {availableSkills.map((skill) => (
-                  <option key={skill.id} value={skill.id}>
-                    {skill.name}
-                  </option>
-                ))}
-              </SelectField>
-              <SelectField
-                id={`level-${role.id}`}
-                label="必要レベル"
-                name="requiredLevel"
-                required
-              >
-                {[1, 2, 3, 4, 5].map((level) => (
-                  <option key={level} value={level}>
-                    {level}
-                  </option>
-                ))}
-              </SelectField>
-              <SubmitButton pendingLabel="追加中…">追加</SubmitButton>
+        {mode === "edit" && role ? (
+          <div className="flex gap-2 border-t pt-4">
+            <ActionForm action={deactivateRoleAction} onSuccess={onRefresh}>
+              <input type="hidden" name="id" value={role.id} />
+              <SubmitButton variant="secondary" pendingLabel="無効化中…">
+                無効化
+              </SubmitButton>
             </ActionForm>
-          ) : null}
-        </section>
-        <div className="flex gap-2">
-          <ActionForm action={deactivateRoleAction} onSuccess={onRefresh}>
-            <input type="hidden" name="id" value={role.id} />
-            <SubmitButton variant="secondary" pendingLabel="無効化中…">
-              無効化
-            </SubmitButton>
-          </ActionForm>
-          <ActionForm action={deleteRoleAction} onSuccess={onRefresh}>
-            <input type="hidden" name="id" value={role.id} />
-            <ConfirmSubmitButton
-              variant="destructive"
-              pendingLabel="削除中…"
-              confirm={{
-                title: "ロールを削除しますか",
-                description: "この操作は取り消せません。",
-                confirmLabel: "削除する",
-                destructive: true,
-              }}
-            >
-              削除
-            </ConfirmSubmitButton>
-          </ActionForm>
-        </div>
+            <ActionForm action={deleteRoleAction} onSuccess={onRefresh}>
+              <input type="hidden" name="id" value={role.id} />
+              <ConfirmSubmitButton
+                variant="destructive"
+                pendingLabel="削除中…"
+                confirm={{
+                  title: "ロールを削除しますか",
+                  description: "この操作は取り消せません。",
+                  confirmLabel: "削除する",
+                  destructive: true,
+                }}
+              >
+                削除
+              </ConfirmSubmitButton>
+            </ActionForm>
+          </div>
+        ) : null}
       </div>
     </Dialog>
   );

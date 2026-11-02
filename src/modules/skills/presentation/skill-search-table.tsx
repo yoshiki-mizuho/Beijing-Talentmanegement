@@ -11,6 +11,7 @@ import {
   deleteSkillAction,
   updateSkillAction
 } from "@/modules/skills/presentation/actions";
+import { SkillLevelGuideFields } from "./skill-level-guide-fields";
 import {
   buildSkillSearchParams,
   emptySkillSearchFilters,
@@ -370,14 +371,15 @@ function SkillSearchTableInner({
               onSuccess={handleEditSuccess}
             >
               <input type="hidden" name="id" value={editingSkill.id} />
-              <FormField
-                id={`edit-skill-code-${editingSkill.id}`}
-                label="スキルコード"
-                name="code"
-                value={editingSkill.code}
-                readOnly
-                description="スキルコードは変更できません。"
-              />
+              <input type="hidden" name="code" value={editingSkill.code} />
+              <div>
+                <p className="text-sm font-medium text-[var(--foreground)]">
+                  スキルコード
+                </p>
+                <p className="mt-1 text-sm text-[var(--foreground)]">
+                  {editingSkill.code}
+                </p>
+              </div>
               <FormField
                 id={`edit-skill-name-${editingSkill.id}`}
                 label="スキル名"
@@ -404,31 +406,11 @@ function SkillSearchTableInner({
                 name="description"
                 defaultValue={editingSkill.description ?? ""}
               />
-              <div className="space-y-3 border-t border-[var(--border)] pt-4">
-                <div>
-                  <h3 className="font-semibold text-[var(--foreground)]">レベルの目安</h3>
-                  <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-                    空欄のレベルは共通の目安を表示します。
-                  </p>
-                </div>
-                {levels.map((level) => (
-                  <TextareaField
-                    key={level.level}
-                    id={`edit-skill-level-guide-${editingSkill.id}-${level.level}`}
-                    label={`Lv${level.level}`}
-                    name={`levelGuide${level.level}`}
-                    rows={2}
-                    maxLength={300}
-                    className="[&_textarea]:min-h-16"
-                    defaultValue={
-                      editingSkill.levelGuides.find(
-                        (guide) => guide.level === level.level
-                      )?.description ?? ""
-                    }
-                    placeholder={`空欄の場合: ${level.description}`}
-                  />
-                ))}
-              </div>
+              <SkillLevelGuideFields
+                idPrefix={`edit-skill-level-guide-${editingSkill.id}`}
+                levels={levels}
+                guides={editingSkill.levelGuides}
+              />
               <label className="flex min-h-11 items-center gap-2 text-sm font-medium text-[var(--foreground)]">
                 <input
                   type="checkbox"

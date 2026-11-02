@@ -50,6 +50,20 @@ export function updateRole(id: string, input: unknown, actorMemberId: string | n
   return roleRepository.updateRole(id, roleInputSchema.parse(input), actorMemberId);
 }
 
+export function updateRoleWithRequirements(
+  id: string,
+  input: unknown,
+  requirements: unknown,
+  actorMemberId: string | null
+) {
+  return roleRepository.updateRoleWithRequirements(
+    id,
+    roleInputSchema.parse(input),
+    newRoleRequirementsSchema.parse(requirements),
+    actorMemberId
+  );
+}
+
 export function deactivateRole(id: string, actorMemberId: string | null) {
   return roleRepository.deactivateRole(id, actorMemberId);
 }
@@ -63,14 +77,6 @@ export function setRoleRequirement(input: unknown, actorMemberId: string | null)
     roleRequirementInputSchema.parse(input),
     actorMemberId
   );
-}
-
-export function removeRoleRequirement(
-  roleId: string,
-  skillId: string,
-  actorMemberId: string | null
-) {
-  return roleRepository.removeRoleRequirement(roleId, skillId, actorMemberId);
 }
 
 export function evaluateMemberForRole(

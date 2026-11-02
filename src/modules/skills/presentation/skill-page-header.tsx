@@ -18,6 +18,7 @@ import { EmptyState } from "@/shared/ui/empty-state";
 import { FormField, SelectField, TextareaField } from "@/shared/ui/form-field";
 import { PageHeader } from "@/shared/ui/page-header";
 import { SubmitButton } from "@/shared/ui/submit-button";
+import { SkillLevelGuideFields } from "./skill-level-guide-fields";
 
 type SkillCategory = {
   id: string;
@@ -29,11 +30,13 @@ type SkillCategory = {
 export function SkillPageHeader({
   categories,
   canManage,
-  skillCount
+  skillCount,
+  levels
 }: {
   categories: SkillCategory[];
   canManage: boolean;
   skillCount: number;
+  levels: Array<{ level: number; description: string }>;
 }) {
   const router = useRouter();
   const [createOpen, setCreateOpen] = useState(false);
@@ -106,6 +109,10 @@ export function SkillPageHeader({
                   id="create-skill-description"
                   label="説明"
                   name="description"
+                />
+                <SkillLevelGuideFields
+                  idPrefix="create-skill-level-guide"
+                  levels={levels}
                 />
                 <label className="flex min-h-11 items-center gap-2 text-sm font-medium text-[var(--foreground)]">
                   <input

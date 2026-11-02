@@ -59,6 +59,18 @@ export function createSkill(input: unknown, actorMemberId: string | null) {
   return skillRepository.createSkill(createSkillInputSchema.parse(input), actorMemberId);
 }
 
+export function createSkillWithLevelGuides(
+  input: unknown,
+  levelGuides: unknown,
+  actorMemberId: string | null
+) {
+  return skillRepository.createSkillWithLevelGuides(
+    createSkillInputSchema.parse(input),
+    skillLevelGuidesInputSchema.parse(levelGuides),
+    actorMemberId
+  );
+}
+
 export function updateSkill(id: string, input: unknown, actorMemberId: string | null) {
   return skillRepository.updateSkill(id, skillInputSchema.parse(input), actorMemberId);
 }

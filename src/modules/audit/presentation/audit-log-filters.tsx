@@ -165,21 +165,21 @@ export function AuditLogFilters({ query, actors }: Props) {
           <label className="text-sm font-medium" htmlFor="audit-q">
             対象の名前で検索
           </label>
-          <div className="relative mt-1">
-            <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-[var(--muted-foreground)]" />
+          <div className="relative mt-1 max-w-md">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
             <Input
               id="audit-q"
               name="q"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="氏名・社員番号・スキル・カテゴリ・ロール"
-              className="pl-9 pr-9"
+              placeholder="氏名・スキル・ロールなど"
+              className="w-full pl-9 pr-11"
             />
             {search ? (
               <button
                 type="button"
                 aria-label="検索をクリア"
-                className="absolute right-2 top-2 grid h-6 w-6 place-items-center rounded hover:bg-[var(--surface-subtle)]"
+                className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded hover:bg-[var(--surface-subtle)]"
                 onClick={() => {
                   setSearch("");
                   update({ q: null });

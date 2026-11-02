@@ -330,6 +330,18 @@ export async function createSkill(
   input: CreateSkillInput,
   actorMemberId: string | null
 ) {
+  return createSkillWithLevelGuides(
+    input,
+    { guides: [1, 2, 3, 4, 5].map((level) => ({ level, description: "" })) },
+    actorMemberId
+  );
+}
+
+export async function createSkillWithLevelGuides(
+  input: CreateSkillInput,
+  levelGuides: SkillLevelGuidesInput,
+  actorMemberId: string | null
+) {
   const maximumAttempts = 3;
 
   for (let attempt = 0; attempt < maximumAttempts; attempt += 1) {
@@ -354,6 +366,23 @@ export async function createSkill(
             isActive: skill.isActive
           }
         });
+        const guides = levelGuides.guides.filter(
+          (guide) => guide.description !== ""
+        );
+        if (guides.length > 0) {
+          await tx.skillLevelGuide.createMany({
+            data: guides.map((guide) => ({ skillId: skill.id, ...guide }))
+          });
+          await recordAuditLog(tx, {
+            actorMemberId,
+            action: AUDIT_ACTION.SKILL_LEVEL_GUIDES_UPDATE,
+            targetType: AUDIT_TARGET_TYPE.SKILL,
+            targetId: skill.id,
+            after: Object.fromEntries(
+              guides.map((guide) => [guide.level, guide.description])
+            )
+          });
+        }
         return skill;
       });
     } catch (error) {
