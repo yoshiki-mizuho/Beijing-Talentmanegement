@@ -6,7 +6,8 @@ import type { ReactNode } from "react";
 import {
   countMemberSkillAssessments,
   countMemberSkills,
-  countPendingSkillAssessments
+  countPendingSkillAssessments,
+  hasMemberTargetRole
 } from "@/modules/members/application/member-service";
 import { getMyAvatarUpdatedAt } from "@/modules/members/application/member-avatar-service";
 import {
@@ -54,7 +55,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     approvedSkillCount,
     levelUpCelebrations,
     cheerCelebrations,
-    avatarUpdatedAt
+    avatarUpdatedAt,
+    hasTargetRole
   ] = await Promise.all([
     session.user.memberId
       ? countUnreadNotifications(session.user.memberId)
@@ -82,11 +84,14 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       : Promise.resolve([]),
     session.user.memberId
       ? getMyAvatarUpdatedAt(session.user.memberId)
-      : Promise.resolve(null)
+      : Promise.resolve(null),
+    session.user.memberId
+      ? hasMemberTargetRole(session.user.memberId)
+      : Promise.resolve(false)
   ]);
   const setupProgress = session.user.memberId
     ? buildSetupProgress({
-        passwordChangeRequired: session.user.passwordChangeRequired,
+        hasTargetRole,
         assessmentCount,
         approvedSkillCount
       })
@@ -104,6 +109,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       latestUnreadNotifications={latestUnreadNotifications}
       pendingApprovalCount={pendingApprovalCount}
       setupProgress={setupProgress}
+      passwordChangeRequired={session.user.passwordChangeRequired}
     >
       {children}
       <LevelUpCelebrationDialog celebrations={levelUpCelebrations} />

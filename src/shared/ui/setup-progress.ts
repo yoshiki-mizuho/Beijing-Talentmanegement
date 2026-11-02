@@ -1,13 +1,13 @@
 export type SetupProgressInput = {
-  passwordChangeRequired: boolean;
+  hasTargetRole: boolean;
   assessmentCount: number;
   approvedSkillCount: number;
 };
 
 export type SetupProgressItem = {
-  id: "password" | "first-assessment" | "first-approval";
+  id: "target-role" | "first-assessment" | "first-approval";
   label: string;
-  href: "/account/password" | "/my/skills" | "/dashboard#first-steps";
+  href: "/dashboard#target-role" | "/my/skills" | "/dashboard#first-steps";
   completed: boolean;
 };
 
@@ -20,10 +20,10 @@ export type SetupProgress = {
 
 const setupItemDefinitions = [
   {
-    id: "password",
-    label: "パスワードを決める",
-    href: "/account/password",
-    isCompleted: (input: SetupProgressInput) => !input.passwordChangeRequired
+    id: "target-role",
+    label: "目標ロールを決める",
+    href: "/dashboard#target-role",
+    isCompleted: (input: SetupProgressInput) => input.hasTargetRole
   },
   {
     id: "first-assessment",

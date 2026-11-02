@@ -225,6 +225,7 @@ function FirstDashboard({
   levelUpFeed: SerializableFeedItem[];
 }) {
   const waiting = viewModel.onboardingState === "pending";
+  const hasTargetRole = viewModel.targetRole !== null;
 
   return (
     <div className="space-y-5">
@@ -241,10 +242,27 @@ function FirstDashboard({
           はじめの3ステップ
         </h2>
         <ol className="mt-4 space-y-3">
-          <FirstStep completed number={1} title="パスワードを決める" />
+          <FirstStep
+            completed={hasTargetRole}
+            current={!hasTargetRole}
+            number={1}
+            title={
+              hasTargetRole
+                ? `目標ロールを決める（${viewModel.targetRole?.name}）`
+                : "目標ロールを決める"
+            }
+            action={!hasTargetRole ? (
+              <Link
+                href="/dashboard#target-role"
+                className="inline-flex min-h-11 items-center rounded-md bg-[var(--primary)] px-4 text-sm font-semibold text-white"
+              >
+                ロールを選ぶ
+              </Link>
+            ) : undefined}
+          />
           <FirstStep
             completed={waiting}
-            current={!waiting}
+            current={hasTargetRole && !waiting}
             number={2}
             title="得意なスキルを申請する"
             description="3つほど選ぶと1分ほどで終わります。あとから増やせます。"
@@ -258,7 +276,7 @@ function FirstDashboard({
             ) : undefined}
           />
           <FirstStep
-            current={waiting}
+            current={hasTargetRole && waiting}
             number={3}
             title={waiting ? "上司の承認を待っています" : "上司の承認を待つ"}
             description={waiting
@@ -278,17 +296,11 @@ function FirstDashboard({
             >
               得意な人を探す
             </Link>
-            <span aria-hidden="true">・</span>
-            <Link
-              href="/dashboard#target-role"
-              className="font-semibold text-[var(--primary)] hover:underline"
-            >
-              目標ロールを設定する
-            </Link>
           </p>
         ) : null}
       </section>
-      {waiting ? <TargetRoleCard viewModel={viewModel} /> : null}
+      {/* 未設定なら、ステップ1から移ってすぐ選べるように最初から選択欄を開く */}
+      <TargetRoleCard viewModel={viewModel} initialEditing={!hasTargetRole} />
       <section
         className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5"
         aria-labelledby="first-dashboard-preview-heading"
@@ -299,7 +311,7 @@ function FirstDashboard({
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           <PreviewCard icon={CalendarDays} text="成長の記録とカレンダー" />
           <PreviewCard icon={Award} text="達成バッジ" />
-          <PreviewCard icon={Target} text="目標ロールまでの進み具合（目標ロールはあとで設定できます）" />
+          <PreviewCard icon={Target} text="目標ロールまでの進み具合" />
         </div>
       </section>
       {levelUpFeed.length > 0 ? (
