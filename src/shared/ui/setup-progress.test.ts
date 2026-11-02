@@ -5,7 +5,7 @@ import { buildSetupProgress } from "@/shared/ui/setup-progress";
 describe("buildSetupProgress", () => {
   it("未完了の初期状態を3項目で返す", () => {
     const progress = buildSetupProgress({
-      passwordChangeRequired: true,
+      hasTargetRole: false,
       assessmentCount: 0,
       approvedSkillCount: 0
     });
@@ -20,9 +20,9 @@ describe("buildSetupProgress", () => {
     ]);
   });
 
-  it("申請履歴と承認済みスキルの境界値で完了を判定する", () => {
+  it("目標ロール設定済みで申請履歴と承認済みスキルがあれば全て完了にする", () => {
     const progress = buildSetupProgress({
-      passwordChangeRequired: false,
+      hasTargetRole: true,
       assessmentCount: 1,
       approvedSkillCount: 1
     });
@@ -32,9 +32,9 @@ describe("buildSetupProgress", () => {
     expect(progress.items.every((item) => item.completed)).toBe(true);
   });
 
-  it("申請していなくてもスキルを登録済みなら全て完了にする", () => {
+  it("目標ロール設定済みなら申請していなくても登録済みスキルで全て完了にする", () => {
     const progress = buildSetupProgress({
-      passwordChangeRequired: false,
+      hasTargetRole: true,
       assessmentCount: 0,
       approvedSkillCount: 3
     });
@@ -42,9 +42,26 @@ describe("buildSetupProgress", () => {
     expect(progress.isComplete).toBe(true);
   });
 
+  it("承認済みスキルがあっても目標ロールが未設定なら進捗を表示する", () => {
+    const progress = buildSetupProgress({
+      hasTargetRole: false,
+      assessmentCount: 0,
+      approvedSkillCount: 3
+    });
+
+    expect(progress.completedCount).toBe(2);
+    expect(progress.isComplete).toBe(false);
+    expect(progress.items[0]).toEqual({
+      id: "target-role",
+      label: "目標ロールを決める",
+      href: "/dashboard#target-role",
+      completed: false
+    });
+  });
+
   it("申請済みでも承認済みスキルがなければ承認項目は未完了にする", () => {
     const progress = buildSetupProgress({
-      passwordChangeRequired: false,
+      hasTargetRole: true,
       assessmentCount: 2,
       approvedSkillCount: 0
     });

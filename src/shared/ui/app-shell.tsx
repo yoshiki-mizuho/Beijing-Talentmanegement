@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { SignOutButton } from "@/modules/auth/presentation/sign-out-button";
@@ -73,6 +73,7 @@ type AppShellProps = {
   latestUnreadNotifications: Notification[];
   pendingApprovalCount: number;
   setupProgress: SetupProgress | null;
+  passwordChangeRequired: boolean;
   children: ReactNode;
 };
 
@@ -82,8 +83,34 @@ export function AppShell({
   latestUnreadNotifications,
   pendingApprovalCount,
   setupProgress,
+  passwordChangeRequired,
   children
 }: AppShellProps) {
+  if (passwordChangeRequired) {
+    return <RestrictedAppShell>{children}</RestrictedAppShell>;
+  }
+
+  return (
+    <StandardAppShell
+      user={user}
+      unreadNotificationCount={unreadNotificationCount}
+      latestUnreadNotifications={latestUnreadNotifications}
+      pendingApprovalCount={pendingApprovalCount}
+      setupProgress={setupProgress}
+    >
+      {children}
+    </StandardAppShell>
+  );
+}
+
+function StandardAppShell({
+  user,
+  unreadNotificationCount,
+  latestUnreadNotifications,
+  pendingApprovalCount,
+  setupProgress,
+  children
+}: Omit<AppShellProps, "passwordChangeRequired">) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigationGroups = getNavigationGroupsForRole(user.role, user.memberId);
@@ -210,6 +237,33 @@ export function AppShell({
           </aside>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function RestrictedAppShell({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (pathname !== "/account/password") {
+      router.replace("/account/password");
+    }
+  }, [pathname, router]);
+
+  return (
+    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+      <header className="sticky top-0 z-40 flex h-16 items-center border-b border-[var(--border)] bg-[var(--surface)] px-3 sm:px-4">
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--primary)] text-base font-bold text-[var(--primary-foreground)]">
+            T
+          </span>
+          <span className="text-base font-bold">TalentHub</span>
+        </div>
+        <div className="min-w-4 flex-1" aria-hidden="true" />
+        <SignOutButton />
+      </header>
+      <main className="mx-auto w-full max-w-[1200px] p-4 md:p-6">{children}</main>
     </div>
   );
 }

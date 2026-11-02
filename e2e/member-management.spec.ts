@@ -48,10 +48,21 @@ test("管理者がメンバーを登録し、詳細で役職を更新して無�
     }, /\/account\/password$/);
     try {
       await expect(newMember.page.getByLabel("現在のパスワード")).toHaveCount(0);
+      await expect(
+        newMember.page.getByRole("navigation", { name: "メインナビゲーション" }),
+      ).toHaveCount(0);
+      await expect(
+        newMember.page.getByText("スキルを申請", { exact: true }),
+      ).toHaveCount(0);
+      await newMember.page.goto("/dashboard");
+      await expect(newMember.page).toHaveURL(/\/account\/password$/);
       await newMember.page.getByLabel("新しいパスワード").fill(`Changed-${uniqueSuffix}`);
       await newMember.page.getByLabel("もう一度入力").fill(`Changed-${uniqueSuffix}`);
       await newMember.page.getByRole("button", { name: "決めて始める" }).click();
       await expect(newMember.page).toHaveURL(/\/dashboard/);
+      await expect(
+        newMember.page.locator("#first-steps li").first(),
+      ).toContainText("目標ロールを決める");
     } finally {
       await newMember.context.close();
     }

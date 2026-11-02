@@ -12,8 +12,14 @@ import { Button } from "@/shared/ui/button";
 import { Select } from "@/shared/ui/select";
 import { SubmitButton } from "@/shared/ui/submit-button";
 
-export function TargetRoleCard({ viewModel }: { viewModel: MemberDashboardViewModel }) {
-  const [editing, setEditing] = useState(false);
+export function TargetRoleCard({
+  viewModel,
+  initialEditing = false
+}: {
+  viewModel: MemberDashboardViewModel;
+  initialEditing?: boolean;
+}) {
+  const [editing, setEditing] = useState(initialEditing);
   const role = viewModel.targetRole;
   const circumference = 2 * Math.PI * 42;
   const dashOffset = circumference * (1 - (role?.achievementRate ?? 0) / 100);
