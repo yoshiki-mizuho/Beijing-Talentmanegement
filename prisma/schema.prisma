@@ -416,6 +416,7 @@ model RoleRequirement {
   requiredLevel Int
   skillLevel    SkillLevel @relation(fields: [requiredLevel], references: [level])
   isRequired    Boolean    @default(true)
+  anyOfGroup    Int?
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 

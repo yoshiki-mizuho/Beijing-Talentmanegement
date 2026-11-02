@@ -32,6 +32,7 @@ export async function getTeamDashboard(
             skillId: requirement.skillId,
             skillName: requirement.skill.name,
             requiredLevel: requirement.requiredLevel
+            ,anyOfGroup: requirement.anyOfGroup
           }))
         }
       : null,

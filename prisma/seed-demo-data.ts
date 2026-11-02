@@ -131,7 +131,10 @@ export const demoRoles = [
       { skillCode: "DEMO-SKILL-002", requiredLevel: 4, isRequired: true },
       { skillCode: "DEMO-SKILL-005", requiredLevel: 4, isRequired: true },
       { skillCode: "DEMO-SKILL-006", requiredLevel: 3, isRequired: true },
-      { skillCode: "DEMO-SKILL-007", requiredLevel: 2, isRequired: false }
+      { skillCode: "DEMO-SKILL-007", requiredLevel: 2, isRequired: false },
+      // 「いずれか1つ」の組の例
+      { skillCode: "DEMO-SKILL-001", requiredLevel: 3, isRequired: true, anyOfGroup: 1 },
+      { skillCode: "DEMO-SKILL-003", requiredLevel: 3, isRequired: true, anyOfGroup: 1 }
     ]
   },
   {

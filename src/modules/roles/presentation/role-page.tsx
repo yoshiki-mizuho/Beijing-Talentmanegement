@@ -1,9 +1,9 @@
 "use client";
 
-import { Check, Plus, Target, X } from "lucide-react";
+import { Check, GitFork, Plus, Target, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState, type MouseEvent } from "react";
 
 import { updateMemberTargetRoleAction } from "@/modules/members/presentation/actions";
 import {
@@ -27,7 +27,24 @@ type RoleItem = ReturnType<
   typeof import("./role-page-view-model").buildRolePageViewModel
 >[number];
 type SkillOption = { id: string; name: string; categoryName: string };
-type DraftRequirement = { key: number; skillId: string; requiredLevel: number };
+type DraftRequirement = { key: number; skillId: string; requiredLevel: number; anyOfGroup: number | null };
+type DraftRequirementUnit =
+  | { kind: "single"; requirement: DraftRequirement }
+  | { kind: "group"; group: number; requirements: DraftRequirement[] };
+
+function requirementsForSubmission(requirements: DraftRequirement[]) {
+  const groupNumbers = new Map<number, number>();
+  return requirements.filter((item) => item.skillId).map((item) => {
+    if (item.anyOfGroup !== null && !groupNumbers.has(item.anyOfGroup)) {
+      groupNumbers.set(item.anyOfGroup, groupNumbers.size + 1);
+    }
+    return {
+      skillId: item.skillId,
+      requiredLevel: item.requiredLevel,
+      anyOfGroup: item.anyOfGroup === null ? null : groupNumbers.get(item.anyOfGroup)
+    };
+  });
+}
 
 export function RolePage({
   roles,
@@ -237,12 +254,20 @@ function RoleDetail({
               </tr>
             </thead>
             <tbody>
-              {role.requirements.map((requirement) => (
-                <tr
-                  key={requirement.id}
-                  className="border-b border-[var(--border)]"
-                >
-                  <td className="py-3">
+              {role.requirements.map((requirement) => {
+                const firstInGroup = requirement.anyOfGroup !== null &&
+                  role.requirements.find((item) => item.anyOfGroup === requirement.anyOfGroup)?.id === requirement.id;
+                return (
+                <Fragment key={requirement.id}>
+                  {firstInGroup ? (
+                    <tr className="bg-[var(--surface-subtle)]">
+                      <td colSpan={4} className="px-3 py-2 text-xs font-semibold text-[var(--primary)]">
+                        いずれか1つ
+                      </td>
+                    </tr>
+                  ) : null}
+                  <tr className={`border-b border-[var(--border)] ${requirement.anyOfGroup === null ? "" : "bg-[var(--surface-subtle)]"}`}>
+                  <td className={`py-3 ${requirement.anyOfGroup === null ? "" : "border-l-2 border-[var(--primary)] pl-6"}`}>
                     {requirement.skill.name}
                     {requirement.isRequired ? null : (
                       <span className="ml-2 text-xs text-[var(--muted-foreground)]">
@@ -272,7 +297,8 @@ function RoleDetail({
                     )}
                   </td>
                 </tr>
-              ))}
+                </Fragment>
+              );})}
             </tbody>
           </table>
         </div>
@@ -377,15 +403,44 @@ function RoleFormDialog({
           key: index + 1,
           skillId: requirement.skillId,
           requiredLevel: requirement.requiredLevel,
+          anyOfGroup: requirement.anyOfGroup ?? null,
         }))
       : [];
   const [nextKey, setNextKey] = useState(initialRequirements.length + 1);
   const [requirements, setRequirements] =
     useState<DraftRequirement[]>(initialRequirements);
+  const [formError, setFormError] = useState<string | null>(null);
   const selected = useMemo(
     () => new Set(requirements.map((item) => item.skillId).filter(Boolean)),
     [requirements],
   );
+  const requirementUnits = useMemo(() => {
+    const renderedGroups = new Set<number>();
+    return requirements.flatMap<DraftRequirementUnit>((requirement) => {
+      if (requirement.anyOfGroup === null) {
+        return [{ kind: "single" as const, requirement }];
+      }
+      if (renderedGroups.has(requirement.anyOfGroup)) return [];
+      renderedGroups.add(requirement.anyOfGroup);
+      return [{
+        kind: "group" as const,
+        group: requirement.anyOfGroup,
+        requirements: requirements.filter((item) => item.anyOfGroup === requirement.anyOfGroup),
+      }];
+    });
+  }, [requirements]);
+
+  function validateBeforeSubmit(event: MouseEvent<HTMLButtonElement>) {
+    const invalidGroup = requirementUnits.some((unit) =>
+      unit.kind === "group" && unit.requirements.filter((item) => item.skillId).length < 2
+    );
+    if (!invalidGroup) {
+      setFormError(null);
+      return;
+    }
+    event.preventDefault();
+    setFormError("いずれかの組には、スキルを2つ以上入れてください。");
+  }
   return (
     <Dialog
       open={open}
@@ -400,6 +455,11 @@ function RoleFormDialog({
           className="space-y-4"
           onSuccess={mode === "create" ? onSuccess : onRefresh}
         >
+          {formError ? (
+            <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm font-medium text-[var(--danger)]">
+              {formError}
+            </p>
+          ) : null}
           {mode === "edit" && role ? (
             <input type="hidden" name="id" value={role.id} />
           ) : null}
@@ -419,15 +479,24 @@ function RoleFormDialog({
           <input
             type="hidden"
             name="requirements"
-            value={JSON.stringify(requirements.filter((item) => item.skillId))}
+            value={JSON.stringify(requirementsForSubmission(requirements))}
           />
           <section className="space-y-3">
             <h3 className="font-semibold">必要なスキル</h3>
-            {requirements.map((requirement) => (
-              <div
-                key={requirement.key}
-                className="grid grid-cols-[minmax(0,1fr)_7rem_auto] items-center gap-2"
-              >
+            {requirementUnits.map((unit) => {
+              const unitRequirements = unit.kind === "single" ? [unit.requirement] : unit.requirements;
+              return (
+              <div key={unit.kind === "single" ? unit.requirement.key : `group-${unit.group}`} className={unit.kind === "group" ? "space-y-2 rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface-subtle)] p-3" : ""}>
+                {unit.kind === "group" ? (
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold">次のうち いずれか1つ</p>
+                    <Button type="button" variant="ghost" className="min-h-11 min-w-11 px-0" aria-label="この組を外す" onClick={() => setRequirements((items) => items.filter((item) => item.anyOfGroup !== unit.group))}>
+                      <X className="h-4 w-4" aria-hidden="true" />
+                    </Button>
+                  </div>
+                ) : null}
+                {unitRequirements.map((requirement) => (
+                <div key={requirement.key} className="grid grid-cols-[minmax(0,1fr)_7rem_auto] items-center gap-2">
                 <select
                   className="min-h-11 rounded-md border bg-[var(--surface)] px-3"
                   aria-label="必要なスキル"
@@ -484,15 +553,23 @@ function RoleFormDialog({
                   className="min-h-11 min-w-11 px-0"
                   aria-label={`${skills.find((skill) => skill.id === requirement.skillId)?.name ?? "この行"}を外す`}
                   onClick={() =>
-                    setRequirements((items) =>
-                      items.filter((item) => item.key !== requirement.key),
-                    )
+                    setRequirements((items) => items.filter((item) => item.key !== requirement.key))
                   }
                 >
                   <X className="h-4 w-4" aria-hidden="true" />
                 </Button>
+                </div>
+                ))}
+                {unit.kind === "group" ? (
+                  <Button type="button" variant="ghost" size="small" disabled={selected.size >= skills.length} onClick={() => {
+                    setRequirements((items) => [...items, { key: nextKey, skillId: "", requiredLevel: 1, anyOfGroup: unit.group }]);
+                    setNextKey((value) => value + 1);
+                  }}>
+                    ＋ 候補を追加
+                  </Button>
+                ) : null}
               </div>
-            ))}
+            );})}
             <Button
               type="button"
               variant="secondary"
@@ -500,12 +577,29 @@ function RoleFormDialog({
               onClick={() => {
                 setRequirements((items) => [
                   ...items,
-                  { key: nextKey, skillId: "", requiredLevel: 1 },
+                  { key: nextKey, skillId: "", requiredLevel: 1, anyOfGroup: null },
                 ]);
                 setNextKey((value) => value + 1);
               }}
             >
               ＋ スキルを追加
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={selected.size >= skills.length - 1}
+              onClick={() => {
+                const group = Math.max(0, ...requirements.map((item) => item.anyOfGroup ?? 0)) + 1;
+                setRequirements((items) => [
+                  ...items,
+                  { key: nextKey, skillId: "", requiredLevel: 1, anyOfGroup: group },
+                  { key: nextKey + 1, skillId: "", requiredLevel: 1, anyOfGroup: group },
+                ]);
+                setNextKey((value) => value + 2);
+              }}
+            >
+              <GitFork className="mr-2 h-4 w-4" aria-hidden="true" />
+              ＋ いずれかの組を追加
             </Button>
           </section>
           <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
@@ -517,7 +611,7 @@ function RoleFormDialog({
             有効
           </label>
           <div className="flex justify-end">
-            <SubmitButton pendingLabel="保存中…">保存</SubmitButton>
+            <SubmitButton pendingLabel="保存中…" onClick={validateBeforeSubmit}>保存</SubmitButton>
           </div>
         </ActionForm>
         {mode === "edit" && role ? (

@@ -36,6 +36,7 @@ export async function getMemberDashboardData(memberId: string) {
               skillId: true,
               requiredLevel: true,
               isRequired: true,
+              anyOfGroup: true,
               skill: {
                 select: {
                   name: true,

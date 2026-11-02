@@ -16,6 +16,7 @@ import {
 } from "@/modules/explore/infrastructure/explore-repository";
 import { badgeDefinitions, badgeRarities } from "@/modules/growth/domain/badge-art";
 import { calculateBadgeAchievements } from "@/modules/growth/domain/growth-insights";
+import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
 
 export async function getExploreData(
   viewer: ProfileViewer,
@@ -34,13 +35,14 @@ export async function getExploreData(
     categoryName:
       changes.find((change) => change.skillId === item.skillId)?.skill.category.name ?? ""
   }));
-  const currentLevels = new Map(
-    viewerMember?.memberSkills.map((item) => [item.skillId, item.level]) ?? []
+  const targetEvaluation = evaluateRoleAchievement(
+    (viewerMember?.targetRole?.roleRequirements ?? []).map((item) => ({ ...item, isRequired: true })),
+    viewerMember?.memberSkills ?? []
   );
   const targetGapSkillIds = new Set(
-    (viewerMember?.targetRole?.roleRequirements ?? [])
-      .filter((item) => (currentLevels.get(item.skillId) ?? 0) < item.requiredLevel)
-      .map((item) => item.skillId)
+    targetEvaluation.units.flatMap((unit) =>
+      unit.satisfied ? [] : unit.kind === "single" ? [unit.requirement.skillId] : unit.requirements.map((item) => item.skillId)
+    )
   );
   const trendingSkillIds = new Set(trending.map((item) => item.skillId));
   const recommendations = candidates

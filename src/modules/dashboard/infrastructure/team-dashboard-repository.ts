@@ -33,6 +33,7 @@ export function getTeamDashboardData(managerMemberId: string) {
                 select: {
                   skillId: true,
                   requiredLevel: true,
+                  anyOfGroup: true,
                   skill: { select: { name: true } }
                 }
               }

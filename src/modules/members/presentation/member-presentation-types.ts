@@ -68,6 +68,7 @@ export type RoleOption = {
     skillId: string;
     requiredLevel: number;
     isRequired: boolean;
+    anyOfGroup?: number | null;
     skill: {
       name: string;
     };

@@ -1,8 +1,9 @@
 "use client";
 
-import { KeyRound } from "lucide-react";
+import { CheckCircle2, KeyRound } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
 
 import {
   deactivateMemberAction,
@@ -80,18 +81,15 @@ export function MemberOverviewPanel({
     (assessment) => !ownedSkillIds.has(assessment.skillId),
   );
   const targetRole = roles.find((role) => role.id === member.targetRoleId);
-  const levels = new Map(
-    member.memberSkills.map((memberSkill) => [
-      memberSkill.skillId,
-      memberSkill.level,
-    ]),
-  );
-  const remainingSkillCount =
-    targetRole?.roleRequirements.filter(
-      (requirement) =>
-        requirement.isRequired &&
-        (levels.get(requirement.skillId) ?? 0) < requirement.requiredLevel,
-    ).length ?? 0;
+  const targetRoleEvaluation = targetRole
+    ? evaluateRoleAchievement(
+        targetRole.roleRequirements,
+        member.memberSkills.map((skill) => ({ skillId: skill.skillId, level: skill.level })),
+      )
+    : null;
+  const remainingSkillCount = targetRoleEvaluation
+    ? targetRoleEvaluation.requiredCount - targetRoleEvaluation.satisfiedCount
+    : 0;
 
   return (
     <section
@@ -142,6 +140,20 @@ export function MemberOverviewPanel({
                   >
                     ロールの詳細を見る
                   </Link>
+                  {targetRoleEvaluation ? (
+                    <div className="mt-2 space-y-2">
+                      {targetRoleEvaluation.units.map((unit, index) => (
+                        <div key={unit.kind === "single" ? unit.requirement.skillId : `group-${unit.group}`} className={unit.kind === "anyOf" ? "rounded-lg border border-dashed border-[var(--border)] p-2" : ""}>
+                          {unit.kind === "anyOf" ? <p className="mb-1 text-xs font-semibold text-[var(--primary)]">いずれか1つ</p> : null}
+                          {(unit.kind === "single" ? [unit.requirement] : unit.requirements).map((requirement) => (
+                            <p key={`${index}-${requirement.skillId}`} className={`flex items-center gap-1 ${requirement.satisfied ? "text-[var(--primary)]" : ""}`}>
+                              {requirement.satisfied ? <><CheckCircle2 className="h-4 w-4" aria-hidden="true" /><span className="sr-only">達成</span></> : null}{targetRole?.roleRequirements.find((item) => item.skillId === requirement.skillId)?.skill.name ?? requirement.skillId} Lv{requirement.requiredLevel}
+                            </p>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </div>

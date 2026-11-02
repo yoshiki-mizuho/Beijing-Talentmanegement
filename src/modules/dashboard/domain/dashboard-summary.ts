@@ -11,6 +11,7 @@ export type OrganizationMember = {
       skillId: string;
       requiredLevel: number;
       isRequired: boolean;
+      anyOfGroup?: number | null;
       skill: { name: string };
     }[];
   };
@@ -64,21 +65,15 @@ export function buildOrganizationDashboard(input: {
     { skillId: string; name: string; count: number }
   >();
   for (const member of targets) {
-    const levels = new Map(
-      member.memberSkills.map((skill) => [skill.skillId, skill.level]),
-    );
-    for (const requirement of member.targetRole!.roleRequirements.filter(
-      (item) => item.isRequired,
-    )) {
-      if ((levels.get(requirement.skillId) ?? 0) < requirement.requiredLevel) {
+    const evaluation = evaluateRoleAchievement(member.targetRole!.roleRequirements, member.memberSkills);
+    for (const requirement of evaluation.missingRequirements) {
         const item = missing.get(requirement.skillId) ?? {
           skillId: requirement.skillId,
-          name: requirement.skill.name,
+          name: member.targetRole!.roleRequirements.find((source) => source.skillId === requirement.skillId)?.skill.name ?? requirement.skillId,
           count: 0,
         };
         item.count += 1;
         missing.set(requirement.skillId, item);
-      }
     }
   }
   const staleBoundary = new Date(input.now.getTime() - 7 * 86400000);

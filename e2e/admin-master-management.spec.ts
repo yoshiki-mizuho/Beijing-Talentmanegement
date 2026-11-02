@@ -194,11 +194,27 @@ test("管理者がスキルを作成・編集・無効化し、ロール要件�
     await roleDialog.getByRole("button", { name: "保存", exact: true }).click();
     await expect(admin.page.getByText("ロールを更新しました。")).toBeVisible();
 
+    await roleDialog.getByRole("button", { name: "＋ いずれかの組を追加" }).click();
+    const groupSelects = roleDialog.getByLabel("必要なスキル");
+    const groupSelectCount = await groupSelects.count();
+    for (let index = groupSelectCount - 2; index < groupSelectCount; index += 1) {
+      const value = await groupSelects.nth(index).locator("option:not([value=''])").first().getAttribute("value");
+      if (!value) throw new Error("いずれかの組の候補がありません。");
+      await groupSelects.nth(index).selectOption(value);
+    }
+    await roleDialog.getByRole("button", { name: "＋ 候補を追加" }).click();
+    await expect(roleDialog.getByLabel("必要なスキル")).toHaveCount(groupSelectCount + 1);
+    await roleDialog.getByRole("button", { name: "この行を外す" }).click();
+    await roleDialog.getByRole("button", { name: "保存", exact: true }).click();
+    await expect(admin.page.getByText("いずれか1つ").first()).toBeVisible();
+
+    await roleDialog.getByRole("button", { name: "この組を外す" }).click();
+
     await roleDialog
       .getByRole("button", { name: `${editedSkillName}を外す` })
       .click();
     await roleDialog.getByRole("button", { name: "保存", exact: true }).click();
-    await expect(admin.page.getByText("ロールを更新しました。")).toBeVisible();
+    await expect(admin.page.getByText("ロールを更新しました。").last()).toBeVisible();
 
     await admin.page.goto("/skills");
     // 一覧の読み込みで行の位置がずれないよう、名前で1件に絞ってから操作する

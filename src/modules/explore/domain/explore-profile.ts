@@ -1,4 +1,5 @@
 import { isGrowthLevelChange } from "@/modules/growth/domain/level-change-source";
+import { isRoleAchieved } from "@/modules/roles/domain/role-achievement";
 
 export type ProfileViewer = { role: string; memberId: string };
 export type VisibleMember = {
@@ -132,16 +133,16 @@ export function achievedRoleNames(
   skills: ReadonlyArray<{ skillId: string; level: number }>,
   roles: ReadonlyArray<{
     name: string;
-    requirements: ReadonlyArray<{ skillId: string; requiredLevel: number }>;
+    requirements: ReadonlyArray<{ skillId: string; requiredLevel: number; anyOfGroup?: number | null }>;
   }>
 ) {
-  const levels = new Map(skills.map((skill) => [skill.skillId, skill.level]));
   return roles
     .filter(
       (role) =>
         role.requirements.length > 0 &&
-        role.requirements.every(
-          (requirement) => (levels.get(requirement.skillId) ?? 0) >= requirement.requiredLevel
+        isRoleAchieved(
+          role.requirements.map((requirement) => ({ ...requirement, isRequired: true })),
+          [...skills]
         )
     )
     .map((role) => role.name);

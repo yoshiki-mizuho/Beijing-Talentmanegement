@@ -2,7 +2,7 @@
 
 import { CheckCircle2, Target } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import type { MemberDashboardViewModel } from "@/modules/dashboard/presentation/member-dashboard-view-model";
 import { DashboardSectionHeading } from "@/modules/dashboard/presentation/dashboard-section-heading";
@@ -11,6 +11,11 @@ import { ActionForm } from "@/shared/ui/action-form";
 import { Button } from "@/shared/ui/button";
 import { Select } from "@/shared/ui/select";
 import { SubmitButton } from "@/shared/ui/submit-button";
+
+type TargetRequirement = NonNullable<MemberDashboardViewModel["targetRole"]>["requirements"][number];
+type TargetRequirementUnit =
+  | { kind: "single"; requirement: TargetRequirement }
+  | { kind: "group"; group: number; requirements: TargetRequirement[] };
 
 export function TargetRoleCard({
   viewModel,
@@ -21,6 +26,22 @@ export function TargetRoleCard({
 }) {
   const [editing, setEditing] = useState(initialEditing);
   const role = viewModel.targetRole;
+  const requirementUnits = useMemo(() => {
+    if (!role) return [];
+    const renderedGroups = new Set<number>();
+    return role.requirements.flatMap<TargetRequirementUnit>((requirement) => {
+      if (requirement.anyOfGroup === null) {
+        return [{ kind: "single" as const, requirement }];
+      }
+      if (renderedGroups.has(requirement.anyOfGroup)) return [];
+      renderedGroups.add(requirement.anyOfGroup);
+      return [{
+        kind: "group" as const,
+        group: requirement.anyOfGroup,
+        requirements: role.requirements.filter((item) => item.anyOfGroup === requirement.anyOfGroup),
+      }];
+    });
+  }, [role]);
   const circumference = 2 * Math.PI * 42;
   const dashOffset = circumference * (1 - (role?.achievementRate ?? 0) / 100);
 
@@ -85,22 +106,29 @@ export function TargetRoleCard({
               必要なスキルをすべて見る
             </summary>
             <ul className="space-y-2 pb-1">
-              {role.requirements.map((requirement) => (
+              {requirementUnits.map((unit) => {
+                const requirements = unit.kind === "single" ? [unit.requirement] : unit.requirements;
+                const achieved = unit.kind === "single"
+                  ? unit.requirement.achieved
+                  : unit.requirements.some((requirement) => requirement.achieved);
+                return (
                 <li
-                  key={requirement.skillId}
-                  className={`grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-x-3 rounded-lg px-3 py-2 text-sm ${requirement.achieved ? "bg-[var(--primary-subtle)] text-[var(--primary)]" : "bg-[var(--surface-subtle)] text-[var(--muted-foreground)]"}`}
+                  key={unit.kind === "single" ? unit.requirement.skillId : `group-${unit.group}`}
+                  className={`rounded-lg px-3 py-2 text-sm ${achieved ? "bg-[var(--primary-subtle)] text-[var(--primary)]" : "bg-[var(--surface-subtle)] text-[var(--muted-foreground)]"}`}
                 >
-                  <CheckCircle2
-                    className={`h-4 w-4 shrink-0 ${requirement.achieved ? "opacity-100" : "opacity-30"}`}
-                    aria-hidden="true"
-                  />
-                  <span className="min-w-0 truncate font-medium">
-                    {requirement.skillName}
-                  </span>
-                  <span className="whitespace-nowrap">必要 Lv{requirement.requiredLevel}</span>
-                  <span className="whitespace-nowrap">{requirement.currentLevel === null ? "未保有" : `今 Lv${requirement.currentLevel}`}</span>
+                  {unit.kind === "group" ? <p className="mb-1 text-xs font-semibold">いずれか1つ</p> : null}
+                  <div className={unit.kind === "group" ? "space-y-1 pl-3" : ""}>
+                    {requirements.map((requirement) => (
+                      <div key={requirement.skillId} className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-x-3">
+                        <CheckCircle2 className={`h-4 w-4 shrink-0 ${requirement.achieved ? "opacity-100" : "opacity-30"}`} aria-hidden="true" />
+                        <span className="min-w-0 truncate font-medium">{requirement.skillName}</span>
+                        <span className="whitespace-nowrap">必要 Lv{requirement.requiredLevel}</span>
+                        <span className="whitespace-nowrap">{requirement.currentLevel === null ? "未保有" : `今 Lv${requirement.currentLevel}`}</span>
+                      </div>
+                    ))}
+                  </div>
                 </li>
-              ))}
+              );})}
             </ul>
           </details>
         ) : editing ? (

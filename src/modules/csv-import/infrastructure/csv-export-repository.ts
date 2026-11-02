@@ -76,6 +76,7 @@ export async function loadCsvExportRows<T extends CsvExportTarget>(
               skill: { select: { code: true } },
               requiredLevel: true,
               isRequired: true,
+              anyOfGroup: true,
             },
             orderBy: { skill: { code: "asc" } },
           },

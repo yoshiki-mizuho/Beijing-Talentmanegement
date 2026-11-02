@@ -1,3 +1,5 @@
+import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
+
 export type TeamMemberSnapshot = {
   id: string;
   name: string;
@@ -9,6 +11,8 @@ export type TeamMemberSnapshot = {
       skillId: string;
       skillName: string;
       requiredLevel: number;
+      anyOfGroup?: number | null;
+      isRequired?: boolean;
     }[];
   } | null;
   memberSkills: { skillId: string; level: number }[];
@@ -80,9 +84,11 @@ export function findAlmostThereMembers(members: TeamMemberSnapshot[]) {
   return members.flatMap((member) => {
     if (!member.targetRole) return [];
     const levels = new Map(member.memberSkills.map((skill) => [skill.skillId, skill.level]));
-    const gaps = member.targetRole.roleRequirements.filter(
-      (requirement) => (levels.get(requirement.skillId) ?? 0) < requirement.requiredLevel
+    const evaluation = evaluateRoleAchievement(
+      member.targetRole.roleRequirements.map((requirement) => ({ ...requirement, isRequired: requirement.isRequired ?? true })),
+      member.memberSkills
     );
+    const gaps = evaluation.missingRequirements;
     if (gaps.length !== 1) return [];
     const gap = gaps[0];
     return [{
@@ -91,7 +97,7 @@ export function findAlmostThereMembers(members: TeamMemberSnapshot[]) {
       avatarUpdatedAt: member.avatarUpdatedAt,
       roleName: member.targetRole.name,
       skillId: gap.skillId,
-      skillName: gap.skillName,
+      skillName: gap.skillName ?? gap.skillId,
       currentLevel: levels.get(gap.skillId) ?? 0,
       requiredLevel: gap.requiredLevel,
       pending: member.pendingAssessments.some((assessment) => assessment.skillId === gap.skillId)
@@ -133,13 +139,18 @@ export function aggregateMissingSkills(members: TeamMemberSnapshot[]) {
   const counts = new Map<string, { skillId: string; skillName: string; count: number }>();
   for (const member of members) {
     if (!member.targetRole) continue;
-    const levels = new Map(member.memberSkills.map((skill) => [skill.skillId, skill.level]));
-    for (const requirement of member.targetRole.roleRequirements) {
-      if ((levels.get(requirement.skillId) ?? 0) >= requirement.requiredLevel) continue;
+    const evaluation = evaluateRoleAchievement(
+      member.targetRole.roleRequirements.map((requirement) => ({ ...requirement, isRequired: requirement.isRequired ?? true })),
+      member.memberSkills
+    );
+    const missing = evaluation.units.flatMap((unit) =>
+      unit.satisfied ? [] : unit.kind === "single" ? [unit.requirement] : unit.requirements
+    );
+    for (const requirement of missing) {
       const current = counts.get(requirement.skillId);
       counts.set(requirement.skillId, {
         skillId: requirement.skillId,
-        skillName: requirement.skillName,
+        skillName: requirement.skillName ?? requirement.skillId,
         count: (current?.count ?? 0) + 1
       });
     }
@@ -151,10 +162,10 @@ export function aggregateMissingSkills(members: TeamMemberSnapshot[]) {
 
 export function hasAchievedTargetRole(member: TeamMemberSnapshot) {
   if (!member.targetRole || member.targetRole.roleRequirements.length === 0) return false;
-  const levels = new Map(member.memberSkills.map((skill) => [skill.skillId, skill.level]));
-  return member.targetRole.roleRequirements.every(
-    (requirement) => (levels.get(requirement.skillId) ?? 0) >= requirement.requiredLevel
-  );
+  return evaluateRoleAchievement(
+    member.targetRole.roleRequirements.map((requirement) => ({ ...requirement, isRequired: requirement.isRequired ?? true })),
+    member.memberSkills
+  ).achieved;
 }
 
 function tokyoMonthStart(year: number, month: number) {

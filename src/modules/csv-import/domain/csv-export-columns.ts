@@ -61,6 +61,7 @@ export const csvExportDefinitions = {
       "skill_code",
       "required_level",
       "is_required",
+      "any_of_group",
     ],
   },
 } as const satisfies Record<
@@ -111,6 +112,7 @@ export type CsvExportRows = {
       skill: { code: string };
       requiredLevel: number;
       isRequired: boolean;
+      anyOfGroup?: number | null;
     }>;
   }>;
 };
@@ -162,7 +164,7 @@ export function toCsvExportRows<T extends CsvExportTarget>(
       return (rows as CsvExportRows["roles"]).flatMap((row) => {
         const requirements = row.roleRequirements.length
           ? row.roleRequirements
-          : [{ skill: null, requiredLevel: null, isRequired: null }];
+          : [{ skill: null, requiredLevel: null, isRequired: null, anyOfGroup: null }];
         return requirements.map((requirement) => [
           row.name,
           row.description ?? "",
@@ -170,6 +172,7 @@ export function toCsvExportRows<T extends CsvExportTarget>(
           requirement.skill?.code ?? "",
           requirement.requiredLevel ?? "",
           requirement.isRequired ?? "",
+          requirement.anyOfGroup ?? "",
         ]);
       });
   }

@@ -20,7 +20,8 @@ export function createRole(input: unknown, actorMemberId: string | null) {
 
 const newRoleRequirementSchema = z.object({
   skillId: z.string().min(1),
-  requiredLevel: z.number().int().min(1).max(5)
+  requiredLevel: z.number().int().min(1).max(5),
+  anyOfGroup: z.number().int().min(1).nullable().optional()
 });
 const newRoleRequirementsSchema = z.array(newRoleRequirementSchema).superRefine(
   (requirements, context) => {
@@ -29,6 +30,18 @@ const newRoleRequirementsSchema = z.array(newRoleRequirementSchema).superRefine(
       context.addIssue({
         code: "custom",
         message: "同じスキルを複数の要件に指定できません。"
+      });
+    }
+    const groupCounts = new Map<number, number>();
+    for (const requirement of requirements) {
+      if (requirement.anyOfGroup != null) {
+        groupCounts.set(requirement.anyOfGroup, (groupCounts.get(requirement.anyOfGroup) ?? 0) + 1);
+      }
+    }
+    if ([...groupCounts.values()].some((count) => count < 2)) {
+      context.addIssue({
+        code: "custom",
+        message: "いずれかの組には、スキルを2つ以上入れてください。"
       });
     }
   }
