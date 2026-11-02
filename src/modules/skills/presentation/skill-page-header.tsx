@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpDown, FolderTree, Plus, Save } from "lucide-react";
+import { FolderTree, Plus, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -31,14 +31,12 @@ export function SkillPageHeader({
   categories,
   canManage,
   skillCount,
-  levels,
-  onReorder
+  levels
 }: {
   categories: SkillCategory[];
   canManage: boolean;
   skillCount: number;
   levels: Array<{ level: number; description: string }>;
-  onReorder: () => void;
 }) {
   const router = useRouter();
   const [createOpen, setCreateOpen] = useState(false);
@@ -53,10 +51,6 @@ export function SkillPageHeader({
         actions={
           canManage ? (
             <div className="flex flex-wrap justify-end gap-2">
-              <Button variant="secondary" onClick={onReorder}>
-                <ArrowUpDown className="h-4 w-4" aria-hidden="true" />
-                並び替え
-              </Button>
               <Button variant="secondary" onClick={() => setCategoriesOpen(true)}>
                 <FolderTree className="h-4 w-4" aria-hidden="true" />
                 カテゴリを管理

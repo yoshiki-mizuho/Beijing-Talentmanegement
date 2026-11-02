@@ -32,8 +32,10 @@ test("キーボードでスキルを別カテゴリへ並び替えられる", as
     await createDialog.getByRole("button", { name: "スキルを追加", exact: true }).click();
     await expect(admin.page.getByText("スキルを登録しました。")).toBeVisible();
 
-    await admin.page.getByRole("button", { name: "並び替え" }).click();
     const handle = admin.page.getByRole("button", { name: `${skillName}を並び替える` });
+    await admin.page.getByLabel("スキル名").fill(skillName);
+    await expect(handle).toBeDisabled();
+    await admin.page.getByRole("button", { name: "検索をクリア" }).click();
     await handle.focus();
     await admin.page.keyboard.press("Space");
     for (let attempt = 0; attempt < 6; attempt += 1) {
@@ -42,9 +44,9 @@ test("キーボードでスキルを別カテゴリへ並び替えられる", as
       if (await targetCard.getByText(skillName, { exact: true }).count()) break;
     }
     await admin.page.keyboard.press("Space");
-    await admin.page.getByRole("button", { name: "保存", exact: true }).click();
     await expect(admin.page.getByText("並び順を保存しました")).toBeVisible();
 
+    await admin.page.reload();
     await admin.page.getByLabel("スキル名").fill(skillName);
     // 一覧はカテゴリごとのまとまりで、行にはカテゴリ名が出ないため、移動先のまとまりの中にあることを確かめる
     const targetSection = admin.page
@@ -277,7 +279,7 @@ test("管理者がスキルを検索・削除し、要件付きロールも削�
     await expect(admin.page.getByRole("row").filter({ hasText: skillName })).toHaveCount(1);
     await expect(admin.page.getByRole("row")).toHaveCount(2);
 
-    await admin.page.getByRole("row").filter({ hasText: skillName }).getByRole("button").click();
+    await admin.page.getByRole("row").filter({ hasText: skillName }).getByRole("button", { name: `${skillName}を編集` }).click();
     const deleteSkillDialog = admin.page.getByRole("dialog", { name: `${skillName}を編集` });
     await deleteSkillDialog.getByRole("button", { name: "スキルを削除" }).click();
     await admin.page

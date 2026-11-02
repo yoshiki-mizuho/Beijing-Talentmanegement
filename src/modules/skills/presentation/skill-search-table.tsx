@@ -1,16 +1,49 @@
 "use client";
 
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import { ChevronDown, ChevronRight, MoreHorizontal, Search, SearchX, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { type ColumnDef, type Row, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  closestCorners,
+  type CollisionDetection,
+  type DragEndEvent,
+  type UniqueIdentifier,
+  useDroppable,
+  useSensor,
+  useSensors
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { ChevronDown, ChevronRight, GripVertical, MoreHorizontal, Search, SearchX, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 import {
   deactivateSkillAction,
   deleteSkillAction,
+  reorderSkillsAction,
   updateSkillAction
 } from "@/modules/skills/presentation/actions";
+import {
+  buildSkillOrder,
+  categoryKey,
+  containerKey,
+  findCategoryId,
+  moveCategoryOrder,
+  moveSkillOrder,
+  skillKey,
+  toSkillOrderPayload,
+  type SkillOrderCategory
+} from "./skill-reorder-order";
 import { SkillLevelGuideFields } from "./skill-level-guide-fields";
 import {
   buildSkillSearchParams,
@@ -91,6 +124,20 @@ function SkillSearchTableInner({
   const [filters, setFilters] = useState<SkillSearchFilters>(emptySkillSearchFilters);
   const [editingSkillId, setEditingSkillId] = useState<string | null>(null);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+  const initialOrder = useMemo(
+    () => buildSkillOrder(categories, initialSkills),
+    [categories, initialSkills]
+  );
+  const [order, setOrder] = useState<SkillOrderCategory[]>(initialOrder);
+  const orderRef = useRef(order);
+  const dragStartOrder = useRef<SkillOrderCategory[] | null>(null);
+  const [savingOrder, startSavingOrder] = useTransition();
+  const reducedMotion = useReducedMotion();
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
   const query = useQuery({
     queryKey: ["skills", filters],
     queryFn: () => fetchSkills(filters),
@@ -105,6 +152,11 @@ function SkillSearchTableInner({
   const rows = query.data ?? [];
   // 編集中のスキルは一覧の最新のデータから引く。保存直後に開き直しても、再取得が届いたら最新の内容に置き換わる
   const editingSkill = rows.find((skill) => skill.id === editingSkillId) ?? null;
+  const reorderDisabled = savingOrder || filters.q.trim() !== "" || filters.categoryId !== "";
+  const reorderTitle =
+    filters.q.trim() !== "" || filters.categoryId !== ""
+      ? "絞り込みを解除すると並び替えられます"
+      : undefined;
 
   // 追加・編集の後にサーバーの一覧が変わったら、表示中の検索結果も取り直す
   useEffect(() => {
@@ -114,6 +166,11 @@ function SkillSearchTableInner({
     );
     void queryClient.invalidateQueries({ queryKey: ["skills"] });
   }, [initialSkills, queryClient]);
+
+  useEffect(() => {
+    orderRef.current = initialOrder;
+    setOrder(initialOrder);
+  }, [initialOrder]);
 
   const columns = useMemo<ColumnDef<SkillRow>[]>(() => {
     const definitions: ColumnDef<SkillRow>[] = [
@@ -188,12 +245,110 @@ function SkillSearchTableInner({
   });
   // table のインスタンスはデータが変わっても同じなので、メモ化せず毎回まとめ直す
   const tableRows = table.getRowModel().rows;
-  const groupedRows = categories
-    .map((category) => ({
-      category,
-      rows: tableRows.filter((row) => row.original.categoryId === category.id)
+  const categoriesById = new Map(categories.map((category) => [category.id, category]));
+  const tableRowsById = new Map(tableRows.map((row) => [row.original.id, row]));
+  const groupedRows = order
+    .map((orderedCategory) => ({
+      category: categoriesById.get(orderedCategory.id),
+      rows: orderedCategory.skillIds.flatMap((id) => {
+        const row = tableRowsById.get(id);
+        return row ? [row] : [];
+      })
     }))
-    .filter((group) => group.rows.length > 0);
+    .filter(
+      (group): group is { category: CategoryOption; rows: typeof tableRows } =>
+        Boolean(group.category) &&
+        (filters.q.trim() === "" && filters.categoryId === "" || group.rows.length > 0)
+    );
+
+  function updateOrder(next: SkillOrderCategory[]) {
+    orderRef.current = next;
+    setOrder(next);
+  }
+
+  function labelOf(id: UniqueIdentifier) {
+    const key = String(id);
+    if (key.startsWith("skill:")) {
+      return initialSkills.find((skill) => skill.id === key.slice("skill:".length))?.name ?? "スキル";
+    }
+    return categoriesById.get(findCategoryId(orderRef.current, key) ?? "")?.name ?? "カテゴリ";
+  }
+
+  function positionOf(activeId: UniqueIdentifier, overId: UniqueIdentifier) {
+    const active = String(activeId);
+    const over = String(overId);
+    if (active.startsWith("category:")) {
+      const index = orderRef.current.findIndex((category) => categoryKey(category.id) === over);
+      return index >= 0 ? `${index + 1}番目に移動しました` : "移動しました";
+    }
+    const categoryId = findCategoryId(orderRef.current, over);
+    const category = orderRef.current.find((item) => item.id === categoryId);
+    if (!category) return "移動しました";
+    const index = over.startsWith("skill:")
+      ? category.skillIds.indexOf(over.slice("skill:".length))
+      : category.skillIds.length - 1;
+    return `${categoriesById.get(category.id)?.name ?? "カテゴリ"}の${Math.max(index, 0) + 1}番目に移動しました`;
+  }
+
+  const collisionDetection: CollisionDetection = (args) => {
+    const draggingCategory = String(args.active.id).startsWith("category:");
+    return closestCorners({
+      ...args,
+      droppableContainers: args.droppableContainers.filter((container) =>
+        draggingCategory
+          ? String(container.id).startsWith("category:")
+          : String(container.id).startsWith("skill:") || String(container.id).startsWith("container:")
+      )
+    });
+  };
+
+  function handleDragStart() {
+    dragStartOrder.current = orderRef.current;
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const before = dragStartOrder.current;
+    dragStartOrder.current = null;
+    if (!before || !event.over) return;
+    const active = String(event.active.id);
+    const over = String(event.over.id);
+    const next = active.startsWith("category:")
+      ? moveCategoryOrder(orderRef.current, active, over)
+      : moveSkillOrder(orderRef.current, active, over);
+    if (JSON.stringify(toSkillOrderPayload(before)) === JSON.stringify(toSkillOrderPayload(next))) return;
+    updateOrder(next);
+    saveOrder(next, before);
+  }
+
+  function saveOrder(next: SkillOrderCategory[], before: SkillOrderCategory[]) {
+    startSavingOrder(async () => {
+      const result = await reorderSkillsAction(toSkillOrderPayload(next));
+      if (result.status === "error") {
+        updateOrder(before);
+        toast.error(result.message);
+        return;
+      }
+      toast.success("並び順を保存しました", {
+        action: {
+          label: "元に戻す",
+          onClick: () => {
+            updateOrder(before);
+            startSavingOrder(async () => {
+              const undoResult = await reorderSkillsAction(toSkillOrderPayload(before));
+              if (undoResult.status === "error") {
+                updateOrder(next);
+                toast.error(undoResult.message);
+                return;
+              }
+              toast.success("元に戻しました");
+              router.refresh();
+            });
+          }
+        }
+      });
+      router.refresh();
+    });
+  }
 
   function handleEditSuccess() {
     setEditingSkillId(null);
@@ -260,6 +415,29 @@ function SkillSearchTableInner({
         </label>
       </div>
 
+      <DndContext
+        sensors={sensors}
+        collisionDetection={collisionDetection}
+        onDragStart={handleDragStart}
+        onDragCancel={() => {
+          if (dragStartOrder.current) updateOrder(dragStartOrder.current);
+          dragStartOrder.current = null;
+        }}
+        onDragEnd={handleDragEnd}
+        accessibility={{
+          screenReaderInstructions: {
+            draggable:
+              "並び替える項目でスペースキーを押し、矢印キーで移動し、もう一度スペースキーで確定します。"
+          },
+          announcements: {
+            onDragStart: ({ active }) => `${labelOf(active.id)}を持ち上げました`,
+            onDragOver: ({ active, over }) =>
+              over ? `${labelOf(active.id)}を${positionOf(active.id, over.id)}` : undefined,
+            onDragEnd: ({ active }) => `${labelOf(active.id)}の移動を確定しました`,
+            onDragCancel: () => "並び替えを取り消しました"
+          }
+        }}
+      >
       {query.isError ? (
         <p
           role="alert"
@@ -267,54 +445,52 @@ function SkillSearchTableInner({
         >
           スキルの検索に失敗しました。時間を置いて再度お試しください。
         </p>
-      ) : rows.length === 0 && !query.isFetching ? (
+      ) : rows.length === 0 && !query.isFetching &&
+        (!canManage || filters.q.trim() !== "" || filters.categoryId !== "" || categories.length === 0) ? (
         <EmptyState
           icon={SearchX}
           title="条件に一致するスキルがありません"
           description="キーワードやカテゴリ、状態を変更して再度検索してください。"
         />
       ) : (
+        <SortableContext
+          items={order.map((category) => categoryKey(category.id))}
+          strategy={verticalListSortingStrategy}
+        >
         <div className="space-y-2">
           {groupedRows.map(({ category, rows: categoryRows }) => (
-            <section
+            <SortableCategorySection
               key={category.id}
-              className="overflow-hidden rounded-xl border border-[var(--border)]"
+              category={category}
+              count={categoryRows.length}
+              collapsed={collapsedCategories.has(category.id)}
+              canManage={canManage}
+              disabled={reorderDisabled}
+              title={reorderTitle}
+              reducedMotion={reducedMotion}
+              onToggle={() =>
+                setCollapsedCategories((current) => {
+                  const next = new Set(current);
+                  if (next.has(category.id)) next.delete(category.id);
+                  else next.add(category.id);
+                  return next;
+                })
+              }
             >
-              <button
-                type="button"
-                className="flex min-h-11 w-full items-center gap-2 bg-[var(--surface-subtle)] px-4 text-left font-semibold"
-                aria-expanded={!collapsedCategories.has(category.id)}
-                onClick={() =>
-                  setCollapsedCategories((current) => {
-                    const next = new Set(current);
-                    if (next.has(category.id)) next.delete(category.id);
-                    else next.add(category.id);
-                    return next;
-                  })
-                }
-              >
-                {collapsedCategories.has(category.id) ? (
-                  <ChevronRight className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
-                {category.name}
-                <span className="text-sm font-normal text-[var(--muted-foreground)]">
-                  {categoryRows.length}件
-                </span>
-              </button>
               {!collapsedCategories.has(category.id) ? (
                 <table className="w-full min-w-[680px] table-fixed text-sm">
                   <colgroup>
-                    <col className="w-[34%]" />
-                    <col className="w-[28%]" />
+                    {canManage ? <col className="w-14" /> : null}
+                    <col className={canManage ? "w-[30%]" : "w-[34%]"} />
+                    <col className={canManage ? "w-[26%]" : "w-[28%]"} />
                     <col className="w-[14%]" />
                     <col className="w-[12%]" />
-                    <col className="w-[12%]" />
+                    {canManage ? <col className="w-[12%]" /> : null}
                   </colgroup>
                   <thead className="bg-[var(--surface-subtle)] text-left text-[var(--muted-foreground)]">
                     {table.getHeaderGroups().map((headerGroup) => (
                       <tr key={headerGroup.id}>
+                        {canManage ? <th scope="col" aria-label="並び替え" className="w-14" /> : null}
                         {headerGroup.headers.map((header) => (
                           <th
                             key={header.id}
@@ -329,15 +505,19 @@ function SkillSearchTableInner({
                       </tr>
                     ))}
                   </thead>
+                  <SortableContext
+                    items={categoryRows.map((row) => skillKey(row.original.id))}
+                    strategy={verticalListSortingStrategy}
+                  >
                   <tbody className="divide-y divide-[var(--border)] bg-[var(--surface)]">
                     {categoryRows.map((row) => (
-                      <tr
+                      <SortableSkillRow
                         key={row.id}
-                        className={
-                          row.original.isActive
-                            ? "hover:bg-[var(--surface-subtle)]"
-                            : "bg-[var(--surface-subtle)] opacity-60"
-                        }
+                        row={row}
+                        canManage={canManage}
+                        disabled={reorderDisabled}
+                        title={reorderTitle}
+                        reducedMotion={reducedMotion}
                       >
                         {row.getVisibleCells().map((cell) => (
                           <td
@@ -347,15 +527,18 @@ function SkillSearchTableInner({
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </td>
                         ))}
-                      </tr>
+                      </SortableSkillRow>
                     ))}
                   </tbody>
+                  </SortableContext>
                 </table>
               ) : null}
-            </section>
+            </SortableCategorySection>
           ))}
         </div>
+        </SortableContext>
       )}
+      </DndContext>
 
       {canManage && editingSkill ? (
         <Dialog
@@ -475,6 +658,134 @@ function SkillSearchTableInner({
   );
 }
 
+function SortableCategorySection({
+  category,
+  count,
+  collapsed,
+  canManage,
+  disabled,
+  title,
+  reducedMotion,
+  onToggle,
+  children
+}: {
+  category: CategoryOption;
+  count: number;
+  collapsed: boolean;
+  canManage: boolean;
+  disabled: boolean;
+  title?: string;
+  reducedMotion: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  const {
+    setNodeRef: setCategoryRef,
+    attributes,
+    listeners,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id: categoryKey(category.id), disabled: !canManage || disabled });
+  const { setNodeRef: setDropRef, isOver } = useDroppable({
+    id: containerKey(category.id),
+    disabled: !canManage || disabled
+  });
+
+  return (
+    <section
+      ref={(node) => {
+        setCategoryRef(node);
+        setDropRef(node);
+      }}
+      style={{
+        transform: CSS.Translate.toString(transform),
+        transition: reducedMotion ? undefined : transition
+      }}
+      className={`overflow-hidden rounded-xl border ${isDragging || isOver ? "border-[var(--primary)] shadow-md" : "border-[var(--border)]"}`}
+    >
+      <div className="flex min-h-11 items-center bg-[var(--surface-subtle)]">
+        {canManage ? (
+          <button
+            type="button"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+            aria-label={`${category.name}を並び替える`}
+            disabled={disabled}
+            title={title}
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="h-5 w-5" aria-hidden="true" />
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className="flex min-h-11 flex-1 items-center gap-2 px-3 text-left font-semibold"
+          aria-expanded={!collapsed}
+          onClick={onToggle}
+        >
+          {collapsed ? (
+            <ChevronRight className="h-4 w-4" aria-hidden="true" />
+          ) : (
+            <ChevronDown className="h-4 w-4" aria-hidden="true" />
+          )}
+          {category.name}
+          <span className="text-sm font-normal text-[var(--muted-foreground)]">{count}件</span>
+        </button>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function SortableSkillRow({
+  row,
+  canManage,
+  disabled,
+  title,
+  reducedMotion,
+  children
+}: {
+  row: Row<SkillRow>;
+  canManage: boolean;
+  disabled: boolean;
+  title?: string;
+  reducedMotion: boolean;
+  children: React.ReactNode;
+}) {
+  const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({
+    id: skillKey(row.original.id),
+    disabled: !canManage || disabled
+  });
+  return (
+    <tr
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Translate.toString(transform),
+        transition: reducedMotion ? undefined : transition
+      }}
+      className={`${row.original.isActive ? "hover:bg-[var(--surface-subtle)]" : "bg-[var(--surface-subtle)] opacity-60"} ${isDragging ? "relative z-10 bg-[var(--surface)] outline outline-1 outline-[var(--primary)] shadow-md" : ""}`}
+    >
+      {canManage ? (
+        <td className="w-14 px-1 py-1 align-middle">
+          <button
+            type="button"
+            className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-[var(--surface-subtle)] disabled:cursor-not-allowed disabled:opacity-50"
+            aria-label={`${row.original.name}を並び替える`}
+            disabled={disabled}
+            title={title}
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="h-5 w-5" aria-hidden="true" />
+          </button>
+        </td>
+      ) : null}
+      {children}
+    </tr>
+  );
+}
+
 function AverageLevel({ value }: { value: number }) {
   if (value === 0)
     return (
@@ -495,6 +806,18 @@ function AverageLevel({ value }: { value: number }) {
       <span className="text-xs tabular-nums">Lv{value.toFixed(1)}</span>
     </div>
   );
+}
+
+function useReducedMotion() {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReduced(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+  return reduced;
 }
 
 async function fetchSkills(filters: SkillSearchFilters) {
