@@ -20,6 +20,7 @@ export async function getOrganizationDashboardData(
                 skillId: true,
                 requiredLevel: true,
                 isRequired: true,
+                anyOfGroup: true,
                 skill: { select: { name: true } },
               },
             },

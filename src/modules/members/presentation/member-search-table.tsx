@@ -488,9 +488,7 @@ function TargetRoleCell({ member, roles }: { member: MemberRow; roles: RoleOptio
     return <span className="text-[var(--muted-foreground)]">未設定</span>;
   const result = evaluateMemberTargetRole(member, roles);
   if (!result) return <span className="text-[var(--muted-foreground)]">未設定</span>;
-  const required = role.roleRequirements.filter((item) => item.isRequired).length;
-  const satisfied = result.satisfiedRequirements.length;
-  const rate = required === 0 ? 100 : Math.round((satisfied / required) * 100);
+  const rate = result.requiredCount === 0 ? 100 : Math.round(result.achievementRate * 100);
   return (
     <div className="flex items-center gap-2">
       <span
@@ -498,13 +496,13 @@ function TargetRoleCell({ member, roles }: { member: MemberRow; roles: RoleOptio
         style={{ background: `conic-gradient(var(--primary) ${rate}%, var(--border) 0)` }}
       >
         <span className="grid h-7 w-7 place-items-center rounded-full bg-[var(--surface)]">
-          {satisfied}/{required}
+          {result.satisfiedCount}/{result.requiredCount}
         </span>
       </span>
       <div>
         <p className="font-medium">{member.targetRole.name}</p>
         <p className="text-xs text-[var(--muted-foreground)]">
-          {getTargetRoleProgressLabel(satisfied, required)}
+          {getTargetRoleProgressLabel(result.satisfiedCount, result.requiredCount)}
         </p>
       </div>
     </div>

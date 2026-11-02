@@ -54,7 +54,7 @@ export async function createRole(input: RoleInput, actorMemberId: string | null)
 
 export async function createRoleWithRequirements(
   input: RoleInput,
-  requirements: { skillId: string; requiredLevel: number }[],
+  requirements: { skillId: string; requiredLevel: number; anyOfGroup?: number | null }[],
   actorMemberId: string | null
 ) {
   return prisma.$transaction(async (tx) => {
@@ -65,7 +65,8 @@ export async function createRoleWithRequirements(
           roleId: role.id,
           skillId: requirement.skillId,
           requiredLevel: requirement.requiredLevel,
-          isRequired: true
+          isRequired: true,
+          anyOfGroup: requirement.anyOfGroup ?? null
         }))
       });
     }
@@ -79,7 +80,8 @@ export async function createRoleWithRequirements(
         requirements: requirements.map((requirement) => ({
           skillId: requirement.skillId,
           requiredLevel: requirement.requiredLevel,
-          isRequired: true
+          isRequired: true,
+          anyOfGroup: requirement.anyOfGroup ?? null
         }))
       }
     });
@@ -91,7 +93,8 @@ export async function createRoleWithRequirements(
         targetId: role.id,
         after: {
           requiredLevel: requirement.requiredLevel,
-          isRequired: true
+          isRequired: true,
+          anyOfGroup: requirement.anyOfGroup ?? null
         },
         metadata: { skillId: requirement.skillId }
       });
@@ -121,7 +124,7 @@ export async function updateRole(id: string, input: RoleInput, actorMemberId: st
 export async function updateRoleWithRequirements(
   id: string,
   input: RoleInput,
-  requirements: { skillId: string; requiredLevel: number }[],
+  requirements: { skillId: string; requiredLevel: number; anyOfGroup?: number | null }[],
   actorMemberId: string | null
 ) {
   return prisma.$transaction(async (tx) => {
@@ -157,7 +160,8 @@ export async function updateRoleWithRequirements(
           targetId: id,
           before: {
             requiredLevel: current.requiredLevel,
-            isRequired: current.isRequired
+            isRequired: current.isRequired,
+            anyOfGroup: current.anyOfGroup ?? null
           },
           metadata: { skillId: current.skillId }
         });
@@ -166,13 +170,13 @@ export async function updateRoleWithRequirements(
       nextBySkillId.delete(current.skillId);
       // 画面では必須・任意を変えないので、既存の要件の isRequired はそのまま残す
       const requirementDiff = diffForAudit(
-        { requiredLevel: current.requiredLevel, isRequired: current.isRequired },
-        { requiredLevel: next.requiredLevel, isRequired: current.isRequired }
+        { requiredLevel: current.requiredLevel, isRequired: current.isRequired, anyOfGroup: current.anyOfGroup ?? null },
+        { requiredLevel: next.requiredLevel, isRequired: current.isRequired, anyOfGroup: next.anyOfGroup ?? null }
       );
       if (requirementDiff) {
         await tx.roleRequirement.update({
           where: { roleId_skillId: { roleId: id, skillId: current.skillId } },
-          data: { requiredLevel: next.requiredLevel }
+          data: { requiredLevel: next.requiredLevel, anyOfGroup: next.anyOfGroup ?? null }
         });
         await recordAuditLog(tx, {
           actorMemberId,
@@ -186,14 +190,14 @@ export async function updateRoleWithRequirements(
     }
     for (const requirement of nextBySkillId.values()) {
       await tx.roleRequirement.create({
-        data: { roleId: id, ...requirement, isRequired: true }
+        data: { roleId: id, ...requirement, anyOfGroup: requirement.anyOfGroup ?? null, isRequired: true }
       });
       await recordAuditLog(tx, {
         actorMemberId,
         action: AUDIT_ACTION.ROLE_REQUIREMENT_SET,
         targetType: AUDIT_TARGET_TYPE.ROLE,
         targetId: id,
-        after: { requiredLevel: requirement.requiredLevel, isRequired: true },
+        after: { requiredLevel: requirement.requiredLevel, isRequired: true, anyOfGroup: requirement.anyOfGroup ?? null },
         metadata: { skillId: requirement.skillId }
       });
     }
@@ -259,17 +263,19 @@ export async function upsertRoleRequirement(
       },
       update: {
         requiredLevel: input.requiredLevel,
-        isRequired: input.isRequired
+        isRequired: input.isRequired,
+        anyOfGroup: input.anyOfGroup ?? null
       },
       create: input
     });
     const diff = diffForAudit(
       before
-        ? { requiredLevel: before.requiredLevel, isRequired: before.isRequired }
+        ? { requiredLevel: before.requiredLevel, isRequired: before.isRequired, anyOfGroup: before.anyOfGroup ?? null }
         : {},
       {
         requiredLevel: requirement.requiredLevel,
-        isRequired: requirement.isRequired
+        isRequired: requirement.isRequired,
+        anyOfGroup: requirement.anyOfGroup ?? null
       }
     );
     if (diff) {

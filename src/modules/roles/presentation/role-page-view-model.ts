@@ -12,6 +12,7 @@ type RoleSource = {
     skillId: string;
     requiredLevel: number;
     isRequired: boolean;
+    anyOfGroup?: number | null;
     skill: { name: string; category: { name: string } };
   }[];
 };
@@ -45,6 +46,7 @@ export function buildRolePageViewModel(input: {
         skillId: requirement.skillId,
         requiredLevel: requirement.requiredLevel,
         isRequired: requirement.isRequired,
+        anyOfGroup: requirement.anyOfGroup,
         skillName: requirement.skill.name,
       }));
       const ownStatus = evaluateMemberForRole(
@@ -91,12 +93,13 @@ export function buildRolePageViewModel(input: {
         ownAchievement: {
           achieved: ownStatus.achieved,
           achievementRate: ownStatus.achievementRate,
-          satisfiedCount: ownStatus.satisfiedRequirements.length,
-          requiredCount:
-            ownStatus.satisfiedRequirements.length +
-            ownStatus.missingRequirements.length,
+          satisfiedCount: ownStatus.satisfiedCount,
+          requiredCount: ownStatus.requiredCount,
         },
-        requirements: role.roleRequirements.map((requirement) => {
+        requirements: [...role.roleRequirements].sort((left, right) =>
+          (left.anyOfGroup == null ? -1 : left.anyOfGroup) -
+          (right.anyOfGroup == null ? -1 : right.anyOfGroup)
+        ).map((requirement) => {
           const result = [
             ...ownStatus.satisfiedRequirements,
             ...ownStatus.missingRequirements,
@@ -106,6 +109,7 @@ export function buildRolePageViewModel(input: {
             skillId: requirement.skillId,
             requiredLevel: requirement.requiredLevel,
             isRequired: requirement.isRequired,
+            anyOfGroup: requirement.anyOfGroup ?? null,
             memberLevel: result?.memberLevel ?? null,
             satisfied: result?.satisfied ?? false,
             skill: {

@@ -18,7 +18,7 @@ export async function getExploreSourceData(viewer: ProfileViewer, since: Date) {
           select: {
             roleRequirements: {
               where: { isRequired: true },
-              select: { skillId: true, requiredLevel: true }
+              select: { skillId: true, requiredLevel: true, anyOfGroup: true }
             }
           }
         },
@@ -103,7 +103,7 @@ export async function getSkillProfileSourceData(memberId: string) {
           select: {
             roleRequirements: {
               where: { isRequired: true },
-              select: { skillId: true, requiredLevel: true }
+              select: { skillId: true, requiredLevel: true, anyOfGroup: true }
             }
           }
         }
@@ -115,7 +115,7 @@ export async function getSkillProfileSourceData(memberId: string) {
         name: true,
         roleRequirements: {
           where: { isRequired: true },
-          select: { skillId: true, requiredLevel: true }
+          select: { skillId: true, requiredLevel: true, anyOfGroup: true }
         }
       }
     })

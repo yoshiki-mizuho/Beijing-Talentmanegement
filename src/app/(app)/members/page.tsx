@@ -82,6 +82,7 @@ export default async function MembersPage({
       skillId: requirement.skillId,
       requiredLevel: requirement.requiredLevel,
       isRequired: requirement.isRequired,
+      anyOfGroup: requirement.anyOfGroup,
       skill: {
         name: requirement.skill.name
       }

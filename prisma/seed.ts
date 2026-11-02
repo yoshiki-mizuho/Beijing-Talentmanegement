@@ -305,7 +305,8 @@ async function main() {
             roleId,
             skillId,
             requiredLevel: requirement.requiredLevel,
-            isRequired: requirement.isRequired
+            isRequired: requirement.isRequired,
+            anyOfGroup: "anyOfGroup" in requirement ? requirement.anyOfGroup : null
           }
         });
       }

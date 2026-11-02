@@ -13,6 +13,9 @@ describe("audit log display", () => {
     expect(fieldLabel("employeeNo")).toBe("社員番号");
     expect(displayValue("status", "ACTIVE")).toBe("在籍中");
     expect(displayValue("isRequired", false)).toBe("任意");
+    expect(fieldLabel("anyOfGroup")).toBe("いずれかの組");
+    expect(displayValue("anyOfGroup", 1)).toBe("組1");
+    expect(displayValue("anyOfGroup", null)).toBe("なし");
     expect(fieldLabel("role")).toBe("権限");
     expect(displayValue("role", "MANAGER")).toBe("マネージャー");
     expect(
@@ -330,7 +333,7 @@ describe("audit log display", () => {
         action: "role.requirement.set",
         after: { requiredLevel: 2, isRequired: true },
       }),
-    ).toBe("Lv2・必須");
+    ).toBe("Lv2・必須・なし");
   });
 
   it("出力の件数を補足の行に出す", () => {

@@ -26,6 +26,7 @@ const labels: Record<string, string> = {
   displayOrder: "表示順",
   requiredLevel: "必要レベル",
   isRequired: "必須",
+  anyOfGroup: "いずれかの組",
   requestedLevel: "申請レベル",
   approvedLevel: "承認レベル",
   count: "件数",
@@ -48,6 +49,7 @@ export function displayValue(
   value: unknown,
   names: NameMaps = {},
 ) {
+  if (field === "anyOfGroup") return value === null || value === undefined ? "なし" : `組${value}`;
   if (value === null || value === undefined) return "—";
   if (
     field === "level" ||
@@ -325,6 +327,7 @@ export function buildAuditSummary(input: AuditDisplayInput) {
     return [
       levelChange(undefined, after?.requiredLevel),
       displayValue("isRequired", after?.isRequired),
+      displayValue("anyOfGroup", after?.anyOfGroup),
     ].join("・");
   }
   if (action === "role.requirement.set") {
@@ -336,6 +339,9 @@ export function buildAuditSummary(input: AuditDisplayInput) {
           after?.isRequired,
         )}`,
       );
+    }
+    if (before?.anyOfGroup !== after?.anyOfGroup) {
+      parts.push(`${displayValue("anyOfGroup", before?.anyOfGroup)} → ${displayValue("anyOfGroup", after?.anyOfGroup)}`);
     }
     return parts.filter(Boolean).join("・");
   }

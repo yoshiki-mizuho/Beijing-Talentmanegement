@@ -141,6 +141,7 @@ erDiagram
     string skillId
     int requiredLevel
     boolean isRequired
+    int anyOfGroup
   }
 
   AuditLog {
@@ -173,7 +174,7 @@ erDiagram
 | `SkillSelfAssessment` | メンバー自身が申告したスキル更新依頼 | `pending`、`approved`、`corrected`、`rejected` の状態を持つ |
 | `Notification` | ユーザーへの業務通知 | 承認依頼、承認結果、差し戻しを通知する |
 | `Role` | 職務、期待役割、キャリアロール | 無効化しても過去判定の参照は可能にする |
-| `RoleRequirement` | ロール達成に必要なスキル条件 | `roleId` と `skillId` の組み合わせは一意 |
+| `RoleRequirement` | ロール達成に必要なスキル条件 | `roleId` と `skillId` の組み合わせは一意。`anyOfGroup` が同じ必須要件は「いずれか1つ」を満たせば1つの達成単位として扱い、`null` は単独要件とする |
 | `AuditLog` | 重要操作の履歴 | 業務データから直接更新しない |
 | `CsvImportJob` | CSV importの実行単位 | プレビュー、検証、登録結果の追跡に使う |
 

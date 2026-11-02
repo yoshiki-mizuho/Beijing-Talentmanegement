@@ -26,6 +26,7 @@ export async function getMemberGrowthData(memberId: string) {
                   skillId: true,
                   requiredLevel: true,
                   isRequired: true,
+                  anyOfGroup: true,
                   skill: {
                     select: {
                       name: true,

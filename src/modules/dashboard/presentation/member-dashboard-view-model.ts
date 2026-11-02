@@ -167,7 +167,8 @@ function buildTargetRole(
       skillId: requirement.skillId,
       skillName: requirement.skill.name,
       requiredLevel: requirement.requiredLevel,
-      isRequired: requirement.isRequired
+      isRequired: requirement.isRequired,
+      anyOfGroup: requirement.anyOfGroup
     })),
     skills.map((skill) => ({
       skillId: skill.id,
@@ -195,11 +196,19 @@ function buildTargetRole(
         skillId: requirement.skillId,
         skillName: requirement.skill.name,
         requiredLevel: requirement.requiredLevel,
+        anyOfGroup: requirement.anyOfGroup,
         currentLevel,
         achieved: currentLevel !== null && currentLevel >= requirement.requiredLevel
       };
     })
-    .sort((left, right) => Number(left.achieved) - Number(right.achieved));
+    .sort((left, right) => {
+      if (left.anyOfGroup === null && right.anyOfGroup !== null) return -1;
+      if (left.anyOfGroup !== null && right.anyOfGroup === null) return 1;
+      if (left.anyOfGroup !== right.anyOfGroup) {
+        return (left.anyOfGroup ?? 0) - (right.anyOfGroup ?? 0);
+      }
+      return Number(left.achieved) - Number(right.achieved);
+    });
 
   return {
     id: role.id,
@@ -209,8 +218,8 @@ function buildTargetRole(
         ? 0
         : Math.round(evaluation.achievementRate * 100),
     achieved: evaluation.achieved && role.roleRequirements.length > 0,
-    requiredSkillCount: role.roleRequirements.length,
-    satisfiedSkillCount: evaluation.satisfiedRequirements.length,
+    requiredSkillCount: evaluation.requiredCount,
+    satisfiedSkillCount: evaluation.satisfiedCount,
     requirements,
     gaps
   };

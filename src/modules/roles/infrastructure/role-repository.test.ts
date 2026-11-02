@@ -48,6 +48,7 @@ describe("upsertRoleRequirement audit log", () => {
       skillId: "skill-1",
       requiredLevel: 3,
       isRequired: true,
+      anyOfGroup: null,
     });
     mocks.auditLogCreate.mockResolvedValue({});
   });
@@ -70,6 +71,7 @@ describe("upsertRoleRequirement audit log", () => {
         targetType: "Role",
         targetId: "role-1",
         metadata: { skillId: "skill-1" },
+        // 組に入っていない要件は、空の anyOfGroup を差分に含めない
         after: { requiredLevel: 3, isRequired: true },
       }),
     });
@@ -88,8 +90,8 @@ describe("updateRoleWithRequirements", () => {
       description: null,
       isActive: true,
       roleRequirements: [
-        { roleId: "role-1", skillId: "remove", requiredLevel: 1, isRequired: true },
-        { roleId: "role-1", skillId: "change", requiredLevel: 2, isRequired: true },
+        { roleId: "role-1", skillId: "remove", requiredLevel: 1, isRequired: true, anyOfGroup: null },
+        { roleId: "role-1", skillId: "change", requiredLevel: 2, isRequired: true, anyOfGroup: null },
       ],
     });
     mocks.roleUpdate.mockResolvedValue({
@@ -117,10 +119,10 @@ describe("updateRoleWithRequirements", () => {
     });
     expect(mocks.requirementUpdate).toHaveBeenCalledWith({
       where: { roleId_skillId: { roleId: "role-1", skillId: "change" } },
-      data: { requiredLevel: 4 },
+      data: { requiredLevel: 4, anyOfGroup: null },
     });
     expect(mocks.requirementCreate).toHaveBeenCalledWith({
-      data: { roleId: "role-1", skillId: "add", requiredLevel: 3, isRequired: true },
+      data: { roleId: "role-1", skillId: "add", requiredLevel: 3, anyOfGroup: null, isRequired: true },
     });
     expect(mocks.auditLogCreate).toHaveBeenCalledTimes(4);
   });
@@ -132,7 +134,7 @@ describe("updateRoleWithRequirements", () => {
       description: "説明",
       isActive: true,
       roleRequirements: [
-        { roleId: "role-1", skillId: "optional", requiredLevel: 2, isRequired: false },
+        { roleId: "role-1", skillId: "optional", requiredLevel: 2, isRequired: false, anyOfGroup: null },
       ],
     });
 
@@ -146,5 +148,24 @@ describe("updateRoleWithRequirements", () => {
     expect(mocks.requirementUpdate).not.toHaveBeenCalled();
     expect(mocks.requirementDelete).not.toHaveBeenCalled();
     expect(mocks.requirementCreate).not.toHaveBeenCalled();
+  });
+
+  it("いずれかの組を保存し、組の変更を監査する", async () => {
+    await updateRoleWithRequirements(
+      "role-1",
+      { name: "新ロール", description: "説明", isActive: true },
+      [
+        { skillId: "change", requiredLevel: 2, anyOfGroup: 1 },
+        { skillId: "add", requiredLevel: 3, anyOfGroup: 1 },
+      ],
+      "actor-1",
+    );
+
+    expect(mocks.requirementUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      data: { requiredLevel: 2, anyOfGroup: 1 },
+    }));
+    expect(mocks.requirementCreate).toHaveBeenCalledWith({
+      data: { roleId: "role-1", skillId: "add", requiredLevel: 3, anyOfGroup: 1, isRequired: true },
+    });
   });
 });

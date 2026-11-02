@@ -198,6 +198,7 @@ export function getGrowthHintMemberContext(memberId: string, since: Date) {
             select: {
               skillId: true,
               requiredLevel: true,
+              anyOfGroup: true,
               skill: { select: { name: true } }
             }
           }
@@ -551,6 +552,7 @@ export async function getMemberSkillSheetContext(memberId: string) {
               select: {
                 skillId: true,
                 requiredLevel: true
+                ,anyOfGroup: true
               }
             }
           }
@@ -656,6 +658,7 @@ export async function listPendingSkillAssessments(
                 select: {
                   skillId: true,
                   requiredLevel: true
+                  ,anyOfGroup: true
                 }
               }
             }

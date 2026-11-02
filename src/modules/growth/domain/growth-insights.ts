@@ -1,4 +1,5 @@
 import type { BadgeId } from "@/modules/growth/domain/badge-art";
+import { isRoleAchieved } from "@/modules/roles/domain/role-achievement";
 import { isGrowthLevelChange } from "./level-change-source";
 
 const TOKYO_TIME_ZONE = "Asia/Tokyo";
@@ -35,20 +36,17 @@ export function calculateBadgeAchievements(input: {
   assessments: ReadonlyArray<DatedValue>;
   memberSkills: ReadonlyArray<{ skillId: string; level: number }>;
   levelChanges: ReadonlyArray<GrowthLevelChange>;
-  targetRequirements: ReadonlyArray<{ skillId: string; requiredLevel: number }>;
+  targetRequirements: ReadonlyArray<{ skillId: string; requiredLevel: number; isRequired?: boolean; anyOfGroup?: number | null }>;
   mentoredCheers: ReadonlyArray<{ toMemberId: string; createdAt: Date | string }>;
 }): BadgeAchievement[] {
   const assessments = sortByDate(input.assessments, "createdAt");
   const changes = sortByDate(input.levelChanges, "changedAt");
   const newSkillChanges = changes.filter((change) => change.fromLevel === null);
-  const skillLevels = new Map(
-    input.memberSkills.map((skill) => [skill.skillId, skill.level])
-  );
   const targetAchieved =
     input.targetRequirements.length > 0 &&
-    input.targetRequirements.every(
-      (requirement) =>
-        (skillLevels.get(requirement.skillId) ?? 0) >= requirement.requiredLevel
+    isRoleAchieved(
+      input.targetRequirements.map((requirement) => ({ ...requirement, isRequired: requirement.isRequired ?? true })),
+      [...input.memberSkills]
     );
   const targetSkillIds = new Set(
     input.targetRequirements.map((requirement) => requirement.skillId)
@@ -121,7 +119,7 @@ function findThreeMonthStreakDate(changes: ReadonlyArray<GrowthLevelChange>) {
 }
 
 function findTargetAchievementDate(
-  requirements: ReadonlyArray<{ skillId: string; requiredLevel: number }>,
+  requirements: ReadonlyArray<{ skillId: string; requiredLevel: number; isRequired?: boolean; anyOfGroup?: number | null }>,
   changes: ReadonlyArray<GrowthLevelChange>,
   targetSkillIds: ReadonlySet<string>
 ) {
@@ -132,9 +130,9 @@ function findTargetAchievementDate(
   for (const change of relevantChanges) {
     knownLevels.set(change.skillId, change.toLevel);
     if (
-      requirements.every(
-        (requirement) =>
-          (knownLevels.get(requirement.skillId) ?? 0) >= requirement.requiredLevel
+      isRoleAchieved(
+        requirements.map((requirement) => ({ ...requirement, isRequired: requirement.isRequired ?? true })),
+        [...knownLevels].map(([skillId, level]) => ({ skillId, level }))
       )
     ) {
       return change.changedAt;

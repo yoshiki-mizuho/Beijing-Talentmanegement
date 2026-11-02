@@ -204,7 +204,8 @@ function buildTargetProgress(
       skillId: requirement.skillId,
       skillName: requirement.skill.name,
       requiredLevel: requirement.requiredLevel,
-      isRequired: requirement.isRequired
+      isRequired: requirement.isRequired,
+      anyOfGroup: requirement.anyOfGroup
     })),
     (data.member?.memberSkills ?? []).map((skill) => ({
       skillId: skill.skillId,
@@ -214,8 +215,8 @@ function buildTargetProgress(
   );
   return {
     name: role.name,
-    satisfiedCount: evaluation.satisfiedRequirements.length,
-    requiredCount: role.roleRequirements.length,
+    satisfiedCount: evaluation.satisfiedCount,
+    requiredCount: evaluation.requiredCount,
     percentage:
       role.roleRequirements.length === 0
         ? 0

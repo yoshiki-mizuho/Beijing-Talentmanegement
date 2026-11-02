@@ -72,11 +72,12 @@ describe("CSV export columns", () => {
               skill: { code: "TS" },
               requiredLevel: 4,
               isRequired: false,
+              anyOfGroup: 2,
             },
           ],
         },
       ]),
-    ).toEqual([["リード", "", true, "TS", 4, false]]);
+    ).toEqual([["リード", "", true, "TS", 4, false, 2]]);
   });
 
   it("要件のないロールを空欄の要件付きで1行にする", () => {
@@ -89,7 +90,7 @@ describe("CSV export columns", () => {
           roleRequirements: [],
         },
       ]),
-    ).toEqual([["メンバー", "標準ロール", true, "", "", ""]]);
+    ).toEqual([["メンバー", "標準ロール", true, "", "", "", ""]]);
   });
 
   it("メンバースキルの日付と経験年数を変換する", () => {
