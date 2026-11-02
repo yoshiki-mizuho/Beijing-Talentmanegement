@@ -1,5 +1,6 @@
 import type {
   CreateSkillInput,
+  ReorderSkillsInput,
   SkillCategoryInput,
   SkillInput,
   SkillLevelGuidesInput
@@ -81,6 +82,7 @@ export async function listActiveSkillsForSkillSheet() {
     select: {
       id: true,
       name: true,
+      displayOrder: true,
       category: {
         select: {
           id: true,
@@ -93,7 +95,7 @@ export async function listActiveSkillsForSkillSheet() {
         orderBy: { level: "asc" }
       }
     },
-    orderBy: [{ category: { displayOrder: "asc" } }, { name: "asc" }]
+    orderBy: [{ category: { displayOrder: "asc" } }, { displayOrder: "asc" }, { name: "asc" }]
   });
 }
 
@@ -165,7 +167,13 @@ export async function createSkillCategory(
   actorMemberId: string | null
 ) {
   return prisma.$transaction(async (tx) => {
-    const item = await tx.skillCategory.create({ data: input });
+    const lastCategory = await tx.skillCategory.findFirst({
+      orderBy: { displayOrder: "desc" },
+      select: { displayOrder: true }
+    });
+    const item = await tx.skillCategory.create({
+      data: { ...input, displayOrder: (lastCategory?.displayOrder ?? -1) + 1 }
+    });
     await recordAuditLog(tx, {
       actorMemberId,
       action: AUDIT_ACTION.SKILL_CATEGORY_CREATE,
@@ -262,7 +270,7 @@ export async function listSkills(input?: SkillSearchInput) {
         }
       }
     },
-    orderBy: [{ category: { displayOrder: "asc" } }, { name: "asc" }]
+    orderBy: [{ category: { displayOrder: "asc" } }, { displayOrder: "asc" }, { name: "asc" }]
   });
 
   return skills.map((skill) => ({
@@ -305,6 +313,18 @@ async function generateNextSkillCode(client: Prisma.TransactionClient) {
   return generateNextSkillCodeFromExistingCodes(
     skills.map((skill) => skill.code)
   );
+}
+
+async function nextSkillDisplayOrder(
+  client: Prisma.TransactionClient,
+  categoryId: string
+) {
+  const lastSkill = await client.skill.findFirst({
+    where: { categoryId },
+    orderBy: { displayOrder: "desc" },
+    select: { displayOrder: true }
+  });
+  return (lastSkill?.displayOrder ?? -1) + 1;
 }
 
 function hasConstraintTarget(error: unknown, targetName: string) {
@@ -350,6 +370,7 @@ export async function createSkillWithLevelGuides(
         const skill = await tx.skill.create({
           data: {
             ...input,
+            displayOrder: await nextSkillDisplayOrder(tx, input.categoryId),
             code: await generateNextSkillCode(tx)
           }
         });
@@ -412,7 +433,15 @@ export async function updateSkill(
 ) {
   return prisma.$transaction(async (tx) => {
     const before = await tx.skill.findUniqueOrThrow({ where: { id } });
-    const item = await tx.skill.update({ where: { id }, data: input });
+    const item = await tx.skill.update({
+      where: { id },
+      data: {
+        ...input,
+        ...(before.categoryId === input.categoryId
+          ? {}
+          : { displayOrder: await nextSkillDisplayOrder(tx, input.categoryId) })
+      }
+    });
     const diff = diffForAudit(skillAuditFields(before), skillAuditFields(item));
     if (diff) {
       await recordAuditLog(tx, {
@@ -438,7 +467,15 @@ export async function updateSkillWithLevelGuides(
       where: { id },
       include: { levelGuides: true }
     });
-    const skill = await transaction.skill.update({ where: { id }, data: input });
+    const skill = await transaction.skill.update({
+      where: { id },
+      data: {
+        ...input,
+        ...(before.categoryId === input.categoryId
+          ? {}
+          : { displayOrder: await nextSkillDisplayOrder(transaction, input.categoryId) })
+      }
+    });
 
     for (const guide of levelGuides.guides) {
       if (guide.description === "") {
@@ -523,5 +560,86 @@ export async function deleteSkill(id: string, actorMemberId: string | null) {
       before: skillAuditFields(item)
     });
     return item;
+  });
+}
+
+export async function reorderSkills(
+  input: ReorderSkillsInput,
+  actorMemberId: string | null
+) {
+  return prisma.$transaction(async (tx) => {
+    const [categories, skills] = await Promise.all([
+      tx.skillCategory.findMany({
+        select: { id: true, displayOrder: true }
+      }),
+      tx.skill.findMany({
+        select: { id: true, categoryId: true, displayOrder: true, code: true, name: true, description: true, isActive: true }
+      })
+    ]);
+    const submittedCategoryIds = input.categories.map((category) => category.categoryId);
+    const submittedSkillIds = input.categories.flatMap((category) => category.skillIds);
+    const categoryIds = new Set(categories.map((category) => category.id));
+    const skillIds = new Set(skills.map((skill) => skill.id));
+    if (
+      submittedCategoryIds.length !== categoryIds.size ||
+      submittedSkillIds.length !== skillIds.size ||
+      new Set(submittedCategoryIds).size !== submittedCategoryIds.length ||
+      new Set(submittedSkillIds).size !== submittedSkillIds.length ||
+      submittedCategoryIds.some((id) => !categoryIds.has(id)) ||
+      submittedSkillIds.some((id) => !skillIds.has(id))
+    ) {
+      throw new UserFacingError("一覧が更新されています。画面を開き直してください。");
+    }
+
+    const skillsById = new Map(skills.map((skill) => [skill.id, skill]));
+    let changedCategoryCount = 0;
+    let changedSkillCount = 0;
+    let movedSkillCount = 0;
+
+    for (const [categoryOrder, category] of input.categories.entries()) {
+      const currentCategory = categories.find((item) => item.id === category.categoryId);
+      if (currentCategory?.displayOrder !== categoryOrder) {
+        changedCategoryCount += 1;
+        await tx.skillCategory.update({
+          where: { id: category.categoryId },
+          data: { displayOrder: categoryOrder }
+        });
+      }
+      for (const [skillOrder, skillId] of category.skillIds.entries()) {
+        const currentSkill = skillsById.get(skillId);
+        if (!currentSkill) continue;
+        const categoryChanged = currentSkill.categoryId !== category.categoryId;
+        if (categoryChanged || currentSkill.displayOrder !== skillOrder) {
+          changedSkillCount += 1;
+          if (categoryChanged) movedSkillCount += 1;
+          await tx.skill.update({
+            where: { id: skillId },
+            data: { categoryId: category.categoryId, displayOrder: skillOrder }
+          });
+          if (categoryChanged) {
+            await recordAuditLog(tx, {
+              actorMemberId,
+              action: AUDIT_ACTION.SKILL_UPDATE,
+              targetType: AUDIT_TARGET_TYPE.SKILL,
+              targetId: skillId,
+              before: { categoryId: currentSkill.categoryId },
+              after: { categoryId: category.categoryId },
+              changedFields: ["categoryId"]
+            });
+          }
+        }
+      }
+    }
+
+    if (changedCategoryCount > 0 || changedSkillCount > 0) {
+      await recordAuditLog(tx, {
+        actorMemberId,
+        action: AUDIT_ACTION.SKILL_REORDER,
+        targetType: AUDIT_TARGET_TYPE.SKILL,
+        targetId: null,
+        metadata: { changedCategoryCount, changedSkillCount, movedSkillCount }
+      });
+    }
+    return { changedCategoryCount, changedSkillCount, movedSkillCount };
   });
 }

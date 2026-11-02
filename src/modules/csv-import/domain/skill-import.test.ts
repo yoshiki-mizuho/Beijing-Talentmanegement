@@ -42,7 +42,7 @@ describe("skill import", () => {
     ]);
   });
 
-  it("未知コード・未知カテゴリ・同カテゴリ同名を検出する", () => {
+  it("未知コードと同カテゴリ同名を検出し、未知カテゴリは新規扱いにする", () => {
     const result = validateSkillImport(
       [record(2, "UNKNOWN", "既存"), record(3, "", "別", "未知")],
       existing,
@@ -50,9 +50,10 @@ describe("skill import", () => {
     );
     const messages = result.errors.map((error) => error.message).join(" ");
     expect(messages).toMatch(/スキルコード UNKNOWN/);
-    expect(messages).toMatch(/カテゴリ 未知/);
     expect(messages).toMatch(/同じ名前/);
-    expect(result.changes).toEqual([]);
+    expect(result.changes).toEqual([
+      expect.objectContaining({ categoryName: "未知", categoryId: "new:未知" }),
+    ]);
   });
 
   it("エラーのある行を変更一覧に含めない", () => {

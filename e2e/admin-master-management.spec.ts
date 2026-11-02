@@ -6,6 +6,79 @@ import { dismissExistingLevelUpDialogs } from "./helpers/level-up";
 
 const credentials = readDemoCredentials();
 
+test("キーボードでスキルを別カテゴリへ並び替えられる", async ({ browser }) => {
+  test.slow();
+  const admin = await openLoggedInContext(browser, credentials.ADMIN);
+  const suffix = `${Date.now()}-${test.info().workerIndex}`;
+  const sourceCategory = `E2E並替元-${suffix}`;
+  const targetCategory = `E2E並替先-${suffix}`;
+  const skillName = `E2E並替スキル-${suffix}`;
+
+  try {
+    await admin.page.goto("/skills");
+    await admin.page.getByRole("button", { name: "カテゴリを管理" }).click();
+    const categoryDialog = admin.page.getByRole("dialog", { name: "カテゴリを管理" });
+    for (const name of [sourceCategory, targetCategory]) {
+      await categoryDialog.getByLabel("カテゴリ名").first().fill(name);
+      await categoryDialog.getByRole("button", { name: "追加", exact: true }).click();
+      await expect(admin.page.getByText("カテゴリを登録しました。")).toBeVisible();
+    }
+    await categoryDialog.getByRole("button", { name: "ダイアログを閉じる" }).click();
+
+    await admin.page.getByRole("button", { name: "スキルを追加", exact: true }).click();
+    const createDialog = admin.page.getByRole("dialog", { name: "スキルを追加" });
+    await createDialog.getByLabel("スキル名").fill(skillName);
+    await createDialog.getByLabel("カテゴリ").selectOption({ label: sourceCategory });
+    await createDialog.getByRole("button", { name: "スキルを追加", exact: true }).click();
+    await expect(admin.page.getByText("スキルを登録しました。")).toBeVisible();
+
+    await admin.page.getByRole("button", { name: "並び替え" }).click();
+    const handle = admin.page.getByRole("button", { name: `${skillName}を並び替える` });
+    await handle.focus();
+    await admin.page.keyboard.press("Space");
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      await admin.page.keyboard.press("ArrowDown");
+      const targetCard = admin.page.locator("section").filter({ hasText: targetCategory });
+      if (await targetCard.getByText(skillName, { exact: true }).count()) break;
+    }
+    await admin.page.keyboard.press("Space");
+    await admin.page.getByRole("button", { name: "保存", exact: true }).click();
+    await expect(admin.page.getByText("並び順を保存しました")).toBeVisible();
+
+    await admin.page.getByLabel("スキル名").fill(skillName);
+    // 一覧はカテゴリごとのまとまりで、行にはカテゴリ名が出ないため、移動先のまとまりの中にあることを確かめる
+    const targetSection = admin.page
+      .locator("section")
+      .filter({ hasText: targetCategory })
+      .filter({ hasNotText: sourceCategory });
+    await expect(targetSection.getByRole("row").filter({ hasText: skillName })).toBeVisible();
+
+    await admin.page.getByRole("row").filter({ hasText: skillName })
+      .getByRole("button", { name: `${skillName}を編集` }).click();
+    await admin.page.getByRole("dialog", { name: `${skillName}を編集` })
+      .getByRole("button", { name: "スキルを削除" }).click();
+    await admin.page.getByRole("dialog", { name: "スキルを削除しますか" })
+      .getByRole("button", { name: "削除する" }).click();
+    await expect(admin.page.getByText("スキルを削除しました。")).toBeVisible();
+
+    await admin.page.getByRole("button", { name: "カテゴリを管理" }).click();
+    const cleanupDialog = admin.page.getByRole("dialog", { name: "カテゴリを管理" });
+    for (const name of [sourceCategory, targetCategory]) {
+      // カテゴリ名は入力欄の値なので、入力欄と削除ボタンを両方含む最も内側の要素を行とみなす
+      const row = cleanupDialog.locator("div")
+        .filter({ has: admin.page.locator(`input[value="${name}"]`) })
+        .filter({ has: admin.page.getByRole("button", { name: "削除", exact: true }) })
+        .last();
+      await row.getByRole("button", { name: "削除", exact: true }).click();
+      await admin.page.getByRole("dialog", { name: "カテゴリを削除しますか" })
+        .getByRole("button", { name: "削除する" }).click();
+      await expect(cleanupDialog.locator(`input[value="${name}"]`)).toHaveCount(0);
+    }
+  } finally {
+    await admin.context.close();
+  }
+});
+
 test("スキルごとのレベルの目安を保存してスキルシートに表示できる", async ({ browser }) => {
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
   const uniqueSuffix = `${Date.now()}-${test.info().workerIndex}`;

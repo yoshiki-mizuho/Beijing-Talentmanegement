@@ -4,6 +4,7 @@ export type SkillSheetRow = {
   categoryId: string;
   categoryName: string;
   categoryDisplayOrder: number;
+  skillDisplayOrder: number;
   currentLevel: number | null;
   pendingLevel: number | null;
   targetLevel: number | null;
@@ -16,6 +17,7 @@ type SkillSheetSource = {
   skills: ReadonlyArray<{
     id: string;
     name: string;
+    displayOrder: number;
     category: {
       id: string;
       name: string;
@@ -85,6 +87,7 @@ export function buildSkillSheetRows({
       categoryId: skill.category.id,
       categoryName: skill.category.name,
       categoryDisplayOrder: skill.category.displayOrder,
+      skillDisplayOrder: skill.displayOrder,
       currentLevel: currentLevels.get(skill.id) ?? null,
       pendingLevel: pendingLevels.get(skill.id) ?? null,
       targetLevel: targetLevels.get(skill.id) ?? null,
@@ -95,6 +98,7 @@ export function buildSkillSheetRows({
     .sort(
       (left, right) =>
         left.categoryDisplayOrder - right.categoryDisplayOrder ||
+        left.skillDisplayOrder - right.skillDisplayOrder ||
         left.skillName.localeCompare(right.skillName, "ja")
     );
 }

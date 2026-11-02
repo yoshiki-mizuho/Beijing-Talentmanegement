@@ -1,6 +1,6 @@
 "use client";
 
-import { FolderTree, Plus, Save } from "lucide-react";
+import { ArrowUpDown, FolderTree, Plus, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -31,12 +31,14 @@ export function SkillPageHeader({
   categories,
   canManage,
   skillCount,
-  levels
+  levels,
+  onReorder
 }: {
   categories: SkillCategory[];
   canManage: boolean;
   skillCount: number;
   levels: Array<{ level: number; description: string }>;
+  onReorder: () => void;
 }) {
   const router = useRouter();
   const [createOpen, setCreateOpen] = useState(false);
@@ -51,6 +53,10 @@ export function SkillPageHeader({
         actions={
           canManage ? (
             <div className="flex flex-wrap justify-end gap-2">
+              <Button variant="secondary" onClick={onReorder}>
+                <ArrowUpDown className="h-4 w-4" aria-hidden="true" />
+                並び替え
+              </Button>
               <Button variant="secondary" onClick={() => setCategoriesOpen(true)}>
                 <FolderTree className="h-4 w-4" aria-hidden="true" />
                 カテゴリを管理
@@ -137,28 +143,19 @@ export function SkillPageHeader({
             open={categoriesOpen}
             onClose={() => setCategoriesOpen(false)}
             title="カテゴリを管理"
-            description="カテゴリ名と表示順を整えます。スキルが残るカテゴリは削除できません。"
+            description="カテゴリ名を管理します。スキルが残るカテゴリは削除できません。"
             className="max-w-3xl"
           >
             <div className="space-y-6">
               <ActionForm
                 action={createSkillCategoryAction}
-                className="grid gap-3 rounded-lg bg-[var(--surface-subtle)] p-4 sm:grid-cols-[minmax(0,1fr)_7rem_auto] sm:items-end"
+                className="grid gap-3 rounded-lg bg-[var(--surface-subtle)] p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
                 onSuccess={refresh}
               >
                 <FormField
                   id="create-category-name"
                   label="カテゴリ名"
                   name="name"
-                  required
-                />
-                <FormField
-                  id="create-category-order"
-                  label="表示順"
-                  name="displayOrder"
-                  type="number"
-                  defaultValue={0}
-                  min={0}
                   required
                 />
                 <SubmitButton pendingLabel="追加中…">
@@ -179,7 +176,7 @@ export function SkillPageHeader({
                     <div key={category.id} className="space-y-3 py-4">
                       <ActionForm
                         action={updateSkillCategoryAction}
-                        className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_7rem_auto] sm:items-end"
+                        className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
                         onSuccess={refresh}
                       >
                         <input type="hidden" name="id" value={category.id} />
@@ -188,15 +185,6 @@ export function SkillPageHeader({
                           label="カテゴリ名"
                           name="name"
                           defaultValue={category.name}
-                          required
-                        />
-                        <FormField
-                          id={`category-order-${category.id}`}
-                          label="表示順"
-                          name="displayOrder"
-                          type="number"
-                          defaultValue={category.displayOrder}
-                          min={0}
                           required
                         />
                         <SubmitButton pendingLabel="更新中…" variant="secondary">

@@ -34,6 +34,7 @@ export type SkillRow = {
   categoryId: string;
   description: string | null;
   isActive: boolean;
+  displayOrder: number;
   category: {
     id: string;
     name: string;

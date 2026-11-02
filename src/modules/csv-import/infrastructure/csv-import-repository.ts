@@ -420,14 +420,63 @@ async function applySkills(
   actorMemberId: string,
   jobId: string,
 ) {
+  const existingCategories = await tx.skillCategory.findMany({
+    select: { id: true, name: true, displayOrder: true },
+  });
+  const categoryIds = new Map(
+    existingCategories.map((category) => [category.name, category.id]),
+  );
+  let nextCategoryOrder =
+    Math.max(-1, ...existingCategories.map((category) => category.displayOrder)) + 1;
+  for (const categoryName of [
+    ...new Set(
+      changes
+        .filter((item) => item.kind !== "unchanged")
+        .map((item) => item.categoryName),
+    ),
+  ]) {
+    if (categoryIds.has(categoryName)) continue;
+    const created = await tx.skillCategory.create({
+      data: { name: categoryName, displayOrder: nextCategoryOrder },
+    });
+    nextCategoryOrder += 1;
+    categoryIds.set(categoryName, created.id);
+    await recordAuditLog(tx, {
+      actorMemberId,
+      action: AUDIT_ACTION.SKILL_CATEGORY_CREATE,
+      targetType: AUDIT_TARGET_TYPE.SKILL_CATEGORY,
+      targetId: created.id,
+      csvImportJobId: jobId,
+      after: { name: categoryName, displayOrder: created.displayOrder },
+    });
+  }
+  const existingSkills = await tx.skill.findMany({
+    select: { categoryId: true, displayOrder: true },
+  });
+  const nextSkillOrders = new Map<string, number>();
+  for (const skill of existingSkills) {
+    nextSkillOrders.set(
+      skill.categoryId,
+      Math.max(nextSkillOrders.get(skill.categoryId) ?? 0, skill.displayOrder + 1),
+    );
+  }
   for (const change of changes.filter((item) => item.kind !== "unchanged")) {
+    const categoryId = categoryIds.get(change.categoryName);
+    if (!categoryId) throw new Error(`カテゴリ ${change.categoryName} の登録に失敗しました`);
+    const movedCategory = change.kind === "new" || change.categoryId !== categoryId;
     const data = {
       code: change.code,
       name: change.name,
-      categoryId: change.categoryId,
+      categoryId,
       description: change.description,
       isActive: change.isActive,
+      ...(movedCategory
+        ? { displayOrder: nextSkillOrders.get(categoryId) ?? 0 }
+        : {}),
     };
+    if (movedCategory) {
+      nextSkillOrders.set(categoryId, (nextSkillOrders.get(categoryId) ?? 0) + 1);
+    }
     const saved =
       change.kind === "new"
         ? await tx.skill.create({ data })

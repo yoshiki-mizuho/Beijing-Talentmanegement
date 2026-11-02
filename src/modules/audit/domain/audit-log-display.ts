@@ -179,6 +179,9 @@ export function buildActionDescription(
   input: AuditDisplayInput,
 ): AuditActionDescription {
   const { action, targetName } = input;
+  if (action === "skill.reorder") {
+    return { prefix: "", target: "スキルの並び順", suffix: " を変更" };
+  }
   if (action === "skill.level_guides.update") {
     return {
       prefix: "スキル ",
@@ -281,6 +284,9 @@ function levelChange(before: unknown, after: unknown) {
 
 export function buildAuditSummary(input: AuditDisplayInput) {
   const { action, before, after, metadata, names = {}, diffRows = [] } = input;
+  if (action === "skill.reorder") {
+    return `カテゴリ ${metadata?.changedCategoryCount ?? 0}件・スキル ${metadata?.changedSkillCount ?? 0}件・カテゴリ移動 ${metadata?.movedSkillCount ?? 0}件`;
+  }
   if (action === "audit_log.export" || action === "csv.export") {
     return metadata?.count === undefined ? "" : `${metadata.count}件`;
   }

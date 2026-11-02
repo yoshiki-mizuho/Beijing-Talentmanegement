@@ -66,14 +66,11 @@ export function validateSkillImport(
       });
     }
     seenCodes.add(code);
-    const category = categoryByName.get(record.values.category_name);
-    if (!category) {
-      errors.push({
-        row: record.row,
-        column: "category_name",
-        message: `カテゴリ ${record.values.category_name} が見つかりません`,
-      });
-    }
+    const categoryName = record.values.category_name;
+    const category = categoryByName.get(categoryName) ?? {
+      id: `new:${categoryName}`,
+      name: categoryName,
+    };
     return { record, code, category };
   });
   const names = new Map<string, number>();

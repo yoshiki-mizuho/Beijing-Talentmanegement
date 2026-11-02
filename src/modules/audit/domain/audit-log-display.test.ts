@@ -114,6 +114,29 @@ describe("audit log display", () => {
     ).toBe(" の上司を変更");
   });
 
+  it("スキルの並び替えを表示する", () => {
+    const input = {
+      action: "skill.reorder",
+      targetType: "Skill",
+      targetName: "（削除済み）",
+      before: null,
+      after: null,
+      metadata: {
+        changedCategoryCount: 2,
+        changedSkillCount: 3,
+        movedSkillCount: 1,
+      },
+    };
+    expect(buildActionDescription(input)).toEqual({
+      prefix: "",
+      target: "スキルの並び順",
+      suffix: " を変更",
+    });
+    expect(buildAuditSummary(input)).toBe(
+      "カテゴリ 2件・スキル 3件・カテゴリ移動 1件",
+    );
+  });
+
   it("本人の申請ではメンバー名を省き、代理申請では表示する", () => {
     const base = {
       action: "skill_assessment.create",

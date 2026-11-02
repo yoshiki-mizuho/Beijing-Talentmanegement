@@ -6,6 +6,7 @@ export async function getSkillMapData(memberIds: string[], since: Date) {
     select: {
       id: true,
       name: true,
+      displayOrder: true,
       category: { select: { id: true, name: true, displayOrder: true } },
       memberSkills: {
         where: { memberId: { in: memberIds }, member: { status: "ACTIVE" } },
@@ -27,7 +28,7 @@ export async function getSkillMapData(memberIds: string[], since: Date) {
         },
       },
     },
-    orderBy: [{ category: { displayOrder: "asc" } }, { name: "asc" }],
+    orderBy: [{ category: { displayOrder: "asc" } }, { displayOrder: "asc" }, { name: "asc" }],
   });
   return skills.map((skill) => ({
     id: skill.id,
