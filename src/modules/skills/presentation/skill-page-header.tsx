@@ -1,6 +1,6 @@
 "use client";
 
-import { FolderTree, Plus, Save } from "lucide-react";
+import { FolderTree, ListChecks, Plus, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -8,6 +8,7 @@ import {
   createSkillAction,
   createSkillCategoryAction,
   deleteSkillCategoryAction,
+  updateCommonSkillLevelGuidesAction,
   updateSkillCategoryAction
 } from "@/modules/skills/presentation/actions";
 import { ActionForm, ConfirmSubmitButton } from "@/shared/ui/action-form";
@@ -41,6 +42,21 @@ export function SkillPageHeader({
   const router = useRouter();
   const [createOpen, setCreateOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const [commonGuidesOpen, setCommonGuidesOpen] = useState(false);
+  // 保存の直後に開き直しても、画面の更新を待たずに保存した文章を出す
+  // （画面が更新されて levels が新しくなったら、そちらを使う）
+  const [savedOverride, setSavedOverride] = useState<{
+    base: typeof levels;
+    guides: typeof levels;
+  } | null>(null);
+  const savedGuides =
+    savedOverride && savedOverride.base === levels ? savedOverride.guides : levels;
+  const [draftGuides, setDraftGuides] = useState(levels);
+
+  const openCommonGuides = () => {
+    setDraftGuides(savedGuides);
+    setCommonGuidesOpen(true);
+  };
 
   const refresh = () => router.refresh();
 
@@ -51,6 +67,10 @@ export function SkillPageHeader({
         actions={
           canManage ? (
             <div className="flex flex-wrap justify-end gap-2">
+              <Button variant="secondary" onClick={openCommonGuides}>
+                <ListChecks className="h-4 w-4" aria-hidden="true" />
+                レベルの目安（共通）
+              </Button>
               <Button variant="secondary" onClick={() => setCategoriesOpen(true)}>
                 <FolderTree className="h-4 w-4" aria-hidden="true" />
                 カテゴリを管理
@@ -66,6 +86,50 @@ export function SkillPageHeader({
 
       {canManage ? (
         <>
+          <Dialog
+            open={commonGuidesOpen}
+            onClose={() => setCommonGuidesOpen(false)}
+            title="レベルの目安（共通）"
+            description="スキルごとの目安が空欄のときに使われます"
+          >
+            <ActionForm
+              action={updateCommonSkillLevelGuidesAction}
+              className="space-y-4"
+              onSuccess={() => {
+                setSavedOverride({ base: levels, guides: draftGuides });
+                setCommonGuidesOpen(false);
+                refresh();
+              }}
+            >
+              {draftGuides.map((level) => (
+                <CommonLevelGuideField
+                  key={level.level}
+                  level={level}
+                  onChange={(description) =>
+                    setDraftGuides((current) =>
+                      current.map((item) =>
+                        item.level === level.level ? { ...item, description } : item
+                      )
+                    )
+                  }
+                />
+              ))}
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setCommonGuidesOpen(false)}
+                >
+                  キャンセル
+                </Button>
+                <SubmitButton pendingLabel="保存中…">
+                  <Save className="h-4 w-4" aria-hidden="true" />
+                  保存
+                </SubmitButton>
+              </div>
+            </ActionForm>
+          </Dialog>
+
           <Dialog
             open={createOpen}
             onClose={() => setCreateOpen(false)}
@@ -229,5 +293,39 @@ export function SkillPageHeader({
         </>
       ) : null}
     </>
+  );
+}
+
+function CommonLevelGuideField({
+  level,
+  onChange
+}: {
+  level: { level: number; description: string };
+  onChange: (description: string) => void;
+}) {
+  const value = level.description;
+  const id = `common-level-guide-${level.level}`;
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between gap-3">
+        <label htmlFor={id} className="text-sm font-medium text-[var(--foreground)]">
+          Lv{level.level}
+        </label>
+        <span className="text-xs tabular-nums text-[var(--muted-foreground)]">
+          残り{200 - value.length}文字
+        </span>
+      </div>
+      <textarea
+        id={id}
+        name={`levelGuide${level.level}`}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        maxLength={200}
+        required
+        rows={3}
+        className="min-h-24 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--ring)]"
+      />
+    </div>
   );
 }

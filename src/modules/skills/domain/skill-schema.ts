@@ -44,8 +44,26 @@ export const skillLevelGuidesInputSchema = z.object({
     })
 });
 
+export const commonSkillLevelGuidesInputSchema = z.object({
+  guides: z
+    .array(
+      z.object({
+        level: z.number().int().min(1).max(5),
+        description: z.string().trim().min(1).max(200)
+      })
+    )
+    .length(5)
+    .refine(
+      (guides) =>
+        new Set(guides.map((guide) => guide.level)).size === 5 &&
+        guides.every((guide) => guide.level >= 1 && guide.level <= 5),
+      { message: "Lv1〜Lv5を1件ずつ指定してください。" }
+    )
+});
+
 export type SkillInput = z.infer<typeof skillInputSchema>;
 export type CreateSkillInput = z.infer<typeof createSkillInputSchema>;
 export type SkillCategoryInput = z.infer<typeof skillCategoryInputSchema>;
 export type SkillLevelGuidesInput = z.infer<typeof skillLevelGuidesInputSchema>;
+export type CommonSkillLevelGuidesInput = z.infer<typeof commonSkillLevelGuidesInputSchema>;
 export type ReorderSkillsInput = z.infer<typeof reorderSkillsInputSchema>;

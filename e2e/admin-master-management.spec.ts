@@ -24,6 +24,10 @@ test("キーボードでスキルを別カテゴリへ並び替えられる", as
       await expect(admin.page.getByText("カテゴリを登録しました。")).toBeVisible();
     }
     await categoryDialog.getByRole("button", { name: "ダイアログを閉じる" }).click();
+    // 1件目の登録のトーストが残っていると2件目の完了を待てないため、両方のカテゴリが出るまで待つ
+    for (const name of [sourceCategory, targetCategory]) {
+      await expect(admin.page.getByRole("button", { name, exact: true })).toBeVisible();
+    }
 
     await admin.page.getByRole("button", { name: "スキルを追加", exact: true }).click();
     const createDialog = admin.page.getByRole("dialog", { name: "スキルを追加" });
@@ -136,6 +140,32 @@ test("スキルごとのレベルの目安を保存してスキルシートに�
       .getByRole("button", { name: "削除する" })
       .click();
     await expect(admin.page.getByText("スキルを削除しました。")).toBeVisible();
+  } finally {
+    await admin.context.close();
+  }
+});
+
+test("共通のレベルの目安を編集して元に戻せる", async ({ browser }) => {
+  const admin = await openLoggedInContext(browser, credentials.ADMIN);
+  const changedGuide = `E2E共通目安-${Date.now()}-${test.info().workerIndex}`;
+
+  try {
+    await admin.page.goto("/skills");
+    await admin.page.getByRole("button", { name: "レベルの目安（共通）" }).click();
+    let dialog = admin.page.getByRole("dialog", { name: "レベルの目安（共通）" });
+    const originalGuide = await dialog.getByLabel("Lv1").inputValue();
+
+    await dialog.getByLabel("Lv1").fill(changedGuide);
+    await dialog.getByRole("button", { name: "保存", exact: true }).click();
+    await expect(admin.page.getByText("レベルの目安を更新しました")).toBeVisible();
+
+    await admin.page.getByRole("button", { name: "レベルの目安（共通）" }).click();
+    dialog = admin.page.getByRole("dialog", { name: "レベルの目安（共通）" });
+    await expect(dialog.getByLabel("Lv1")).toHaveValue(changedGuide);
+
+    await dialog.getByLabel("Lv1").fill(originalGuide);
+    await dialog.getByRole("button", { name: "保存", exact: true }).click();
+    await expect(admin.page.getByText("レベルの目安を更新しました")).toBeVisible();
   } finally {
     await admin.context.close();
   }

@@ -31,6 +31,7 @@ export function moveSkillOrder(
   order: SkillOrderCategory[],
   activeKey: string,
   overKey: string,
+  insertAfter = false,
 ): SkillOrderCategory[] {
   const activeId = activeKey.slice("skill:".length);
   const fromCategoryId = findCategoryId(order, activeKey);
@@ -54,6 +55,7 @@ export function moveSkillOrder(
       ? overKey.slice("skill:".length)
       : null;
     let insertAt = overId ? next.indexOf(overId) : next.length;
+    if (insertAfter && insertAt >= 0) insertAt += 1;
     if (fromCategoryId === toCategoryId && activeIndex < originalOverIndex)
       insertAt += 1;
     next.splice(insertAt < 0 ? next.length : insertAt, 0, activeId);

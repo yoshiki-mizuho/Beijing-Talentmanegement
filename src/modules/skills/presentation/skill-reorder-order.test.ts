@@ -45,6 +45,14 @@ describe("skill reorder order", () => {
     expect(moved[0].skillIds).toEqual(["hidden", "shown-2"]);
     expect(moved[1].skillIds).toEqual(["shown-1", "target"]);
 
+    const movedAfter = moveSkillOrder(
+      order,
+      skillKey("shown-1"),
+      skillKey("target"),
+      true,
+    );
+    expect(movedAfter[1].skillIds).toEqual(["target", "shown-1"]);
+
     const movedToEmpty = moveSkillOrder(
       moved,
       skillKey("shown-1"),

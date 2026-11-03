@@ -1,5 +1,6 @@
 import type {
   CreateSkillInput,
+  CommonSkillLevelGuidesInput,
   ReorderSkillsInput,
   SkillCategoryInput,
   SkillInput,
@@ -59,6 +60,44 @@ export async function listSkillCategories() {
 export async function listSkillLevels() {
   return prisma.skillLevel.findMany({
     orderBy: { level: "asc" }
+  });
+}
+
+export async function updateCommonSkillLevelGuides(
+  input: CommonSkillLevelGuidesInput,
+  actorMemberId: string | null
+) {
+  return prisma.$transaction(async (tx) => {
+    const before = await tx.skillLevel.findMany({
+      orderBy: { level: "asc" },
+      select: { level: true, description: true }
+    });
+    await Promise.all(
+      input.guides.map((guide) =>
+        tx.skillLevel.update({
+          where: { level: guide.level },
+          data: { description: guide.description }
+        })
+      )
+    );
+    const after = input.guides
+      .slice()
+      .sort((left, right) => left.level - right.level);
+    const diff = diffForAudit(
+      Object.fromEntries(before.map((guide) => [guide.level, guide.description])),
+      Object.fromEntries(after.map((guide) => [guide.level, guide.description]))
+    );
+    if (diff) {
+      await recordAuditLog(tx, {
+        actorMemberId,
+        action: AUDIT_ACTION.SKILL_LEVEL_GUIDES_UPDATE,
+        targetType: AUDIT_TARGET_TYPE.SKILL,
+        targetId: "common-skill-level-guides",
+        ...diff,
+        metadata: { targetName: "レベルの目安（共通）" }
+      });
+    }
+    return after;
   });
 }
 
