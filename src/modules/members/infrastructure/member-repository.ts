@@ -32,6 +32,7 @@ import type {
   SkillAssessmentReviewInput
 } from "@/modules/members/domain/skill-assessment-schema";
 import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
+import { collectDescendantIds } from "@/modules/members/domain/department-hierarchy";
 import { prisma } from "@/server/db/prisma";
 import { UserFacingError } from "@/shared/lib/user-facing-error";
 
@@ -60,6 +61,7 @@ function memberAuditFields(member: {
 export async function listDepartments() {
   return prisma.department.findMany({
     where: { isActive: true },
+    select: { id: true, name: true, parentDepartmentId: true },
     orderBy: { name: "asc" }
   });
 }
@@ -76,7 +78,8 @@ export async function listManagerCandidates() {
 }
 
 export function buildMemberSearchWhere(
-  input?: MemberSearchInput
+  input?: MemberSearchInput,
+  departmentIds?: string[]
 ): Prisma.MemberWhereInput {
   return {
     ...(input?.q
@@ -89,7 +92,11 @@ export function buildMemberSearchWhere(
           ]
         }
       : {}),
-    ...(input?.departmentId ? { departmentId: input.departmentId } : {}),
+    ...(input?.departmentId
+      ? departmentIds
+        ? { departmentId: { in: departmentIds } }
+        : { departmentId: input.departmentId }
+      : {}),
     ...(input?.status ? { status: input.status } : {}),
     ...(input?.skillId || input?.minLevel
       ? {
@@ -105,10 +112,19 @@ export function buildMemberSearchWhere(
 }
 
 export async function listMembers(input?: MemberSearchInput, memberIds?: string[]) {
+  // 部署で絞り込むときは、配下の部署のメンバーも含める
+  const departmentIds = input?.departmentId
+    ? collectDescendantIds(
+        await prisma.department.findMany({
+          select: { id: true, name: true, parentDepartmentId: true }
+        }),
+        input.departmentId
+      )
+    : undefined;
   const members = await prisma.member.findMany({
     where: {
       AND: [
-        buildMemberSearchWhere(input),
+        buildMemberSearchWhere(input, departmentIds),
         ...(memberIds ? [{ id: { in: memberIds } }] : [])
       ]
     },

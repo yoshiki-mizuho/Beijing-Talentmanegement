@@ -392,6 +392,12 @@ describe("buildMemberSearchWhere", () => {
     });
   });
 
+  it("配下の部署を渡したときは、それらの部署のメンバーを対象にする", () => {
+    expect(
+      buildMemberSearchWhere({ departmentId: "hq" }, ["hq", "dev", "infra"])
+    ).toEqual({ departmentId: { in: ["hq", "dev", "infra"] } });
+  });
+
   it("combines skill and minimum level in the same relation condition", () => {
     expect(
       buildMemberSearchWhere({

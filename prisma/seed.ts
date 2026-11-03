@@ -17,6 +17,7 @@ import { readDemoSeedPasswords } from "./seed-config";
 import {
   buildSkillAssessmentRequestNotificationBody,
   demoDepartments,
+  demoDepartmentParents,
   demoMembers,
   demoManagerAssignments,
   demoMemberSkills,
@@ -186,8 +187,33 @@ async function main() {
         where: { code: department.code },
         update: {},
         create: {
-          ...department,
+          code: department.code,
+          name: department.name,
           isActive: true
+        }
+      });
+    }
+
+    const hierarchyDepartmentCodes = [
+      "DEV",
+      ...demoDepartments.map((department) => department.code)
+    ];
+    const hierarchyDepartments = await tx.department.findMany({
+      where: { code: { in: hierarchyDepartmentCodes } },
+      select: { id: true, code: true }
+    });
+    const hierarchyDepartmentIds = new Map(
+      hierarchyDepartments.map((department) => [department.code, department.id])
+    );
+    for (const relation of demoDepartmentParents) {
+      await tx.department.updateMany({
+        where: { code: relation.code, parentDepartmentId: null },
+        data: {
+          parentDepartmentId: requireId(
+            hierarchyDepartmentIds,
+            relation.parentCode,
+            "Department"
+          )
         }
       });
     }
