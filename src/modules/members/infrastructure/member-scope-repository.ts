@@ -12,7 +12,7 @@ export async function getMemberScopeSource(memberId: string) {
     }),
     prisma.department.findMany({
       where: { isActive: true },
-      select: { id: true, name: true },
+      select: { id: true, name: true, parentDepartmentId: true },
       orderBy: { name: "asc" }
     }),
     prisma.member.findMany({

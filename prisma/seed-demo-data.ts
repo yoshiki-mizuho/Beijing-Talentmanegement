@@ -1,7 +1,16 @@
 export const demoDepartments = [
-  { code: "INFRA", name: "インフラ部" },
-  { code: "DESIGN", name: "デザイン部" },
-  { code: "PMO", name: "PMO" }
+  { code: "DEV-HQ", name: "開発本部", parentCode: null },
+  { code: "BIZ-HQ", name: "事業推進本部", parentCode: null },
+  { code: "INFRA", name: "インフラ部", parentCode: "DEV-HQ" },
+  { code: "DESIGN", name: "デザイン部", parentCode: "BIZ-HQ" },
+  { code: "PMO", name: "PMO", parentCode: "BIZ-HQ" }
+] as const;
+
+export const demoDepartmentParents = [
+  { code: "DEV", parentCode: "DEV-HQ" },
+  { code: "INFRA", parentCode: "DEV-HQ" },
+  { code: "DESIGN", parentCode: "BIZ-HQ" },
+  { code: "PMO", parentCode: "BIZ-HQ" }
 ] as const;
 
 export const demoSkillCategories = [

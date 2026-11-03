@@ -17,9 +17,12 @@ import {
   skillAssessmentReviewInputSchema
 } from "@/modules/members/domain/skill-assessment-schema";
 import * as memberRepository from "@/modules/members/infrastructure/member-repository";
+import { buildDepartmentTree } from "@/modules/members/domain/department-hierarchy";
 
-export function listDepartments() {
-  return memberRepository.listDepartments();
+export async function listDepartments() {
+  return buildDepartmentTree(await memberRepository.listDepartments()).map(
+    ({ pathLabel, ...department }) => ({ ...department, name: pathLabel })
+  );
 }
 
 export function listManagerCandidates() {

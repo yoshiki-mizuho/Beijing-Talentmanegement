@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   demoMemberSkills,
+  demoDepartments,
+  demoDepartmentParents,
   demoManagerAssignments,
   demoMembers,
   demoRoles,
@@ -18,6 +20,16 @@ function expectUnique(values: readonly string[]) {
 }
 
 describe("demo seed data", () => {
+  it("defines every parent department code", () => {
+    const departmentCodes = new Set(["DEV", ...demoDepartments.map((department) => department.code)]);
+    for (const relation of demoDepartmentParents) {
+      expect(departmentCodes.has(relation.code)).toBe(true);
+      expect(departmentCodes.has(relation.parentCode)).toBe(true);
+    }
+    expect(departmentCodes.has("DEV-HQ")).toBe(true);
+    expect(departmentCodes.has("BIZ-HQ")).toBe(true);
+  });
+
   it("has unique business keys", () => {
     expectUnique(demoSkills.map((skill) => skill.code));
     expectUnique(demoSkillCategories.map((category) => category.name));
