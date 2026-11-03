@@ -6,20 +6,29 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import type { LevelUpCelebration } from "@/modules/growth/application/growth-service";
+import type {
+  LevelUpCelebration,
+  RoleAchievementCelebration
+} from "@/modules/growth/application/growth-service";
 import { getCelebrationHeading } from "@/modules/growth/presentation/level-up-celebration";
+import { RoleAchievedDialog } from "@/modules/growth/presentation/role-achieved-dialog";
 import { confirmLevelUpNotificationAction } from "@/modules/notifications/presentation/actions";
 import { Button } from "@/shared/ui/button";
 import { Dialog } from "@/shared/ui/dialog";
 
 export function LevelUpCelebrationDialog({
-  celebrations
+  celebrations,
+  roleAchievement,
+  memberId
 }: {
   celebrations: LevelUpCelebration[];
+  roleAchievement: RoleAchievementCelebration | null;
+  memberId: string;
 }) {
   const router = useRouter();
   const [index, setIndex] = useState(0);
   const [open, setOpen] = useState(celebrations.length > 0);
+  const [showRoleAchievement, setShowRoleAchievement] = useState(false);
   const [pending, startTransition] = useTransition();
   const contentRef = useRef<HTMLDivElement>(null);
   const current = celebrations[index];
@@ -64,7 +73,7 @@ export function LevelUpCelebrationDialog({
     };
   }, [current, open]);
 
-  const confirmAndThen = useCallback((destination: "next" | "close" | "timeline") => {
+  const confirmAndThen = useCallback((destination: "next" | "close" | "timeline" | "role") => {
     if (!current) return;
     startTransition(async () => {
       const formData = new FormData();
@@ -81,7 +90,9 @@ export function LevelUpCelebrationDialog({
         setIndex((value) => value + 1);
       } else {
         setOpen(false);
-        if (destination === "timeline") {
+        if (destination === "role") {
+          setShowRoleAchievement(true);
+        } else if (destination === "timeline") {
           router.push("/dashboard#growth-timeline");
         } else {
           router.refresh();
@@ -89,11 +100,14 @@ export function LevelUpCelebrationDialog({
       }
     });
   }, [celebrations, current, index, multiple, router]);
-  const handleClose = useCallback(() => confirmAndThen("close"), [confirmAndThen]);
+  const handleClose = useCallback(
+    () => confirmAndThen(roleAchievement ? "role" : "close"),
+    [confirmAndThen, roleAchievement]
+  );
 
   if (!current) return null;
 
-  return (
+  return (<>
     <Dialog
       open={open}
       onClose={handleClose}
@@ -104,7 +118,11 @@ export function LevelUpCelebrationDialog({
       closeOnBackdrop={false}
       className="max-w-xl"
       footer={
-        <>
+        roleAchievement ? (
+          <Button disabled={pending} onClick={() => confirmAndThen("role")}>
+            {pending ? "確認中…" : "続ける"}
+          </Button>
+        ) : <>
           <Button variant="secondary" disabled={pending} onClick={() => confirmAndThen("timeline")}>成長の記録を見る</Button>
           <Button disabled={pending} onClick={() => confirmAndThen("close")}>
             {pending ? "確認中…" : "閉じる"}
@@ -173,5 +191,13 @@ export function LevelUpCelebrationDialog({
         ) : null}
       </div>
     </Dialog>
-  );
+    {roleAchievement ? (
+      <RoleAchievedDialog
+        open={showRoleAchievement}
+        celebration={roleAchievement}
+        memberId={memberId}
+        onClose={() => setShowRoleAchievement(false)}
+      />
+    ) : null}
+  </>);
 }

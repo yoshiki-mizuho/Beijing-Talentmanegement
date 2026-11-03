@@ -12,7 +12,8 @@ import {
 import { getMyAvatarUpdatedAt } from "@/modules/members/application/member-avatar-service";
 import {
   getCheerCelebrations,
-  getLevelUpCelebrations
+  getLevelUpCelebrations,
+  getRoleAchievementCelebration
 } from "@/modules/growth/application/growth-service";
 import { CheerCelebrationDialog } from "@/modules/growth/presentation/cheer-celebration-dialog";
 import { LevelUpCelebrationDialog } from "@/modules/growth/presentation/level-up-celebration-dialog";
@@ -54,6 +55,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     pendingApprovalCount,
     approvedSkillCount,
     levelUpCelebrations,
+    roleAchievementCelebration,
     cheerCelebrations,
     avatarUpdatedAt,
     hasTargetRole
@@ -79,6 +81,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     session.user.memberId && !session.user.passwordChangeRequired
       ? getLevelUpCelebrations(session.user.memberId)
       : Promise.resolve([]),
+    session.user.memberId && !session.user.passwordChangeRequired
+      ? getRoleAchievementCelebration(session.user.memberId)
+      : Promise.resolve(null),
     session.user.memberId && !session.user.passwordChangeRequired
       ? getCheerCelebrations(session.user.memberId)
       : Promise.resolve([]),
@@ -112,7 +117,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       passwordChangeRequired={session.user.passwordChangeRequired}
     >
       {children}
-      <LevelUpCelebrationDialog celebrations={levelUpCelebrations} />
+      <LevelUpCelebrationDialog
+        celebrations={levelUpCelebrations}
+        roleAchievement={roleAchievementCelebration}
+        memberId={session.user.memberId!}
+      />
       <CheerCelebrationDialog
         key={
           levelUpCelebrations.length > 0

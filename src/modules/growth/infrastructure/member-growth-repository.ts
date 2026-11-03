@@ -20,6 +20,7 @@ export async function getMemberGrowthData(memberId: string) {
             select: {
               id: true,
               name: true,
+              isActive: true,
               roleRequirements: {
                 where: { isRequired: true },
                 select: {
@@ -54,7 +55,20 @@ export async function getMemberGrowthData(memberId: string) {
       }),
       prisma.role.findMany({
         where: { isActive: true },
-        select: { id: true, name: true },
+        select: {
+          id: true,
+          name: true,
+          roleRequirements: {
+            where: { isRequired: true },
+            select: {
+              skillId: true,
+              requiredLevel: true,
+              isRequired: true,
+              anyOfGroup: true,
+              skill: { select: { name: true } }
+            }
+          }
+        },
         orderBy: { name: "asc" }
       }),
       prisma.skillCategory.findMany({
