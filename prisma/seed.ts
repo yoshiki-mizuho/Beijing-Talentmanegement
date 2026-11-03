@@ -19,6 +19,7 @@ import {
   demoDepartments,
   demoDepartmentParents,
   demoMembers,
+  demoMemberProfiles,
   demoManagerAssignments,
   demoMemberSkills,
   demoLevelUpComments,
@@ -352,6 +353,18 @@ async function main() {
     const memberNamesByEmployeeNo = new Map(
       members.map((member) => [member.employeeNo, member.name])
     );
+
+    for (const profile of demoMemberProfiles) {
+      const memberId = requireId(memberIdsByEmployeeNo, profile.employeeNo, "Member");
+      await tx.member.updateMany({
+        where: { id: memberId, profileMessage: null },
+        data: { profileMessage: profile.profileMessage }
+      });
+      await tx.member.updateMany({
+        where: { id: memberId, consultTopics: { isEmpty: true } },
+        data: { consultTopics: [...profile.consultTopics] }
+      });
+    }
 
     for (const assignment of demoManagerAssignments) {
       await tx.member.updateMany({

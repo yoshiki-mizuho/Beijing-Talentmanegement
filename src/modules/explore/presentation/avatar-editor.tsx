@@ -62,7 +62,7 @@ export function AvatarEditor({ hasAvatar }: { hasAvatar: boolean }) {
         aria-label="アイコン画像を変更"
         disabled={pending}
         onClick={() => inputRef.current?.click()}
-        className="absolute bottom-0 right-0 grid h-7 w-7 place-items-center rounded-full border-2 border-white bg-[var(--primary)] text-white disabled:opacity-50"
+        className="absolute bottom-0 right-0 grid h-11 w-11 place-items-center rounded-full border-2 border-white bg-[var(--primary)] text-white disabled:opacity-50"
       >
         <Camera className="h-3.5 w-3.5" aria-hidden="true" />
       </button>

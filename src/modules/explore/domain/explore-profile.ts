@@ -1,5 +1,110 @@
 import { isGrowthLevelChange } from "@/modules/growth/domain/level-change-source";
 import { isRoleAchieved } from "@/modules/roles/domain/role-achievement";
+import { z } from "zod";
+
+const trimmedText = (maximum: number, label: string) =>
+  z.string().trim().max(maximum, `${label}は${maximum}字以内で入力してください。`);
+
+export const profileInputSchema = z
+  .object({
+    profileMessage: trimmedText(120, "ひとこと").transform((value) => value || null),
+    consultTopics: z
+      .array(trimmedText(20, "相談に乗れること"))
+      .transform((items) => items.filter(Boolean))
+      .pipe(z.array(z.string()).max(8, "相談に乗れることは8件までです。")),
+    pinnedBadgeIds: z.array(z.string().trim().min(1)).max(3, "飾るバッジは3つまでです。")
+  })
+  .superRefine((value, context) => {
+    if (new Set(value.consultTopics).size !== value.consultTopics.length) {
+      context.addIssue({
+        code: "custom",
+        path: ["consultTopics"],
+        message: "同じ相談内容は追加できません。"
+      });
+    }
+    if (new Set(value.pinnedBadgeIds).size !== value.pinnedBadgeIds.length) {
+      context.addIssue({
+        code: "custom",
+        path: ["pinnedBadgeIds"],
+        message: "同じバッジは選べません。"
+      });
+    }
+  });
+
+export function parseProfileInput(
+  input: z.input<typeof profileInputSchema>,
+  earnedBadgeIds: ReadonlySet<string>
+) {
+  const parsed = profileInputSchema.parse(input);
+  if (parsed.pinnedBadgeIds.some((id) => !earnedBadgeIds.has(id))) {
+    throw new z.ZodError([
+      {
+        code: "custom",
+        path: ["pinnedBadgeIds"],
+        message: "獲得済みのバッジだけを選んでください。"
+      }
+    ]);
+  }
+  return parsed;
+}
+
+export function calculateProfileStats(input: {
+  createdAt: Date | string;
+  levelChanges: ReadonlyArray<{ fromLevel: number | null; toLevel: number; source: string }>;
+  receivedCheerCount: number;
+  receivedReactionCount: number;
+  mentoredCheers: ReadonlyArray<{ toMemberId: string; createdAt: Date | string }>;
+  now: Date;
+}) {
+  const startOfYear = new Date(input.now.getFullYear(), 0, 1);
+  const mentees = new Set(input.mentoredCheers.map((cheer) => cheer.toMemberId));
+  const menteesThisYear = new Set(
+    input.mentoredCheers
+      .filter((cheer) => new Date(cheer.createdAt) >= startOfYear)
+      .map((cheer) => cheer.toMemberId)
+  );
+  return {
+    daysSinceJoined: Math.max(
+      1,
+      Math.floor(
+        (input.now.getTime() - new Date(input.createdAt).getTime()) / 86_400_000
+      ) + 1
+    ),
+    levelUpCount: input.levelChanges.filter(
+      (change) =>
+        isGrowthLevelChange(change.source) &&
+        (change.fromLevel === null || change.toLevel > change.fromLevel)
+    ).length,
+    encouragementCount: input.receivedCheerCount + input.receivedReactionCount,
+    mentoredCount: mentees.size,
+    mentoredThisYearCount: menteesThisYear.size
+  };
+}
+
+export function splitTopSkills<T extends { skillName: string; level: number }>(
+  skills: ReadonlyArray<T>
+) {
+  const sorted = [...skills].sort(
+    (left, right) => right.level - left.level || left.skillName.localeCompare(right.skillName, "ja")
+  );
+  return { top: sorted.slice(0, 5), rest: sorted.slice(5) };
+}
+
+export function selectPinnedBadges<T extends { id: string; earnedAt: Date | string }>(
+  earned: ReadonlyArray<T>,
+  pinnedIds: ReadonlyArray<string>
+) {
+  const byId = new Map(earned.map((badge) => [badge.id, badge]));
+  if (pinnedIds.length) {
+    return pinnedIds.flatMap((id) => {
+      const badge = byId.get(id);
+      return badge ? [badge] : [];
+    });
+  }
+  return [...earned]
+    .sort((left, right) => new Date(right.earnedAt).getTime() - new Date(left.earnedAt).getTime())
+    .slice(0, 3);
+}
 
 export type ProfileViewer = { role: string; memberId: string };
 export type VisibleMember = {

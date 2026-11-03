@@ -83,9 +83,19 @@ export async function getSkillProfileSourceData(memberId: string) {
         email: true,
         department: { select: { name: true } },
         jobTitle: true,
+        createdAt: true,
+        profileMessage: true,
+        consultTopics: true,
+        pinnedBadgeIds: true,
         isProfilePublic: true,
         avatarUpdatedAt: true,
-        memberSkills: { select: { skillId: true, level: true, skill: { select: { name: true } } } },
+        memberSkills: {
+          select: {
+            skillId: true,
+            level: true,
+            skill: { select: { name: true, category: { select: { name: true } } } }
+          }
+        },
         skillLevelChanges: {
           select: {
             skillId: true,
@@ -93,17 +103,25 @@ export async function getSkillProfileSourceData(memberId: string) {
             toLevel: true,
             source: true,
             changedAt: true,
-            skill: { select: { name: true } }
+            skill: { select: { name: true } },
+            _count: { select: { reactions: true } }
           },
           orderBy: { changedAt: "asc" }
         },
         selfAssessments: { select: { createdAt: true } },
+        receivedCheers: { select: { id: true } },
         mentoredCheers: { select: { toMemberId: true, createdAt: true } },
         targetRole: {
           select: {
+            name: true,
             roleRequirements: {
               where: { isRequired: true },
-              select: { skillId: true, requiredLevel: true, anyOfGroup: true }
+              select: {
+                skillId: true,
+                requiredLevel: true,
+                anyOfGroup: true,
+                skill: { select: { name: true } }
+              }
             }
           }
         }
@@ -125,4 +143,11 @@ export async function getSkillProfileSourceData(memberId: string) {
 
 export function updateProfileVisibility(memberId: string, isPublic: boolean) {
   return prisma.member.update({ where: { id: memberId }, data: { isProfilePublic: isPublic } });
+}
+
+export function updateMemberProfile(
+  memberId: string,
+  data: { profileMessage: string | null; consultTopics: string[]; pinnedBadgeIds: string[] }
+) {
+  return prisma.member.update({ where: { id: memberId }, data });
 }

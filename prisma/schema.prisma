@@ -156,6 +156,9 @@ model Member {
   status                MemberStatus          @default(ACTIVE)
   jobTitle              String?
   profile               String?
+  profileMessage        String?
+  consultTopics         String[]              @default([])
+  pinnedBadgeIds        String[]              @default([])
   isProfilePublic       Boolean               @default(true)
   avatarImage           Bytes?
   avatarMimeType        String?

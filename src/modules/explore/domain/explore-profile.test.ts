@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   aggregateTrendingSkills,
+  calculateProfileStats,
   canViewProfile,
   getRecommendationReasons,
   markSnapshotChanges,
-  restoreSkillSnapshots
+  parseProfileInput,
+  restoreSkillSnapshots,
+  selectPinnedBadges,
+  splitTopSkills
 } from "./explore-profile";
 
 describe("explore and profile rules", () => {
@@ -97,5 +101,110 @@ describe("explore and profile rules", () => {
       { skillId: "a", skillName: "A", level: 3, marker: { type: "up", fromLevel: 1 } },
       { skillId: "b", skillName: "B", level: 2, marker: { type: "new" } }
     ]);
+  });
+});
+
+describe("profile details", () => {
+  it("入力を整え、上限、重複、未獲得バッジを拒否する", () => {
+    expect(
+      parseProfileInput(
+        {
+          profileMessage: "  hello  ",
+          consultTopics: [" React ", ""],
+          pinnedBadgeIds: ["earned"]
+        },
+        new Set(["earned"])
+      )
+    ).toEqual({
+      profileMessage: "hello",
+      consultTopics: ["React"],
+      pinnedBadgeIds: ["earned"]
+    });
+    expect(() =>
+      parseProfileInput(
+        { profileMessage: "a".repeat(121), consultTopics: [], pinnedBadgeIds: [] },
+        new Set()
+      )
+    ).toThrow();
+    expect(() =>
+      parseProfileInput(
+        { profileMessage: "", consultTopics: Array(9).fill("topic"), pinnedBadgeIds: [] },
+        new Set()
+      )
+    ).toThrow();
+    expect(() =>
+      parseProfileInput(
+        { profileMessage: "", consultTopics: ["a".repeat(21)], pinnedBadgeIds: [] },
+        new Set()
+      )
+    ).toThrow();
+    expect(() =>
+      parseProfileInput(
+        { profileMessage: "", consultTopics: ["same", "same"], pinnedBadgeIds: [] },
+        new Set()
+      )
+    ).toThrow();
+    expect(() =>
+      parseProfileInput(
+        { profileMessage: "", consultTopics: [], pinnedBadgeIds: ["not-earned"] },
+        new Set()
+      )
+    ).toThrow("獲得済み");
+    expect(() =>
+      parseProfileInput(
+        {
+          profileMessage: "",
+          consultTopics: [],
+          pinnedBadgeIds: ["1", "2", "3", "4"]
+        },
+        new Set(["1", "2", "3", "4"])
+      )
+    ).toThrow();
+  });
+
+  it("プロフィールの数字を集計する", () => {
+    expect(
+      calculateProfileStats({
+        createdAt: "2026-01-01T00:00:00Z",
+        now: new Date("2026-01-03T00:00:00Z"),
+        levelChanges: [
+          { fromLevel: 1, toLevel: 2, source: "DIRECT_EDIT" },
+          { fromLevel: 2, toLevel: 1, source: "DIRECT_EDIT" }
+        ],
+        receivedCheerCount: 2,
+        receivedReactionCount: 3,
+        mentoredCheers: [
+          { toMemberId: "a", createdAt: "2026-01-02" },
+          { toMemberId: "a", createdAt: "2026-01-03" },
+          { toMemberId: "b", createdAt: "2025-12-31" }
+        ]
+      })
+    ).toEqual({
+      daysSinceJoined: 3,
+      levelUpCount: 1,
+      encouragementCount: 5,
+      mentoredCount: 2,
+      mentoredThisYearCount: 1
+    });
+  });
+
+  it("得意なスキルを上位5件と残りに分ける", () => {
+    const skills = ["f", "e", "d", "c", "b", "a"].map((skillName, index) => ({
+      skillName,
+      level: index === 0 ? 5 : 3
+    }));
+    const result = splitTopSkills(skills);
+    expect(result.top).toHaveLength(5);
+    expect(result.top[0]?.skillName).toBe("f");
+    expect(result.rest.map((skill) => skill.skillName)).toEqual(["e"]);
+  });
+
+  it("未設定の飾るバッジは獲得日の新しい順に3つ選ぶ", () => {
+    const badges = [1, 4, 2, 3].map((day) => ({
+      id: String(day),
+      earnedAt: `2026-01-0${day}`
+    }));
+    expect(selectPinnedBadges(badges, []).map((badge) => badge.id)).toEqual(["4", "3", "2"]);
+    expect(selectPinnedBadges(badges, ["1"]).map((badge) => badge.id)).toEqual(["1"]);
   });
 });

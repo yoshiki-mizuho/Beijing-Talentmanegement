@@ -1,0 +1,4 @@
+ALTER TABLE "Member"
+ADD COLUMN "profileMessage" TEXT,
+ADD COLUMN "consultTopics" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
+ADD COLUMN "pinnedBadgeIds" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];
