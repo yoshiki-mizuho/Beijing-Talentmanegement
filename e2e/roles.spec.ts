@@ -15,7 +15,9 @@ test("MEMBERがロールを確認して目標を変更し元に戻せる", async
       .getByText("目標", { exact: true })
       .first()
       .locator("xpath=ancestor::a");
-    const originalHref = await originalTarget.getAttribute("href");
+    const originalHref = (await originalTarget.count())
+      ? await originalTarget.getAttribute("href")
+      : null;
     const targetButton = member.page.getByRole("button", {
       name: "目標にする",
     });
@@ -71,7 +73,7 @@ test("ADMINが必要なスキルを2つ選んでロールを作成できる", as
     if (!secondValue)
       throw new Error("2つ目のロール要件に使うスキルがありません。");
     await skillSelects.nth(1).selectOption(secondValue);
-    await dialog.getByRole("button", { name: "ロールを登録" }).click();
+    await dialog.getByRole("button", { name: "保存", exact: true }).click();
     await expect(admin.page.getByText("ロールを登録しました。")).toBeVisible();
 
     await admin.page.getByRole("link", { name: new RegExp(roleName) }).click();

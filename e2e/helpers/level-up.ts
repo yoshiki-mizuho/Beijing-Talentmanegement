@@ -4,7 +4,7 @@ import { expect, type Page } from "@playwright/test";
 export async function dismissExistingLevelUpDialogs(page: Page) {
   for (let attempt = 0; attempt < 10; attempt += 1) {
     await page.waitForLoadState("networkidle");
-    const dialog = page.getByRole("dialog").filter({ hasText: /LEVEL UP|CHEER/ });
+    const dialog = page.getByRole("dialog").filter({ hasText: /LEVEL UP|CHEER|ROLE COMPLETE/ });
     if ((await dialog.count()) === 0) return;
 
     await dialog.getByRole("button", { name: "ダイアログを閉じる" }).click();
