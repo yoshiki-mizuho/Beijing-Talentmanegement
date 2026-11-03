@@ -1,15 +1,20 @@
 import { prisma } from "@/server/db/prisma";
 
-export async function getOrganizationDashboardData(
-  memberIds: string[],
-  from: Date,
-) {
-  const [members, levelChanges, pendingAssessments] = await Promise.all([
+export async function getOrganizationDashboardSource(memberId: string) {
+  const [viewer, departments, members] = await Promise.all([
+    prisma.member.findUniqueOrThrow({
+      where: { id: memberId },
+      select: { id: true, departmentId: true },
+    }),
+    prisma.department.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true, parentDepartmentId: true },
+    }),
     prisma.member.findMany({
-      where: { id: { in: memberIds }, status: "ACTIVE" },
+      where: { status: "ACTIVE" },
       select: {
         id: true,
-        department: { select: { id: true, name: true } },
+        departmentId: true,
         memberSkills: { select: { skillId: true, level: true } },
         targetRole: {
           select: {
@@ -28,20 +33,26 @@ export async function getOrganizationDashboardData(
         },
       },
     }),
-    prisma.skillLevelChange.findMany({
-      where: { memberId: { in: memberIds }, changedAt: { gte: from } },
-      select: {
-        memberId: true,
-        changedAt: true,
-        source: true,
-        fromLevel: true,
-        toLevel: true,
-      },
-    }),
-    prisma.skillSelfAssessment.findMany({
-      where: { memberId: { in: memberIds }, status: "PENDING" },
-      select: { memberId: true, createdAt: true },
-    }),
   ]);
-  return { members, levelChanges, pendingAssessments };
+  const changes = await prisma.skillLevelChange.findMany({
+    where: { memberId: { in: members.map((member) => member.id) } },
+    select: {
+      memberId: true,
+      skillId: true,
+      changedAt: true,
+      source: true,
+      fromLevel: true,
+      toLevel: true,
+      skill: { select: { category: { select: { name: true } } } },
+    },
+  });
+  return {
+    viewer,
+    departments,
+    members,
+    changes: changes.map(({ skill, ...change }) => ({
+      ...change,
+      categoryName: skill.category.name,
+    })),
+  };
 }
