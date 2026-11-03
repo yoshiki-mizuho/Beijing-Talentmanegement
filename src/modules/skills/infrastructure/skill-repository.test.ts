@@ -16,6 +16,8 @@ const mocks = vi.hoisted(() => ({
   cheerCount: vi.fn(),
   requirementCount: vi.fn(),
   skillDelete: vi.fn(),
+  skillLevelFindMany: vi.fn(),
+  skillLevelUpdate: vi.fn(),
   auditLogCreate: vi.fn()
 }));
 
@@ -33,7 +35,8 @@ import {
   createSkillWithLevelGuides,
   deleteSkill,
   listPopularSkillsForMember,
-  reorderSkills
+  reorderSkills,
+  updateCommonSkillLevelGuides
 } from "@/modules/skills/infrastructure/skill-repository";
 
 const transactionClient = {
@@ -54,8 +57,44 @@ const transactionClient = {
     update: mocks.categoryUpdate
   },
   skillLevelGuide: { createMany: mocks.levelGuideCreateMany },
+  skillLevel: {
+    findMany: mocks.skillLevelFindMany,
+    update: mocks.skillLevelUpdate
+  },
   auditLog: { create: mocks.auditLogCreate }
 };
+
+describe("updateCommonSkillLevelGuides", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.transaction.mockImplementation((callback) => callback(transactionClient));
+    mocks.skillLevelFindMany.mockResolvedValue(
+      [1, 2, 3, 4, 5].map((level) => ({ level, description: `変更前${level}` }))
+    );
+    mocks.skillLevelUpdate.mockImplementation(({ where, data }) =>
+      Promise.resolve({ level: where.level, description: data.description })
+    );
+  });
+
+  it("5件を同じトランザクションで更新し、監査ログを1件残す", async () => {
+    const guides = [1, 2, 3, 4, 5].map((level) => ({
+      level,
+      description: `変更後${level}`
+    }));
+
+    await updateCommonSkillLevelGuides({ guides }, "admin-1");
+
+    expect(mocks.skillLevelUpdate).toHaveBeenCalledTimes(5);
+    expect(mocks.auditLogCreate).toHaveBeenCalledTimes(1);
+    expect(mocks.auditLogCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        actorMemberId: "admin-1",
+        action: "skill.level_guides.update",
+        targetId: "common-skill-level-guides"
+      })
+    });
+  });
+});
 
 describe("listPopularSkillsForMember", () => {
   beforeEach(() => {

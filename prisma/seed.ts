@@ -91,7 +91,7 @@ async function main() {
     for (const level of skillLevels) {
       await tx.skillLevel.upsert({
         where: { level: level.level },
-        update: level,
+        update: { label: level.label },
         create: level
       });
     }

@@ -1,5 +1,6 @@
 import {
   createSkillInputSchema,
+  commonSkillLevelGuidesInputSchema,
   reorderSkillsInputSchema,
   skillCategoryInputSchema,
   skillInputSchema,
@@ -17,6 +18,13 @@ export function listSkillCategories() {
 
 export function listSkillLevels() {
   return skillRepository.listSkillLevels();
+}
+
+export function updateCommonSkillLevelGuides(input: unknown, actorMemberId: string | null) {
+  return skillRepository.updateCommonSkillLevelGuides(
+    commonSkillLevelGuidesInputSchema.parse(input),
+    actorMemberId
+  );
 }
 
 export function listSkillLevelGuides(skillId: string) {

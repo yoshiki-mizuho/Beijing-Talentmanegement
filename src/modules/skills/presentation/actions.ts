@@ -9,6 +9,7 @@ import {
   deleteSkill,
   deactivateSkill,
   reorderSkills,
+  updateCommonSkillLevelGuides,
   updateSkillCategory,
   updateSkillWithLevelGuides
 } from "@/modules/skills/application/skill-service";
@@ -124,4 +125,23 @@ export async function reorderSkillsAction(input: {
     revalidatePath("/my/skills");
     revalidatePath("/skill-map");
   }, "並び順を保存しました");
+}
+
+export async function updateCommonSkillLevelGuidesAction(
+  formData: FormData
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requireRoles(adminOnly);
+    await updateCommonSkillLevelGuides(
+      {
+        guides: [1, 2, 3, 4, 5].map((level) => ({
+          level,
+          description: getString(formData, `levelGuide${level}`)
+        }))
+      },
+      session.user.memberId
+    );
+    revalidatePath("/skills");
+    revalidatePath("/my/skills");
+  }, "レベルの目安を更新しました");
 }

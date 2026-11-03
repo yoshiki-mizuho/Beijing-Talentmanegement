@@ -4,12 +4,16 @@ import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-quer
 import { type ColumnDef, type Row, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import {
   DndContext,
+  DragOverlay,
   KeyboardSensor,
+  MeasuringStrategy,
   PointerSensor,
   TouchSensor,
   closestCorners,
   type CollisionDetection,
   type DragEndEvent,
+  type DragOverEvent,
+  type DragStartEvent,
   type UniqueIdentifier,
   useDroppable,
   useSensor,
@@ -131,6 +135,9 @@ function SkillSearchTableInner({
   const [order, setOrder] = useState<SkillOrderCategory[]>(initialOrder);
   const orderRef = useRef(order);
   const dragStartOrder = useRef<SkillOrderCategory[] | null>(null);
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const lastOverId = useRef<UniqueIdentifier | null>(null);
+  const recentlyMovedToNewCategory = useRef(false);
   const [savingOrder, startSavingOrder] = useTransition();
   const reducedMotion = useReducedMotion();
   const sensors = useSensors(
@@ -171,6 +178,14 @@ function SkillSearchTableInner({
     orderRef.current = initialOrder;
     setOrder(initialOrder);
   }, [initialOrder]);
+
+  // 並びが変わって描き直されたら、次の判定から通常どおりに戻す
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      recentlyMovedToNewCategory.current = false;
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [order]);
 
   const columns = useMemo<ColumnDef<SkillRow>[]>(() => {
     const definitions: ColumnDef<SkillRow>[] = [
@@ -291,8 +306,12 @@ function SkillSearchTableInner({
   }
 
   const collisionDetection: CollisionDetection = (args) => {
+    // 別のカテゴリへ移した直後は、行の位置が測り直されるまで前の判定を使う（行が行き来して揺れるのを防ぐ）
+    if (recentlyMovedToNewCategory.current && lastOverId.current) {
+      return [{ id: lastOverId.current }];
+    }
     const draggingCategory = String(args.active.id).startsWith("category:");
-    return closestCorners({
+    const collisions = closestCorners({
       ...args,
       droppableContainers: args.droppableContainers.filter((container) =>
         draggingCategory
@@ -300,16 +319,42 @@ function SkillSearchTableInner({
           : String(container.id).startsWith("skill:") || String(container.id).startsWith("container:")
       )
     });
+    lastOverId.current = collisions[0]?.id ?? null;
+    return collisions;
   };
 
-  function handleDragStart() {
+  function handleDragStart(event: DragStartEvent) {
     dragStartOrder.current = orderRef.current;
+    setActiveDragId(String(event.active.id));
+  }
+
+  function handleDragOver(event: DragOverEvent) {
+    if (!event.over) return;
+    const active = String(event.active.id);
+    const over = String(event.over.id);
+    if (!active.startsWith("skill:")) return;
+    const fromCategoryId = findCategoryId(orderRef.current, active);
+    const toCategoryId = findCategoryId(orderRef.current, over);
+    if (!fromCategoryId || !toCategoryId || fromCategoryId === toCategoryId) return;
+    const insertAfter =
+      over.startsWith("skill:") &&
+      event.active.rect.current.translated !== null &&
+      event.active.rect.current.translated.top +
+        event.active.rect.current.translated.height / 2 >
+        event.over.rect.top + event.over.rect.height / 2;
+    recentlyMovedToNewCategory.current = true;
+    updateOrder(moveSkillOrder(orderRef.current, active, over, insertAfter));
   }
 
   function handleDragEnd(event: DragEndEvent) {
     const before = dragStartOrder.current;
     dragStartOrder.current = null;
-    if (!before || !event.over) return;
+    setActiveDragId(null);
+    if (!before) return;
+    if (!event.over) {
+      updateOrder(before);
+      return;
+    }
     const active = String(event.active.id);
     const over = String(event.over.id);
     const next = active.startsWith("category:")
@@ -416,12 +461,15 @@ function SkillSearchTableInner({
       </div>
 
       <DndContext
+        measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
         sensors={sensors}
         collisionDetection={collisionDetection}
         onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
         onDragCancel={() => {
           if (dragStartOrder.current) updateOrder(dragStartOrder.current);
           dragStartOrder.current = null;
+          setActiveDragId(null);
         }}
         onDragEnd={handleDragEnd}
         accessibility={{
@@ -538,6 +586,13 @@ function SkillSearchTableInner({
         </div>
         </SortableContext>
       )}
+      <DragOverlay dropAnimation={reducedMotion ? null : undefined}>
+        {activeDragId ? (
+          <div className="rounded-lg border border-[var(--primary)] bg-[var(--surface)] px-4 py-3 font-semibold shadow-lg">
+            {labelOf(activeDragId)}
+          </div>
+        ) : null}
+      </DragOverlay>
       </DndContext>
 
       {canManage && editingSkill ? (
@@ -764,7 +819,7 @@ function SortableSkillRow({
         transform: CSS.Translate.toString(transform),
         transition: reducedMotion ? undefined : transition
       }}
-      className={`${row.original.isActive ? "hover:bg-[var(--surface-subtle)]" : "bg-[var(--surface-subtle)] opacity-60"} ${isDragging ? "relative z-10 bg-[var(--surface)] outline outline-1 outline-[var(--primary)] shadow-md" : ""}`}
+      className={`${row.original.isActive ? "hover:bg-[var(--surface-subtle)]" : "bg-[var(--surface-subtle)] opacity-60"} ${isDragging ? "opacity-40" : ""}`}
     >
       {canManage ? (
         <td className="w-14 px-1 py-1 align-middle">
