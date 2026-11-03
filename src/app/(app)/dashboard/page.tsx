@@ -5,13 +5,12 @@ import type { Route } from "next";
 import { getDashboardSummary } from "@/modules/dashboard/application/dashboard-service";
 import { getMemberDashboard } from "@/modules/dashboard/application/member-dashboard-service";
 import { getTeamDashboard } from "@/modules/dashboard/application/team-dashboard-service";
-import { DashboardVisualizations } from "@/modules/dashboard/presentation/dashboard-visualizations";
+import { OrganizationDashboard } from "@/modules/dashboard/presentation/organization-dashboard";
 import { MemberDashboard } from "@/modules/dashboard/presentation/member-dashboard";
 import { buildMemberDashboardViewModel } from "@/modules/dashboard/presentation/member-dashboard-view-model";
 import { TeamDashboard } from "@/modules/dashboard/presentation/team-dashboard";
 import { buildTeamDashboardViewModel } from "@/modules/dashboard/presentation/team-dashboard-view-model";
 import { getDepartmentLevelUpFeed } from "@/modules/growth/application/growth-service";
-import { listDepartments } from "@/modules/members/application/member-service";
 import { getCurrentSession } from "@/server/auth/session";
 
 export const dynamic = "force-dynamic";
@@ -97,51 +96,11 @@ export default async function DashboardPage({
       );
   }
   if (!session?.user.memberId || !management) redirect("/login");
-  const [{ scope, summary }, departments] = await Promise.all([
-    getDashboardSummary(session.user.role, session.user.memberId, department),
-    session.user.role === "ADMIN" ? listDepartments() : Promise.resolve([]),
-  ]);
+  const organization = await getDashboardSummary(session.user.role, session.user.memberId, department);
   return (
     <div className="space-y-5">
       <DashboardViewSwitch current="organization" />
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-[26px] font-bold">組織の成長</h1>
-          <p className="text-sm text-[var(--muted-foreground)]">
-            {scope.name}・{summary.memberCount}名
-          </p>
-        </div>
-        <span className="text-sm font-semibold">直近6か月</span>
-      </header>
-      {session.user.role === "ADMIN" ? (
-        <nav aria-label="組織の範囲" className="flex flex-wrap gap-2">
-          <Link
-            href="/dashboard?view=organization"
-            className={chip(!scope.departmentId)}
-          >
-            全社
-          </Link>
-          {departments.map((item) => (
-            <Link
-              key={item.id}
-              href={
-                `/dashboard?view=organization&department=${item.id}` as Route
-              }
-              className={chip(scope.departmentId === item.id)}
-            >
-              {item.name}
-            </Link>
-          ))}
-        </nav>
-      ) : null}
-      <DashboardVisualizations
-        summary={summary}
-        showDepartments={session.user.role === "ADMIN" && !scope.departmentId}
-      />
+      <OrganizationDashboard model={organization} />
     </div>
   );
-}
-
-function chip(active: boolean) {
-  return `inline-flex min-h-9 items-center rounded-full border px-3 text-sm font-semibold ${active ? "border-[var(--primary)] bg-[var(--primary)] text-white" : "border-[var(--border)] bg-white"}`;
 }

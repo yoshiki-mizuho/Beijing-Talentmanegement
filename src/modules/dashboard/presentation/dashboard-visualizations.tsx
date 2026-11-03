@@ -5,9 +5,11 @@ type Summary = ReturnType<typeof buildOrganizationDashboard>;
 export function DashboardVisualizations({
   summary,
   showDepartments,
+  compact = false,
 }: {
   summary: Summary;
   showDepartments: boolean;
+  compact?: boolean;
 }) {
   const metrics = [
     [
@@ -39,7 +41,7 @@ export function DashboardVisualizations({
   );
   return (
     <>
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {!compact ? <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {metrics.map(([label, value, note], index) => (
           <article
             key={label}
@@ -54,8 +56,9 @@ export function DashboardVisualizations({
             </p>
           </article>
         ))}
-      </section>
-      <div className="grid gap-5 xl:grid-cols-[1.35fr_0.65fr]">
+      </section> : null}
+      <div className={`grid gap-5 ${compact ? "" : "xl:grid-cols-[1.35fr_0.65fr]"}`}>
+        {!compact ? (
         <Panel title="レベルアップの推移">
           <div
             role="img"
@@ -87,6 +90,7 @@ export function DashboardVisualizations({
             ))}
           </div>
         </Panel>
+        ) : null}
         <Panel title="不足しているスキル">
           <Bars
             items={summary.missingSkills.map((item) => ({
