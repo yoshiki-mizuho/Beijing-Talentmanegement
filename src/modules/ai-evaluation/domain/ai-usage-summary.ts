@@ -69,5 +69,9 @@ const reasonLabels: Record<string, string> = {
 };
 
 export function translateAiErrorCode(code: string | null) {
-  return code ? (reasonLabels[code] ?? code) : "—";
+  if (!code) return "—";
+  const [reason, status] = code.split(":", 2);
+  const label = reasonLabels[reason];
+  if (!label) return code;
+  return status ? `${label.replace(/（429）$/, "")}（${status}）` : label;
 }

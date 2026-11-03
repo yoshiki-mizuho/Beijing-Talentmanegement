@@ -37,7 +37,7 @@ export function GrowthHintPanel({
 }) {
   const [hint, setHint] = useState<GrowthHintView | null>(null);
   const [loading, setLoading] = useState(true);
-  const [failure, setFailure] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
   const [addedTopics, setAddedTopics] = useState<Set<string>>(new Set());
   const [pending, startTransition] = useTransition();
 
@@ -58,18 +58,22 @@ export function GrowthHintPanel({
   }, [memberId]);
 
   function generate() {
-    setFailure(false);
+    setMessage(null);
     startTransition(async () => {
       try {
         const result = await generateGrowthHintAction(memberId);
         setHint(result.hint);
-        setFailure(result.keptPrevious);
+        setMessage(result.message);
         onGenerated();
         if (!result.keptPrevious) {
-          toast.success(result.message ?? "育成のヒントを作りました。");
+          toast.success(
+            result.message
+              ? "簡易版のヒントを作りました。"
+              : "育成のヒントを作りました。",
+          );
         }
       } catch {
-        setFailure(true);
+        setMessage("育成のヒントを作れませんでした。");
         toast.error("育成のヒントを作れませんでした。");
       }
     });
@@ -119,7 +123,7 @@ export function GrowthHintPanel({
       ) : (
         <HintContent
           hint={hint}
-          failure={failure}
+          message={message}
           pending={pending}
           addedTopics={addedTopics}
           onGenerate={generate}
@@ -143,14 +147,14 @@ export function GrowthHintPanel({
 
 function HintContent({
   hint,
-  failure,
+  message,
   pending,
   addedTopics,
   onGenerate,
   onAddTopic,
 }: {
   hint: GrowthHintView;
-  failure: boolean;
+  message: string | null;
   pending: boolean;
   addedTopics: Set<string>;
   onGenerate: () => void;
@@ -185,10 +189,15 @@ function HintContent({
           スキルや目標ロールが変わりました。 作り直せます。
         </p>
       ) : null}
-      {failure ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800">
-          <span>作り直しに失敗しました。前回のヒントを表示しています。</span>
-          <Button type="button" variant="secondary" onClick={onGenerate}>
+      {message ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <span>{message}</span>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onGenerate}
+            disabled={pending}
+          >
             もう一度試す
           </Button>
         </div>
