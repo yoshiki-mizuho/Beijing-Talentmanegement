@@ -2,7 +2,7 @@ import { getSkillProfile } from "@/modules/explore/application/explore-service";
 import { RecentLevelUps } from "@/modules/explore/presentation/recent-level-ups";
 import { SkillHistory } from "@/modules/explore/presentation/skill-history";
 import { SkillProfileHeader } from "@/modules/explore/presentation/skill-profile-header";
-import { SkillStrengths } from "@/modules/explore/presentation/skill-strengths";
+import { ProfileCards } from "@/modules/explore/presentation/profile-cards";
 import { requirePasswordReadyMember } from "@/server/auth/authorization";
 
 export const dynamic = "force-dynamic";
@@ -28,17 +28,13 @@ export default async function SkillProfilePage({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="-mx-4 -mt-6 space-y-6 sm:-mx-6">
       <SkillProfileHeader profile={profile} isOwner={memberId === session.user.memberId} />
-      <div className="grid gap-5 lg:grid-cols-5">
-        <div className="lg:col-span-3">
-          <SkillStrengths skills={profile.skills} />
-        </div>
-        <div className="lg:col-span-2">
-          <RecentLevelUps items={profile.recent} />
-        </div>
+      <div className="mx-auto max-w-6xl space-y-5 px-4 sm:px-6">
+        <ProfileCards profile={profile} isOwner={memberId === session.user.memberId} />
+        <RecentLevelUps items={profile.recent} />
+        <SkillHistory name={profile.name} snapshots={profile.snapshots} />
       </div>
-      <SkillHistory name={profile.name} snapshots={profile.snapshots} />
     </div>
   );
 }

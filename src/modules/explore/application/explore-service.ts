@@ -2,16 +2,21 @@ import { isGrowthLevelChange } from "@/modules/growth/domain/level-change-source
 import {
   achievedRoleNames,
   aggregateTrendingSkills,
+  calculateProfileStats,
   canViewProfile,
   getRecommendationReasons,
   markSnapshotChanges,
+  parseProfileInput,
   restoreSkillSnapshots,
+  selectPinnedBadges,
+  splitTopSkills,
   type ProfileViewer
 } from "@/modules/explore/domain/explore-profile";
 import {
   getExploreSourceData,
   getProfileVisibility,
   getSkillProfileSourceData,
+  updateMemberProfile,
   updateProfileVisibility
 } from "@/modules/explore/infrastructure/explore-repository";
 import { badgeDefinitions, badgeRarities } from "@/modules/growth/domain/badge-art";
@@ -118,6 +123,7 @@ export async function getSkillProfile(viewer: ProfileViewer, memberId: string, n
     .map((item) => ({
       skillId: item.skillId,
       skillName: item.skill.name,
+      categoryName: item.skill.category.name,
       level: item.level
     }))
     .sort(
@@ -157,6 +163,7 @@ export async function getSkillProfile(viewer: ProfileViewer, memberId: string, n
       ? [
           {
             ...definition,
+            earnedAt: achievement.earnedAt.toISOString(),
             rarityLabel: badgeRarities[definition.rarity].label,
             frameColor: badgeRarities[definition.rarity].frame,
             backgroundColor: badgeRarities[definition.rarity].background
@@ -183,6 +190,32 @@ export async function getSkillProfile(viewer: ProfileViewer, memberId: string, n
     ? template.replaceAll("{email}", encodeURIComponent(member.email))
     : null;
 
+  const targetEvaluation = member.targetRole
+    ? evaluateRoleAchievement(
+        member.targetRole.roleRequirements.map((requirement) => ({
+          skillId: requirement.skillId,
+          skillName: requirement.skill.name,
+          requiredLevel: requirement.requiredLevel,
+          anyOfGroup: requirement.anyOfGroup,
+          isRequired: true
+        })),
+        skills
+      )
+    : null;
+  const stats = calculateProfileStats({
+    createdAt: member.createdAt,
+    levelChanges: member.skillLevelChanges,
+    receivedCheerCount: member.receivedCheers.length,
+    receivedReactionCount: member.skillLevelChanges.reduce(
+      (sum, change) => sum + change._count.reactions,
+      0
+    ),
+    mentoredCheers: member.mentoredCheers,
+    now
+  });
+  const skillGroups = splitTopSkills(skills);
+  const pinnedBadges = selectPinnedBadges(badges, member.pinnedBadgeIds);
+
   return {
     id: member.id,
     name: member.name,
@@ -190,13 +223,43 @@ export async function getSkillProfile(viewer: ProfileViewer, memberId: string, n
     jobTitle: member.jobTitle,
     isProfilePublic: member.isProfilePublic,
     avatarUpdatedAt: member.avatarUpdatedAt?.toISOString() ?? null,
+    profileMessage: member.profileMessage,
+    consultTopics: member.consultTopics,
+    pinnedBadgeIds: member.pinnedBadgeIds,
     skills,
+    topSkills: skillGroups.top,
+    otherSkills: skillGroups.rest,
     achievedRoles: achievedRoleNames(skills, roleDefinitions),
     badges,
+    pinnedBadges,
+    stats,
+    targetRole: member.targetRole
+      ? { name: member.targetRole.name, evaluation: targetEvaluation! }
+      : null,
     recent,
     snapshots,
     chatUrl
   };
+}
+
+export async function updateMyProfile(
+  memberId: string,
+  input: { profileMessage: string; consultTopics: string[]; pinnedBadgeIds: string[] }
+) {
+  const { member } = await getSkillProfileSourceData(memberId);
+  const earnedIds = new Set(
+    calculateBadgeAchievements({
+      assessments: member.selfAssessments,
+      memberSkills: member.memberSkills,
+      levelChanges: member.skillLevelChanges,
+      targetRequirements: member.targetRole?.roleRequirements ?? [],
+      mentoredCheers: member.mentoredCheers
+    })
+      .filter((badge) => badge.earnedAt)
+      .map((badge) => badge.id)
+  );
+  const parsed = parseProfileInput(input, earnedIds);
+  return updateMemberProfile(memberId, parsed);
 }
 
 export function orderSkillHistorySnapshots<T extends { yearsAgo: number }>(

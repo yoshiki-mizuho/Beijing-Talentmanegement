@@ -1,7 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { setProfileVisibility } from "@/modules/explore/application/explore-service";
+import {
+  setProfileVisibility,
+  updateMyProfile
+} from "@/modules/explore/application/explore-service";
 import {
   deleteMyAvatar,
   updateMyAvatar
@@ -39,4 +42,16 @@ export async function deleteMyAvatarAction() {
     await deleteMyAvatar(session.user.memberId);
     revalidatePath("/", "layout");
   }, "アイコン画像を削除しました。");
+}
+
+export async function updateMyProfileAction(formData: FormData) {
+  return runAction(async () => {
+    const session = await requirePasswordReadyMember();
+    await updateMyProfile(session.user.memberId, {
+      profileMessage: String(formData.get("profileMessage") ?? ""),
+      consultTopics: formData.getAll("consultTopics").map(String),
+      pinnedBadgeIds: formData.getAll("pinnedBadgeIds").map(String)
+    });
+    revalidatePath(`/people/${session.user.memberId}`);
+  }, "プロフィールを更新しました");
 }

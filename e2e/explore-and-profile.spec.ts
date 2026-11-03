@@ -60,6 +60,32 @@ test("本人が公開設定を切り替え、最後に公開へ戻す", async ({
   await expect(visibility).toHaveAttribute("aria-checked", "true");
 });
 
+test("MEMBERがプロフィールのひとことと相談タグを編集し、最後に元へ戻す", async ({ page }) => {
+  await login(page, credentials.MEMBER);
+  await dismissExistingLevelUpDialogs(page);
+  await page.getByLabel("アカウントメニューを開く").click();
+  await page.getByRole("link", { name: "スキルプロフィール" }).click();
+
+  await page.getByRole("button", { name: "プロフィールを編集" }).first().click();
+  const dialog = page.getByRole("dialog", { name: "プロフィールを編集" });
+  const message = dialog.getByLabel("ひとこと");
+  // デモのひとこととタグを最後に元へ戻すため、今の値を覚えておく
+  const originalMessage = await message.inputValue();
+  await message.fill("E2Eプロフィール更新");
+  await dialog.getByRole("textbox", { name: "相談に乗れること" }).fill("E2E相談タグ");
+  await dialog.getByRole("button", { name: "追加" }).click();
+  await dialog.getByRole("button", { name: "保存" }).click();
+  await expect(page.getByText("「E2Eプロフィール更新」")).toBeVisible();
+  await expect(page.getByText("E2E相談タグ", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "プロフィールを編集" }).first().click();
+  await dialog.getByLabel("ひとこと").fill(originalMessage);
+  await dialog.getByRole("button", { name: "E2E相談タグを外す" }).click();
+  await dialog.getByRole("button", { name: "保存" }).click();
+  await expect(page.getByText("E2Eプロフィール更新")).toHaveCount(0);
+  await expect(page.getByText("E2E相談タグ", { exact: true })).toHaveCount(0);
+});
+
 test("非公開プロフィールは別のMEMBER相当の閲覧者に氏名を見せず、最後に公開へ戻す", async ({
   browser
 }) => {

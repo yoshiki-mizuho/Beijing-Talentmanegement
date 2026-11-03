@@ -2,14 +2,16 @@ import { badgePalette, type BadgeDefinition } from "@/modules/growth/domain/badg
 import { Tooltip } from "@/shared/ui/tooltip";
 
 export function EarnedBadge({
-  badge
+  badge,
+  focusable = true
 }: {
   badge: BadgeDefinition & { frameColor: string; backgroundColor: string };
+  focusable?: boolean;
 }) {
   return (
     <Tooltip content={badge.name}>
       <span
-        tabIndex={0}
+        tabIndex={focusable ? 0 : undefined}
         aria-label={badge.name}
         className="grid h-12 w-12 place-items-center rounded-lg border-2"
         style={{ borderColor: badge.frameColor, backgroundColor: badge.backgroundColor }}

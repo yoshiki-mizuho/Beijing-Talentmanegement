@@ -170,6 +170,29 @@ export const demoRoles = [
 
 export const existingDemoMemberEmployeeNos = ["TM0001", "TM0002", "TM0003"] as const;
 
+export const demoMemberProfiles = [
+  {
+    employeeNo: "TM0003",
+    profileMessage: "小さな改善を積み重ねています。",
+    consultTopics: ["TypeScript", "コードレビュー", "テスト設計"]
+  },
+  {
+    employeeNo: "TM0101",
+    profileMessage: "使いやすい画面づくりが好きです。",
+    consultTopics: ["React", "Next.js", "アクセシビリティ", "画面設計"]
+  },
+  {
+    employeeNo: "TM0102",
+    profileMessage: "堅実なAPI設計を一緒に考えます。",
+    consultTopics: ["API設計", "データベース", "性能改善"]
+  },
+  {
+    employeeNo: "TM0103",
+    profileMessage: "安全に運べる基盤を育てています。",
+    consultTopics: ["AWS", "Docker", "監視", "CI/CD"]
+  }
+] as const;
+
 export const demoMembers = [
   {
     employeeNo: "TM0101",
