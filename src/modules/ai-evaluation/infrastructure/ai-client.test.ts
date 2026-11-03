@@ -16,10 +16,10 @@ function configureApi() {
   process.env.AI_TIMEOUT_MS = "5000";
 }
 
-function response(body: unknown, status = 200) {
+function response(body: unknown, status = 200, headers?: HeadersInit) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...headers },
   });
 }
 
@@ -96,11 +96,12 @@ describe("AI client", () => {
     });
   });
 
-  it("429の後に1回再試行して成功する", async () => {
+  it("503が2回続いた後に再試行して成功する", async () => {
     vi.useFakeTimers();
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(response({}, 429))
+      .mockResolvedValueOnce(response({}, 503))
+      .mockResolvedValueOnce(response({}, 503))
       .mockResolvedValueOnce(
         response({ choices: [{ message: { content: "ok" } }] }),
       );
@@ -108,9 +109,10 @@ describe("AI client", () => {
 
     const resultPromise = createChatCompletion({ messages });
     await vi.advanceTimersByTimeAsync(1_000);
+    await vi.advanceTimersByTimeAsync(2_000);
 
     await expect(resultPromise).resolves.toMatchObject({ content: "ok" });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
   it("5xxが続くとhttp_errorを返す", async () => {
@@ -123,10 +125,40 @@ describe("AI client", () => {
       code: "http_error",
       status: 503,
     });
-    await vi.advanceTimersByTimeAsync(1_000);
+    await vi.advanceTimersByTimeAsync(3_000);
 
     await rejection;
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("429ではRetry-Afterが通常の待ち時間より長ければ従う", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(response({}, 429, { "Retry-After": "3" }))
+      .mockResolvedValueOnce(
+        response({ choices: [{ message: { content: "ok" } }] }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const resultPromise = createChatCompletion({ messages });
+    await vi.advanceTimersByTimeAsync(2_999);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+
+    await expect(resultPromise).resolves.toMatchObject({ content: "ok" });
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("400は再試行しない", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(response({}, 400));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(createChatCompletion({ messages })).rejects.toMatchObject({
+      code: "http_error",
+      status: 400,
+    });
+    expect(fetchMock).toHaveBeenCalledOnce();
   });
 
   it("通信エラーをnetworkへ変換する", async () => {

@@ -50,6 +50,7 @@ vi.mock("@/modules/growth/application/growth-service", () => ({
 }));
 
 import { generateGrowthHint, getGrowthHint } from "./growth-hint-service";
+import { AiClientError } from "../infrastructure/ai-client";
 
 const viewer = { memberId: "manager", role: "MANAGER" as const };
 const context = {
@@ -181,6 +182,9 @@ describe("generateGrowthHint", () => {
     mocks.createChatCompletion.mockRejectedValue(new Error("failure"));
     const result = await generateGrowthHint("member", viewer);
     expect(result.keptPrevious).toBe(true);
+    expect(result.message).toBe(
+      "作り直しに失敗しました。前回のヒントを表示しています。",
+    );
     expect(mocks.saveGrowthHint).not.toHaveBeenCalled();
     expect(mocks.recordAiUsage).toHaveBeenCalledWith(
       expect.objectContaining({ status: "FAILED" }),
@@ -194,6 +198,25 @@ describe("generateGrowthHint", () => {
     expect(result.hint.source).toBe("FALLBACK");
     expect(mocks.saveGrowthHint).toHaveBeenCalledWith(
       expect.objectContaining({ source: "FALLBACK" }),
+    );
+  });
+
+  it("HTTPエラーのステータスを記録し混雑時の案内を返す", async () => {
+    mocks.getAiConfig.mockReturnValue({ kind: "fake" });
+    mocks.createChatCompletion.mockRejectedValue(
+      new AiClientError("http_error", 503),
+    );
+
+    const result = await generateGrowthHint("member", viewer);
+
+    expect(result.message).toBe(
+      "AI が混み合っていたため、簡易版で作りました。時間をおいて作り直してください。",
+    );
+    expect(mocks.recordAiUsage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "FAILED",
+        errorCode: "http_error:503",
+      }),
     );
   });
 

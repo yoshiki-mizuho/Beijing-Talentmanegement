@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { aiGrowthHintSchema } from "./growth-hint";
+import { aiGrowthHintSchema, parseAiGrowthHint } from "./growth-hint";
 import { createFallbackGrowthHint } from "./growth-hint-fallback";
 import {
   hashGrowthHintInput,
@@ -71,6 +71,46 @@ describe("growth hint domain", () => {
         nextSteps: ["あ".repeat(81)],
         oneOnOneTopics: ["話題"],
       }),
+    ).toThrow();
+  });
+
+  it("長い文字列と4件以上の配列を上限内に収める", () => {
+    const result = parseAiGrowthHint(
+      JSON.stringify({
+        strengthsSummary: "強".repeat(121),
+        nextSteps: ["一".repeat(81), "二", "三", "四"],
+        oneOnOneTopics: ["話".repeat(51), "", "相談", "確認", "余分"],
+      }),
+    );
+
+    expect(result.strengthsSummary).toHaveLength(120);
+    expect(result.strengthsSummary.endsWith("…")).toBe(true);
+    expect(result.nextSteps).toHaveLength(3);
+    expect(result.nextSteps[0]).toHaveLength(80);
+    expect(result.oneOnOneTopics).toEqual([
+      `${"話".repeat(49)}…`,
+      "相談",
+      "確認",
+    ]);
+  });
+
+  it("jsonコードブロックの中身を読み取る", () => {
+    const result = parseAiGrowthHint(`\`\`\`json
+{"strengthsSummary":"強み","nextSteps":["次へ"],"oneOnOneTopics":["話題"]}
+\`\`\``);
+
+    expect(result.strengthsSummary).toBe("強み");
+  });
+
+  it("空文字列を除いた後に必須の配列が空なら拒否する", () => {
+    expect(() =>
+      parseAiGrowthHint(
+        JSON.stringify({
+          strengthsSummary: "強み",
+          nextSteps: [" "],
+          oneOnOneTopics: ["話題"],
+        }),
+      ),
     ).toThrow();
   });
 

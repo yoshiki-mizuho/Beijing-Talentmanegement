@@ -26,6 +26,10 @@ describe("AI利用状況の集計", () => {
   it("理由と割合を表示用に変換する", () => {
     expect(translateAiErrorCode("monthly_limit")).toBe("月の上限");
     expect(translateAiErrorCode("timeout")).toBe("時間切れ");
+    expect(translateAiErrorCode("http_error:503")).toBe(
+      "エラーの応答（503）",
+    );
+    expect(translateAiErrorCode("rate_limited:429")).toBe("混雑（429）");
     expect(calculatePercentage(2, 40)).toBe(5);
     expect(calculatePercentage(1, 0)).toBe(0);
   });

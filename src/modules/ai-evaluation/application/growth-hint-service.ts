@@ -158,8 +158,7 @@ export async function generateGrowthHint(
       message: null,
     };
   } catch (error) {
-    const errorCode =
-      error instanceof AiClientError ? error.code : "invalid_response";
+    const errorCode = getErrorCode(error);
     await log("FAILED", Date.now() - startedAt, errorCode);
     if (previous) {
       return {
@@ -169,7 +168,7 @@ export async function generateGrowthHint(
           context.managerId === viewer.memberId,
         ),
         keptPrevious: true,
-        message: null,
+        message: "作り直しに失敗しました。前回のヒントを表示しています。",
       };
     }
     const saved = await saveContent(
@@ -180,7 +179,7 @@ export async function generateGrowthHint(
     return {
       hint: toView(saved, inputHash, context.managerId === viewer.memberId),
       keptPrevious: false,
-      message: null,
+      message: getFallbackMessage(errorCode),
     };
   }
 
@@ -214,6 +213,28 @@ export async function generateGrowthHint(
       errorCode,
     });
   }
+}
+
+function getErrorCode(error: unknown) {
+  if (!(error instanceof AiClientError)) return "invalid_response";
+  if (
+    error.status !== undefined &&
+    (error.code === "http_error" || error.code === "rate_limited")
+  ) {
+    return `${error.code}:${error.status}`;
+  }
+  return error.code;
+}
+
+function getFallbackMessage(errorCode: string) {
+  const reason = errorCode.split(":", 1)[0];
+  if (["timeout", "rate_limited", "http_error", "network"].includes(reason)) {
+    return "AI が混み合っていたため、簡易版で作りました。時間をおいて作り直してください。";
+  }
+  if (reason === "invalid_response") {
+    return "AI の応答を読み取れなかったため、簡易版で作りました。";
+  }
+  return "AI で作れなかったため、簡易版で作りました。";
 }
 
 function buildInput(context: Context): GrowthHintInput {

@@ -90,7 +90,7 @@ type ApiResponse = {
   };
 };
 
-const RETRY_DELAY_MS = 1_000;
+const RETRY_DELAYS_MS = [1_000, 2_000];
 
 export async function createChatCompletion(
   input: ChatCompletionInput,
@@ -129,7 +129,7 @@ export async function createChatCompletion(
 
   const deadline = startedAt + config.timeoutMs;
 
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
     const remainingMs = deadline - Date.now();
 
     if (remainingMs <= 0) {
@@ -145,12 +145,16 @@ export async function createChatCompletion(
 
       const retryable = response.status === 429 || response.status >= 500;
 
-      if (
-        retryable &&
-        attempt === 0 &&
-        deadline - Date.now() > RETRY_DELAY_MS
-      ) {
-        await delay(RETRY_DELAY_MS);
+      const retryDelayMs = getRetryDelayMs(response, attempt);
+
+      if (retryable && retryDelayMs !== null) {
+        if (deadline - Date.now() <= retryDelayMs) {
+          throw new AiClientError(
+            response.status === 429 ? "rate_limited" : "http_error",
+            response.status,
+          );
+        }
+        await delay(retryDelayMs);
         continue;
       }
 
@@ -169,8 +173,12 @@ export async function createChatCompletion(
         throw new AiClientError("timeout");
       }
 
-      if (attempt === 0 && deadline - Date.now() > RETRY_DELAY_MS) {
-        await delay(RETRY_DELAY_MS);
+      const retryDelayMs = RETRY_DELAYS_MS[attempt];
+      if (
+        retryDelayMs !== undefined &&
+        deadline - Date.now() > retryDelayMs
+      ) {
+        await delay(retryDelayMs);
         continue;
       }
 
@@ -249,6 +257,18 @@ async function parseResponse(
 
 function isAbortError(error: unknown) {
   return error instanceof Error && error.name === "AbortError";
+}
+
+function getRetryDelayMs(response: Response, attempt: number) {
+  const baseDelayMs = RETRY_DELAYS_MS[attempt];
+  if (baseDelayMs === undefined) return null;
+  if (response.status !== 429) return baseDelayMs;
+
+  const retryAfterSeconds = Number(response.headers.get("Retry-After"));
+  const retryAfterMs = Number.isFinite(retryAfterSeconds)
+    ? Math.max(0, retryAfterSeconds * 1_000)
+    : 0;
+  return Math.max(baseDelayMs, retryAfterMs);
 }
 
 function delay(milliseconds: number) {
