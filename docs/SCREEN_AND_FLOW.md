@@ -14,10 +14,10 @@
 | ダッシュボード | `/dashboard` | 全ロール | 含める | `admin`・`manager`は組織集計、`member`は本人のスキルと成長課題 |
 | 通知一覧 | `/notifications` | 全ロール | 含める | ヘッダーに未読件数を表示し、確認後は対応画面へ遷移 |
 | メンバー一覧 | `/members` | `admin`、`manager` | 含める | 検索、部署フィルタ、スキル条件検索、行選択による詳細モーダル表示 |
-| メンバー詳細 | `/members` のモーダル | `admin`、`manager` | 含める | 基本情報の編集、保有スキルの追加・削除 |
-| 自分のスキル申告 | `/my/skills` | `member`、`manager`、`admin` | 含める | 複数スキルの追加、スライダーによるレベル設定、一括申請 |
+| メンバー詳細 | `/members` のモーダル | `admin`、`manager` | 含める | 「育成」と「アカウント」を分け、成長情報と管理項目を表示 |
+| 自分のスキル申告 | `/my/skills` | `member`、`manager`、`admin` | 含める | カテゴリごとのスキルシートでLvを選び、変更した行をまとめて申請 |
 | スキル承認 | `/skill-approvals` | `manager`、`admin` | 含める | 申告スキルの承認、補正承認、差し戻し |
-| スキル管理 | `/skills` | `admin` | 含める | スキルの登録・編集 |
+| スキル管理 | `/skills` | `admin` | 含める | 一覧上でカテゴリとスキルを並び替え、共通・個別のレベルの目安を編集 |
 | スキル編集 | `/skills/[id]/edit` | `admin` | 含める | スキル定義の作成、更新、無効化 |
 | ロール | `/roles` | 全ロール | 含める | ロール一覧、必要スキル、自分の達成状況。`manager`は担当範囲、`admin`は全社の状況と編集機能も表示 |
 | ロール編集 | `/roles/[id]/edit` | `admin` | 含める | ロールと必要スキル条件の編集 |
@@ -26,6 +26,7 @@
 | 監査ログ | `/audit-logs` | `admin` | 含める | 操作履歴の検索、確認 |
 | 育成のヒント | `/members` のメンバー詳細タブ | `admin`、担当範囲内の`manager` | 含める | 承認済みスキルと目標ロールをもとに作成 |
 | AI の利用状況 | `/ai-usage` | `admin` | 含める | 実行回数、トークン数、失敗割合、月間上限を確認 |
+| プロフィール | `/people/[memberId]` | 全ロール | 含める | ひとことと数字、「いま挑戦中」「得意なスキル」「こんなことで相談に乗れます」の3枚のカード。本人はひとこと、相談タグ、飾るバッジを編集 |
 
 ## 画面構成
 
@@ -49,6 +50,7 @@ flowchart TD
   App --> Audit[監査ログ]
   MemberDetail --> GrowthHints[育成のヒント]
   App --> AiUsage[AI の利用状況]
+  App --> Profile[プロフィール]
 ```
 
 ## `admin` ユーザーフロー
@@ -124,7 +126,11 @@ flowchart TD
   Result -->|承認| Approved[承認済みスキルへ反映]
   Result -->|補正承認| Corrected[補正内容を確認]
   Result -->|差し戻し| Revise[コメントを確認して再申告]
-  Approved --> Roles[自分のロール達成状況確認]
+  Approved --> Achievement{目標ロールを達成}
+  Achievement -->|yes| Celebrate[達成の演出]
+  Celebrate --> NextRole[次の目標ロールを選ぶ]
+  Achievement -->|no| Roles[自分のロール達成状況確認]
+  NextRole --> Roles
   Corrected --> Roles
   Revise --> Submit
   Roles --> Done[完了]
@@ -136,12 +142,21 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-  Login[初回ログイン] --> Password[パスワードを決める]
-  Password --> Select[得意なスキルを選ぶ]
+  Login[初回ログイン] --> Password[初回パスワードを変更]
+  Password --> Target[目標ロールを選ぶ]
+  Target --> Select[目標に沿ってスキルを申告]
   Select --> Waiting[上司の承認待ち]
   Waiting --> Approved[承認]
   Approved --> Dashboard[通常のダッシュボード]
 ```
+
+## R4・R5で改善した画面
+
+- 組織ダッシュボードは部署の木から対象を選ぶ。`MANAGER`には自部署と配下に加え、並列部署そのものの匿名集計を表示し、成長の勢いなどを先月までの完了月で比較する。
+- プロフィールは、上部にひとこと・飾るバッジ・数字（始めた日数、レベルアップ、達成したロールなど）、その下に「いま挑戦中」「得意なスキル（上位5件）」「こんなことで相談に乗れます」の3枚のカードを置き、本人だけがひとこと、相談タグ、飾るバッジを編集する。
+- ロール画面は全ロールが閲覧できる。達成状況を確認し、`ADMIN`は通常要件と「いずれか1つ」の組を編集できる。
+- スキル管理は一覧のままドラッグ＆ドロップで並び替えて自動保存する。`ADMIN`は共通のレベルの目安も編集できる。
+- 初回ログイン用パスワードは登録・再発行時に一度だけ表示し、初回ログイン後の変更を必須とする。
 
 ## スキル申告・承認シーケンス
 
