@@ -255,6 +255,7 @@ export async function listActiveSkillsForSkillSheet() {
     select: {
       id: true,
       name: true,
+      createdAt: true,
       displayOrder: true,
       category: {
         select: {

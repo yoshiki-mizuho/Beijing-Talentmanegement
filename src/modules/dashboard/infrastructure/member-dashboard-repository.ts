@@ -70,3 +70,26 @@ export async function getMemberDashboardData(memberId: string) {
 export type MemberDashboardData = Awaited<
   ReturnType<typeof getMemberDashboardData>
 >;
+
+export async function getSkillReminderData(memberId: string) {
+  const [skills, memberSkills, assessments, levelChanges] = await Promise.all([
+    prisma.skill.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true, createdAt: true },
+      orderBy: { name: "asc" }
+    }),
+    prisma.memberSkill.findMany({
+      where: { memberId },
+      select: { skillId: true, level: true }
+    }),
+    prisma.skillSelfAssessment.findMany({
+      where: { memberId },
+      select: { skillId: true, status: true, createdAt: true }
+    }),
+    prisma.skillLevelChange.findMany({
+      where: { memberId },
+      select: { skillId: true, changedAt: true }
+    })
+  ]);
+  return { skills, memberSkills, assessments, levelChanges };
+}

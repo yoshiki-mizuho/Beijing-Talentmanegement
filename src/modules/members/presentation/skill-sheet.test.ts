@@ -2,15 +2,20 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildSkillSheetRows,
+  buildLevelGuideWindow,
+  countSkillSheetFilters,
   filterSkillSheetRows,
   getNextSkillSheetLevel,
   getSkillLevelDefinitionText,
   getSkillSheetRowStatus,
   isSkillSheetRowChanged,
+  isNewSkill,
+  isStaleSkill,
   selectSkillSheetEncouragement
 } from "@/modules/members/presentation/skill-sheet";
 
 describe("skill sheet display logic", () => {
+  const now = new Date("2026-11-01T00:00:00.000Z");
   it("builds each row with current, pending, and target levels in display order", () => {
     const rows = buildSkillSheetRows({
       skills: [
@@ -52,8 +57,7 @@ describe("skill sheet display logic", () => {
       rejectionReason: "実務例を追記してください"
     });
     expect(getSkillSheetRowStatus(rows[1])).toEqual([
-      "承認待ち（申請 Lv4）",
-      "目標ロールで Lv4 が必要"
+      "承認待ち（申請 Lv4）"
     ]);
   });
 
@@ -111,6 +115,60 @@ describe("skill sheet display logic", () => {
     expect(filterSkillSheetRows(rows, { ...base, groupId: "tech", categoryId: "all" }).map((row) => row.skillId)).toEqual(["react", "sql"]);
     expect(filterSkillSheetRows(rows, { ...base, groupId: "tech", categoryId: "data" }).map((row) => row.skillId)).toEqual(["sql"]);
     expect(filterSkillSheetRows(rows, { ...base, groupId: "unclassified", categoryId: "all" }).map((row) => row.skillId)).toEqual(["talk"]);
+  });
+
+  it("判定時点から30日以内のスキルだけを新着にする", () => {
+    expect(isNewSkill("2026-10-02T00:00:00.000Z", now)).toBe(true);
+    expect(isNewSkill("2026-10-01T23:59:59.000Z", now)).toBe(false);
+  });
+
+  it("保有中で承認待ちがなく最後の活動から180日以上なら見直し対象にする", () => {
+    expect(isStaleSkill({
+      currentLevel: 2,
+      pendingLevel: null,
+      lastActivityAt: new Date("2026-05-05T00:00:00.000Z")
+    }, now)).toBe(true);
+    expect(isStaleSkill({
+      currentLevel: 2,
+      pendingLevel: 3,
+      lastActivityAt: new Date("2026-01-01T00:00:00.000Z")
+    }, now)).toBe(false);
+  });
+
+  it("基準レベルと上下を1から5の範囲で返す", () => {
+    expect(buildLevelGuideWindow(3, 4, 2)).toEqual({
+      baseLevel: 3,
+      levels: [2, 3, 4]
+    });
+    expect(buildLevelGuideWindow(null, null, 5)).toEqual({
+      baseLevel: 5,
+      levels: [3, 4, 5]
+    });
+    expect(buildLevelGuideWindow(null, null, null)).toEqual({
+      baseLevel: 1,
+      levels: [1, 2, 3]
+    });
+  });
+
+  it("検索語を除外し、大分類とカテゴリの範囲で絞り込み件数を数える", () => {
+    const rows = buildSkillSheetRows({
+      skills: [
+        { id: "new", name: "New", createdAt: new Date("2026-10-20"), displayOrder: 0, category: { id: "front", name: "フロント", displayOrder: 1 } },
+        { id: "old", name: "Old", createdAt: new Date("2020-01-01"), displayOrder: 1, category: { id: "front", name: "フロント", displayOrder: 1 } }
+      ],
+      memberSkills: [{ skillId: "old", level: 2 }],
+      pendingAssessments: [],
+      targetRequirements: [{ skillId: "new", requiredLevel: 3 }],
+      latestAssessments: []
+    });
+    const counts = countSkillSheetFilters(rows, {
+      categoryId: "front",
+      groupId: "all",
+      changedSkillIds: new Set(["new"]),
+      popularSkillIds: new Set(["old"]),
+      now
+    });
+    expect(counts).toMatchObject({ all: 2, new: 1, target: 1, popular: 1, unowned: 1, changed: 1 });
   });
 });
 

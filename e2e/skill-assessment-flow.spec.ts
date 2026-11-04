@@ -97,6 +97,7 @@ test("複数のスキル申告を上司への通知1件にまとめ、承認後�
 
 test("メンバーのスキル申告をマネージャーが承認できる", async ({ browser }) => {
   const member = await openLoggedInContext(browser, credentials.MEMBER);
+  const applicantComment = "案件Xで設計から担当しました";
 
   try {
     await member.page.goto("/my/skills");
@@ -115,6 +116,7 @@ test("メンバーのスキル申告をマネージャーが承認できる", as
     }
 
     await selectableLevel.click();
+    await member.page.getByLabel("ひとこと（任意）").fill(applicantComment);
     await expect(
       member.page.getByText("1件のスキルを変更しています", { exact: true })
     ).toBeVisible();
@@ -130,6 +132,7 @@ test("メンバーのスキル申告をマネージャーが承認できる", as
       name: `${skillName}の申請履歴`
     }).first();
     await expect(pendingHistory).toContainText("承認待ち");
+    await expect(pendingHistory).toContainText(`ひとこと：${applicantComment}`);
 
     const manager = await openLoggedInContext(browser, credentials.MANAGER);
     try {

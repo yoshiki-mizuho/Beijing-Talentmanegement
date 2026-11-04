@@ -7,7 +7,11 @@ export const skillAssessmentInputSchema = z.object({
   memberId: z.string().min(1),
   skillId: z.string().min(1),
   requestedLevel: z.number().int().min(MIN_SKILL_LEVEL).max(MAX_SKILL_LEVEL),
-  yearsOfExperience: z.number().min(0).max(99.9).optional()
+  yearsOfExperience: z.number().min(0).max(99.9).optional(),
+  applicantComment: z.preprocess(
+    (value) => typeof value === "string" && value.trim() === "" ? null : value,
+    z.string().trim().max(200, "ひとことは200字以内で入力してください。").nullable().optional()
+  )
 });
 
 export const skillAssessmentBatchInputSchema = z.object({

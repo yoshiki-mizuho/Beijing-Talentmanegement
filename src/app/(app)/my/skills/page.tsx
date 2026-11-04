@@ -44,7 +44,7 @@ const dateFormatter = new Intl.DateTimeFormat("ja-JP", {
 export default async function MySkillsPage({
   searchParams
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; filter?: string }>;
 }) {
   const session = await getCurrentSession();
   const query = await searchParams;
@@ -66,7 +66,9 @@ export default async function MySkillsPage({
     memberSkills: context.memberSkills,
     pendingAssessments: context.pendingAssessments,
     targetRequirements: context.targetRequirements,
-    latestAssessments: context.latestAssessments
+    latestAssessments: context.latestAssessments,
+    latestAssessmentDates: context.latestAssessmentDates,
+    latestLevelChangeDates: context.latestLevelChangeDates
   });
   const encouragement = selectSkillSheetEncouragement(
     context.assessmentHistory[0]?.createdAt ?? null
@@ -122,6 +124,9 @@ export default async function MySkillsPage({
               encouragement={encouragement}
               initial={initial}
               popularSkillIds={popularSkills.skillIds}
+              initialFilter={query.filter === "new" || query.filter === "stale"
+                ? query.filter
+                : "all"}
               categoryGroups={categoryGroups
                 .filter((group) => rows.some((row) => row.groupId === group.id))
                 .map((group) => ({
@@ -185,6 +190,11 @@ export default async function MySkillsPage({
                     {assessment.status === "CORRECTED"
                       ? `Lv${approvedLevel} に補正`
                       : `承認レベル Lv${approvedLevel}`}
+                  </p>
+                ) : null}
+                {assessment.applicantComment ? (
+                  <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
+                    ひとこと：{assessment.applicantComment}
                   </p>
                 ) : null}
                 {assessment.managerComment ? (
