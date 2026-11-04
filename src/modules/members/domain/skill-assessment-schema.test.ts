@@ -35,6 +35,27 @@ describe("skill assessment schemas", () => {
     ).toThrow();
   });
 
+  it("ひとことをtrimし、空文字をnullにして200字を超える入力を拒否する", () => {
+    expect(skillAssessmentInputSchema.parse({
+      memberId: "member-1",
+      skillId: "skill-1",
+      requestedLevel: 2,
+      applicantComment: "  実務で担当しました  "
+    }).applicantComment).toBe("実務で担当しました");
+    expect(skillAssessmentInputSchema.parse({
+      memberId: "member-1",
+      skillId: "skill-1",
+      requestedLevel: 2,
+      applicantComment: "   "
+    }).applicantComment).toBeNull();
+    expect(() => skillAssessmentInputSchema.parse({
+      memberId: "member-1",
+      skillId: "skill-1",
+      requestedLevel: 2,
+      applicantComment: "あ".repeat(201)
+    })).toThrow("ひとことは200字以内で入力してください。");
+  });
+
   it("accepts a batch with unique skills and levels from 1 to 5", () => {
     expect(
       skillAssessmentBatchInputSchema.parse({

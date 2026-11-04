@@ -8,18 +8,30 @@ export type SkillSheetRow = {
   groupName: string | null;
   groupDisplayOrder: number | null;
   skillDisplayOrder: number;
+  createdAt: Date;
   currentLevel: number | null;
   pendingLevel: number | null;
   targetLevel: number | null;
   isRejected: boolean;
   rejectionReason: string | null;
+  lastActivityAt: Date | null;
   levelGuides: ReadonlyArray<{ level: number; description: string }>;
 };
+
+export type SkillSheetFilter =
+  | "all"
+  | "new"
+  | "target"
+  | "popular"
+  | "stale"
+  | "unowned"
+  | "changed";
 
 type SkillSheetSource = {
   skills: ReadonlyArray<{
     id: string;
     name: string;
+    createdAt?: Date;
     displayOrder: number;
     category: {
       id: string;
@@ -47,6 +59,14 @@ type SkillSheetSource = {
     status: string;
     managerComment: string | null;
   }>;
+  latestAssessmentDates?: ReadonlyArray<{
+    skillId: string;
+    _max: { createdAt: Date | null };
+  }>;
+  latestLevelChangeDates?: ReadonlyArray<{
+    skillId: string;
+    _max: { changedAt: Date | null };
+  }>;
 };
 
 export const SKILL_SHEET_ENCOURAGEMENT_MESSAGES = {
@@ -64,7 +84,9 @@ export function buildSkillSheetRows({
   memberSkills,
   pendingAssessments,
   targetRequirements,
-  latestAssessments
+  latestAssessments,
+  latestAssessmentDates = [],
+  latestLevelChangeDates = []
 }: SkillSheetSource): SkillSheetRow[] {
   const currentLevels = new Map(
     memberSkills.map((memberSkill) => [memberSkill.skillId, memberSkill.level])
@@ -87,6 +109,12 @@ export function buildSkillSheetRows({
       .map((assessment) => [assessment.skillId, assessment.managerComment])
   );
   const rejectedSkillIds = new Set(rejectionReasons.keys());
+  const assessmentDates = new Map(
+    latestAssessmentDates.map((item) => [item.skillId, item._max.createdAt])
+  );
+  const levelChangeDates = new Map(
+    latestLevelChangeDates.map((item) => [item.skillId, item._max.changedAt])
+  );
 
   return skills
     .map((skill) => ({
@@ -99,11 +127,16 @@ export function buildSkillSheetRows({
       groupName: skill.category.group?.name ?? null,
       groupDisplayOrder: skill.category.group?.displayOrder ?? null,
       skillDisplayOrder: skill.displayOrder,
+      createdAt: skill.createdAt ?? new Date(0),
       currentLevel: currentLevels.get(skill.id) ?? null,
       pendingLevel: pendingLevels.get(skill.id) ?? null,
       targetLevel: targetLevels.get(skill.id) ?? null,
       isRejected: rejectedSkillIds.has(skill.id),
       rejectionReason: rejectionReasons.get(skill.id) ?? null,
+      lastActivityAt: latestDate(
+        assessmentDates.get(skill.id) ?? null,
+        levelChangeDates.get(skill.id) ?? null
+      ),
       levelGuides: skill.levelGuides ?? []
     }))
     .sort(
@@ -119,10 +152,35 @@ export function getSkillSheetRowStatus(row: SkillSheetRow): string[] {
     ...(row.pendingLevel === null
       ? []
       : [`承認待ち（申請 Lv${row.pendingLevel}）`]),
-    ...(row.targetLevel === null
-      ? []
-      : [`目標ロールで Lv${row.targetLevel} が必要`])
   ];
+}
+
+export function isNewSkill(createdAt: Date | string, now: Date = new Date()) {
+  const elapsed = now.getTime() - new Date(createdAt).getTime();
+  return elapsed >= 0 && elapsed <= 30 * 24 * 60 * 60 * 1000;
+}
+
+export function isStaleSkill(
+  row: Pick<SkillSheetRow, "currentLevel" | "pendingLevel" | "lastActivityAt">,
+  now: Date = new Date()
+) {
+  return row.currentLevel !== null &&
+    row.pendingLevel === null &&
+    row.lastActivityAt !== null &&
+    now.getTime() - row.lastActivityAt.getTime() >= 180 * 24 * 60 * 60 * 1000;
+}
+
+export function buildLevelGuideWindow(
+  selectedLevel: number | null,
+  pendingLevel: number | null,
+  currentLevel: number | null
+) {
+  const baseLevel = selectedLevel ?? pendingLevel ?? currentLevel ?? 1;
+  const start = Math.max(1, Math.min(baseLevel - 1, 3));
+  return {
+    baseLevel,
+    levels: [start, start + 1, start + 2]
+  };
 }
 
 export function isSkillSheetRowChanged(
@@ -157,10 +215,12 @@ export function filterSkillSheetRows(
   rows: ReadonlyArray<SkillSheetRow>,
   options: {
     query: string;
-    filter: "all" | "unowned" | "changed";
+    filter: SkillSheetFilter;
     categoryId: string;
     groupId: string;
     changedSkillIds: ReadonlySet<string>;
+    popularSkillIds?: ReadonlySet<string>;
+    now?: Date;
   }
 ) {
   const normalizedQuery = options.query.trim().toLocaleLowerCase("ja");
@@ -168,6 +228,10 @@ export function filterSkillSheetRows(
     const matchesQuery = normalizedQuery.length === 0 ||
       row.skillName.toLocaleLowerCase("ja").includes(normalizedQuery);
     const matchesFilter = options.filter === "all" ||
+      (options.filter === "new" && isNewSkill(row.createdAt, options.now)) ||
+      (options.filter === "target" && row.targetLevel !== null) ||
+      (options.filter === "popular" && options.popularSkillIds?.has(row.skillId)) ||
+      (options.filter === "stale" && isStaleSkill(row, options.now)) ||
       (options.filter === "unowned" && row.currentLevel === null) ||
       (options.filter === "changed" && options.changedSkillIds.has(row.skillId));
     const matchesCategory = options.categoryId === "all" ||
@@ -178,6 +242,25 @@ export function filterSkillSheetRows(
         : row.groupId === options.groupId);
     return matchesQuery && matchesFilter && matchesCategory && matchesGroup;
   });
+}
+
+export function countSkillSheetFilters(
+  rows: ReadonlyArray<SkillSheetRow>,
+  options: Omit<Parameters<typeof filterSkillSheetRows>[1], "query" | "filter">
+) {
+  const filters: SkillSheetFilter[] = [
+    "all", "new", "target", "popular", "stale", "unowned", "changed"
+  ];
+  return Object.fromEntries(filters.map((filter) => [
+    filter,
+    filterSkillSheetRows(rows, { ...options, query: "", filter }).length
+  ])) as Record<SkillSheetFilter, number>;
+}
+
+function latestDate(left: Date | null, right: Date | null) {
+  if (left === null) return right;
+  if (right === null) return left;
+  return left > right ? left : right;
 }
 
 export function selectSkillSheetEncouragement(

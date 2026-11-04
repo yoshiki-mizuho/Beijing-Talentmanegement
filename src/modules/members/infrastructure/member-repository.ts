@@ -550,7 +550,9 @@ export async function getMemberSkillSheetContext(memberId: string) {
     member,
     latestAssessments,
     pendingAssessments,
-    assessmentHistory
+    assessmentHistory,
+    latestAssessmentDates,
+    latestLevelChangeDates
   ] = await Promise.all([
     prisma.member.findUniqueOrThrow({
       where: { id: memberId },
@@ -602,6 +604,7 @@ export async function getMemberSkillSheetContext(memberId: string) {
         requestedLevel: true,
         status: true,
         managerComment: true,
+        applicantComment: true,
         createdAt: true,
         skill: {
           select: {
@@ -619,6 +622,16 @@ export async function getMemberSkillSheetContext(memberId: string) {
       },
       orderBy: { createdAt: "desc" },
       take: 10
+    }),
+    prisma.skillSelfAssessment.groupBy({
+      by: ["skillId"],
+      where: { memberId },
+      _max: { createdAt: true }
+    }),
+    prisma.skillLevelChange.groupBy({
+      by: ["skillId"],
+      where: { memberId },
+      _max: { changedAt: true }
     })
   ]);
 
@@ -628,7 +641,9 @@ export async function getMemberSkillSheetContext(memberId: string) {
     targetRequirements: member.targetRole?.roleRequirements ?? [],
     pendingAssessments,
     latestAssessments,
-    assessmentHistory
+    assessmentHistory,
+    latestAssessmentDates,
+    latestLevelChangeDates
   };
 }
 
@@ -725,7 +740,8 @@ export async function createSkillAssessment(
     assessments: [{
       skillId: input.skillId,
       requestedLevel: input.requestedLevel,
-      yearsOfExperience: input.yearsOfExperience
+      yearsOfExperience: input.yearsOfExperience,
+      applicantComment: input.applicantComment
     }]
   }, actorMemberId);
 
@@ -788,6 +804,7 @@ export async function createSkillAssessments(
           memberId: input.memberId,
           skillId: item.skillId,
           requestedLevel: item.requestedLevel,
+          applicantComment: item.applicantComment,
           yearsOfExperience: item.yearsOfExperience === undefined
             ? undefined
             : new Prisma.Decimal(item.yearsOfExperience)

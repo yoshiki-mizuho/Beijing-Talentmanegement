@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, RotateCcw, Search, SearchX, Send } from "lucide-react";
+import { ChevronDown, Clock, MessageSquare, RotateCcw, Search, SearchX, Send, Target } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
@@ -8,9 +8,13 @@ import { createSkillAssessmentsAction } from "@/modules/members/presentation/act
 import { resolveSkillLevelDescription } from "@/modules/skills/domain/skill-level-guide";
 import {
   getNextSkillSheetLevel,
+  buildLevelGuideWindow,
+  countSkillSheetFilters,
   filterSkillSheetRows,
-  getSkillLevelDefinitionText,
   getSkillSheetRowStatus,
+  isNewSkill,
+  isStaleSkill,
+  type SkillSheetFilter,
   type SkillSheetRow
 } from "@/modules/members/presentation/skill-sheet";
 import { cn } from "@/shared/lib/utils";
@@ -21,13 +25,16 @@ import { EmptyState } from "@/shared/ui/empty-state";
 import { Input } from "@/shared/ui/input";
 import { SelectField } from "@/shared/ui/form-field";
 import { SubmitButton } from "@/shared/ui/submit-button";
-
-type SkillSheetFilter = "all" | "unowned" | "changed";
+import { Tooltip } from "@/shared/ui/tooltip";
 
 const filters: Array<{ value: SkillSheetFilter; label: string }> = [
   { value: "all", label: "すべて" },
-  { value: "unowned", label: "未保有のみ" },
-  { value: "changed", label: "変更した行" }
+  { value: "new", label: "新着" },
+  { value: "target", label: "目標ロールに必要" },
+  { value: "popular", label: "部署でよく登録" },
+  { value: "stale", label: "しばらく申請なし" },
+  { value: "unowned", label: "未登録" },
+  { value: "changed", label: "変更あり" }
 ];
 
 export function SkillSheetForm({
@@ -37,6 +44,7 @@ export function SkillSheetForm({
   initial = false,
   popularSkillIds = [],
   categoryGroups = [],
+  initialFilter = "all",
   popularHeading = "よく登録されているスキル"
 }: {
   rows: SkillSheetRow[];
@@ -45,31 +53,54 @@ export function SkillSheetForm({
   initial?: boolean;
   popularSkillIds?: string[];
   categoryGroups?: Array<{ id: string; name: string }>;
+  initialFilter?: SkillSheetFilter;
   popularHeading?: string;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<SkillSheetFilter>("all");
+  const [filter, setFilter] = useState<SkillSheetFilter>(initialFilter);
   const [categoryId, setCategoryId] = useState("all");
   const [groupId, setGroupId] = useState("all");
   const [selectedLevels, setSelectedLevels] = useState<Record<string, number>>(
     {}
   );
+  const [comments, setComments] = useState<Record<string, string>>({});
+  const [activeSkillId, setActiveSkillId] = useState<string | null>(null);
   // よく登録されているスキルがまだ無いときは、最初から全件を出す
   const [showAllSkills, setShowAllSkills] = useState(
-    !initial || popularSkillIds.length === 0
+    !initial || popularSkillIds.length === 0 || initialFilter !== "all"
   );
   const changedSkillIds = useMemo(
     () => new Set(Object.keys(selectedLevels)),
     [selectedLevels]
   );
   const changedCount = changedSkillIds.size;
+  const popularSkillIdSet = useMemo(
+    () => new Set(popularSkillIds),
+    [popularSkillIds]
+  );
 
   const filteredRows = useMemo(
     () =>
-      filterSkillSheetRows(rows, { query, filter, categoryId, groupId, changedSkillIds })
-        .filter((row) => showAllSkills || popularSkillIds.includes(row.skillId)),
-    [categoryId, changedSkillIds, filter, groupId, popularSkillIds, query, rows, showAllSkills]
+      filterSkillSheetRows(rows, {
+        query,
+        filter,
+        categoryId,
+        groupId,
+        changedSkillIds,
+        popularSkillIds: popularSkillIdSet
+      })
+        .filter((row) => showAllSkills || popularSkillIdSet.has(row.skillId)),
+    [categoryId, changedSkillIds, filter, groupId, popularSkillIdSet, query, rows, showAllSkills]
+  );
+  const filterCounts = useMemo(
+    () => countSkillSheetFilters(rows, {
+      categoryId,
+      groupId,
+      changedSkillIds,
+      popularSkillIds: popularSkillIdSet
+    }),
+    [categoryId, changedSkillIds, groupId, popularSkillIdSet, rows]
   );
 
   const groupOptions = categoryGroups;
@@ -109,17 +140,33 @@ export function SkillSheetForm({
 
     return [...grouped.values()];
   }, [filteredRows]);
+  const activeRow = rows.find((row) => row.skillId === activeSkillId) ?? null;
+  const activeSelectedLevel = activeRow
+    ? selectedLevels[activeRow.skillId] ?? null
+    : null;
+  const levelGuideWindow = activeRow
+    ? buildLevelGuideWindow(
+        activeSelectedLevel,
+        activeRow.pendingLevel,
+        activeRow.currentLevel
+      )
+    : null;
 
   const payload = rows.flatMap((row) => {
     const selectedLevel = selectedLevels[row.skillId];
     return selectedLevel === undefined
       ? []
-      : [{ skillId: row.skillId, requestedLevel: selectedLevel }];
+      : [{
+          skillId: row.skillId,
+          requestedLevel: selectedLevel,
+          applicantComment: comments[row.skillId] ?? null
+        }];
   });
 
   function selectLevel(row: SkillSheetRow, clickedLevel: number) {
     if (row.pendingLevel !== null) return;
 
+    setActiveSkillId(row.skillId);
     setSelectedLevels((current) => {
       const selectedLevel = current[row.skillId] ?? null;
       const nextLevel = getNextSkillSheetLevel(
@@ -131,6 +178,11 @@ export function SkillSheetForm({
 
       if (nextLevel === null) {
         delete next[row.skillId];
+        setComments((currentComments) => {
+          const nextComments = { ...currentComments };
+          delete nextComments[row.skillId];
+          return nextComments;
+        });
       } else {
         next[row.skillId] = nextLevel;
       }
@@ -145,6 +197,8 @@ export function SkillSheetForm({
       className="space-y-5"
       onSuccess={() => {
         setSelectedLevels({});
+        setComments({});
+        setActiveSkillId(null);
         if (initial) router.push("/dashboard");
       }}
     >
@@ -164,7 +218,9 @@ export function SkillSheetForm({
               </div>
             ))}
           </div>
-          <h3 className="text-base font-semibold">{popularHeading}</h3>
+          {!showAllSkills ? (
+            <h3 className="text-base font-semibold">{popularHeading}</h3>
+          ) : null}
         </div>
       ) : (
         <p className="rounded-lg bg-[var(--primary-subtle)] px-4 py-3 text-sm font-medium leading-6 text-[var(--foreground)]">
@@ -195,6 +251,23 @@ export function SkillSheetForm({
                 >
                   {group.name}
                   <span className="text-xs font-normal text-[var(--muted-foreground)]">{count}</span>
+                  {rows.some((row) =>
+                    isNewSkill(row.createdAt) &&
+                    (group.id === "all" ||
+                      (group.id === "unclassified"
+                        ? row.groupId === null
+                        : row.groupId === group.id))
+                  ) ? (
+                    <Badge variant="primary">
+                      新着 {rows.filter((row) =>
+                        isNewSkill(row.createdAt) &&
+                        (group.id === "all" ||
+                          (group.id === "unclassified"
+                            ? row.groupId === null
+                            : row.groupId === group.id))
+                      ).length}
+                    </Badge>
+                  ) : null}
                 </button>
               );
             })}
@@ -273,15 +346,93 @@ export function SkillSheetForm({
                     : "border-[var(--border-strong)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-subtle)]"
                 )}
               >
-                {item.label}
+                {item.label} {filterCounts[item.value]}
               </button>
             ))}
           </div>
         </div>
       </div> : null}
 
+      <div className={cn(!initial && "grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start")}>
+      {!initial ? (
+        <aside className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 lg:col-start-2 lg:row-start-1 lg:sticky lg:top-4" aria-label="レベルの目安">
+          {activeRow && levelGuideWindow ? (
+            <div className="space-y-3">
+              <h2 className="text-sm font-semibold">{activeRow.skillName}のレベルの目安</h2>
+              {levelGuideWindow.levels.map((level) => {
+                const labels = [
+                  activeSelectedLevel === level ? "申請するレベル" : null,
+                  activeRow.pendingLevel === level ? "承認待ちのレベル" : null,
+                  activeRow.currentLevel === level ? "いまのレベル" : null
+                ].filter(Boolean);
+                return (
+                  <div
+                    key={level}
+                    className={cn(
+                      "flex gap-3 rounded-lg border p-3",
+                      level === levelGuideWindow.baseLevel
+                        ? "border-[var(--primary)] bg-[var(--primary-subtle)]"
+                        : "border-[var(--border)]"
+                    )}
+                  >
+                    <span
+                      aria-label={`Lv${level}`}
+                      className={cn(
+                        "grid h-9 w-9 shrink-0 place-items-center rounded-md text-sm font-bold",
+                        level === levelGuideWindow.baseLevel
+                          ? "bg-[var(--primary)] text-white"
+                          : "bg-[var(--surface-subtle)] text-[var(--muted-foreground)]"
+                      )}
+                    >
+                      {level}
+                    </span>
+                    <div>
+                      {labels.length > 0 ? (
+                        <p className="mb-1 text-xs font-semibold text-[var(--primary)]">
+                          {labels.join("・")}
+                        </p>
+                      ) : null}
+                      <p className="text-sm leading-6 text-[var(--muted-foreground)]">
+                        {resolveSkillLevelDescription(level, levels, activeRow.levelGuides) ??
+                          "レベル定義が登録されていません。"}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+              {activeSelectedLevel !== null ? (
+                <div>
+                  <label htmlFor="skill-applicant-comment" className="text-sm font-semibold">
+                    ひとこと（任意）
+                  </label>
+                  <textarea
+                    id="skill-applicant-comment"
+                    value={comments[activeRow.skillId] ?? ""}
+                    maxLength={200}
+                    rows={3}
+                    placeholder="例：案件Xで設計から担当しました"
+                    onChange={(event) => setComments((current) => ({
+                      ...current,
+                      [activeRow.skillId]: event.target.value
+                    }))}
+                    className="mt-2 w-full rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                  />
+                  <p className="mt-1 text-right text-xs text-[var(--muted-foreground)]">
+                    {(comments[activeRow.skillId] ?? "").length} / 200
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <p className="text-sm text-[var(--muted-foreground)]">
+              スキルを選ぶと、レベルの目安が出ます
+            </p>
+          )}
+        </aside>
+      ) : null}
+
       {categories.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-[var(--border-strong)]">
+        <div className="rounded-lg border border-dashed border-[var(--border-strong)] lg:col-start-1 lg:row-start-1">
           <EmptyState
             icon={SearchX}
             title="条件に合うスキルがありません"
@@ -289,7 +440,7 @@ export function SkillSheetForm({
           />
         </div>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-5 lg:col-start-1 lg:row-start-1">
           {categories.map((category) => (
             <section
               key={category.id}
@@ -312,7 +463,6 @@ export function SkillSheetForm({
                   const selectedLevel = selectedLevels[row.skillId] ?? null;
                   const displayedLevel = selectedLevel ?? row.currentLevel;
                   const isChanged = selectedLevel !== null;
-                  const definitionId = `skill-definition-${row.skillId}`;
                   const pendingReasonId = `skill-pending-reason-${row.skillId}`;
                   const rejectionReasonId = `skill-rejection-reason-${row.skillId}`;
 
@@ -321,16 +471,50 @@ export function SkillSheetForm({
                       key={row.skillId}
                       role="listitem"
                       className={cn(
-                        "grid gap-4 border-l-4 border-b border-b-[var(--border)] px-4 py-4 last:border-b-0 md:grid-cols-[minmax(180px,0.8fr)_minmax(260px,1fr)_minmax(220px,1.1fr)] md:items-center",
-                        isChanged
+                        "grid gap-4 border-l-4 border-b border-b-[var(--border)] px-4 py-4 last:border-b-0 md:grid-cols-[minmax(180px,0.8fr)_minmax(260px,1fr)] md:items-center",
+                        isChanged || activeSkillId === row.skillId
                           ? "border-l-[var(--primary)] bg-[var(--primary-subtle)]"
                           : "border-l-transparent bg-[var(--surface)]"
                       )}
                     >
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-[var(--foreground)]">
+                        <button
+                          type="button"
+                          onClick={() => setActiveSkillId(row.skillId)}
+                          className="text-left text-sm font-semibold text-[var(--foreground)] hover:text-[var(--primary)]"
+                        >
                           {row.skillName}
-                        </p>
+                        </button>
+                        <div className="mt-1 flex flex-wrap items-center gap-1">
+                          {isNewSkill(row.createdAt) ? (
+                            <Tooltip content="30日以内に追加されたスキル">
+                              <button type="button" aria-label="30日以内に追加されたスキル" className="rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]">
+                                <Badge variant="primary">NEW</Badge>
+                              </button>
+                            </Tooltip>
+                          ) : null}
+                          {row.targetLevel !== null ? (
+                            <Tooltip content={`目標ロールに必要なスキル（Lv${row.targetLevel}）`}>
+                              <button type="button" aria-label={`目標ロールに必要なスキル（Lv${row.targetLevel}）`} className="rounded p-1 text-[var(--primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]">
+                                <Target className="h-4 w-4" aria-hidden="true" />
+                              </button>
+                            </Tooltip>
+                          ) : null}
+                          {isStaleSkill(row) ? (
+                            <Tooltip content="半年以上申請していません。見直してみませんか">
+                              <button type="button" aria-label="半年以上申請していません。見直してみませんか" className="rounded p-1 text-amber-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]">
+                                <Clock className="h-4 w-4" aria-hidden="true" />
+                              </button>
+                            </Tooltip>
+                          ) : null}
+                          {(comments[row.skillId] ?? "").trim() ? (
+                            <Tooltip content="ひとことを書いています">
+                              <button type="button" aria-label="ひとことを書いています" className="rounded p-1 text-[var(--primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]">
+                                <MessageSquare className="h-4 w-4" aria-hidden="true" />
+                              </button>
+                            </Tooltip>
+                          ) : null}
+                        </div>
                         {row.isRejected ? (
                           <div className="mt-2 space-y-1">
                             <Badge variant="danger">差し戻し</Badge>
@@ -365,7 +549,6 @@ export function SkillSheetForm({
                           role="group"
                           aria-label={`${row.skillName}のレベル`}
                           aria-describedby={[
-                            definitionId,
                             row.pendingLevel === null ? null : pendingReasonId,
                             row.isRejected ? rejectionReasonId : null
                           ]
@@ -410,23 +593,6 @@ export function SkillSheetForm({
                         ) : null}
                       </div>
 
-                      <p
-                        id={definitionId}
-                        className="text-sm leading-6 text-[var(--muted-foreground)]"
-                        aria-live="polite"
-                      >
-                        {getSkillLevelDefinitionText(
-                          row.currentLevel,
-                          selectedLevel,
-                          displayedLevel === null
-                            ? undefined
-                            : resolveSkillLevelDescription(
-                                displayedLevel,
-                                levels,
-                                row.levelGuides
-                              )
-                        )}
-                      </p>
                     </div>
                   );
                 })}
@@ -435,6 +601,7 @@ export function SkillSheetForm({
           ))}
         </div>
       )}
+      </div>
 
       {initial && !showAllSkills ? (
         <Button
@@ -458,7 +625,11 @@ export function SkillSheetForm({
           <Button
             type="button"
             variant="secondary"
-            onClick={() => setSelectedLevels({})}
+            onClick={() => {
+              setSelectedLevels({});
+              setComments({});
+              setActiveSkillId(null);
+            }}
             disabled={changedCount === 0}
           >
             <RotateCcw className="h-4 w-4" aria-hidden="true" />

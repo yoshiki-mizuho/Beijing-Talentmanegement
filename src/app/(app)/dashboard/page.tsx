@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import type { Route } from "next";
 
 import { getDashboardSummary } from "@/modules/dashboard/application/dashboard-service";
-import { getMemberDashboard } from "@/modules/dashboard/application/member-dashboard-service";
+import { getMemberDashboard, getMemberSkillReminders } from "@/modules/dashboard/application/member-dashboard-service";
 import { getTeamDashboard } from "@/modules/dashboard/application/team-dashboard-service";
 import { OrganizationDashboard } from "@/modules/dashboard/presentation/organization-dashboard";
 import { MemberDashboard } from "@/modules/dashboard/presentation/member-dashboard";
@@ -60,9 +60,10 @@ export default async function DashboardPage({
   const personal =
     Boolean(session?.user.memberId) && (!management || view === "personal");
   if (session?.user.memberId && personal) {
-    const [data, feed] = await Promise.all([
+    const [data, feed, skillReminders] = await Promise.all([
       getMemberDashboard(session.user.memberId),
       getDepartmentLevelUpFeed(session.user.memberId, 5),
+      getMemberSkillReminders(session.user.memberId)
     ]);
     const model = buildMemberDashboardViewModel(data);
     if (!model) redirect("/login");
@@ -71,6 +72,7 @@ export default async function DashboardPage({
         {management ? <DashboardViewSwitch current="personal" /> : null}
         <MemberDashboard
           viewModel={model}
+          skillReminders={skillReminders}
           levelUpFeed={feed.map((item) => ({
             ...item,
             avatarUpdatedAt: item.avatarUpdatedAt?.toISOString() ?? null,

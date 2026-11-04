@@ -1,4 +1,4 @@
-import { Award, CalendarDays, Check, Heart, History, PartyPopper, Radar, Target, Users } from "lucide-react";
+import { Award, CalendarDays, Check, Clock, Heart, History, PartyPopper, Radar, Sparkles, Target, Users } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 
@@ -18,10 +18,16 @@ const TIMELINE_LIMIT = 5;
 
 export function MemberDashboard({
   viewModel,
-  levelUpFeed
+  levelUpFeed,
+  skillReminders
 }: {
   viewModel: MemberDashboardViewModel;
   levelUpFeed: SerializableFeedItem[];
+  skillReminders: {
+    newSkillCount: number;
+    newSkills: Array<{ id: string; name: string }>;
+    staleSkills: Array<{ id: string; name: string; level: number; monthsAgo: number }>;
+  };
 }) {
   if (viewModel.onboardingState !== "regular") {
     return (
@@ -89,6 +95,47 @@ export function MemberDashboard({
           <GrowthRadarChart values={viewModel.radar} />
         </DashboardCard>
       </div>
+
+      {skillReminders.newSkills.length > 0 || skillReminders.staleSkills.length > 0 ? (
+        <div className="grid gap-5 lg:grid-cols-2">
+          {skillReminders.newSkills.length > 0 ? (
+            <DashboardCard
+              id="new-skills-heading"
+              icon={Sparkles}
+              title={`新しいスキルが ${skillReminders.newSkillCount}件 増えました`}
+              description=""
+            >
+              <div className="flex flex-wrap gap-2">
+                {skillReminders.newSkills.map((skill) => (
+                  <span key={skill.id} className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm">
+                    <BadgeNew />
+                    {skill.name}
+                  </span>
+                ))}
+              </div>
+              <DashboardLink href="/my/skills?filter=new" />
+            </DashboardCard>
+          ) : null}
+          {skillReminders.staleSkills.length > 0 ? (
+            <DashboardCard
+              id="stale-skills-heading"
+              icon={Clock}
+              title="見直してみませんか"
+              description=""
+            >
+              <ul className="divide-y divide-[var(--border)]">
+                {skillReminders.staleSkills.map((skill) => (
+                  <li key={skill.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+                    <span className="font-semibold">{skill.name} Lv{skill.level}</span>
+                    <span className="text-xs text-[var(--muted-foreground)]">{skill.monthsAgo}か月前</span>
+                  </li>
+                ))}
+              </ul>
+              <DashboardLink href="/my/skills?filter=stale" />
+            </DashboardCard>
+          ) : null}
+        </div>
+      ) : null}
 
       {viewModel.cheers.length > 0 ? (
         <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]" aria-labelledby="cheers-heading">
@@ -392,6 +439,25 @@ function PreviewCard({ icon: Icon, text }: { icon: typeof Award; text: string })
       <Icon className="h-5 w-5 shrink-0 text-[var(--primary)]" aria-hidden="true" />
       {text}
     </div>
+  );
+}
+
+function BadgeNew() {
+  return (
+    <span className="rounded bg-blue-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+      NEW
+    </span>
+  );
+}
+
+function DashboardLink({ href }: { href: Route }) {
+  return (
+    <Link
+      href={href}
+      className="mt-4 inline-flex min-h-11 items-center rounded-md bg-[var(--primary)] px-4 text-sm font-semibold text-white hover:bg-[var(--primary-hover)]"
+    >
+      スキルシートで見る
+    </Link>
   );
 }
 
