@@ -34,6 +34,11 @@ enum SkillLevelChangeSource {
   CSV_IMPORT
 }
 
+enum SkillPrerequisiteSource {
+  AI_SUGGESTION
+  MANUAL
+}
+
 enum LevelUpReactionType {
   CONGRATS
   AMAZING
@@ -187,6 +192,7 @@ model Member {
   growthHint            GrowthHint?           @relation("GrowthHintMember")
   generatedGrowthHints  GrowthHint[]          @relation("GrowthHintGeneratedBy")
   aiUsageLogs           AiUsageLog[]          @relation("AiUsageActor")
+  createdSkillPrerequisites SkillPrerequisite[] @relation("SkillPrerequisiteCreatedBy")
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
 
@@ -200,9 +206,22 @@ model SkillCategory {
   id           String   @id @default(cuid())
   name         String   @unique
   displayOrder Int      @default(0)
+  groupId      String?
+  group        SkillCategoryGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
   skills       Skill[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  @@index([groupId])
+}
+
+model SkillCategoryGroup {
+  id           String          @id @default(cuid())
+  name         String          @unique
+  displayOrder Int             @default(0)
+  categories   SkillCategory[]
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
 }
 
 model Skill {
@@ -220,11 +239,28 @@ model Skill {
   skillLevelChanges SkillLevelChange[]
   cheers            Cheer[]
   levelGuides       SkillLevelGuide[]
+  prerequisites     SkillPrerequisite[]   @relation("SkillPrerequisites")
+  requiredBy        SkillPrerequisite[]   @relation("PrerequisiteSkill")
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
 
   @@unique([categoryId, name])
   @@index([categoryId])
+}
+
+model SkillPrerequisite {
+  id                  String                  @id @default(cuid())
+  skillId             String
+  skill               Skill                   @relation("SkillPrerequisites", fields: [skillId], references: [id], onDelete: Cascade)
+  prerequisiteSkillId String
+  prerequisiteSkill   Skill                   @relation("PrerequisiteSkill", fields: [prerequisiteSkillId], references: [id], onDelete: Cascade)
+  source              SkillPrerequisiteSource
+  createdById         String?
+  createdBy           Member?                 @relation("SkillPrerequisiteCreatedBy", fields: [createdById], references: [id])
+  createdAt           DateTime                @default(now())
+
+  @@unique([skillId, prerequisiteSkillId])
+  @@index([prerequisiteSkillId])
 }
 
 model SkillLevelGuide {
@@ -281,6 +317,7 @@ model SkillSelfAssessment {
   yearsOfExperience   Decimal?                  @db.Decimal(4, 1)
   status              SkillSelfAssessmentStatus @default(PENDING)
   managerComment      String?
+  applicantComment    String?
   reviewedByMemberId  String?
   reviewedByMember    Member?                   @relation("AssessmentReviewer", fields: [reviewedByMemberId], references: [id])
   reviewedAt          DateTime?

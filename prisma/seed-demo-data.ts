@@ -21,6 +21,24 @@ export const demoSkillCategories = [
   { name: "マネジメント", displayOrder: 50 }
 ] as const;
 
+export const demoSkillCategoryGroups = [
+  {
+    name: "技術",
+    displayOrder: 10,
+    categoryNames: [
+      "プログラミング言語",
+      "フレームワーク",
+      "クラウド・インフラ",
+      "データベース"
+    ]
+  },
+  {
+    name: "マネジメント・ビジネス",
+    displayOrder: 20,
+    categoryNames: ["マネジメント"]
+  }
+] as const;
+
 export const demoSkills = [
   {
     code: "DEMO-SKILL-001",
@@ -130,6 +148,12 @@ export const demoSkills = [
     categoryName: "マネジメント",
     description: "反復的な開発プロセスの運営と改善"
   }
+] as const;
+
+export const demoSkillPrerequisites = [
+  { skillName: "TypeScript", prerequisiteSkillName: "JavaScript" },
+  { skillName: "React", prerequisiteSkillName: "JavaScript" },
+  { skillName: "Next.js", prerequisiteSkillName: "React" }
 ] as const;
 
 export const demoRoles = [

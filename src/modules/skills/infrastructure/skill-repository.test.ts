@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   levelChangeCount: vi.fn(),
   cheerCount: vi.fn(),
   requirementCount: vi.fn(),
+  prerequisiteCount: vi.fn(),
   skillDelete: vi.fn(),
   skillLevelFindMany: vi.fn(),
   skillLevelUpdate: vi.fn(),
@@ -45,6 +46,7 @@ const transactionClient = {
   skillLevelChange: { count: mocks.levelChangeCount },
   cheer: { count: mocks.cheerCount },
   roleRequirement: { count: mocks.requirementCount },
+  skillPrerequisite: { count: mocks.prerequisiteCount },
   skill: {
     create: mocks.skillCreate,
     findFirst: mocks.skillFindFirst,
@@ -297,6 +299,17 @@ describe("deleteSkill audit log", () => {
           isActive: true
         }
       }
+    });
+  });
+
+  it("前提スキルの関係があっても削除できる", async () => {
+    mocks.prerequisiteCount.mockResolvedValue(1);
+
+    await deleteSkill("skill-1", "actor-1");
+
+    expect(mocks.prerequisiteCount).not.toHaveBeenCalled();
+    expect(mocks.skillDelete).toHaveBeenCalledWith({
+      where: { id: "skill-1" }
     });
   });
 });

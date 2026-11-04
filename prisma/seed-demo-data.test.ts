@@ -8,8 +8,10 @@ import {
   demoMembers,
   demoRoles,
   demoSkillAssessments,
+  demoSkillCategoryGroups,
   demoSkillLevelChanges,
   demoSkillCategories,
+  demoSkillPrerequisites,
   demoSkills,
   demoTargetRoleAssignments,
   existingDemoMemberEmployeeNos
@@ -33,12 +35,25 @@ describe("demo seed data", () => {
   it("has unique business keys", () => {
     expectUnique(demoSkills.map((skill) => skill.code));
     expectUnique(demoSkillCategories.map((category) => category.name));
+    expectUnique(demoSkillCategoryGroups.map((group) => group.name));
     expectUnique(demoRoles.map((role) => role.name));
     expectUnique([
       ...existingDemoMemberEmployeeNos,
       ...demoMembers.map((member) => member.employeeNo)
     ]);
     expectUnique(demoMembers.map((member) => member.email));
+  });
+
+  it("defines valid skill prerequisites without self-reference", () => {
+    const skillNames = new Set(demoSkills.map((skill) => skill.name));
+
+    for (const prerequisite of demoSkillPrerequisites) {
+      expect(skillNames.has(prerequisite.skillName)).toBe(true);
+      expect(skillNames.has(prerequisite.prerequisiteSkillName)).toBe(true);
+      expect(prerequisite.skillName).not.toBe(
+        prerequisite.prerequisiteSkillName
+      );
+    }
   });
 
   it("only references defined skills, categories, and members", () => {
