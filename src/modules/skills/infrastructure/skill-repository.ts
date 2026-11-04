@@ -1,6 +1,9 @@
 import type {
   CreateSkillInput,
   CommonSkillLevelGuidesInput,
+  AssignSkillCategoryGroupInput,
+  ReorderSkillCategoryGroupsInput,
+  SkillCategoryGroupInput,
   ReorderSkillsInput,
   SkillCategoryInput,
   SkillInput,
@@ -46,6 +49,10 @@ function categoryAuditFields(category: { name: string; displayOrder: number }) {
   return { name: category.name, displayOrder: category.displayOrder };
 }
 
+function categoryGroupAuditFields(group: { name: string; displayOrder: number }) {
+  return { name: group.name, displayOrder: group.displayOrder };
+}
+
 export async function listSkillCategories() {
   return prisma.skillCategory.findMany({
     include: {
@@ -54,6 +61,133 @@ export async function listSkillCategories() {
       }
     },
     orderBy: [{ displayOrder: "asc" }, { name: "asc" }]
+  });
+}
+
+export async function listSkillCategoryGroups() {
+  return prisma.skillCategoryGroup.findMany({
+    include: { _count: { select: { categories: true } } },
+    orderBy: [{ displayOrder: "asc" }, { name: "asc" }]
+  });
+}
+
+export async function createSkillCategoryGroup(
+  input: SkillCategoryGroupInput,
+  actorMemberId: string | null
+) {
+  return prisma.$transaction(async (tx) => {
+    const duplicate = await tx.skillCategoryGroup.findUnique({
+      where: { name: input.name }, select: { id: true }
+    });
+    if (duplicate) throw new UserFacingError("同じ名前の大分類がすでにあります。");
+    const last = await tx.skillCategoryGroup.findFirst({
+      orderBy: { displayOrder: "desc" },
+      select: { displayOrder: true }
+    });
+    const group = await tx.skillCategoryGroup.create({
+      data: { ...input, displayOrder: (last?.displayOrder ?? -1) + 1 }
+    });
+    await recordAuditLog(tx, {
+      actorMemberId,
+      action: AUDIT_ACTION.SKILL_CATEGORY_GROUP_CREATE,
+      targetType: AUDIT_TARGET_TYPE.SKILL_CATEGORY_GROUP,
+      targetId: group.id,
+      after: categoryGroupAuditFields(group)
+    });
+    return group;
+  });
+}
+
+export async function updateSkillCategoryGroup(
+  id: string,
+  input: SkillCategoryGroupInput,
+  actorMemberId: string | null
+) {
+  return prisma.$transaction(async (tx) => {
+    const duplicate = await tx.skillCategoryGroup.findFirst({
+      where: { name: input.name, id: { not: id } }, select: { id: true }
+    });
+    if (duplicate) throw new UserFacingError("同じ名前の大分類がすでにあります。");
+    const before = await tx.skillCategoryGroup.findUniqueOrThrow({ where: { id } });
+    const group = await tx.skillCategoryGroup.update({ where: { id }, data: input });
+    const diff = diffForAudit(categoryGroupAuditFields(before), categoryGroupAuditFields(group));
+    if (diff) {
+      await recordAuditLog(tx, {
+        actorMemberId,
+        action: AUDIT_ACTION.SKILL_CATEGORY_GROUP_UPDATE,
+        targetType: AUDIT_TARGET_TYPE.SKILL_CATEGORY_GROUP,
+        targetId: id,
+        ...diff
+      });
+    }
+    return group;
+  });
+}
+
+export async function deleteSkillCategoryGroup(id: string, actorMemberId: string | null) {
+  return prisma.$transaction(async (tx) => {
+    const group = await tx.skillCategoryGroup.delete({ where: { id } });
+    await recordAuditLog(tx, {
+      actorMemberId,
+      action: AUDIT_ACTION.SKILL_CATEGORY_GROUP_DELETE,
+      targetType: AUDIT_TARGET_TYPE.SKILL_CATEGORY_GROUP,
+      targetId: id,
+      before: categoryGroupAuditFields(group)
+    });
+    return group;
+  });
+}
+
+export async function reorderSkillCategoryGroups(
+  input: ReorderSkillCategoryGroupsInput,
+  actorMemberId: string | null
+) {
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.skillCategoryGroup.findMany({
+      orderBy: [{ displayOrder: "asc" }, { name: "asc" }],
+      select: { id: true }
+    });
+    if (existing.length !== input.groupIds.length ||
+      existing.some((group) => !input.groupIds.includes(group.id))) {
+      throw new UserFacingError("一覧が更新されています。画面を開き直してください。");
+    }
+    await Promise.all(input.groupIds.map((id, displayOrder) =>
+      tx.skillCategoryGroup.update({ where: { id }, data: { displayOrder } })
+    ));
+    await recordAuditLog(tx, {
+      actorMemberId,
+      action: AUDIT_ACTION.SKILL_CATEGORY_GROUP_REORDER,
+      targetType: AUDIT_TARGET_TYPE.SKILL_CATEGORY_GROUP,
+      targetId: null,
+      metadata: { count: input.groupIds.length }
+    });
+  });
+}
+
+export async function assignSkillCategoryGroup(
+  input: AssignSkillCategoryGroupInput,
+  actorMemberId: string | null
+) {
+  return prisma.$transaction(async (tx) => {
+    const before = await tx.skillCategory.findUniqueOrThrow({
+      where: { id: input.categoryId },
+      include: { group: { select: { name: true } } }
+    });
+    const category = await tx.skillCategory.update({
+      where: { id: input.categoryId },
+      data: { groupId: input.groupId },
+      include: { group: { select: { name: true } } }
+    });
+    await recordAuditLog(tx, {
+      actorMemberId,
+      action: AUDIT_ACTION.SKILL_CATEGORY_GROUP_ASSIGN,
+      targetType: AUDIT_TARGET_TYPE.SKILL_CATEGORY,
+      targetId: category.id,
+      before: { groupName: before.group?.name ?? "未分類" },
+      after: { groupName: category.group?.name ?? "未分類" },
+      metadata: { targetName: category.name }
+    });
+    return category;
   });
 }
 
@@ -126,7 +260,8 @@ export async function listActiveSkillsForSkillSheet() {
         select: {
           id: true,
           name: true,
-          displayOrder: true
+          displayOrder: true,
+          group: { select: { id: true, name: true, displayOrder: true } }
         }
       },
       levelGuides: {

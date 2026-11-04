@@ -4,6 +4,9 @@ export type SkillSheetRow = {
   categoryId: string;
   categoryName: string;
   categoryDisplayOrder: number;
+  groupId: string | null;
+  groupName: string | null;
+  groupDisplayOrder: number | null;
   skillDisplayOrder: number;
   currentLevel: number | null;
   pendingLevel: number | null;
@@ -22,6 +25,11 @@ type SkillSheetSource = {
       id: string;
       name: string;
       displayOrder: number;
+      group?: {
+        id: string;
+        name: string;
+        displayOrder: number;
+      } | null;
     };
     levelGuides?: ReadonlyArray<{ level: number; description: string }>;
   }>;
@@ -87,6 +95,9 @@ export function buildSkillSheetRows({
       categoryId: skill.category.id,
       categoryName: skill.category.name,
       categoryDisplayOrder: skill.category.displayOrder,
+      groupId: skill.category.group?.id ?? null,
+      groupName: skill.category.group?.name ?? null,
+      groupDisplayOrder: skill.category.group?.displayOrder ?? null,
       skillDisplayOrder: skill.displayOrder,
       currentLevel: currentLevels.get(skill.id) ?? null,
       pendingLevel: pendingLevels.get(skill.id) ?? null,
@@ -148,6 +159,7 @@ export function filterSkillSheetRows(
     query: string;
     filter: "all" | "unowned" | "changed";
     categoryId: string;
+    groupId: string;
     changedSkillIds: ReadonlySet<string>;
   }
 ) {
@@ -160,7 +172,11 @@ export function filterSkillSheetRows(
       (options.filter === "changed" && options.changedSkillIds.has(row.skillId));
     const matchesCategory = options.categoryId === "all" ||
       row.categoryId === options.categoryId;
-    return matchesQuery && matchesFilter && matchesCategory;
+    const matchesGroup = options.groupId === "all" ||
+      (options.groupId === "unclassified"
+        ? row.groupId === null
+        : row.groupId === options.groupId);
+    return matchesQuery && matchesFilter && matchesCategory && matchesGroup;
   });
 }
 

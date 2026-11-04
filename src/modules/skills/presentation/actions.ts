@@ -4,6 +4,11 @@ import { revalidatePath } from "next/cache";
 
 import {
   createSkillWithLevelGuides,
+  assignSkillCategoryGroup,
+  createSkillCategoryGroup,
+  deleteSkillCategoryGroup,
+  reorderSkillCategoryGroups,
+  updateSkillCategoryGroup,
   createSkillCategory,
   deleteSkillCategory,
   deleteSkill,
@@ -34,6 +39,59 @@ export async function createSkillCategoryAction(formData: FormData): Promise<Act
     }, session.user.memberId);
     revalidatePath("/skills");
   }, "カテゴリを登録しました。");
+}
+
+function revalidateSkillCategoryGroups() {
+  revalidatePath("/skills");
+  revalidatePath("/my/skills");
+}
+
+export async function createSkillCategoryGroupAction(formData: FormData): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requireRoles(adminOnly);
+    await createSkillCategoryGroup({ name: getString(formData, "name") }, session.user.memberId);
+    revalidateSkillCategoryGroups();
+  }, "大分類を追加しました。");
+}
+
+export async function updateSkillCategoryGroupAction(formData: FormData): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requireRoles(adminOnly);
+    await updateSkillCategoryGroup(
+      getString(formData, "id"), { name: getString(formData, "name") }, session.user.memberId
+    );
+    revalidateSkillCategoryGroups();
+  }, "大分類名を更新しました。");
+}
+
+export async function deleteSkillCategoryGroupAction(formData: FormData): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requireRoles(adminOnly);
+    await deleteSkillCategoryGroup(getString(formData, "id"), session.user.memberId);
+    revalidateSkillCategoryGroups();
+  }, "大分類を削除しました。カテゴリは未分類に戻りました。");
+}
+
+export async function reorderSkillCategoryGroupsAction(input: {
+  groupIds: string[];
+}): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requireRoles(adminOnly);
+    await reorderSkillCategoryGroups(input, session.user.memberId);
+    revalidateSkillCategoryGroups();
+  }, "大分類の並び順を保存しました。");
+}
+
+export async function assignSkillCategoryGroupAction(formData: FormData): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requireRoles(adminOnly);
+    const groupId = getString(formData, "groupId");
+    await assignSkillCategoryGroup({
+      categoryId: getString(formData, "categoryId"),
+      groupId: groupId === "unclassified" ? null : groupId
+    }, session.user.memberId);
+    revalidateSkillCategoryGroups();
+  }, "カテゴリの大分類を保存しました。");
 }
 
 export async function updateSkillCategoryAction(formData: FormData): Promise<ActionResult> {

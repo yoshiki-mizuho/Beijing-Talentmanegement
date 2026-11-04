@@ -21,6 +21,8 @@ const labels: Record<string, string> = {
   parentCode: "親部署コード",
   categoryName: "カテゴリ",
   categoryId: "カテゴリ",
+  groupId: "大分類",
+  groupName: "大分類",
   description: "説明",
   isActive: "有効",
   displayOrder: "表示順",
@@ -184,6 +186,12 @@ export function buildActionDescription(
   if (action === "skill.reorder") {
     return { prefix: "", target: "スキルの並び順", suffix: " を変更" };
   }
+  if (action === "skill_category_group.reorder") {
+    return { prefix: "", target: "大分類の並び順", suffix: " を変更" };
+  }
+  if (action === "skill_category_group.assign") {
+    return { prefix: "カテゴリ ", target: targetName, suffix: " の大分類を変更" };
+  }
   if (action === "skill.level_guides.update") {
     return {
       prefix: "スキル ",
@@ -269,6 +277,7 @@ export function buildActionDescription(
       Skill: "スキル ",
       Department: "部署 ",
       SkillCategory: "カテゴリ ",
+      SkillCategoryGroup: "大分類 ",
       Role: "ロール ",
     }[input.targetType] ?? "";
   return {
@@ -392,6 +401,8 @@ export function resolveAuditTargetName(input: {
       return input.names.skills?.[input.targetId ?? ""] ?? savedName;
     case "SkillCategory":
       return input.names.categories?.[input.targetId ?? ""] ?? savedName;
+    case "SkillCategoryGroup":
+      return savedName;
     case "Role":
       return input.names.roles?.[input.targetId ?? ""] ?? savedName;
     case "MemberSkill":

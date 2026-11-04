@@ -12,6 +12,7 @@ import {
 import {
   listActiveSkillsForSkillSheet,
   listPopularSkillsForMember,
+  listSkillCategoryGroups,
   listSkillLevels
 } from "@/modules/skills/application/skill-service";
 import { getCurrentSession } from "@/server/auth/session";
@@ -53,11 +54,12 @@ export default async function MySkillsPage({
     redirect("/login");
   }
 
-  const [context, skills, levels, popularSkills] = await Promise.all([
+  const [context, skills, levels, popularSkills, categoryGroups] = await Promise.all([
     getMemberSkillSheetContext(session.user.memberId),
     listActiveSkillsForSkillSheet(),
     listSkillLevels(),
-    listPopularSkillsForMember(session.user.memberId)
+    listPopularSkillsForMember(session.user.memberId),
+    listSkillCategoryGroups()
   ]);
   const rows = buildSkillSheetRows({
     skills,
@@ -120,6 +122,12 @@ export default async function MySkillsPage({
               encouragement={encouragement}
               initial={initial}
               popularSkillIds={popularSkills.skillIds}
+              categoryGroups={categoryGroups
+                .filter((group) => rows.some((row) => row.groupId === group.id))
+                .map((group) => ({
+                id: group.id,
+                name: group.name
+              }))}
               popularHeading={popularSkills.departmentName
                 ? `${popularSkills.departmentName}でよく登録されているスキル`
                 : "よく登録されているスキル"}

@@ -2,6 +2,9 @@ import {
   createSkillInputSchema,
   commonSkillLevelGuidesInputSchema,
   reorderSkillsInputSchema,
+  reorderSkillCategoryGroupsInputSchema,
+  assignSkillCategoryGroupInputSchema,
+  skillCategoryGroupInputSchema,
   skillCategoryInputSchema,
   skillInputSchema,
   skillLevelGuidesInputSchema
@@ -14,6 +17,38 @@ import * as skillRepository from "@/modules/skills/infrastructure/skill-reposito
 
 export function listSkillCategories() {
   return skillRepository.listSkillCategories();
+}
+
+export function listSkillCategoryGroups() {
+  return skillRepository.listSkillCategoryGroups();
+}
+
+export function createSkillCategoryGroup(input: unknown, actorMemberId: string | null) {
+  return skillRepository.createSkillCategoryGroup(
+    skillCategoryGroupInputSchema.parse(input), actorMemberId
+  );
+}
+
+export function updateSkillCategoryGroup(id: string, input: unknown, actorMemberId: string | null) {
+  return skillRepository.updateSkillCategoryGroup(
+    id, skillCategoryGroupInputSchema.parse(input), actorMemberId
+  );
+}
+
+export function deleteSkillCategoryGroup(id: string, actorMemberId: string | null) {
+  return skillRepository.deleteSkillCategoryGroup(id, actorMemberId);
+}
+
+export function reorderSkillCategoryGroups(input: unknown, actorMemberId: string | null) {
+  return skillRepository.reorderSkillCategoryGroups(
+    reorderSkillCategoryGroupsInputSchema.parse(input), actorMemberId
+  );
+}
+
+export function assignSkillCategoryGroup(input: unknown, actorMemberId: string | null) {
+  return skillRepository.assignSkillCategoryGroup(
+    assignSkillCategoryGroupInputSchema.parse(input), actorMemberId
+  );
 }
 
 export function listSkillLevels() {

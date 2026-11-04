@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  assignSkillCategoryGroupInputSchema,
   createSkillInputSchema,
+  reorderSkillCategoryGroupsInputSchema,
   reorderSkillsInputSchema,
+  skillCategoryGroupInputSchema,
   skillInputSchema
 } from "@/modules/skills/domain/skill-schema";
 
@@ -44,6 +47,21 @@ describe("skill schemas", () => {
       name: "TypeScript",
       categoryId: "category-1"
     });
+  });
+});
+
+describe("skill category group schemas", () => {
+  it("1〜30文字の大分類名を受け付ける", () => {
+    expect(skillCategoryGroupInputSchema.parse({ name: " 技術 " })).toEqual({ name: "技術" });
+  });
+
+  it.each(["", "あ".repeat(31)])("不正な大分類名を拒否する", (name) => {
+    expect(() => skillCategoryGroupInputSchema.parse({ name })).toThrow();
+  });
+
+  it("重複した並び順と空のカテゴリIDを拒否する", () => {
+    expect(() => reorderSkillCategoryGroupsInputSchema.parse({ groupIds: ["a", "a"] })).toThrow();
+    expect(() => assignSkillCategoryGroupInputSchema.parse({ categoryId: "", groupId: null })).toThrow();
   });
 });
 

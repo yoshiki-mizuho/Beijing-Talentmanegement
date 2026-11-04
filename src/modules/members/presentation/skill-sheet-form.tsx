@@ -36,6 +36,7 @@ export function SkillSheetForm({
   encouragement,
   initial = false,
   popularSkillIds = [],
+  categoryGroups = [],
   popularHeading = "よく登録されているスキル"
 }: {
   rows: SkillSheetRow[];
@@ -43,12 +44,14 @@ export function SkillSheetForm({
   encouragement: string;
   initial?: boolean;
   popularSkillIds?: string[];
+  categoryGroups?: Array<{ id: string; name: string }>;
   popularHeading?: string;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<SkillSheetFilter>("all");
   const [categoryId, setCategoryId] = useState("all");
+  const [groupId, setGroupId] = useState("all");
   const [selectedLevels, setSelectedLevels] = useState<Record<string, number>>(
     {}
   );
@@ -64,16 +67,26 @@ export function SkillSheetForm({
 
   const filteredRows = useMemo(
     () =>
-      filterSkillSheetRows(rows, { query, filter, categoryId, changedSkillIds })
+      filterSkillSheetRows(rows, { query, filter, categoryId, groupId, changedSkillIds })
         .filter((row) => showAllSkills || popularSkillIds.includes(row.skillId)),
-    [categoryId, changedSkillIds, filter, popularSkillIds, query, rows, showAllSkills]
+    [categoryId, changedSkillIds, filter, groupId, popularSkillIds, query, rows, showAllSkills]
   );
 
+  const groupOptions = categoryGroups;
+  const hasUnclassified = rows.some((row) => row.groupId === null);
   const categoryOptions = useMemo(() => {
+    // 大分類がないときは、今までどおり全カテゴリを選択欄に出す。
+    const hasGroups = groupOptions.length > 0;
+    if (hasGroups && groupId === "all") return [];
     const options = new Map<string, string>();
-    rows.forEach((row) => options.set(row.categoryId, row.categoryName));
+    rows
+      .filter((row) =>
+        !hasGroups ||
+        (groupId === "unclassified" ? row.groupId === null : row.groupId === groupId)
+      )
+      .forEach((row) => options.set(row.categoryId, row.categoryName));
     return [...options].map(([id, name]) => ({ id, name }));
-  }, [rows]);
+  }, [groupId, groupOptions.length, rows]);
 
   const categories = useMemo(() => {
     const grouped = new Map<
@@ -159,7 +172,54 @@ export function SkillSheetForm({
         </p>
       )}
 
-      {showAllSkills ? <div className="grid gap-4 md:grid-cols-[minmax(240px,1fr)_minmax(180px,0.6fr)_auto] md:items-end">
+      {showAllSkills && groupOptions.length > 0 ? (
+        <div className="space-y-3">
+          <div role="tablist" aria-label="大分類" className="flex flex-wrap gap-1 border-b border-[var(--border)]">
+            {[
+              { id: "all", name: "すべて" },
+              ...groupOptions,
+              ...(hasUnclassified ? [{ id: "unclassified", name: "未分類" }] : [])
+            ].map((group) => {
+              const count = group.id === "all"
+                ? rows.length
+                : rows.filter((row) => group.id === "unclassified" ? row.groupId === null : row.groupId === group.id).length;
+              return (
+                <button key={group.id} type="button" role="tab" aria-selected={groupId === group.id}
+                  onClick={() => { setGroupId(group.id); setCategoryId("all"); }}
+                  className={cn(
+                    "-mb-px inline-flex min-h-11 items-center gap-2 border-b-[3px] px-4 text-sm",
+                    groupId === group.id
+                      ? "border-[var(--primary)] font-semibold text-[var(--primary)]"
+                      : "border-transparent text-[var(--muted-foreground)]"
+                  )}
+                >
+                  {group.name}
+                  <span className="text-xs font-normal text-[var(--muted-foreground)]">{count}</span>
+                </button>
+              );
+            })}
+          </div>
+          {groupId !== "all" ? (
+            <div role="group" aria-label="カテゴリ" className="flex flex-wrap gap-2">
+              {[{ id: "all", name: "すべてのカテゴリ" }, ...categoryOptions].map((category) => (
+                <button key={category.id} type="button" aria-pressed={categoryId === category.id}
+                  onClick={() => setCategoryId(category.id)}
+                  className={cn("min-h-11 rounded-full border px-4 text-sm font-semibold", categoryId === category.id ? "border-[var(--primary)] bg-[var(--primary-subtle)] text-[var(--primary)]" : "border-[var(--border-strong)]")}
+                >{category.name}</button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {showAllSkills ? <div
+        className={cn(
+          "grid gap-4 md:items-end",
+          groupOptions.length > 0
+            ? "md:grid-cols-[minmax(240px,1fr)_auto]"
+            : "md:grid-cols-[minmax(240px,1fr)_minmax(180px,0.6fr)_auto]"
+        )}
+      >
         <div>
           <label htmlFor="skill-sheet-search" className="sr-only">
             スキルを検索
@@ -180,18 +240,20 @@ export function SkillSheetForm({
           </div>
         </div>
 
-        <SelectField
-          id="skill-sheet-category"
-          label="カテゴリ"
-          labelClassName="sr-only"
-          value={categoryId}
-          onChange={(event) => setCategoryId(event.target.value)}
-        >
-          <option value="all">すべてのカテゴリ</option>
-          {categoryOptions.map((category) => (
-            <option key={category.id} value={category.id}>{category.name}</option>
-          ))}
-        </SelectField>
+        {groupOptions.length === 0 ? (
+          <SelectField
+            id="skill-sheet-category"
+            label="カテゴリ"
+            labelClassName="sr-only"
+            value={categoryId}
+            onChange={(event) => setCategoryId(event.target.value)}
+          >
+            <option value="all">すべてのカテゴリ</option>
+            {categoryOptions.map((category) => (
+              <option key={category.id} value={category.id}>{category.name}</option>
+            ))}
+          </SelectField>
+        ) : null}
 
         <div>
           <span className="sr-only">
@@ -239,6 +301,9 @@ export function SkillSheetForm({
                   id={`skill-category-${category.id}`}
                   className="text-sm font-semibold text-[var(--foreground)]"
                 >
+                  {category.rows[0]?.groupName ? (
+                    <span className="mr-2 text-xs font-medium text-[var(--muted-foreground)]">{category.rows[0].groupName} /</span>
+                  ) : null}
                   {category.name}
                 </h3>
               </div>

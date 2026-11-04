@@ -64,6 +64,14 @@ describe("audit log display", () => {
       "開発",
       " を更新",
     ],
+    [
+      "skill_category_group.create",
+      "SkillCategoryGroup",
+      "技術",
+      "大分類 ",
+      "技術",
+      " を作成",
+    ],
     ["role.deactivate", "Role", "リード", "ロール ", "リード", " を無効化"],
   ])(
     "対象の種類を含む基本操作の文を組み立てる",
@@ -115,6 +123,25 @@ describe("audit log display", () => {
         targetName: "山田 花子",
       }).suffix,
     ).toBe(" の上司を変更");
+  });
+
+  it("大分類の並び替えと割り当てを日本語で表示する", () => {
+    expect(buildActionDescription({
+      action: "skill_category_group.reorder",
+      targetType: "SkillCategoryGroup",
+      targetName: "（削除済み）",
+      before: null,
+      after: null,
+      metadata: null,
+    })).toEqual({ prefix: "", target: "大分類の並び順", suffix: " を変更" });
+    expect(buildActionDescription({
+      action: "skill_category_group.assign",
+      targetType: "SkillCategory",
+      targetName: "言語",
+      before: null,
+      after: null,
+      metadata: null,
+    })).toEqual({ prefix: "カテゴリ ", target: "言語", suffix: " の大分類を変更" });
   });
 
   it("スキルの並び替えを表示する", () => {

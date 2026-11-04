@@ -386,6 +386,60 @@ test("スキル検索をクリアして一覧を元に戻せる", async ({ brows
   }
 });
 
+test("大分類を作成してカテゴリを割り当て、削除すると未分類に戻る", async ({ browser }) => {
+  const admin = await openLoggedInContext(browser, credentials.ADMIN);
+  const suffix = `${Date.now()}-${test.info().workerIndex}`;
+  const groupName = `E2E大分類-${suffix}`;
+  // デモのカテゴリの割り当てを変えないよう、使い捨てのカテゴリで確かめる（後片付けで消える）
+  const categoryName = `E2E大分類用-${suffix}`;
+  try {
+    await admin.page.goto("/skills");
+    await admin.page.getByRole("button", { name: "カテゴリを管理" }).click();
+    const categoryDialog = admin.page.getByRole("dialog", { name: "カテゴリを管理" });
+    await categoryDialog.getByLabel("カテゴリ名").first().fill(categoryName);
+    await categoryDialog.getByRole("button", { name: "追加", exact: true }).click();
+    await expect(admin.page.getByText("カテゴリを登録しました。")).toBeVisible();
+    await categoryDialog.getByRole("button", { name: "ダイアログを閉じる" }).click();
+    // スキルのない大分類はスキルシートに出ないため、使い捨てのスキルも1件作る
+    await admin.page.getByRole("button", { name: categoryName, exact: true }).waitFor();
+    await admin.page.getByRole("button", { name: "スキルを追加", exact: true }).click();
+    const createDialog = admin.page.getByRole("dialog", { name: "スキルを追加" });
+    await createDialog.getByLabel("スキル名").fill(`E2E大分類スキル-${suffix}`);
+    await createDialog.getByLabel("カテゴリ").selectOption({ label: categoryName });
+    await createDialog.getByRole("button", { name: "スキルを追加", exact: true }).click();
+    await expect(admin.page.getByText("スキルを登録しました。")).toBeVisible();
+
+    await admin.page.goto("/skills?tab=groups");
+    await admin.page.getByLabel("新しい大分類").fill(groupName);
+    await admin.page.getByRole("button", { name: "追加", exact: true }).click();
+    await expect(admin.page.getByText("大分類を追加しました。")).toBeVisible();
+
+    const categorySelect = admin.page.getByLabel(`${categoryName}の大分類`);
+    await categorySelect.selectOption({ label: groupName });
+    await expect(admin.page.getByText("カテゴリの大分類を保存しました。")).toBeVisible();
+    await admin.page.reload();
+    await admin.page.getByLabel(`${categoryName}の大分類`).waitFor();
+
+    const member = await openLoggedInContext(browser, credentials.MEMBER);
+    try {
+      await member.page.goto("/my/skills");
+      await dismissExistingLevelUpDialogs(member.page);
+      await expect(member.page.getByRole("tab", { name: new RegExp(groupName) })).toBeVisible();
+    } finally {
+      await member.context.close();
+    }
+
+    await admin.page.getByRole("button", { name: `${groupName}を削除` }).click();
+    await admin.page.getByRole("dialog", { name: "大分類を削除しますか" })
+      .getByRole("button", { name: "削除する" }).click();
+    await expect(admin.page.getByText("大分類を削除しました。カテゴリは未分類に戻りました。")).toBeVisible();
+    await admin.page.reload();
+    await expect(admin.page.getByLabel(`${categoryName}の大分類`)).toHaveValue("unclassified");
+  } finally {
+    await admin.context.close();
+  }
+});
+
 test("ロール詳細の全社の状況を切り替えられる", async ({ browser }) => {
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
   try {
