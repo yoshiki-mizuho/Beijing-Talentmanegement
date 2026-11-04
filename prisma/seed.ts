@@ -8,6 +8,7 @@ import {
   LevelUpReactionType,
   MemberStatus,
   NotificationType,
+  SkillPrerequisiteSource,
   SkillLevelChangeSource,
   SkillSelfAssessmentStatus
 } from "@prisma/client";
@@ -27,7 +28,9 @@ import {
   demoRoles,
   demoSkillLevelChanges,
   demoSkillAssessments,
+  demoSkillCategoryGroups,
   demoSkillCategories,
+  demoSkillPrerequisites,
   demoSkills,
   demoTargetRoleAssignments,
   existingDemoMemberEmployeeNos
@@ -227,6 +230,24 @@ async function main() {
       });
     }
 
+    for (const group of demoSkillCategoryGroups) {
+      const categoryGroup = await tx.skillCategoryGroup.upsert({
+        where: { name: group.name },
+        update: {},
+        create: {
+          name: group.name,
+          displayOrder: group.displayOrder
+        }
+      });
+      await tx.skillCategory.updateMany({
+        where: {
+          name: { in: [...group.categoryNames] },
+          groupId: null
+        },
+        data: { groupId: categoryGroup.id }
+      });
+    }
+
     const categories = await tx.skillCategory.findMany({
       where: {
         name: { in: demoSkillCategories.map((category) => category.name) }
@@ -308,6 +329,26 @@ async function main() {
     const skillNamesByCode = new Map(
       skills.map((skill) => [skill.code, skill.name])
     );
+    const skillIdsByName = new Map(
+      skills.map((skill) => [skill.name, skill.id])
+    );
+
+    await tx.skillPrerequisite.createMany({
+      data: demoSkillPrerequisites.map((prerequisite) => ({
+        skillId: requireId(
+          skillIdsByName,
+          prerequisite.skillName,
+          "Skill"
+        ),
+        prerequisiteSkillId: requireId(
+          skillIdsByName,
+          prerequisite.prerequisiteSkillName,
+          "Skill"
+        ),
+        source: SkillPrerequisiteSource.MANUAL
+      })),
+      skipDuplicates: true
+    });
 
     const roles = await tx.role.findMany({
       where: { name: { in: demoRoles.map((role) => role.name) } },
