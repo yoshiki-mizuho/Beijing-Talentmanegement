@@ -93,8 +93,24 @@ describe("skill sheet display logic", () => {
       query: "sql",
       filter: "unowned",
       categoryId: "data",
+      groupId: "all",
       changedSkillIds: new Set()
     }).map((row) => row.skillId)).toEqual(["sql"]);
+  });
+
+  it("大分類・カテゴリ・未分類で絞り込む", () => {
+    const rows = buildSkillSheetRows({
+      skills: [
+        { id: "react", name: "React", displayOrder: 0, category: { id: "front", name: "フロント", displayOrder: 1, group: { id: "tech", name: "技術", displayOrder: 0 } } },
+        { id: "sql", name: "SQL", displayOrder: 0, category: { id: "data", name: "データ", displayOrder: 2, group: { id: "tech", name: "技術", displayOrder: 0 } } },
+        { id: "talk", name: "対話", displayOrder: 0, category: { id: "soft", name: "ソフト", displayOrder: 3, group: null } }
+      ],
+      memberSkills: [], pendingAssessments: [], targetRequirements: [], latestAssessments: []
+    });
+    const base = { query: "", filter: "all" as const, changedSkillIds: new Set<string>() };
+    expect(filterSkillSheetRows(rows, { ...base, groupId: "tech", categoryId: "all" }).map((row) => row.skillId)).toEqual(["react", "sql"]);
+    expect(filterSkillSheetRows(rows, { ...base, groupId: "tech", categoryId: "data" }).map((row) => row.skillId)).toEqual(["sql"]);
+    expect(filterSkillSheetRows(rows, { ...base, groupId: "unclassified", categoryId: "all" }).map((row) => row.skillId)).toEqual(["talk"]);
   });
 });
 

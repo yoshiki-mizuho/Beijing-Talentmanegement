@@ -14,6 +14,22 @@ export const skillCategoryInputSchema = z.object({
   name: z.string().trim().min(1).max(120)
 });
 
+export const skillCategoryGroupInputSchema = z.object({
+  name: z.string().trim().min(1).max(30)
+});
+
+export const reorderSkillCategoryGroupsInputSchema = z.object({
+  groupIds: z.array(z.string().trim().min(1)).refine(
+    (ids) => new Set(ids).size === ids.length,
+    { message: "一覧が更新されています。画面を開き直してください。" }
+  )
+});
+
+export const assignSkillCategoryGroupInputSchema = z.object({
+  categoryId: z.string().trim().min(1),
+  groupId: z.string().trim().min(1).nullable()
+});
+
 export const reorderSkillsInputSchema = z.object({
   categories: z.array(z.object({
     categoryId: z.string().trim().min(1),
@@ -64,6 +80,9 @@ export const commonSkillLevelGuidesInputSchema = z.object({
 export type SkillInput = z.infer<typeof skillInputSchema>;
 export type CreateSkillInput = z.infer<typeof createSkillInputSchema>;
 export type SkillCategoryInput = z.infer<typeof skillCategoryInputSchema>;
+export type SkillCategoryGroupInput = z.infer<typeof skillCategoryGroupInputSchema>;
+export type ReorderSkillCategoryGroupsInput = z.infer<typeof reorderSkillCategoryGroupsInputSchema>;
+export type AssignSkillCategoryGroupInput = z.infer<typeof assignSkillCategoryGroupInputSchema>;
 export type SkillLevelGuidesInput = z.infer<typeof skillLevelGuidesInputSchema>;
 export type CommonSkillLevelGuidesInput = z.infer<typeof commonSkillLevelGuidesInputSchema>;
 export type ReorderSkillsInput = z.infer<typeof reorderSkillsInputSchema>;
