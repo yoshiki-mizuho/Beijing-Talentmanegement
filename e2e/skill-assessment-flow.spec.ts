@@ -221,3 +221,67 @@ test("差し戻し理由を入力し、メンバーが申請履歴で確認で�
     await member.context.close();
   }
 });
+
+test("確認ポイントの詳細を確認し、確認ポイントなしだけを選べる", async ({ browser }) => {
+  const member = await openLoggedInContext(browser, credentials.MEMBER);
+  const manager = await openLoggedInContext(browser, credentials.MANAGER);
+  let skillName: string | null = null;
+
+  try {
+    await member.page.goto("/my/skills");
+    await dismissExistingLevelUpDialogs(member.page);
+    const levelGroups = member.page.locator('[role="group"][aria-label$="のレベル"]');
+
+    for (let index = 0; index < await levelGroups.count(); index += 1) {
+      const group = levelGroups.nth(index);
+      const currentButton = group.locator('button[aria-pressed="true"]').first();
+      if (await currentButton.count() === 0) continue;
+
+      const currentLabel = await currentButton.getAttribute("aria-label");
+      const currentLevel = Number(currentLabel?.match(/(\d+)/)?.[1]);
+      if (!currentLevel || currentLevel > 3) continue;
+
+      const requestedButton = group.getByRole("button", {
+        name: `Lv${currentLevel + 2}`,
+        exact: true
+      });
+      if (await requestedButton.isDisabled()) continue;
+
+      skillName = (await group.getAttribute("aria-label"))?.replace(/のレベル$/, "") ?? null;
+      await requestedButton.click();
+      break;
+    }
+
+    expect(skillName).not.toBeNull();
+    await member.page.getByRole("button", { name: "1件を申請", exact: true }).click();
+    await expect(member.page.getByText(
+      "1件のスキルを申請しました。マネージャーの承認をお待ちください。"
+    )).toBeVisible();
+
+    await manager.page.goto("/skill-approvals");
+    const approval = manager.page.getByRole("listitem", {
+      name: `Member User / ${skillName}の承認`
+    });
+    await expect(approval.getByText("2段以上の上昇", { exact: true })).toBeVisible();
+    await approval.getByRole("button", { name: /2段以上の上昇/ }).click();
+    await expect(approval.getByText(/段の上昇です。/)).toBeVisible();
+
+    await manager.page.getByRole("button", {
+      name: "確認ポイントなしをすべて選ぶ"
+    }).click();
+    await expect(approval.getByRole("checkbox", {
+      name: `Member Userの${skillName}申請を選択`
+    })).not.toBeChecked();
+
+    await approval.getByRole("button", {
+      name: `Member Userの${skillName}を差し戻し`,
+      exact: true
+    }).click();
+    await manager.page.getByLabel("差し戻し理由").fill("E2E確認ポイントの後片付け");
+    await manager.page.getByRole("button", { name: "差し戻す", exact: true }).click();
+    await expect(approval).toHaveCount(0);
+  } finally {
+    await manager.context.close();
+    await member.context.close();
+  }
+});

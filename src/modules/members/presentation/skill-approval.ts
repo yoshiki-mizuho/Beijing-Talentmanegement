@@ -14,6 +14,25 @@ export type SkillApprovalRow = {
   submittedDateLabel: string;
   waitingDays: number;
   targetRequiredLevel: number | null;
+  applicantComment: string | null;
+  checkPoints: Array<{
+    type: "prerequisite" | "jump" | "resubmit" | "rejected";
+    label: string;
+    detail: string;
+  }>;
+  departmentDistribution: SkillApprovalDistribution;
+  targetRoleDistribution: SkillApprovalDistribution | null;
+  history: Array<{
+    id: string;
+    dateLabel: string;
+    requestedLevel: number;
+    resultLabel: string;
+  }>;
+};
+
+export type SkillApprovalDistribution = {
+  groupSize: number;
+  counts: [number, number, number, number, number] | null;
 };
 
 const millisecondsPerDay = 24 * 60 * 60 * 1000;
@@ -31,7 +50,7 @@ export function getSkillApprovalWaitingDays(
 }
 
 export function isSkillApprovalLongWaiting(waitingDays: number) {
-  return waitingDays >= 5;
+  return waitingDays >= 7;
 }
 
 export function formatSkillApprovalDate(submittedAt: Date | string) {
@@ -49,7 +68,7 @@ export function getSkillApprovalLevelChange(
 ) {
   return currentLevel === null
     ? `未登録 → Lv${requestedLevel}`
-    : `現在 Lv${currentLevel} → 申請 Lv${requestedLevel}`;
+    : `Lv${currentLevel} → Lv${requestedLevel}`;
 }
 
 export { getMemberAvatarTone, getMemberInitial } from "@/shared/ui/member-avatar";

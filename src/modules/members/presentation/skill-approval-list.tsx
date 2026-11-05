@@ -1,6 +1,14 @@
 "use client";
 
-import { Check, ClipboardCheck, Pencil, Undo2 } from "lucide-react";
+import {
+  AlertTriangle,
+  Check,
+  ChevronDown,
+  ClipboardCheck,
+  MessageCircle,
+  Pencil,
+  Undo2
+} from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
@@ -23,15 +31,23 @@ import { Dialog } from "@/shared/ui/dialog";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { TextareaField } from "@/shared/ui/form-field";
 import { SubmitButton } from "@/shared/ui/submit-button";
+import { Tooltip } from "@/shared/ui/tooltip";
 
 const skillLevels = [1, 2, 3, 4, 5] as const;
 const statuses = { approved: "APPROVED", corrected: "CORRECTED", rejected: "REJECTED" } as const;
 
 export function SkillApprovalList({ rows }: { rows: SkillApprovalRow[] }) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [filter, setFilter] = useState<"all" | "with" | "without">("all");
   const selectAllRef = useRef<HTMLInputElement>(null);
-  const allSelected = rows.length > 0 && rows.every((row) => selectedIds.has(row.id));
-  const someSelected = rows.some((row) => selectedIds.has(row.id));
+  const visibleRows = rows.filter((row) => {
+    if (filter === "with") return row.checkPoints.length > 0;
+    if (filter === "without") return row.checkPoints.length === 0;
+    return true;
+  });
+  const allSelected = visibleRows.length > 0
+    && visibleRows.every((row) => selectedIds.has(row.id));
+  const someSelected = visibleRows.some((row) => selectedIds.has(row.id));
   const selectedCount = rows.filter((row) => selectedIds.has(row.id)).length;
 
   useEffect(() => {
@@ -57,8 +73,19 @@ export function SkillApprovalList({ rows }: { rows: SkillApprovalRow[] }) {
   }
 
   const selectedAssessmentIds = rows.filter((row) => selectedIds.has(row.id)).map((row) => row.id);
-  const toggleAll = () =>
-    setSelectedIds(allSelected ? new Set() : new Set(rows.map((row) => row.id)));
+  const selectRows = (ids: string[]) =>
+    setSelectedIds((current) => new Set([...current, ...ids]));
+  const toggleAll = () => {
+    if (!allSelected) {
+      selectRows(visibleRows.map((row) => row.id));
+      return;
+    }
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      visibleRows.forEach((row) => next.delete(row.id));
+      return next;
+    });
+  };
   const toggleOne = (id: string) =>
     setSelectedIds((current) => {
       const next = new Set(current);
@@ -76,11 +103,34 @@ export function SkillApprovalList({ rows }: { rows: SkillApprovalRow[] }) {
   return (
     <div className="space-y-4">
       <Card className="sticky top-2 z-20 rounded-2xl p-3 shadow-sm sm:p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <label
-            htmlFor="select-all-skill-approvals"
-            className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-semibold"
-          >
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex flex-wrap gap-2" aria-label="確認ポイントで絞り込む">
+            {([
+              ["all", `すべて ${rows.length}`],
+              ["with", `確認ポイントあり ${rows.filter((row) => row.checkPoints.length > 0).length}`],
+              ["without", `確認ポイントなし ${rows.filter((row) => row.checkPoints.length === 0).length}`]
+            ] as const).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={filter === value}
+                onClick={() => setFilter(value)}
+                className={cn(
+                  "min-h-9 rounded-full px-4 text-sm font-semibold",
+                  filter === value
+                    ? "bg-[var(--primary)] text-white"
+                    : "bg-[var(--surface-subtle)] text-[var(--muted-foreground)]"
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <label
+              htmlFor="select-all-skill-approvals"
+              className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold"
+            >
             <input
               ref={selectAllRef}
               id="select-all-skill-approvals"
@@ -90,8 +140,19 @@ export function SkillApprovalList({ rows }: { rows: SkillApprovalRow[] }) {
               onChange={toggleAll}
               className="h-5 w-5 accent-[var(--primary)]"
             />
-            すべて選択
-          </label>
+              すべて選ぶ
+            </label>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => selectRows(
+                visibleRows
+                  .filter((row) => row.checkPoints.length === 0)
+                  .map((row) => row.id)
+              )}
+            >
+              確認ポイントなしをすべて選ぶ
+            </Button>
           <ActionForm
             action={approveSkillAssessmentsAction}
             confirm={{
@@ -115,11 +176,13 @@ export function SkillApprovalList({ rows }: { rows: SkillApprovalRow[] }) {
               選択した {selectedCount}件を承認
             </SubmitButton>
           </ActionForm>
+          </div>
         </div>
       </Card>
 
       <Card className="overflow-hidden rounded-2xl">
-        <div className="hidden grid-cols-[44px_minmax(150px,1.25fr)_minmax(130px,1fr)_minmax(140px,1fr)_80px_120px_minmax(360px,1.6fr)] gap-3 border-b border-[var(--border)] bg-[var(--surface-subtle)] px-4 py-3 text-xs font-semibold text-[var(--muted-foreground)] lg:grid">
+        <div className="overflow-x-auto">
+        <div className="hidden min-w-[1140px] grid-cols-[40px_150px_120px_120px_64px_100px_minmax(120px,1fr)_340px] gap-2 border-b border-[var(--border)] bg-[var(--surface-subtle)] px-4 py-3 text-xs font-semibold text-[var(--muted-foreground)] lg:grid">
           <span>
             <span className="sr-only">選択</span>
           </span>
@@ -128,6 +191,7 @@ export function SkillApprovalList({ rows }: { rows: SkillApprovalRow[] }) {
           <span>レベル</span>
           <span>経験年数</span>
           <span>申請日</span>
+          <span>確認ポイント</span>
           <span>操作</span>
         </div>
         <div
@@ -135,7 +199,7 @@ export function SkillApprovalList({ rows }: { rows: SkillApprovalRow[] }) {
           role="list"
           aria-label="承認待ちのスキル申請"
         >
-          {rows.map((row) => (
+          {visibleRows.map((row) => (
             <SkillApprovalItem
               key={row.id}
               row={row}
@@ -144,6 +208,7 @@ export function SkillApprovalList({ rows }: { rows: SkillApprovalRow[] }) {
               onReviewed={() => removeSelection(row.id)}
             />
           ))}
+        </div>
         </div>
       </Card>
     </div>
@@ -164,6 +229,7 @@ function SkillApprovalItem({
   const [dialog, setDialog] = useState<"correct" | "reject" | null>(null);
   const [correctedLevel, setCorrectedLevel] = useState<number | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [expanded, setExpanded] = useState(false);
   const subject = `${row.memberName}の${row.skillName}`;
   const closeDialog = () => setDialog(null);
   const handleReviewed = () => {
@@ -175,7 +241,7 @@ function SkillApprovalItem({
     <div
       role="listitem"
       aria-label={`${row.memberName} / ${row.skillName}の承認`}
-      className="grid gap-3 px-4 py-4 lg:grid-cols-[44px_minmax(150px,1.25fr)_minmax(130px,1fr)_minmax(140px,1fr)_80px_120px_minmax(360px,1.6fr)] lg:items-center"
+      className="grid min-w-[1140px] gap-2 px-4 py-4 lg:grid-cols-[40px_150px_120px_120px_64px_100px_minmax(120px,1fr)_340px] lg:items-center"
     >
       <div className="grid grid-cols-[44px_minmax(0,1fr)_minmax(0,1fr)] items-center gap-3 lg:contents">
         <label className="flex min-h-11 cursor-pointer items-center" title="一括承認の対象に選択">
@@ -200,12 +266,21 @@ function SkillApprovalItem({
           </div>
         </div>
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">{row.skillName}</p>
+          <p className="flex items-center gap-1 truncate text-sm font-semibold">
+            {row.skillName}
+            {row.applicantComment ? (
+              <Tooltip content="ひとことあり">
+                <span tabIndex={0} aria-label="ひとことあり">
+                  <MessageCircle className="h-4 w-4 text-[var(--primary)]" aria-hidden="true" />
+                </span>
+              </Tooltip>
+            ) : null}
+          </p>
           <p className="truncate text-xs text-[var(--muted-foreground)]">{row.categoryName}</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 items-center gap-3 border-t border-[var(--border)] pt-3 sm:grid-cols-[minmax(130px,1fr)_80px_120px_minmax(360px,1.6fr)] lg:contents">
+      <div className="grid grid-cols-2 items-center gap-3 border-t border-[var(--border)] pt-3 sm:grid-cols-[150px_80px_120px_210px_300px] lg:contents">
         <div>
           <p className="text-sm font-semibold">
             {getSkillApprovalLevelChange(row.currentLevel, row.requestedLevel)}
@@ -231,6 +306,25 @@ function SkillApprovalItem({
             {row.waitingDays}日待ち
           </Badge>
         </div>
+        <button
+          type="button"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((current) => !current)}
+          className="flex min-h-11 flex-wrap items-center gap-1 rounded-md text-left focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+        >
+          {row.checkPoints.length === 0 ? (
+            <span className="text-sm text-[var(--muted-foreground)]">なし</span>
+          ) : row.checkPoints.map((point) => (
+            <Badge key={`${point.type}-${point.detail}`} variant="warning">
+              <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+              {point.label}
+            </Badge>
+          ))}
+          <ChevronDown
+            className={cn("h-4 w-4", expanded && "rotate-180")}
+            aria-hidden="true"
+          />
+        </button>
         <div
           className={cn(
             // 3つのボタンを同じ幅・高さで1行に並べる（1つ目はフォームに包まれているので、フォームも1列として扱う）
@@ -272,6 +366,8 @@ function SkillApprovalItem({
         </div>
       </div>
 
+      {expanded ? <SkillApprovalDetails row={row} /> : null}
+
       <CorrectionDialog
         row={row}
         subject={subject}
@@ -290,6 +386,128 @@ function SkillApprovalItem({
         onClose={closeDialog}
         onReviewed={handleReviewed}
       />
+    </div>
+  );
+}
+
+function SkillApprovalDetails({ row }: { row: SkillApprovalRow }) {
+  const [distributionType, setDistributionType] = useState<"department" | "role">(
+    "department"
+  );
+  const distribution = distributionType === "department"
+    ? row.departmentDistribution
+    : row.targetRoleDistribution;
+
+  return (
+    <div className="col-span-full grid gap-5 border-t border-[var(--border)] bg-[var(--surface-subtle)] p-4 lg:grid-cols-3">
+      <section>
+        <h3 className="text-sm font-semibold">確認ポイント</h3>
+        {row.checkPoints.length > 0 ? (
+          <ul className="mt-2 space-y-2 text-sm">
+            {row.checkPoints.map((point) => (
+              <li key={`${point.type}-${point.detail}`}>{point.detail}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2 text-sm text-[var(--muted-foreground)]">確認ポイントはありません。</p>
+        )}
+      </section>
+      <section>
+        <h3 className="text-sm font-semibold">レベルの分布</h3>
+        <div className="mt-2 flex gap-2">
+          <Button
+            type="button"
+            size="small"
+            variant={distributionType === "department" ? "primary" : "secondary"}
+            aria-pressed={distributionType === "department"}
+            onClick={() => setDistributionType("department")}
+          >
+            同じ部署
+          </Button>
+          {row.targetRoleDistribution ? (
+            <Button
+              type="button"
+              size="small"
+              variant={distributionType === "role" ? "primary" : "secondary"}
+              aria-pressed={distributionType === "role"}
+              onClick={() => setDistributionType("role")}
+            >
+              同じ目標ロール
+            </Button>
+          ) : null}
+        </div>
+        {distribution?.counts ? (
+          <LevelDistributionChart
+            counts={distribution.counts}
+            requestedLevel={row.requestedLevel}
+          />
+        ) : (
+          <p className="mt-3 text-sm text-[var(--muted-foreground)]">
+            人数が少ないため表示しません
+          </p>
+        )}
+        {distribution ? (
+          <p className="mt-2 text-xs text-[var(--muted-foreground)]">
+            本人を除く {distribution.groupSize}人。濃い色が申請のレベルです。名前は出しません。
+          </p>
+        ) : null}
+      </section>
+      <section>
+        <h3 className="text-sm font-semibold">ひとこと</h3>
+        <p className="mt-2 text-sm text-[var(--muted-foreground)]">
+          {row.applicantComment ?? "ひとことはありません。"}
+        </p>
+        <h3 className="mt-4 text-sm font-semibold">これまでの申請</h3>
+        {row.history.length > 0 ? (
+          <ul className="mt-2 space-y-1 text-sm">
+            {row.history.map((item) => (
+              <li key={item.id}>
+                {item.dateLabel}・Lv{item.requestedLevel}・{item.resultLabel}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2 text-sm text-[var(--muted-foreground)]">過去の申請はありません。</p>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function LevelDistributionChart({
+  counts,
+  requestedLevel
+}: {
+  counts: [number, number, number, number, number];
+  requestedLevel: number;
+}) {
+  const maximum = Math.max(...counts, 1);
+  const label = counts
+    .map((count, index) => `Lv${index + 1}は${count}人`)
+    .join("、");
+
+  return (
+    <div
+      role="img"
+      aria-label={`レベルの分布。${label}`}
+      className="mt-3 flex h-32 items-end gap-2"
+    >
+      {counts.map((count, index) => {
+        const level = index + 1;
+        return (
+          <div key={level} className="flex flex-1 flex-col items-center gap-1 text-xs">
+            <span>{count}人</span>
+            <span
+              className={cn(
+                "w-full rounded-t bg-[color-mix(in_srgb,var(--primary)_30%,var(--surface))]",
+                level === requestedLevel && "bg-[var(--primary)]"
+              )}
+              style={{ height: `${Math.max(4, count / maximum * 80)}px` }}
+            />
+            <span>Lv{level}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }
