@@ -33,7 +33,6 @@ const filters: Array<{ value: SkillSheetFilter; label: string }> = [
   { value: "all", label: "すべて" },
   { value: "new", label: "新着" },
   { value: "target", label: "目標ロールに必要" },
-  { value: "popular", label: "部署でよく登録" },
   { value: "stale", label: "しばらく申請なし" },
   { value: "unowned", label: "未登録" },
   { value: "changed", label: "変更あり" }
@@ -92,8 +91,7 @@ export function SkillSheetForm({
         filter,
         categoryId,
         groupId,
-        changedSkillIds,
-        popularSkillIds: popularSkillIdSet
+        changedSkillIds
       })
         .filter((row) => showAllSkills || popularSkillIdSet.has(row.skillId)),
     [categoryId, changedSkillIds, filter, groupId, popularSkillIdSet, query, rows, showAllSkills]
@@ -102,10 +100,9 @@ export function SkillSheetForm({
     () => countSkillSheetFilters(rows, {
       categoryId,
       groupId,
-      changedSkillIds,
-      popularSkillIds: popularSkillIdSet
+      changedSkillIds
     }),
-    [categoryId, changedSkillIds, groupId, popularSkillIdSet, rows]
+    [categoryId, changedSkillIds, groupId, rows]
   );
 
   const groupOptions = categoryGroups;
@@ -390,7 +387,7 @@ export function SkillSheetForm({
 
       <div className={cn(!initial && "grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start")}>
       {!initial ? (
-        <aside className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 lg:col-start-2 lg:row-start-1 lg:sticky lg:top-4" aria-label="レベルの目安">
+        <aside className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 lg:col-start-2 lg:row-start-1 lg:sticky lg:top-20" aria-label="レベルの目安">
           {activeRow && levelGuideWindow ? (
             <div className="space-y-3">
               <h2 className="text-sm font-semibold">{activeRow.skillName}のレベルの目安</h2>

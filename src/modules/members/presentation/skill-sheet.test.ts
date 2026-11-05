@@ -179,10 +179,9 @@ describe("skill sheet display logic", () => {
       categoryId: "front",
       groupId: "all",
       changedSkillIds: new Set(["new"]),
-      popularSkillIds: new Set(["old"]),
       now
     });
-    expect(counts).toMatchObject({ all: 2, new: 1, target: 1, popular: 1, unowned: 1, changed: 1 });
+    expect(counts).toMatchObject({ all: 2, new: 1, target: 1, unowned: 1, changed: 1 });
   });
 
   it("0件の絞り込みだけを無効にし、選択中なら押せるままにする", () => {

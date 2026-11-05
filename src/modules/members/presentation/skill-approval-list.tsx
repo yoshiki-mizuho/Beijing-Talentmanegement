@@ -3,6 +3,7 @@
 import {
   AlertTriangle,
   Check,
+  CircleCheck,
   ChevronDown,
   ClipboardCheck,
   MessageCircle,
@@ -10,7 +11,7 @@ import {
   Undo2
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
 import {
   approveSkillAssessmentsAction,
@@ -39,7 +40,6 @@ const statuses = { approved: "APPROVED", corrected: "CORRECTED", rejected: "REJE
 export function SkillApprovalList({ rows }: { rows: SkillApprovalRow[] }) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<"all" | "with" | "without">("all");
-  const selectAllRef = useRef<HTMLInputElement>(null);
   const visibleRows = rows.filter((row) => {
     if (filter === "with") return row.checkPoints.length > 0;
     if (filter === "without") return row.checkPoints.length === 0;
@@ -47,12 +47,7 @@ export function SkillApprovalList({ rows }: { rows: SkillApprovalRow[] }) {
   });
   const allSelected = visibleRows.length > 0
     && visibleRows.every((row) => selectedIds.has(row.id));
-  const someSelected = visibleRows.some((row) => selectedIds.has(row.id));
   const selectedCount = rows.filter((row) => selectedIds.has(row.id)).length;
-
-  useEffect(() => {
-    if (selectAllRef.current) selectAllRef.current.indeterminate = someSelected && !allSelected;
-  }, [allSelected, someSelected]);
 
   if (rows.length === 0) {
     return (
@@ -127,31 +122,26 @@ export function SkillApprovalList({ rows }: { rows: SkillApprovalRow[] }) {
             ))}
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <label
-              htmlFor="select-all-skill-approvals"
-              className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold"
-            >
-            <input
-              ref={selectAllRef}
-              id="select-all-skill-approvals"
-              type="checkbox"
-              checked={allSelected}
-              aria-checked={allSelected ? "true" : someSelected ? "mixed" : "false"}
-              onChange={toggleAll}
-              className="h-5 w-5 accent-[var(--primary)]"
-            />
-              すべて選ぶ
-            </label>
             <Button
               type="button"
               variant="secondary"
+              aria-pressed={allSelected}
+              onClick={toggleAll}
+              className="w-full text-[13px] sm:w-auto"
+            >
+              {allSelected ? "すべて外す" : "すべて選ぶ"}
+            </Button>
+            <Button
+              type="button"
               disabled={filter === "with"}
               onClick={() => selectRows(
                 visibleRows
                   .filter((row) => row.checkPoints.length === 0)
                   .map((row) => row.id)
               )}
+              className="w-full border border-[var(--primary)] bg-[color-mix(in_srgb,var(--primary)_8%,var(--surface))] text-[13px] text-[var(--primary)] hover:bg-[var(--primary-subtle)] sm:w-auto"
             >
+              <CircleCheck className="h-4 w-4" aria-hidden="true" />
               確認ポイントなしをすべて選ぶ
             </Button>
           <ActionForm
