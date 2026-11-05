@@ -608,6 +608,7 @@ export async function getMemberSkillSheetContext(memberId: string) {
         createdAt: true,
         skill: {
           select: {
+            id: true,
             name: true,
             category: {
               select: { name: true }

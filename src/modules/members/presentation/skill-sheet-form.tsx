@@ -2,7 +2,8 @@
 
 import { ChevronDown, Clock, MessageSquare, RotateCcw, Search, SearchX, Send, Target } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { createSkillAssessmentsAction } from "@/modules/members/presentation/actions";
 import { resolveSkillLevelDescription } from "@/modules/skills/domain/skill-level-guide";
@@ -13,6 +14,7 @@ import {
   filterSkillSheetRows,
   getSkillSheetRowStatus,
   isNewSkill,
+  isSkillSheetFilterDisabled,
   isStaleSkill,
   type SkillSheetFilter,
   type SkillSheetRow
@@ -45,6 +47,7 @@ export function SkillSheetForm({
   popularSkillIds = [],
   categoryGroups = [],
   initialFilter = "all",
+  initialQuery = "",
   popularHeading = "よく登録されているスキル"
 }: {
   rows: SkillSheetRow[];
@@ -54,10 +57,11 @@ export function SkillSheetForm({
   popularSkillIds?: string[];
   categoryGroups?: Array<{ id: string; name: string }>;
   initialFilter?: SkillSheetFilter;
+  initialQuery?: string;
   popularHeading?: string;
 }) {
   const router = useRouter();
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [filter, setFilter] = useState<SkillSheetFilter>(initialFilter);
   const [categoryId, setCategoryId] = useState("all");
   const [groupId, setGroupId] = useState("all");
@@ -66,6 +70,7 @@ export function SkillSheetForm({
   );
   const [comments, setComments] = useState<Record<string, string>>({});
   const [activeSkillId, setActiveSkillId] = useState<string | null>(null);
+  const [showInitialLevelGuides, setShowInitialLevelGuides] = useState(false);
   // よく登録されているスキルがまだ無いときは、最初から全件を出す
   const [showAllSkills, setShowAllSkills] = useState(
     !initial || popularSkillIds.length === 0 || initialFilter !== "all"
@@ -163,6 +168,10 @@ export function SkillSheetForm({
         }];
   });
 
+  useEffect(() => {
+    toast.dismiss();
+  }, []);
+
   function selectLevel(row: SkillSheetRow, clickedLevel: number) {
     if (row.pendingLevel !== null) return;
 
@@ -208,9 +217,27 @@ export function SkillSheetForm({
         <div className="space-y-4">
           <div>
             <h2 className="text-xl font-bold">得意なスキルを3つ選びましょう</h2>
-            <p className="mt-1 text-sm text-[var(--muted-foreground)]">迷ったら「一人でできる」を目安に。あとから何度でも変えられます。</p>
+            <p className="mt-1 text-sm text-[var(--muted-foreground)]">迷ったら Lv2（一人でできる）を目安に。あとから何度でも変えられます。</p>
           </div>
-          <div className="grid grid-cols-2 gap-2 lg:grid-cols-5" aria-label="レベルの目安">
+          <button
+            type="button"
+            aria-expanded={showInitialLevelGuides}
+            onClick={() => setShowInitialLevelGuides((current) => !current)}
+            className="flex min-h-11 items-center gap-2 text-sm font-semibold text-[var(--primary)] md:hidden"
+          >
+            レベルの目安を見る
+            <ChevronDown
+              className={cn("h-4 w-4", showInitialLevelGuides && "rotate-180")}
+              aria-hidden="true"
+            />
+          </button>
+          <div
+            className={cn(
+              "grid-cols-2 gap-2 md:grid md:grid-cols-5",
+              showInitialLevelGuides ? "grid" : "hidden"
+            )}
+            aria-label="レベルの目安"
+          >
             {levels.map((level) => (
               <div key={level.level} className="rounded-lg border border-[var(--border)] p-3 text-sm">
                 <p className="font-semibold">Lv{level.level}</p>
@@ -333,22 +360,30 @@ export function SkillSheetForm({
             表示するスキル
           </span>
           <div className="flex flex-wrap gap-2" role="group" aria-label="表示するスキル">
-            {filters.map((item) => (
-              <button
-                key={item.value}
-                type="button"
-                aria-pressed={filter === item.value}
-                onClick={() => setFilter(item.value)}
-                className={cn(
-                  "min-h-11 rounded-full border px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2",
-                  filter === item.value
-                    ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--primary-foreground)]"
-                    : "border-[var(--border-strong)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-subtle)]"
-                )}
-              >
-                {item.label} {filterCounts[item.value]}
-              </button>
-            ))}
+            {filters.map((item) => {
+              const disabled = isSkillSheetFilterDisabled(
+                filterCounts[item.value],
+                filter === item.value
+              );
+              return (
+                <button
+                  key={item.value}
+                  type="button"
+                  aria-pressed={filter === item.value}
+                  disabled={disabled}
+                  onClick={() => setFilter(item.value)}
+                  className={cn(
+                    "min-h-11 rounded-full border px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2",
+                    filter === item.value
+                      ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--primary-foreground)]"
+                      : "border-[var(--border-strong)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-subtle)]",
+                    disabled && "cursor-not-allowed opacity-40"
+                  )}
+                >
+                  {item.label} {filterCounts[item.value]}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div> : null}
@@ -534,7 +569,7 @@ export function SkillSheetForm({
                             <span
                               key={status}
                               className={cn(
-                                status.startsWith("承認待ち") &&
+                                row.pendingLevel !== null &&
                                   "font-semibold text-amber-800"
                               )}
                             >

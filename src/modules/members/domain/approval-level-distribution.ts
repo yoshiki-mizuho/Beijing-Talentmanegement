@@ -2,6 +2,7 @@ export const APPROVAL_DISTRIBUTION_MINIMUM_GROUP_SIZE = 3;
 
 export type ApprovalLevelDistribution = {
   groupSize: number;
+  unregisteredCount: number;
   counts: [number, number, number, number, number] | null;
 };
 
@@ -10,8 +11,9 @@ export function buildApprovalLevelDistribution(
   applicantId: string
 ): ApprovalLevelDistribution {
   const peers = members.filter((member) => member.id !== applicantId);
+  const unregisteredCount = peers.filter((member) => member.level === null).length;
   if (peers.length < APPROVAL_DISTRIBUTION_MINIMUM_GROUP_SIZE) {
-    return { groupSize: peers.length, counts: null };
+    return { groupSize: peers.length, unregisteredCount, counts: null };
   }
 
   const counts: [number, number, number, number, number] = [0, 0, 0, 0, 0];
@@ -20,5 +22,5 @@ export function buildApprovalLevelDistribution(
       counts[peer.level - 1] += 1;
     }
   }
-  return { groupSize: peers.length, counts };
+  return { groupSize: peers.length, unregisteredCount, counts };
 }

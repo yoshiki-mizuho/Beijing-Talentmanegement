@@ -12,6 +12,7 @@ describe("buildApprovalLevelDistribution", () => {
       { id: "four", level: null }
     ], "applicant")).toEqual({
       groupSize: 4,
+      unregisteredCount: 1,
       counts: [1, 2, 0, 0, 0]
     });
   });
@@ -21,7 +22,11 @@ describe("buildApprovalLevelDistribution", () => {
       { id: "applicant", level: 3 },
       { id: "one", level: 1 },
       { id: "two", level: 2 }
-    ], "applicant")).toEqual({ groupSize: 2, counts: null });
+    ], "applicant")).toEqual({
+      groupSize: 2,
+      unregisteredCount: 0,
+      counts: null
+    });
   });
 
   it("目標ロールのない申請者は呼び出し側で分布を作らない", () => {

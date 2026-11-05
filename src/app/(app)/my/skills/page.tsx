@@ -1,4 +1,4 @@
-import { ClipboardList } from "lucide-react";
+import { ArrowRight, ClipboardList } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -44,7 +44,7 @@ const dateFormatter = new Intl.DateTimeFormat("ja-JP", {
 export default async function MySkillsPage({
   searchParams
 }: {
-  searchParams: Promise<{ tab?: string; filter?: string }>;
+  searchParams: Promise<{ tab?: string; filter?: string; skill?: string }>;
 }) {
   const session = await getCurrentSession();
   const query = await searchParams;
@@ -127,6 +127,7 @@ export default async function MySkillsPage({
               initialFilter={query.filter === "new" || query.filter === "stale"
                 ? query.filter
                 : "all"}
+              initialQuery={rows.find((row) => row.skillId === query.skill)?.skillName ?? ""}
               categoryGroups={categoryGroups
                 .filter((group) => rows.some((row) => row.groupId === group.id))
                 .map((group) => ({
@@ -209,6 +210,15 @@ export default async function MySkillsPage({
                       ? `差し戻しの理由：${assessment.managerComment}`
                       : `マネージャーコメント: ${assessment.managerComment}`}
                   </p>
+                ) : null}
+                {assessment.status === "REJECTED" ? (
+                  <Link
+                    href={`/my/skills?skill=${assessment.skill.id}` as Route}
+                    className="mt-3 inline-flex h-10 items-center gap-1 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-4 text-sm font-semibold hover:bg-[var(--surface-subtle)]"
+                  >
+                    スキルシートで直す
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </Link>
                 ) : null}
               </div>
             );

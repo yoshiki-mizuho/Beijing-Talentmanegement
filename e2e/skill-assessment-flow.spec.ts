@@ -263,7 +263,9 @@ test("確認ポイントの詳細を確認し、確認ポイントなしだけ�
       name: `Member User / ${skillName}の承認`
     });
     await expect(approval.getByText("2段以上の上昇", { exact: true })).toBeVisible();
-    await approval.getByRole("button", { name: /2段以上の上昇/ }).click();
+    await approval.getByRole("button", {
+      name: `Member Userさんの ${skillName} の詳しい内容`
+    }).click();
     await expect(approval.getByText(/段の上昇です。/)).toBeVisible();
 
     await manager.page.getByRole("button", {

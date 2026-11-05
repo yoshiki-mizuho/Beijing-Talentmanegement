@@ -5,6 +5,8 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import { formatSkillPrerequisiteRelationship } from "@/modules/skills/domain/skill-prerequisite";
+
 import {
   createManualSkillPrerequisiteAction,
   createSuggestedSkillPrerequisitesAction,
@@ -206,6 +208,21 @@ export function SkillPrerequisitesPanel({
                   前提と言える候補はありませんでした。
                 </p>
               ) : (
+                <div className="space-y-3">
+                  <p className="text-sm font-medium">
+                    AI の提案です。確かめてから登録してください。
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="secondary"
+                      onClick={() => setSelected(new Set(suggestions.map(keyOf)))}
+                    >
+                      すべて選ぶ
+                    </Button>
+                    <Button variant="secondary" onClick={() => setSelected(new Set())}>
+                      すべて外す
+                    </Button>
+                  </div>
                 <ul className="divide-y divide-[var(--border)] border-y border-[var(--border)]">
                   {suggestions.map((item) => {
                     const key = keyOf(item);
@@ -213,6 +230,10 @@ export function SkillPrerequisitesPanel({
                       <li key={key} className="flex items-start gap-3 py-3">
                         <input
                           type="checkbox"
+                          aria-label={formatSkillPrerequisiteRelationship(
+                            item.skillName,
+                            item.prerequisiteSkillName
+                          )}
                           className="mt-1 h-5 w-5"
                           checked={selected.has(key)}
                           onChange={(event) =>
@@ -226,8 +247,10 @@ export function SkillPrerequisitesPanel({
                         />
                         <div>
                           <p className="font-medium">
-                            {item.prerequisiteSkillName} が前提 →{" "}
-                            {item.skillName}
+                            {formatSkillPrerequisiteRelationship(
+                              item.skillName,
+                              item.prerequisiteSkillName
+                            )}
                           </p>
                           <p className="mt-1 text-sm text-[var(--muted-foreground)]">
                             {item.reason}
@@ -237,6 +260,7 @@ export function SkillPrerequisitesPanel({
                     );
                   })}
                 </ul>
+                </div>
               )}
               <div className="flex justify-end gap-3">
                 <Button
@@ -279,6 +303,7 @@ export function SkillPrerequisitesPanel({
                 options={options}
                 value={skillId}
                 onChange={setSkillId}
+                placeholder="スキル名を入力して選ぶ"
               />
               <Combobox
                 id="prerequisite-required"
@@ -286,6 +311,7 @@ export function SkillPrerequisitesPanel({
                 options={options}
                 value={prerequisiteSkillId}
                 onChange={setPrerequisiteSkillId}
+                placeholder="スキル名を入力して選ぶ"
               />
               <div className="flex gap-2">
                 <Button
@@ -323,7 +349,35 @@ export function SkillPrerequisitesPanel({
               </button>
             ) : null}
           </div>
-          <div className="overflow-x-auto">
+          <div className="space-y-3 md:hidden">
+            {filtered.map((item) => (
+              <div key={item.id} className="rounded-lg border border-[var(--border)] p-4 text-sm">
+                <p className="font-medium">
+                  {formatSkillPrerequisiteRelationship(
+                    item.skill.name,
+                    item.prerequisiteSkill.name
+                  )}
+                </p>
+                <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2">
+                  <dt className="text-[var(--muted-foreground)]">登録のしかた</dt>
+                  <dd>{item.source === "AI_SUGGESTION" ? "AI の候補から" : "手で追加"}</dd>
+                  <dt className="text-[var(--muted-foreground)]">登録日</dt>
+                  <dd>{formatPrerequisiteDate(item.createdAt)}</dd>
+                </dl>
+                <Button
+                  size="small"
+                  variant="ghost"
+                  className="mt-3 text-[var(--destructive)]"
+                  aria-label={`${item.skill.name}と${item.prerequisiteSkill.name}の関係を削除`}
+                  onClick={() => setDeleteTarget(item)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  削除
+                </Button>
+              </div>
+            ))}
+          </div>
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[720px] text-sm">
               <thead>
                 <tr className="border-b text-left text-[var(--muted-foreground)]">
@@ -347,9 +401,7 @@ export function SkillPrerequisitesPanel({
                       </Badge>
                     </td>
                     <td className="p-3">
-                      {new Intl.DateTimeFormat("ja-JP", {
-                        timeZone: "Asia/Tokyo",
-                      }).format(new Date(item.createdAt))}
+                      {formatPrerequisiteDate(item.createdAt)}
                     </td>
                     <td className="p-3 text-right">
                       <Button
@@ -392,4 +444,10 @@ export function SkillPrerequisitesPanel({
 
 function keyOf(item: Pick<Suggestion, "skillId" | "prerequisiteSkillId">) {
   return `${item.skillId}:${item.prerequisiteSkillId}`;
+}
+
+function formatPrerequisiteDate(value: Date) {
+  return new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo"
+  }).format(new Date(value));
 }

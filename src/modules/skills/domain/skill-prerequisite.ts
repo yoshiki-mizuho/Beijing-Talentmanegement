@@ -11,6 +11,13 @@ export const skillPrerequisiteBatchSchema = z.object({
 
 export type SkillPrerequisitePair = z.infer<typeof skillPrerequisitePairSchema>;
 
+export function formatSkillPrerequisiteRelationship(
+  skillName: string,
+  prerequisiteSkillName: string
+) {
+  return `${skillName} の前提は ${prerequisiteSkillName}`;
+}
+
 export function validateSkillPrerequisitePair(
   pair: SkillPrerequisitePair,
   activeSkillIds: ReadonlySet<string>,

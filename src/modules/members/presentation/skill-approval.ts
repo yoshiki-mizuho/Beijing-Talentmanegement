@@ -4,6 +4,7 @@ export type SkillApprovalRow = {
   memberName: string;
   avatarUpdatedAt: string | null;
   departmentName: string;
+  targetRoleName: string | null;
   jobTitle: string | null;
   skillName: string;
   categoryName: string;
@@ -32,6 +33,7 @@ export type SkillApprovalRow = {
 
 export type SkillApprovalDistribution = {
   groupSize: number;
+  unregisteredCount: number;
   counts: [number, number, number, number, number] | null;
 };
 
