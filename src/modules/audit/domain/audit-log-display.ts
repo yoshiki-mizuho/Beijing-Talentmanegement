@@ -199,6 +199,12 @@ export function buildActionDescription(
       suffix: " のレベルの目安を更新",
     };
   }
+  if (action === "skill_prerequisite.create") {
+    return { prefix: "", target: "前提スキル", suffix: " を登録" };
+  }
+  if (action === "skill_prerequisite.delete") {
+    return { prefix: "", target: "前提スキル", suffix: " を削除" };
+  }
   if (
     action === "role.requirement.set" ||
     action === "role.requirement.remove"
@@ -300,6 +306,9 @@ export function buildAuditSummary(input: AuditDisplayInput) {
   }
   if (action === "audit_log.export" || action === "csv.export") {
     return metadata?.count === undefined ? "" : `${metadata.count}件`;
+  }
+  if (action === "skill_prerequisite.create") {
+    return `${metadata?.count ?? 0}件`;
   }
   if (action === "csv.import") {
     return `新規 ${metadata?.created ?? 0}件・更新 ${metadata?.updated ?? 0}件`;

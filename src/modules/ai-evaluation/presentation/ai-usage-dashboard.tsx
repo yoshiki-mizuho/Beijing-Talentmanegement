@@ -179,6 +179,7 @@ function RecentTable({ items }: { items: Summary["recent"] }) {
               <tr className="border-b text-left text-[var(--muted-foreground)]">
                 <th className="p-3">日時</th>
                 <th className="p-3">操作した人</th>
+                <th className="p-3">機能</th>
                 <th className="p-3">対象のメンバー</th>
                 <th className="p-3">状態</th>
                 <th className="p-3">モデル</th>
@@ -192,6 +193,7 @@ function RecentTable({ items }: { items: Summary["recent"] }) {
                 <tr key={item.id}>
                   <td className="p-3">{formatter.format(item.createdAt)}</td>
                   <td className="p-3">{item.actorName}</td>
+                  <td className="p-3">{item.featureName}</td>
                   <td className="p-3">{item.targetName}</td>
                   <td className="p-3">
                     <StatusBadge status={item.status} />

@@ -16,10 +16,14 @@ import {
   reorderSkills,
   updateCommonSkillLevelGuides,
   updateSkillCategory,
-  updateSkillWithLevelGuides
+  updateSkillWithLevelGuides,
+  createSkillPrerequisite,
+  createSkillPrerequisites,
+  deleteSkillPrerequisite
 } from "@/modules/skills/application/skill-service";
+import { generateSkillPrerequisiteSuggestions } from "@/modules/ai-evaluation/application/skill-prerequisite-suggestion-service";
 import { adminOnly, requireRoles } from "@/server/auth/authorization";
-import { runAction, type ActionResult } from "@/shared/lib/action-result";
+import { runAction, runActionWithData, type ActionResult } from "@/shared/lib/action-result";
 import { getOptionalString, getString } from "@/shared/lib/form-data";
 
 function parseSkillForm(formData: FormData) {
@@ -202,4 +206,37 @@ export async function updateCommonSkillLevelGuidesAction(
     revalidatePath("/skills");
     revalidatePath("/my/skills");
   }, "レベルの目安を更新しました");
+}
+
+export async function generateSkillPrerequisiteSuggestionsAction(
+  scope: "unrelated" | "all"
+) {
+  return runActionWithData(async () => {
+    const session = await requireRoles(adminOnly);
+    return generateSkillPrerequisiteSuggestions(scope, session.user.memberId);
+  }, "候補を作りました。");
+}
+
+export async function createSuggestedSkillPrerequisitesAction(input: unknown) {
+  return runAction(async () => {
+    const session = await requireRoles(adminOnly);
+    await createSkillPrerequisites(input, "AI_SUGGESTION", session.user.memberId);
+    revalidatePath("/skills");
+  }, "選んだ前提スキルを登録しました。");
+}
+
+export async function createManualSkillPrerequisiteAction(input: unknown) {
+  return runAction(async () => {
+    const session = await requireRoles(adminOnly);
+    await createSkillPrerequisite(input, session.user.memberId);
+    revalidatePath("/skills");
+  }, "前提スキルを登録しました。");
+}
+
+export async function deleteSkillPrerequisiteAction(id: string) {
+  return runAction(async () => {
+    const session = await requireRoles(adminOnly);
+    await deleteSkillPrerequisite(id, session.user.memberId);
+    revalidatePath("/skills");
+  }, "前提スキルを削除しました。");
 }

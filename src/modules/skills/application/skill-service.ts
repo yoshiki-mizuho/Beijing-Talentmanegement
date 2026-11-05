@@ -14,6 +14,12 @@ import {
   skillSearchSchema
 } from "@/modules/skills/domain/skill-search";
 import * as skillRepository from "@/modules/skills/infrastructure/skill-repository";
+import * as prerequisiteRepository from "@/modules/skills/infrastructure/skill-prerequisite-repository";
+import {
+  skillPrerequisiteBatchSchema,
+  skillPrerequisitePairSchema
+} from "@/modules/skills/domain/skill-prerequisite";
+import type { SkillPrerequisiteSource } from "@prisma/client";
 
 export function listSkillCategories() {
   return skillRepository.listSkillCategories();
@@ -146,4 +152,40 @@ export function reorderSkills(input: unknown, actorMemberId: string | null) {
     reorderSkillsInputSchema.parse(input),
     actorMemberId
   );
+}
+
+export function listSkillPrerequisites() {
+  return prerequisiteRepository.listSkillPrerequisites();
+}
+
+export function listSkillPrerequisitesBySkillIds(skillIds: string[]) {
+  return prerequisiteRepository.listSkillPrerequisitesBySkillIds(skillIds);
+}
+
+export function getSkillPrerequisiteSuggestionContext() {
+  return prerequisiteRepository.getSkillPrerequisiteSuggestionContext();
+}
+
+export function createSkillPrerequisites(
+  input: unknown,
+  source: SkillPrerequisiteSource,
+  actorMemberId: string | null
+) {
+  const parsed = skillPrerequisiteBatchSchema.parse(input);
+  return prerequisiteRepository.createSkillPrerequisites(parsed.pairs, source, actorMemberId);
+}
+
+export function createSkillPrerequisite(
+  input: unknown,
+  actorMemberId: string | null
+) {
+  return prerequisiteRepository.createSkillPrerequisites(
+    [skillPrerequisitePairSchema.parse(input)],
+    "MANUAL",
+    actorMemberId
+  );
+}
+
+export function deleteSkillPrerequisite(id: string, actorMemberId: string | null) {
+  return prerequisiteRepository.deleteSkillPrerequisite(id, actorMemberId);
 }

@@ -48,6 +48,10 @@ export async function getAiUsageSummary(monthValue?: string, now = new Date()) {
     days,
     recent: recentRows.map((row) => ({
       ...row,
+      featureName:
+        row.feature === "skill_prerequisite_suggestion"
+          ? "前提スキルの候補"
+          : "育成のヒント",
       actorName: row.actorMemberId
         ? (names.get(row.actorMemberId) ?? "不明")
         : "システム",
