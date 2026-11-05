@@ -69,6 +69,7 @@ describe("buildAuditLogWhere", () => {
         "member_skill.delete",
         "skill_assessment.approve",
         "skill.delete",
+        "skill_prerequisite.delete",
         "skill_category.delete",
         "skill_category_group.delete",
         "role.delete",

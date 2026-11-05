@@ -2,7 +2,8 @@ import {
   listSkillCategories,
   listSkillCategoryGroups,
   listSkillLevels,
-  listSkills
+  listSkills,
+  listSkillPrerequisites
 } from "@/modules/skills/application/skill-service";
 import { Card, CardContent } from "@/shared/ui/card";
 import { SkillPageHeader } from "@/modules/skills/presentation/skill-page-header";
@@ -12,6 +13,7 @@ import { adminOnly, requirePageRoles } from "@/server/auth/authorization";
 import Link from "next/link";
 import type { Route } from "next";
 import { SkillCategoryGroupsPanel } from "@/modules/skills/presentation/skill-category-groups-panel";
+import { SkillPrerequisitesPanel } from "@/modules/skills/presentation/skill-prerequisites-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -21,14 +23,17 @@ export default async function SkillsPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const query = await searchParams;
-  const activeTab = query.tab === "groups" ? "groups" : "skills";
+  const activeTab = query.tab === "groups" || query.tab === "prerequisites"
+    ? query.tab
+    : "skills";
   const session = await requirePageRoles(adminOnly);
   const canManageSkills = canManageSkillMaster(session.user.role);
-  const [categories, skills, levels, groups] = await Promise.all([
+  const [categories, skills, levels, groups, prerequisites] = await Promise.all([
     listSkillCategories(),
     listSkills(),
     listSkillLevels(),
-    listSkillCategoryGroups()
+    listSkillCategoryGroups(),
+    listSkillPrerequisites()
   ]);
   return (
     <div className="space-y-6">
@@ -41,7 +46,8 @@ export default async function SkillsPage({
       <div role="tablist" aria-label="スキル管理" className="flex gap-1 border-b border-[var(--border)]">
         {[
           { id: "skills", label: "スキル", href: "/skills" },
-          { id: "groups", label: "大分類", href: "/skills?tab=groups" }
+          { id: "groups", label: "大分類", href: "/skills?tab=groups" },
+          { id: "prerequisites", label: "スキルの関係", href: "/skills?tab=prerequisites" }
         ].map((tab) => (
           <Link
             key={tab.id}
@@ -66,6 +72,9 @@ export default async function SkillsPage({
       </Card> : null}
       {activeTab === "groups" ? (
         <SkillCategoryGroupsPanel initialGroups={groups} categories={categories} />
+      ) : null}
+      {activeTab === "prerequisites" ? (
+        <SkillPrerequisitesPanel skills={skills} prerequisites={prerequisites} />
       ) : null}
     </div>
   );
