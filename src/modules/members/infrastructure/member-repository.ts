@@ -684,6 +684,7 @@ export async function listPendingSkillAssessments(
           },
           targetRole: {
             select: {
+              id: true,
               name: true,
               roleRequirements: {
                 select: {
@@ -713,6 +714,77 @@ export function countPendingSkillAssessments(
   return prisma.skillSelfAssessment.count({
     where: pendingSkillAssessmentWhere(reviewerRole, reviewerMemberId)
   });
+}
+
+export async function getSkillApprovalInsightContext(
+  assessments: Array<{
+    id: string;
+    memberId: string;
+    skillId: string;
+    member: {
+      departmentId: string;
+      targetRole: { id: string } | null;
+    };
+  }>
+) {
+  if (assessments.length === 0) {
+    return { history: [], peers: [] };
+  }
+
+  const memberIds = [...new Set(assessments.map((item) => item.memberId))];
+  const skillIds = [...new Set(assessments.map((item) => item.skillId))];
+  const departmentIds = [
+    ...new Set(assessments.map((item) => item.member.departmentId))
+  ];
+  const targetRoleIds = [
+    ...new Set(
+      assessments.flatMap((item) => item.member.targetRole?.id ?? [])
+    )
+  ];
+
+  const [history, peers] = await Promise.all([
+    prisma.skillSelfAssessment.findMany({
+      where: {
+        memberId: { in: memberIds },
+        skillId: { in: skillIds },
+        id: { notIn: assessments.map((item) => item.id) },
+        status: { not: SkillSelfAssessmentStatus.PENDING }
+      },
+      select: {
+        id: true,
+        memberId: true,
+        skillId: true,
+        requestedLevel: true,
+        status: true,
+        managerComment: true,
+        reviewedAt: true,
+        createdAt: true
+      },
+      orderBy: { createdAt: "desc" }
+    }),
+    prisma.member.findMany({
+      where: {
+        status: "ACTIVE",
+        OR: [
+          { departmentId: { in: departmentIds } },
+          ...(targetRoleIds.length > 0
+            ? [{ targetRoleId: { in: targetRoleIds } }]
+            : [])
+        ]
+      },
+      select: {
+        id: true,
+        departmentId: true,
+        targetRoleId: true,
+        memberSkills: {
+          where: { skillId: { in: skillIds } },
+          select: { skillId: true, level: true }
+        }
+      }
+    })
+  ]);
+
+  return { history, peers };
 }
 
 export function countMemberSkillAssessments(memberId: string) {

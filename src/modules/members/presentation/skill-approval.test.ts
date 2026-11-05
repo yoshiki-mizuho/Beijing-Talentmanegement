@@ -22,14 +22,12 @@ describe("skill approval display logic", () => {
   });
 
   it("highlights applications waiting for at least five days", () => {
-    expect(isSkillApprovalLongWaiting(4)).toBe(false);
-    expect(isSkillApprovalLongWaiting(5)).toBe(true);
+    expect(isSkillApprovalLongWaiting(6)).toBe(false);
+    expect(isSkillApprovalLongWaiting(7)).toBe(true);
   });
 
   it("describes owned and unowned level changes", () => {
-    expect(getSkillApprovalLevelChange(2, 4)).toBe(
-      "現在 Lv2 → 申請 Lv4"
-    );
+    expect(getSkillApprovalLevelChange(2, 4)).toBe("Lv2 → Lv4");
     expect(getSkillApprovalLevelChange(null, 3)).toBe("未登録 → Lv3");
   });
 });

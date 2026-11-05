@@ -103,6 +103,14 @@ export function countPendingSkillAssessments(
   );
 }
 
+export function getSkillApprovalInsightContext(
+  assessments: Parameters<
+    typeof memberRepository.getSkillApprovalInsightContext
+  >[0]
+) {
+  return memberRepository.getSkillApprovalInsightContext(assessments);
+}
+
 export function countMemberSkillAssessments(memberId: string) {
   return memberRepository.countMemberSkillAssessments(memberId);
 }
