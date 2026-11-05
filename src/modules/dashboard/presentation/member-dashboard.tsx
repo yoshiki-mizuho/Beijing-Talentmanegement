@@ -102,7 +102,7 @@ export function MemberDashboard({
             <DashboardCard
               id="new-skills-heading"
               icon={Sparkles}
-              title={`新しいスキルが ${skillReminders.newSkillCount}件 増えました`}
+              title={`まだ登録していない新しいスキルが ${skillReminders.newSkillCount}件あります`}
               description=""
             >
               <div className="flex flex-wrap gap-2">

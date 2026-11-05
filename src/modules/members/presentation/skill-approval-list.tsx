@@ -145,6 +145,7 @@ export function SkillApprovalList({ rows }: { rows: SkillApprovalRow[] }) {
             <Button
               type="button"
               variant="secondary"
+              disabled={filter === "with"}
               onClick={() => selectRows(
                 visibleRows
                   .filter((row) => row.checkPoints.length === 0)
@@ -241,7 +242,10 @@ function SkillApprovalItem({
     <div
       role="listitem"
       aria-label={`${row.memberName} / ${row.skillName}の承認`}
-      className="grid min-w-[1140px] gap-2 px-4 py-4 lg:grid-cols-[40px_150px_120px_120px_64px_100px_minmax(120px,1fr)_340px] lg:items-center"
+      className={cn(
+        "grid gap-2 px-4 py-4 lg:min-w-[1140px] lg:grid-cols-[40px_150px_120px_120px_64px_100px_minmax(120px,1fr)_340px] lg:items-center",
+        selected && "bg-[var(--primary-subtle)]"
+      )}
     >
       <div className="grid grid-cols-[44px_minmax(0,1fr)_minmax(0,1fr)] items-center gap-3 lg:contents">
         <label className="flex min-h-11 cursor-pointer items-center" title="一括承認の対象に選択">
@@ -280,7 +284,7 @@ function SkillApprovalItem({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 items-center gap-3 border-t border-[var(--border)] pt-3 sm:grid-cols-[150px_80px_120px_210px_300px] lg:contents">
+      <div className="grid grid-cols-2 items-center gap-3 border-t border-[var(--border)] pt-3 lg:contents">
         <div>
           <p className="text-sm font-semibold">
             {getSkillApprovalLevelChange(row.currentLevel, row.requestedLevel)}
@@ -309,26 +313,32 @@ function SkillApprovalItem({
         <button
           type="button"
           aria-expanded={expanded}
+          aria-label={`${row.memberName}さんの ${row.skillName} の詳しい内容`}
           onClick={() => setExpanded((current) => !current)}
-          className="flex min-h-11 flex-wrap items-center gap-1 rounded-md text-left focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+          className="flex min-h-11 flex-col items-start justify-center gap-1 rounded-md text-left focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
         >
-          {row.checkPoints.length === 0 ? (
-            <span className="text-sm text-[var(--muted-foreground)]">なし</span>
-          ) : row.checkPoints.map((point) => (
-            <Badge key={`${point.type}-${point.detail}`} variant="warning">
-              <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
-              {point.label}
-            </Badge>
-          ))}
-          <ChevronDown
-            className={cn("h-4 w-4", expanded && "rotate-180")}
-            aria-hidden="true"
-          />
+          <span className="flex flex-wrap gap-1">
+            {row.checkPoints.length === 0 ? (
+              <span className="text-sm text-[var(--muted-foreground)]">確認ポイントなし</span>
+            ) : row.checkPoints.map((point) => (
+              <Badge key={`${point.type}-${point.detail}`} variant="warning">
+                <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+                {point.label}
+              </Badge>
+            ))}
+          </span>
+          <span className="inline-flex items-center gap-1 whitespace-nowrap text-sm font-semibold text-[var(--primary)]">
+            <ChevronDown
+              className={cn("h-4 w-4", expanded && "rotate-180")}
+              aria-hidden="true"
+            />
+            詳しく
+          </span>
         </button>
         <div
           className={cn(
-            // 3つのボタンを同じ幅・高さで1行に並べる（1つ目はフォームに包まれているので、フォームも1列として扱う）
-            "grid grid-cols-3 gap-2",
+            // 1つ目はフォームに包まれているので、フォームも1列として扱う。
+            "col-span-2 grid grid-cols-2 gap-2 lg:col-span-1 lg:grid-cols-3",
             "[&_button]:min-h-9 [&_button]:w-full [&_button]:whitespace-nowrap [&_button]:px-2 [&_button]:text-sm"
           )}
         >
@@ -414,6 +424,9 @@ function SkillApprovalDetails({ row }: { row: SkillApprovalRow }) {
       </section>
       <section>
         <h3 className="text-sm font-semibold">レベルの分布</h3>
+        <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+          申請を確かめるための参考です。評価には使いません。
+        </p>
         <div className="mt-2 flex gap-2">
           <Button
             type="button"
@@ -437,16 +450,26 @@ function SkillApprovalDetails({ row }: { row: SkillApprovalRow }) {
           ) : null}
         </div>
         {distribution?.counts ? (
-          <LevelDistributionChart
-            counts={distribution.counts}
-            requestedLevel={row.requestedLevel}
-          />
+          <>
+            <p className="mt-3 text-sm font-medium">
+              {distributionType === "department"
+                ? `${row.departmentName}の ${distribution.groupSize}人`
+                : `${row.targetRoleName}を目標にしている ${distribution.groupSize}人`}
+            </p>
+            <LevelDistributionChart
+              counts={distribution.counts}
+              requestedLevel={row.requestedLevel}
+            />
+            <p className="mt-2 text-xs text-[var(--muted-foreground)]">
+              未登録 {distribution.unregisteredCount}人
+            </p>
+          </>
         ) : (
           <p className="mt-3 text-sm text-[var(--muted-foreground)]">
             人数が少ないため表示しません
           </p>
         )}
-        {distribution ? (
+        {distribution?.counts ? (
           <p className="mt-2 text-xs text-[var(--muted-foreground)]">
             本人を除く {distribution.groupSize}人。濃い色が申請のレベルです。名前は出しません。
           </p>

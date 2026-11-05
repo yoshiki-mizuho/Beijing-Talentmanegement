@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { validateSkillPrerequisitePair } from "./skill-prerequisite";
+import {
+  formatSkillPrerequisiteRelationship,
+  validateSkillPrerequisitePair
+} from "./skill-prerequisite";
 
 const active = new Set(["a", "b", "c"]);
 
@@ -14,5 +17,13 @@ describe("validateSkillPrerequisitePair", () => {
     const existing = [{ skillId: "a", prerequisiteSkillId: "b" }];
     expect(validateSkillPrerequisitePair(existing[0], active, existing)).toEqual({ valid: true, skip: true });
     expect(validateSkillPrerequisitePair({ skillId: "b", prerequisiteSkillId: "a" }, active, existing)).toMatchObject({ valid: false });
+  });
+});
+
+describe("formatSkillPrerequisiteRelationship", () => {
+  it("スキルを先、前提スキルを後にした文言を返す", () => {
+    expect(formatSkillPrerequisiteRelationship("Kubernetes", "Docker")).toBe(
+      "Kubernetes の前提は Docker"
+    );
   });
 });

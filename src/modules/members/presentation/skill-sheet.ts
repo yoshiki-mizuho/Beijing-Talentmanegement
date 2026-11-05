@@ -151,7 +151,9 @@ export function getSkillSheetRowStatus(row: SkillSheetRow): string[] {
   return [
     ...(row.pendingLevel === null
       ? []
-      : [`承認待ち（申請 Lv${row.pendingLevel}）`]),
+      : [row.currentLevel === null
+        ? `未登録 → 申請 Lv${row.pendingLevel}`
+        : `いま Lv${row.currentLevel} → 申請 Lv${row.pendingLevel}`]),
   ];
 }
 
@@ -255,6 +257,13 @@ export function countSkillSheetFilters(
     filter,
     filterSkillSheetRows(rows, { ...options, query: "", filter }).length
   ])) as Record<SkillSheetFilter, number>;
+}
+
+export function isSkillSheetFilterDisabled(
+  count: number,
+  selected: boolean
+) {
+  return count === 0 && !selected;
 }
 
 function latestDate(left: Date | null, right: Date | null) {

@@ -77,6 +77,7 @@ export default async function SkillApprovalsPage() {
       memberName: assessment.member.name,
       avatarUpdatedAt: assessment.member.avatarUpdatedAt?.toISOString() ?? null,
       departmentName: assessment.member.department.name,
+      targetRoleName: assessment.member.targetRole?.name ?? null,
       jobTitle: assessment.member.jobTitle,
       skillName: assessment.skill.name,
       categoryName: assessment.skill.category.name,

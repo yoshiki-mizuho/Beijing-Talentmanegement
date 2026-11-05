@@ -17,7 +17,7 @@ test("ADMINがAI候補と手動追加を登録し削除できる", async ({ page
   if (await checked.count() === 0) await candidateChecks.first().check();
   if (await checked.count() > 1) await checked.first().uncheck();
   await page.getByRole("button", { name: /選んだ \d+件を登録/ }).click();
-  await expect(page.getByText("AI の候補から").first()).toBeVisible();
+  await expect(page.getByRole("cell", { name: "AI の候補から" }).first()).toBeVisible();
 
   await page.getByRole("button", { name: "＋ 手で追加" }).click();
   const skillBox = page.getByRole("combobox", { name: "スキル", exact: true });
@@ -29,7 +29,7 @@ test("ADMINがAI候補と手動追加を登録し削除できる", async ({ page
   await prerequisiteBox.press("ArrowDown");
   await prerequisiteBox.press("Enter");
   await page.getByRole("button", { name: "登録", exact: true }).click();
-  await expect(page.getByText("手で追加").first()).toBeVisible();
+  await expect(page.getByRole("cell", { name: "手で追加" }).first()).toBeVisible();
 
   // seed にも手で追加した関係があるため、今回登録した組の行に絞る
   const manualRow = page

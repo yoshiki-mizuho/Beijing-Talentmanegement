@@ -9,8 +9,10 @@ import {
   getSkillLevelDefinitionText,
   getSkillSheetRowStatus,
   isSkillSheetRowChanged,
+  isSkillSheetFilterDisabled,
   isNewSkill,
   isStaleSkill,
+  type SkillSheetRow,
   selectSkillSheetEncouragement
 } from "@/modules/members/presentation/skill-sheet";
 
@@ -57,7 +59,19 @@ describe("skill sheet display logic", () => {
       rejectionReason: "実務例を追記してください"
     });
     expect(getSkillSheetRowStatus(rows[1])).toEqual([
-      "承認待ち（申請 Lv4）"
+      "いま Lv3 → 申請 Lv4"
+    ]);
+  });
+
+  it("承認待ちの現在レベルと申請レベルを並べて返す", () => {
+    const base = {
+      pendingLevel: 1,
+      currentLevel: 2
+    } as SkillSheetRow;
+
+    expect(getSkillSheetRowStatus(base)).toEqual(["いま Lv2 → 申請 Lv1"]);
+    expect(getSkillSheetRowStatus({ ...base, currentLevel: null })).toEqual([
+      "未登録 → 申請 Lv1"
     ]);
   });
 
@@ -169,6 +183,12 @@ describe("skill sheet display logic", () => {
       now
     });
     expect(counts).toMatchObject({ all: 2, new: 1, target: 1, popular: 1, unowned: 1, changed: 1 });
+  });
+
+  it("0件の絞り込みだけを無効にし、選択中なら押せるままにする", () => {
+    expect(isSkillSheetFilterDisabled(0, false)).toBe(true);
+    expect(isSkillSheetFilterDisabled(0, true)).toBe(false);
+    expect(isSkillSheetFilterDisabled(1, false)).toBe(false);
   });
 });
 

@@ -66,7 +66,7 @@ test("初めてのメンバーを3ステップで案内し、複数承認を1回
     await expect(celebration.getByRole("heading", { name: "2 つのスキルが登録されました" })).toBeVisible();
     await expect(celebration.getByRole("listitem")).toHaveCount(2);
     await celebration.getByRole("button", { name: "閉じる", exact: true }).click();
-    await expect(memberContext.page.getByLabel("はじめの3ステップ進捗")).toHaveCount(0);
+    await expect(memberContext.page.getByLabel("はじめの3ステップ進捗")).toHaveAttribute("aria-valuenow", "2");
   } finally {
     await memberContext?.context.close();
     await admin.page.goto("/members");
