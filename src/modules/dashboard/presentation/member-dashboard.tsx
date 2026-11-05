@@ -1,4 +1,4 @@
-import { Award, CalendarDays, Check, Clock, Heart, History, PartyPopper, Radar, Sparkles, Target, Users } from "lucide-react";
+import { Award, CalendarDays, Check, Clock, Heart, History, MessageCircle, PartyPopper, Radar, Sparkles, Target, Users } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 
@@ -184,13 +184,26 @@ export function MemberDashboard({
               {viewModel.timeline.slice(0, TIMELINE_LIMIT).map((item) => (
                 <li key={item.id} className="relative py-4 pl-7">
                   <span className="absolute left-0 top-5 h-3 w-3 rounded-full bg-[var(--primary)] ring-4 ring-[var(--primary-subtle)]" aria-hidden="true" />
-                  <p className="text-sm font-semibold">
-                    {formatShortDate(item.changedAt)} {item.skillName}{" "}
-                    {item.fromLevel === null
-                      ? `未登録 → Lv${item.toLevel}`
-                      : `Lv${item.fromLevel} → Lv${item.toLevel}`}
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--muted-foreground)]">{item.categoryName}</p>
+                  <Link href={`/level-ups/${item.id}` as Route} className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-sm font-semibold hover:text-[var(--primary)]">
+                        {formatShortDate(item.changedAt)} {item.skillName}{" "}
+                        {item.fromLevel === null
+                          ? `未登録 → Lv${item.toLevel}`
+                          : `Lv${item.fromLevel} → Lv${item.toLevel}`}
+                      </p>
+                      {item.reactionCount > 0 || item.commentCount > 0 ? (
+                        <span
+                          className="inline-flex items-center gap-2 text-xs text-[var(--muted-foreground)]"
+                          aria-label={`リアクション ${item.reactionCount}件、コメント ${item.commentCount}件`}
+                        >
+                          {item.reactionCount > 0 ? <><PartyPopper className="h-3.5 w-3.5" aria-hidden="true" />{item.reactionCount}</> : null}
+                          {item.commentCount > 0 ? <><MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />{item.commentCount}</> : null}
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-1 text-xs text-[var(--muted-foreground)]">{item.categoryName}</p>
+                  </Link>
                 </li>
               ))}
             </ol>

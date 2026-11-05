@@ -8,22 +8,30 @@ import {
 type NotificationDestination =
   | "/skill-approvals"
   | "/my/skills"
-  | "/my/skills?tab=history";
+  | "/my/skills?tab=history"
+  | `/level-ups/${string}`;
 
 type NotificationDestinationInput = {
   type: NotificationType;
   role: AppRole;
   skillSelfAssessmentId: string | null;
+  skillLevelChangeId: string | null;
 };
 
 export function getNotificationDestination({
   type,
   role,
-  skillSelfAssessmentId
+  skillSelfAssessmentId,
+  skillLevelChangeId
 }: NotificationDestinationInput): NotificationDestination | null {
-  if (!skillSelfAssessmentId) {
-    return null;
+  if (type === "LEVEL_UP_COMMENTED" || type === "LEVEL_UP_REACTED") {
+    const destination = skillLevelChangeId
+      ? `/level-ups/${encodeURIComponent(skillLevelChangeId)}` as const
+      : null;
+    return destination && canAccessAppPath(role, destination) ? destination : null;
   }
+
+  if (!skillSelfAssessmentId) return null;
 
   let destination: NotificationDestination | null = null;
 

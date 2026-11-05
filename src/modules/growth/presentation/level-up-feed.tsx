@@ -26,6 +26,7 @@ import { Tooltip } from "@/shared/ui/tooltip";
 import { MemberAvatar } from "@/shared/ui/member-avatar";
 
 type ReactionType = "CONGRATS" | "AMAZING" | "WANT_TO_LEARN";
+type ReactionState = LevelUpFeedItem["reactions"][number] & { memberNames?: string[] };
 
 const reactionDefinitions = [
   { type: "CONGRATS", label: "おめでとう", icon: PartyPopper },
@@ -40,14 +41,17 @@ export type SerializableFeedItem = Omit<
   avatarUpdatedAt: string | null;
   changedAt: string;
   comments: Array<Omit<LevelUpFeedItem["comments"][number], "createdAt"> & { createdAt: string }>;
+  reactions: Array<LevelUpFeedItem["reactions"][number] & { memberNames?: string[] }>;
 };
 
 export function LevelUpFeed({
   items,
-  viewer
+  viewer,
+  detail = false
 }: {
   items: SerializableFeedItem[];
   viewer: { memberId: string; memberName: string };
+  detail?: boolean;
 }) {
   if (items.length === 0) {
     return (
@@ -62,7 +66,7 @@ export function LevelUpFeed({
   return (
     <ol className="divide-y divide-[var(--border)]">
       {items.map((item) => (
-        <FeedItem key={item.id} initialItem={item} viewer={viewer} />
+        <FeedItem key={item.id} initialItem={item} viewer={viewer} detail={detail} />
       ))}
     </ol>
   );
@@ -70,16 +74,20 @@ export function LevelUpFeed({
 
 function FeedItem({
   initialItem,
-  viewer
+  viewer,
+  detail
 }: {
   initialItem: SerializableFeedItem;
   viewer: { memberId: string; memberName: string };
+  detail: boolean;
 }) {
   const [reactions, setReactions] = useState(() =>
-    new Map(initialItem.reactions.map((reaction) => [reaction.type, reaction]))
+    new Map<ReactionType, ReactionState>(
+      initialItem.reactions.map((reaction) => [reaction.type, reaction])
+    )
   );
   const [comments, setComments] = useState(initialItem.comments);
-  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(detail);
   const [body, setBody] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const isOwner = initialItem.memberId === viewer.memberId;
@@ -145,14 +153,17 @@ function FeedItem({
   return (
     <li className="p-5">
       <div className="flex items-start gap-3">
-        <MemberAvatar
-          memberId={initialItem.memberId}
-          name={initialItem.memberName}
-          avatarUpdatedAt={initialItem.avatarUpdatedAt}
-          href={`/people/${initialItem.memberId}`}
-        />
+        {/* 詳しい画面では、上の見出しに同じ内容があるので、アバターと1行の説明を出さない */}
+        {!detail ? (
+          <MemberAvatar
+            memberId={initialItem.memberId}
+            name={initialItem.memberName}
+            avatarUpdatedAt={initialItem.avatarUpdatedAt}
+            href={`/people/${initialItem.memberId}`}
+          />
+        ) : null}
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className={cn("flex flex-wrap items-start justify-between gap-2", detail && "hidden")}>
             <p className="text-sm text-[var(--foreground)]">
               <Link href={`/people/${initialItem.memberId}` as Route} className="font-semibold hover:text-[var(--primary)] hover:underline">{initialItem.memberName} さん</Link>
               が <span className="font-semibold">{initialItem.skillName}</span> を <span className="font-semibold">Lv{initialItem.toLevel}</span> に
@@ -161,7 +172,7 @@ function FeedItem({
               {formatNotificationDate(new Date(initialItem.changedAt))}
             </time>
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-1">
+          <div className={cn("flex flex-wrap items-center gap-1", !detail && "mt-3")}>
             {reactionDefinitions.map((definition) => {
               const reaction = reactions.get(definition.type) ?? {
                 type: definition.type,
@@ -198,19 +209,39 @@ function FeedItem({
                 </Tooltip>
               );
             })}
-            <Tooltip content="コメント">
-              <button
-                type="button"
-                aria-label={`コメント ${comments.length}件`}
-                aria-expanded={commentsOpen}
-                onClick={() => setCommentsOpen((current) => !current)}
-                className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-full border border-[var(--border)] px-3 text-xs font-semibold text-[var(--muted-foreground)] hover:bg-[var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+            {!detail ? (
+              <Tooltip content="コメント">
+                <button
+                  type="button"
+                  aria-label={`コメント ${comments.length}件`}
+                  aria-expanded={commentsOpen}
+                  onClick={() => setCommentsOpen((current) => !current)}
+                  className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-full border border-[var(--border)] px-3 text-xs font-semibold text-[var(--muted-foreground)] hover:bg-[var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                >
+                  <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                  <span aria-hidden="true">{comments.length}</span>
+                </button>
+              </Tooltip>
+            ) : null}
+            {!detail ? (
+              <Link
+                href={`/level-ups/${initialItem.id}` as Route}
+                className="ml-2 inline-flex min-h-11 items-center text-xs font-semibold text-[var(--primary)] hover:underline"
               >
-                <MessageCircle className="h-4 w-4" aria-hidden="true" />
-                <span aria-hidden="true">{comments.length}</span>
-              </button>
-            </Tooltip>
+                詳しく
+              </Link>
+            ) : null}
           </div>
+          {detail && isOwner ? (
+            <div className="mt-3 space-y-1 text-xs text-[var(--muted-foreground)]">
+              {reactionDefinitions.map((definition) => {
+                const names = reactions.get(definition.type)?.memberNames ?? [];
+                return names.length > 0 ? (
+                  <p key={definition.type}>{definition.label}：{names.map((name) => `${name}さん`).join("、")}</p>
+                ) : null;
+              })}
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -231,7 +262,11 @@ function FeedItem({
               ))}
             </ul>
           ) : (
-            <p className="text-xs text-[var(--muted-foreground)]">最初のコメントを送って、お祝いの気持ちを伝えましょう。</p>
+            <p className="text-xs text-[var(--muted-foreground)]">
+              {isOwner
+                ? "まだコメントはありません。"
+                : "最初のコメントを送って、お祝いの気持ちを伝えましょう。"}
+            </p>
           )}
           <form className="mt-4" onSubmit={submitComment}>
             <input type="hidden" name="levelChangeId" value={initialItem.id} />
@@ -242,7 +277,7 @@ function FeedItem({
               maxLength={MAX_LEVEL_UP_COMMENT_LENGTH}
               value={body}
               onChange={(event) => setBody(event.target.value)}
-              placeholder="お祝いのコメントを書く"
+              placeholder={isOwner ? "お礼や返信を書く" : "お祝いのコメントを書く"}
               className="min-h-20 w-full resize-y rounded-lg border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
             />
             <div className="mt-2 flex items-center justify-between gap-3">

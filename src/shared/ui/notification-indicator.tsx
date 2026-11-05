@@ -113,7 +113,8 @@ function NotificationPopoverItem({
   const destination = getNotificationDestination({
     type: notification.type,
     role,
-    skillSelfAssessmentId: notification.skillSelfAssessmentId
+    skillSelfAssessmentId: notification.skillSelfAssessmentId,
+    skillLevelChangeId: notification.skillLevelChangeId
   }) ?? "/notifications";
 
   return (

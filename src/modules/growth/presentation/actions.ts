@@ -25,15 +25,20 @@ export async function toggleLevelUpReactionAction(formData: FormData): Promise<A
     if (getString(formData, "pressed") === "true") await removeLevelUpReaction(input, viewer);
     else await addLevelUpReaction(input, viewer);
     revalidatePath("/dashboard");
+    revalidatePath(`/level-ups/${input.levelChangeId}`);
+    revalidatePath("/notifications");
   }, "リアクションを更新しました。");
 }
 
 export async function createLevelUpCommentAction(formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
     const session = await requirePasswordReadyMember();
-    await createLevelUpComment({ levelChangeId: getString(formData, "levelChangeId"), authorMemberId: session.user.memberId, body: getString(formData, "body") }, { memberId: session.user.memberId, role: session.user.role });
+    const levelChangeId = getString(formData, "levelChangeId");
+    await createLevelUpComment({ levelChangeId, authorMemberId: session.user.memberId, body: getString(formData, "body") }, { memberId: session.user.memberId, role: session.user.role });
     revalidatePath("/dashboard");
-  }, "コメントを投稿しました。本人の通知にも届きます。");
+    revalidatePath(`/level-ups/${levelChangeId}`);
+    revalidatePath("/notifications");
+  }, "コメントを投稿しました。");
 }
 
 export async function createCheerAction(formData: FormData): Promise<ActionResult> {
