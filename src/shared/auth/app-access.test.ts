@@ -83,6 +83,7 @@ describe("application route access", () => {
     expect(canAccessAppPath("MEMBER", "/my/skills/history")).toBe(true);
     expect(canAccessAppPath("MEMBER", "/notifications")).toBe(true);
     expect(canAccessAppPath("MEMBER", "/roles")).toBe(true);
+    expect(canAccessAppPath("MEMBER", "/level-ups/change-1")).toBe(true);
     expect(canAccessAppPath("MEMBER", "/members")).toBe(false);
     expect(canAccessAppPath("MEMBER", "/skill-approvals")).toBe(false);
   });

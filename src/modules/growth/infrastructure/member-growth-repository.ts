@@ -90,6 +90,7 @@ export async function getMemberGrowthData(memberId: string) {
           toLevel: true,
           source: true,
           changedAt: true,
+          _count: { select: { reactions: true, comments: true } },
           skill: {
             select: {
               name: true,

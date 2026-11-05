@@ -7,16 +7,76 @@ import type {
   OneOnOneNoteInput,
   OneOnOneNoteUpdateInput
 } from "@/modules/growth/domain/growth-schema";
+import {
+  buildLevelUpReactionNotificationBody,
+  uniqueReplyRecipientIds
+} from "@/modules/growth/domain/level-up-notification";
 import { prisma } from "@/server/db/prisma";
 import { UserFacingError } from "@/shared/lib/user-facing-error";
 
 export function addLevelUpReaction(input: LevelUpReactionInput) {
-  return prisma.levelUpReaction.upsert({
-    where: {
-      levelChangeId_memberId_type: input
-    },
-    update: {},
-    create: input
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.levelUpReaction.findUnique({
+      where: { levelChangeId_memberId_type: input }
+    });
+    if (existing) return existing;
+
+    const reaction = await tx.levelUpReaction.create({ data: input });
+    const levelChange = await tx.skillLevelChange.findUniqueOrThrow({
+      where: { id: input.levelChangeId },
+      select: {
+        id: true,
+        memberId: true,
+        toLevel: true,
+        skill: { select: { name: true } }
+      }
+    });
+    if (levelChange.memberId === input.memberId) return reaction;
+
+    const [actor, reactors, notification] = await Promise.all([
+      tx.member.findUniqueOrThrow({
+        where: { id: input.memberId },
+        select: { name: true }
+      }),
+      tx.levelUpReaction.findMany({
+        where: { levelChangeId: input.levelChangeId },
+        distinct: ["memberId"],
+        select: { memberId: true }
+      }),
+      tx.notification.findFirst({
+        where: {
+          recipientMemberId: levelChange.memberId,
+          type: NotificationType.LEVEL_UP_REACTED,
+          skillLevelChangeId: levelChange.id
+        },
+        select: { id: true }
+      })
+    ]);
+    const data = {
+      title: "レベルアップにリアクションが届きました",
+      body: buildLevelUpReactionNotificationBody({
+        actorName: actor.name,
+        reactorCount: reactors.length,
+        skillName: levelChange.skill.name,
+        toLevel: levelChange.toLevel
+      }),
+      status: "UNREAD" as const,
+      readAt: null,
+      createdAt: new Date()
+    };
+    if (notification) {
+      await tx.notification.update({ where: { id: notification.id }, data });
+    } else {
+      await tx.notification.create({
+        data: {
+          ...data,
+          recipientMemberId: levelChange.memberId,
+          type: NotificationType.LEVEL_UP_REACTED,
+          skillLevelChangeId: levelChange.id
+        }
+      });
+    }
+    return reaction;
   });
 }
 
@@ -54,7 +114,16 @@ export function createLevelUpComment(input: LevelUpCommentInput) {
   return prisma.$transaction(async (tx) => {
     const levelChange = await tx.skillLevelChange.findUniqueOrThrow({
       where: { id: input.levelChangeId },
-      include: { skill: { select: { name: true } } }
+      include: {
+        member: { select: { name: true } },
+        skill: { select: { name: true } },
+        comments: {
+          select: {
+            authorMemberId: true,
+            authorMember: { select: { status: true } }
+          }
+        }
+      }
     });
     const comment = await tx.levelUpComment.create({ data: input });
 
@@ -68,9 +137,54 @@ export function createLevelUpComment(input: LevelUpCommentInput) {
           body: `${levelChange.skill.name} Lv.${levelChange.toLevel} へのコメントを確認しましょう。`
         }
       });
+    } else {
+      const recipientMemberIds = uniqueReplyRecipientIds(
+        levelChange.memberId,
+        levelChange.comments
+      );
+      if (recipientMemberIds.length > 0) {
+        await tx.notification.createMany({
+          data: recipientMemberIds.map((recipientMemberId) => ({
+            recipientMemberId,
+            type: NotificationType.LEVEL_UP_COMMENTED,
+            skillLevelChangeId: levelChange.id,
+            title: `${levelChange.member.name}さんから返信が届きました`,
+            body: `${levelChange.skill.name} Lv${levelChange.toLevel} のコメントを確認しましょう。`
+          }))
+        });
+      }
     }
 
     return comment;
+  });
+}
+
+export function getLevelUpThread(levelChangeId: string) {
+  return prisma.skillLevelChange.findUnique({
+    where: { id: levelChangeId },
+    select: {
+      id: true,
+      memberId: true,
+      fromLevel: true,
+      toLevel: true,
+      changedAt: true,
+      member: { select: { id: true, name: true, avatarUpdatedAt: true } },
+      skill: { select: { name: true, category: { select: { name: true } } } },
+      reactions: {
+        select: { type: true, memberId: true, member: { select: { name: true } } },
+        orderBy: { createdAt: "asc" }
+      },
+      comments: {
+        select: {
+          id: true,
+          authorMemberId: true,
+          body: true,
+          createdAt: true,
+          authorMember: { select: { name: true, avatarUpdatedAt: true } }
+        },
+        orderBy: { createdAt: "asc" }
+      }
+    }
   });
 }
 

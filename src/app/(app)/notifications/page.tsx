@@ -75,7 +75,8 @@ export default async function NotificationsPage({
             const destination = getNotificationDestination({
               type: notification.type,
               role: session.user.role,
-              skillSelfAssessmentId: notification.skillSelfAssessmentId
+              skillSelfAssessmentId: notification.skillSelfAssessmentId,
+              skillLevelChangeId: notification.skillLevelChangeId
             });
 
             return (

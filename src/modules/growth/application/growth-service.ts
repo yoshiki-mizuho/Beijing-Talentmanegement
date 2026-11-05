@@ -74,6 +74,19 @@ export function getLevelUpFeed(input: {
   return growthRepository.listLevelUpFeed({ ...input, limit: input.limit ?? 10 });
 }
 
+export async function getLevelUpThread(
+  levelChangeId: string,
+  viewer: { memberId: string; role: AuthRole }
+) {
+  const access = await growthRepository.getLevelUpInteractionAccess(
+    levelChangeId,
+    viewer.memberId,
+    viewer.role
+  );
+  if (!access) return null;
+  return growthRepository.getLevelUpThread(levelChangeId);
+}
+
 export async function createCheer(
   input: unknown,
   viewer: { memberId: string; role: AuthRole }

@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   levelChangeFind: vi.fn(),
   commentCreate: vi.fn(),
   notificationCreate: vi.fn(),
+  notificationCreateMany: vi.fn(),
   noteFindMany: vi.fn(),
   noteUpdateMany: vi.fn(),
   noteFindFirstOrThrow: vi.fn()
@@ -30,7 +31,10 @@ import {
 const transactionClient = {
   skillLevelChange: { findUniqueOrThrow: mocks.levelChangeFind },
   levelUpComment: { create: mocks.commentCreate },
-  notification: { create: mocks.notificationCreate }
+  notification: {
+    create: mocks.notificationCreate,
+    createMany: mocks.notificationCreateMany
+  }
 };
 
 describe("growth repository", () => {
@@ -45,7 +49,9 @@ describe("growth repository", () => {
       id: "change-1",
       memberId: "member-1",
       toLevel: 3,
-      skill: { name: "TypeScript" }
+      member: { name: "佐藤" },
+      skill: { name: "TypeScript" },
+      comments: []
     });
 
     await createLevelUpComment({
@@ -62,7 +68,9 @@ describe("growth repository", () => {
       id: "change-1",
       memberId: "member-1",
       toLevel: 3,
-      skill: { name: "TypeScript" }
+      member: { name: "佐藤" },
+      skill: { name: "TypeScript" },
+      comments: []
     });
 
     await createLevelUpComment({
@@ -76,6 +84,31 @@ describe("growth repository", () => {
         recipientMemberId: "member-1",
         skillLevelChangeId: "change-1"
       })
+    });
+  });
+
+  it("notifies each distinct active commenter when the owner replies", async () => {
+    mocks.levelChangeFind.mockResolvedValue({
+      id: "change-1",
+      memberId: "member-1",
+      toLevel: 3,
+      member: { name: "佐藤" },
+      skill: { name: "TypeScript" },
+      comments: [
+        { authorMemberId: "member-2", authorMember: { status: "ACTIVE" } },
+        { authorMemberId: "member-2", authorMember: { status: "ACTIVE" } },
+        { authorMemberId: "member-3", authorMember: { status: "INACTIVE" } }
+      ]
+    });
+
+    await createLevelUpComment({
+      levelChangeId: "change-1",
+      authorMemberId: "member-1",
+      body: "ありがとうございます"
+    });
+
+    expect(mocks.notificationCreateMany).toHaveBeenCalledWith({
+      data: [expect.objectContaining({ recipientMemberId: "member-2" })]
     });
   });
 

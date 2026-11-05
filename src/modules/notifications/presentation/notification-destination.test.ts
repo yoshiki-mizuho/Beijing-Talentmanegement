@@ -11,7 +11,8 @@ describe("getNotificationDestination", () => {
         getNotificationDestination({
           type: NotificationType.SKILL_ASSESSMENT_REQUESTED,
           role,
-          skillSelfAssessmentId: "assessment-1"
+          skillSelfAssessmentId: "assessment-1",
+          skillLevelChangeId: null
         })
       ).toBe("/skill-approvals");
     }
@@ -22,7 +23,8 @@ describe("getNotificationDestination", () => {
       getNotificationDestination({
         type: NotificationType.SKILL_ASSESSMENT_REQUESTED,
         role: AuthRole.MEMBER,
-        skillSelfAssessmentId: "assessment-1"
+        skillSelfAssessmentId: "assessment-1",
+        skillLevelChangeId: null
       })
     ).toBeNull();
   });
@@ -35,7 +37,8 @@ describe("getNotificationDestination", () => {
       getNotificationDestination({
         type,
         role: AuthRole.MEMBER,
-        skillSelfAssessmentId: "assessment-1"
+        skillSelfAssessmentId: "assessment-1",
+        skillLevelChangeId: null
       })
     ).toBe("/my/skills");
   });
@@ -45,7 +48,8 @@ describe("getNotificationDestination", () => {
       getNotificationDestination({
         type: NotificationType.SKILL_ASSESSMENT_REJECTED,
         role: AuthRole.MEMBER,
-        skillSelfAssessmentId: "assessment-1"
+        skillSelfAssessmentId: "assessment-1",
+        skillLevelChangeId: null
       })
     ).toBe("/my/skills?tab=history");
   });
@@ -55,8 +59,21 @@ describe("getNotificationDestination", () => {
       getNotificationDestination({
         type: NotificationType.SKILL_ASSESSMENT_APPROVED,
         role: AuthRole.MEMBER,
-        skillSelfAssessmentId: null
+        skillSelfAssessmentId: null,
+        skillLevelChangeId: null
       })
     ).toBeNull();
+  });
+
+  it.each([
+    NotificationType.LEVEL_UP_COMMENTED,
+    NotificationType.LEVEL_UP_REACTED
+  ])("レベルアップ通知 %s は専用画面へ遷移する", (type) => {
+    expect(getNotificationDestination({
+      type,
+      role: AuthRole.MEMBER,
+      skillSelfAssessmentId: null,
+      skillLevelChangeId: "change-1"
+    })).toBe("/level-ups/change-1");
   });
 });

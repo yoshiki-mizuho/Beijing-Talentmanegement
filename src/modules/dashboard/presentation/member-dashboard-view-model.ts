@@ -109,7 +109,9 @@ export function buildMemberDashboardViewModel(
         categoryName: change.skill.category.name,
         fromLevel: change.fromLevel,
         toLevel: change.toLevel,
-        changedAt: change.changedAt.toISOString()
+        changedAt: change.changedAt.toISOString(),
+        reactionCount: change._count.reactions,
+        commentCount: change._count.comments
       })),
     mentors: findPotentialMentors({
       memberId: data.member.id,

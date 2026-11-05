@@ -70,7 +70,8 @@ export const appNavigationGroups: readonly AppNavigationGroup[] = [
 const nonNavigationRoutes: readonly Pick<AppNavigationItem, "href" | "allowedRoles">[] = [
   { href: "/account/password", allowedRoles: allRoles },
   { href: "/people", allowedRoles: allRoles },
-  { href: "/notifications", allowedRoles: allRoles }
+  { href: "/notifications", allowedRoles: allRoles },
+  { href: "/level-ups", allowedRoles: allRoles }
 ];
 const appRouteRules: readonly Pick<AppNavigationItem, "href" | "allowedRoles">[] = [
   ...appNavigationGroups.flatMap((group) => group.items),
