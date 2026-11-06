@@ -10,6 +10,7 @@ import type { getMonthlyRecapCelebration } from "@/modules/growth/application/mo
 import { markMonthlyRecapSeenAction } from "@/modules/growth/presentation/monthly-recap-actions";
 import { Button } from "@/shared/ui/button";
 import { Dialog } from "@/shared/ui/dialog";
+import { FirstMoverBadge } from "@/modules/growth/presentation/first-mover-badge";
 
 type Celebration = NonNullable<Awaited<ReturnType<typeof getMonthlyRecapCelebration>>>;
 
@@ -76,6 +77,7 @@ export function MonthlyRecapDialog({ celebration }: { celebration: Celebration |
                   <span>
                     {item.skillName} {item.fromLevel === null ? "未登録" : `Lv${item.fromLevel}`} → Lv{item.toLevel}
                   </span>
+                  {item.isFirstMover ? <FirstMoverBadge /> : null}
                 </li>
               ))}
             </ul>

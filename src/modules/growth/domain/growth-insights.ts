@@ -7,11 +7,20 @@ const TOKYO_TIME_ZONE = "Asia/Tokyo";
 type DatedValue = { createdAt: Date | string };
 
 export type GrowthLevelChange = {
+  id?: string;
   skillId: string;
   fromLevel: number | null;
   toLevel: number;
   source: string;
   changedAt: Date | string;
+  categoryGroupId?: string | null;
+};
+
+export type BadgeProgress = {
+  id: BadgeId;
+  current?: number;
+  target?: number;
+  text: string;
 };
 
 export type BadgeAchievement = {
@@ -33,11 +42,18 @@ export function getMonthlyEncouragement(levelUpCount: number) {
 }
 
 export function calculateBadgeAchievements(input: {
-  assessments: ReadonlyArray<DatedValue>;
+  assessments: ReadonlyArray<DatedValue & { skillId?: string; status?: string; reviewedAt?: Date | string | null }>;
   memberSkills: ReadonlyArray<{ skillId: string; level: number }>;
   levelChanges: ReadonlyArray<GrowthLevelChange>;
   targetRequirements: ReadonlyArray<{ skillId: string; requiredLevel: number; isRequired?: boolean; anyOfGroup?: number | null }>;
   mentoredCheers: ReadonlyArray<{ toMemberId: string; createdAt: Date | string }>;
+  memberCreatedAt?: Date | string;
+  sentCheers?: ReadonlyArray<{ toMemberId: string; createdAt: Date | string }>;
+  sentReactions?: ReadonlyArray<{ createdAt: Date | string }>;
+  receivedTeachReactions?: ReadonlyArray<{ memberId: string; createdAt: Date | string }>;
+  firstMoverLevelChangeIds?: ReadonlyArray<string>;
+  prerequisites?: ReadonlyArray<{ skillId: string; prerequisiteSkillId: string }>;
+  now?: Date;
 }): BadgeAchievement[] {
   const assessments = sortByDate(input.assessments, "createdAt");
   const changes = sortByDate(input.levelChanges, "changedAt");
@@ -63,6 +79,23 @@ export function calculateBadgeAchievements(input: {
       break;
     }
   }
+  const upgrades = changes.filter(isLevelUp);
+  const sentCheers = sortByDate(input.sentCheers ?? [], "createdAt");
+  const sentReactions = sortByDate(input.sentReactions ?? [], "createdAt");
+  const teachReactions = sortByDate(input.receivedTeachReactions ?? [], "createdAt");
+  const firstMoverIds = new Set(input.firstMoverLevelChangeIds ?? []);
+  const firstMover = upgrades.find((change) => change.id && firstMoverIds.has(change.id));
+  const categories = new Set<string>();
+  let multiClassAt: Date | string | null = null;
+  for (const change of upgrades) {
+    if (change.categoryGroupId) categories.add(change.categoryGroupId);
+    if (categories.size === 3) {
+      multiClassAt = change.changedAt;
+      break;
+    }
+  }
+  const uniqueCheerTargets = nthUniqueDate(sentCheers, "toMemberId", 3);
+  const uniqueTeachers = nthUniqueDate(teachReactions, "memberId", 5);
 
   return [
     achievement("hello-world", assessments[0]?.createdAt),
@@ -84,8 +117,151 @@ export function calculateBadgeAchievements(input: {
       "master",
       changes.find((change) => change.toLevel >= 5)?.changedAt
     ),
-    achievement("rubber-duck", thirdMenteeAt)
+    achievement("rubber-duck", thirdMenteeAt),
+    achievement("first-mover", firstMover?.changedAt),
+    achievement("retry-success", findRetrySuccessDate(input.assessments, upgrades)),
+    achievement("combo-10", upgrades[9]?.changedAt),
+    achievement("anniversary", findAnniversaryDate(input.memberCreatedAt, upgrades, input.now ?? new Date())),
+    achievement("groundwork", findGroundworkDate(input.assessments, changes, input.prerequisites ?? [])),
+    achievement("multi-class", multiClassAt),
+    achievement("cheer-squad", uniqueCheerTargets),
+    achievement("applause", sentReactions[9]?.createdAt),
+    achievement("sought-after", uniqueTeachers),
+    achievement("new-year-deploy", upgrades.find((change) => getTokyoDateParts(change.changedAt).month === 1)?.changedAt),
+    achievement("welcome-back", findWelcomeBackDate(upgrades))
   ];
+}
+
+export function calculateBadgeProgress(input: Parameters<typeof calculateBadgeAchievements>[0]): BadgeProgress[] {
+  const upgrades = sortByDate(input.levelChanges, "changedAt").filter(isLevelUp);
+  const categoryCount = new Set(upgrades.flatMap((change) => change.categoryGroupId ? [change.categoryGroupId] : [])).size;
+  const cheerCount = new Set((input.sentCheers ?? []).map((item) => item.toMemberId)).size;
+  const teacherCount = new Set((input.receivedTeachReactions ?? []).map((item) => item.memberId)).size;
+  const months = input.memberCreatedAt
+    ? Math.min(12, Math.max(0, Math.floor(((input.now ?? new Date()).getTime() - new Date(input.memberCreatedAt).getTime()) / 2_629_746_000)))
+    : 0;
+  const targetRate = input.targetRequirements.length === 0
+    ? 0
+    : Math.round(isRoleAchieved(
+        input.targetRequirements.map((item) => ({ ...item, isRequired: item.isRequired ?? true })),
+        [...input.memberSkills]
+      ) ? 100 : calculateSatisfiedRequirementRate(input.targetRequirements, input.memberSkills));
+  const currentStreak = getCurrentMonthStreak(upgrades);
+  const menteeCount = new Set(input.mentoredCheers.map((item) => item.toMemberId)).size;
+  // 獲得の判定（新規登録のレベル変更の件数）と同じ数え方にする
+  const registeredCount = Math.min(
+    input.memberSkills.length,
+    input.levelChanges.filter((change) => change.fromLevel === null).length
+  );
+  return [
+    progress("combo-10", upgrades.length, 10, `あと${Math.max(0, 10 - upgrades.length)}回`),
+    progress("anniversary", months, 12, `あと${Math.max(0, 12 - months)}か月`),
+    progress("multi-class", categoryCount, 3, `あと${Math.max(0, 3 - categoryCount)}つの大分類`),
+    progress("cheer-squad", cheerCount, 3, `あと${Math.max(0, 3 - cheerCount)}人に応援を送る`),
+    progress("applause", (input.sentReactions ?? []).length, 10, `あと${Math.max(0, 10 - (input.sentReactions ?? []).length)}回`),
+    progress("sought-after", teacherCount, 5, `あと${Math.max(0, 5 - teacherCount)}人`),
+    progress("save-point", registeredCount, 5, `あと${Math.max(0, 5 - registeredCount)}件`),
+    progress("full-stack", registeredCount, 10, `あと${Math.max(0, 10 - registeredCount)}件`),
+    progress("build-streak", currentStreak, 3, `あと${Math.max(0, 3 - currentStreak)}か月`),
+    progress("deployed", targetRate, 100, `目標ロールまであと${Math.max(0, 100 - targetRate)}%`),
+    progress("rubber-duck", menteeCount, 3, `あと${Math.max(0, 3 - menteeCount)}人`),
+    { id: "groundwork", text: "前提スキルをすべて Lv3 以上にして申請すると達成" }
+  ];
+}
+
+function progress(id: BadgeId, current: number, target: number, text: string): BadgeProgress {
+  return { id, current: Math.min(current, target), target, text };
+}
+
+function isLevelUp(change: GrowthLevelChange) {
+  return isGrowthLevelChange(change.source) && (change.fromLevel === null || change.toLevel > change.fromLevel);
+}
+
+function nthUniqueDate<T extends DatedValue>(values: ReadonlyArray<T>, key: keyof T, target: number) {
+  const unique = new Set<unknown>();
+  for (const value of values) {
+    unique.add(value[key]);
+    if (unique.size === target) return value.createdAt;
+  }
+  return null;
+}
+
+function findRetrySuccessDate(assessments: ReadonlyArray<DatedValue & { skillId?: string; status?: string; reviewedAt?: Date | string | null }>, upgrades: ReadonlyArray<GrowthLevelChange>) {
+  const rejectedBySkill = new Map<string, number>();
+  for (const assessment of assessments) {
+    if (assessment.skillId && assessment.status === "REJECTED" && assessment.reviewedAt) {
+      rejectedBySkill.set(assessment.skillId, Math.min(rejectedBySkill.get(assessment.skillId) ?? Infinity, new Date(assessment.reviewedAt).getTime()));
+    }
+  }
+  const approvedBySkill = new Map<string, number[]>();
+  for (const assessment of assessments) {
+    if (
+      assessment.skillId &&
+      assessment.reviewedAt &&
+      (assessment.status === "APPROVED" || assessment.status === "CORRECTED")
+    ) {
+      const dates = approvedBySkill.get(assessment.skillId) ?? [];
+      dates.push(new Date(assessment.reviewedAt).getTime());
+      approvedBySkill.set(assessment.skillId, dates);
+    }
+  }
+  return upgrades.find((change) => {
+    const rejectedAt = rejectedBySkill.get(change.skillId) ?? Infinity;
+    const changedAt = new Date(change.changedAt).getTime();
+    return (approvedBySkill.get(change.skillId) ?? [])
+      .some((approvedAt) => rejectedAt < approvedAt && approvedAt <= changedAt);
+  })?.changedAt ?? null;
+}
+
+function calculateSatisfiedRequirementRate(
+  requirements: ReadonlyArray<{ skillId: string; requiredLevel: number }>,
+  skills: ReadonlyArray<{ skillId: string; level: number }>
+) {
+  const levels = new Map(skills.map((item) => [item.skillId, item.level]));
+  const satisfied = requirements.filter((item) => (levels.get(item.skillId) ?? 0) >= item.requiredLevel).length;
+  return requirements.length === 0 ? 0 : (satisfied / requirements.length) * 100;
+}
+
+function getCurrentMonthStreak(upgrades: ReadonlyArray<GrowthLevelChange>) {
+  const months = [...new Set(upgrades.map((change) => getTokyoMonthKey(change.changedAt)))].sort().reverse();
+  let count = 0;
+  for (let index = 0; index < months.length; index += 1) {
+    const current = parseMonthKey(months[index]!);
+    if (index > 0) {
+      const previous = parseMonthKey(months[index - 1]!);
+      if (monthSerial(previous.year, previous.month) - monthSerial(current.year, current.month) !== 1) break;
+    }
+    count += 1;
+  }
+  return count;
+}
+
+function findAnniversaryDate(createdAt: Date | string | undefined, upgrades: ReadonlyArray<GrowthLevelChange>, now: Date) {
+  if (!createdAt) return null;
+  const joined = new Date(createdAt);
+  const anniversary = new Date(joined);
+  anniversary.setUTCFullYear(anniversary.getUTCFullYear() + 1);
+  if (anniversary > now) return null;
+  return upgrades.some((change) => new Date(change.changedAt) >= joined && new Date(change.changedAt) <= anniversary) ? anniversary : null;
+}
+
+function findGroundworkDate(assessments: ReadonlyArray<DatedValue & { skillId?: string }>, changes: ReadonlyArray<GrowthLevelChange>, prerequisites: ReadonlyArray<{ skillId: string; prerequisiteSkillId: string }>) {
+  for (const assessment of sortByDate(assessments, "createdAt")) {
+    const required = prerequisites.filter((item) => item.skillId === assessment.skillId);
+    if (!required.length) continue;
+    const at = new Date(assessment.createdAt).getTime();
+    const levels = new Map<string, number>();
+    for (const change of changes) if (new Date(change.changedAt).getTime() <= at) levels.set(change.skillId, change.toLevel);
+    if (required.every((item) => (levels.get(item.prerequisiteSkillId) ?? 0) >= 3)) return assessment.createdAt;
+  }
+  return null;
+}
+
+function findWelcomeBackDate(upgrades: ReadonlyArray<GrowthLevelChange>) {
+  for (let index = 1; index < upgrades.length; index += 1) {
+    if (new Date(upgrades[index]!.changedAt).getTime() - new Date(upgrades[index - 1]!.changedAt).getTime() >= 183 * 86_400_000) return upgrades[index]!.changedAt;
+  }
+  return null;
 }
 
 function achievement(id: BadgeId, value: Date | string | null | undefined) {

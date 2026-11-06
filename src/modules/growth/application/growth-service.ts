@@ -14,6 +14,7 @@ import {
   detectNewRoleAchievement
 } from "@/modules/growth/domain/role-achievement-celebration";
 import * as growthRepository from "@/modules/growth/infrastructure/growth-repository";
+import { getBadgeCalculationData, listFirstMoverLevelChangeIds } from "@/modules/growth/infrastructure/badge-calculation-repository";
 import {
   getMemberGrowthData as fetchMemberGrowthData,
   listUnreadCheerNotifications,
@@ -57,21 +58,21 @@ export async function getDepartmentLevelUpFeed(
   limit = 5
 ) {
   const memberIds = await growthRepository.listDepartmentMemberIds(viewerMemberId);
-  return growthRepository.listLevelUpFeed({
+  return addFirstMoverFlags(await growthRepository.listLevelUpFeed({
     memberIds,
     viewerMemberId,
     limit
-  });
+  }));
 }
 
-export function getLevelUpFeed(input: {
+export async function getLevelUpFeed(input: {
   memberIds: string[];
   viewerMemberId: string;
   start: Date;
   end: Date;
   limit?: number;
 }) {
-  return growthRepository.listLevelUpFeed({ ...input, limit: input.limit ?? 10 });
+  return addFirstMoverFlags(await growthRepository.listLevelUpFeed({ ...input, limit: input.limit ?? 10 }));
 }
 
 export async function getLevelUpThread(
@@ -84,7 +85,17 @@ export async function getLevelUpThread(
     viewer.role
   );
   if (!access) return null;
-  return growthRepository.getLevelUpThread(levelChangeId);
+  const thread = await growthRepository.getLevelUpThread(levelChangeId);
+  if (!thread) return null;
+  const ids = await listFirstMoverLevelChangeIds({ levelChangeIds: [levelChangeId] });
+  return { ...thread, isFirstMover: ids.includes(levelChangeId) };
+}
+
+async function addFirstMoverFlags<T extends { id: string }>(items: T[]) {
+  const ids = new Set(await listFirstMoverLevelChangeIds({
+    levelChangeIds: items.map((item) => item.id)
+  }));
+  return items.map((item) => ({ ...item, isFirstMover: ids.has(item.id) }));
 }
 
 export async function createCheer(
@@ -149,17 +160,13 @@ export function listSkillMentorCandidates(skillIds: string[]) {
 export async function getLevelUpCelebrations(memberId: string) {
   const notifications = await listUnreadLevelUpNotifications(memberId);
   if (notifications.length === 0) return [];
-  const growthData = await fetchMemberGrowthData(memberId);
+  const [growthData, badgeData] = await Promise.all([
+    fetchMemberGrowthData(memberId),
+    getBadgeCalculationData(memberId)
+  ]);
   if (!growthData.member) return [];
 
-  const achievements = calculateBadgeAchievements({
-    assessments: growthData.assessments,
-    memberSkills: growthData.member.memberSkills,
-    levelChanges: growthData.levelChanges,
-    targetRequirements:
-      growthData.member.targetRole?.roleRequirements ?? [],
-    mentoredCheers: growthData.mentoredCheers
-  });
+  const achievements = calculateBadgeAchievements(badgeData);
   const progress = buildTargetProgress(growthData);
   return notifications.flatMap((notification) => {
     const assessment = notification.skillSelfAssessment;
@@ -377,4 +384,4 @@ async function assertLevelUpInteractionAccess(
 
 export type LevelUpFeedItem = Awaited<
   ReturnType<typeof growthRepository.listLevelUpFeed>
->[number];
+>[number] & { isFirstMover: boolean };

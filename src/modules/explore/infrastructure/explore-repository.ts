@@ -86,7 +86,6 @@ export async function getSkillProfileSourceData(memberId: string) {
         createdAt: true,
         profileMessage: true,
         consultTopics: true,
-        pinnedBadgeIds: true,
         isProfilePublic: true,
         avatarUpdatedAt: true,
         memberSkills: {
@@ -147,7 +146,7 @@ export function updateProfileVisibility(memberId: string, isPublic: boolean) {
 
 export function updateMemberProfile(
   memberId: string,
-  data: { profileMessage: string | null; consultTopics: string[]; pinnedBadgeIds: string[] }
+  data: { profileMessage: string | null; consultTopics: string[] }
 ) {
   return prisma.member.update({ where: { id: memberId }, data });
 }

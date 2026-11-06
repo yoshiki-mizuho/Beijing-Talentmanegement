@@ -13,6 +13,7 @@ export type RecapLevelChange = {
   changedAt: Date | string;
   reactionCount: number;
   commentCount: number;
+  isFirstMover?: boolean;
 };
 
 export type RecapAssessment = {

@@ -49,8 +49,7 @@ export async function updateMyProfileAction(formData: FormData) {
     const session = await requirePasswordReadyMember();
     await updateMyProfile(session.user.memberId, {
       profileMessage: String(formData.get("profileMessage") ?? ""),
-      consultTopics: formData.getAll("consultTopics").map(String),
-      pinnedBadgeIds: formData.getAll("pinnedBadgeIds").map(String)
+      consultTopics: formData.getAll("consultTopics").map(String)
     });
     revalidatePath(`/people/${session.user.memberId}`);
   }, "プロフィールを更新しました");

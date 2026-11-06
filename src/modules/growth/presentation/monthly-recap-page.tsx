@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import type { getMonthlyRecap } from "@/modules/growth/application/monthly-recap-service";
 import { Button } from "@/shared/ui/button";
 import { PageHeader } from "@/shared/ui/page-header";
+import { FirstMoverBadge } from "@/modules/growth/presentation/first-mover-badge";
 
 type Result = NonNullable<Awaited<ReturnType<typeof getMonthlyRecap>>>;
 
@@ -73,6 +74,7 @@ export function MonthlyRecapPage({ result }: { result: Result }) {
                     <span>
                       <strong className="block text-sm">{item.skillName}</strong>
                       <span className="text-xs text-[var(--muted-foreground)]">{item.fromLevel === null ? "未登録" : `Lv${item.fromLevel}`} → Lv{item.toLevel}・{formatDate(item.changedAt)}</span>
+                      {item.isFirstMover ? <span className="mt-1 block"><FirstMoverBadge /></span> : null}
                     </span>
                     <span className="flex shrink-0 items-center gap-2 text-xs" aria-label={`リアクション ${item.reactionCount}件、コメント ${item.commentCount}件`}>
                       <span className="inline-flex items-center gap-1" aria-hidden="true">

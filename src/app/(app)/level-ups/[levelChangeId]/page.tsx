@@ -7,6 +7,7 @@ import { LevelUpFeed } from "@/modules/growth/presentation/level-up-feed";
 import { getCurrentSession } from "@/server/auth/session";
 import { MemberAvatar } from "@/shared/ui/member-avatar";
 import { PageHeader } from "@/shared/ui/page-header";
+import { FirstMoverBadge } from "@/modules/growth/presentation/first-mover-badge";
 
 export const dynamic = "force-dynamic";
 
@@ -61,6 +62,7 @@ export default async function LevelUpThreadPage({
             <time className="text-xs text-[var(--muted-foreground)]" dateTime={changedAt}>
               {new Intl.DateTimeFormat("ja-JP", { dateStyle: "long", timeZone: "Asia/Tokyo" }).format(thread.changedAt)}
             </time>
+            {thread.isFirstMover ? <div className="mt-1"><FirstMoverBadge /></div> : null}
           </div>
         </div>
         <LevelUpFeed
@@ -74,6 +76,7 @@ export default async function LevelUpThreadPage({
             skillName: thread.skill.name,
             toLevel: thread.toLevel,
             changedAt,
+            isFirstMover: thread.isFirstMover,
             reactions,
             comments: thread.comments.map((comment) => ({
               id: comment.id,

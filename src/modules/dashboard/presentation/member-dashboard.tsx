@@ -8,6 +8,7 @@ import { BadgeGrid } from "@/modules/growth/presentation/badge-grid";
 import { GrowthCalendar } from "@/modules/growth/presentation/growth-calendar";
 import { GrowthRadarChart } from "@/modules/growth/presentation/growth-radar-chart";
 import { LevelUpFeed, type SerializableFeedItem } from "@/modules/growth/presentation/level-up-feed";
+import { FirstMoverBadge } from "@/modules/growth/presentation/first-mover-badge";
 import { TargetRoleCard } from "@/modules/growth/presentation/target-role-card";
 import type { getMonthlyRecap } from "@/modules/growth/application/monthly-recap-service";
 import { EmptyState } from "@/shared/ui/empty-state";
@@ -102,7 +103,7 @@ export function MemberDashboard({
           title="達成バッジ"
           description="これまでの成長の節目を振り返れます。"
         >
-          <BadgeGrid badges={viewModel.badges} />
+          <BadgeGrid badges={viewModel.badges} memberId={viewModel.memberId} />
         </DashboardCard>
         <DashboardCard
           id="radar-heading"
@@ -210,6 +211,7 @@ export function MemberDashboard({
                           ? `未登録 → Lv${item.toLevel}`
                           : `Lv${item.fromLevel} → Lv${item.toLevel}`}
                       </p>
+                      {item.isFirstMover ? <FirstMoverBadge /> : null}
                       {item.reactionCount > 0 || item.commentCount > 0 ? (
                         <span
                           className="inline-flex items-center gap-2 text-xs text-[var(--muted-foreground)]"

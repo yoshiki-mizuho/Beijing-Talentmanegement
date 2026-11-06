@@ -8,7 +8,6 @@ import {
   markSnapshotChanges,
   parseProfileInput,
   restoreSkillSnapshots,
-  selectPinnedBadges,
   splitTopSkills,
   type ProfileViewer
 } from "@/modules/explore/domain/explore-profile";
@@ -19,8 +18,9 @@ import {
   updateMemberProfile,
   updateProfileVisibility
 } from "@/modules/explore/infrastructure/explore-repository";
-import { badgeDefinitions, badgeRarities } from "@/modules/growth/domain/badge-art";
-import { calculateBadgeAchievements } from "@/modules/growth/domain/growth-insights";
+import { badgeDefinitions, badgeRarities, secretBadgeArt } from "@/modules/growth/domain/badge-art";
+import { calculateBadgeAchievements, calculateBadgeProgress } from "@/modules/growth/domain/growth-insights";
+import { getBadgeCalculationData } from "@/modules/growth/infrastructure/badge-calculation-repository";
 import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
 
 export async function getExploreData(
@@ -114,7 +114,10 @@ export async function getSkillProfile(viewer: ProfileViewer, memberId: string, n
   const guard = await getProfileVisibility(memberId);
   if (!guard || !canViewProfile(viewer, guard)) return null;
 
-  const { member, roles } = await getSkillProfileSourceData(memberId);
+  const [{ member, roles }, badgeData] = await Promise.all([
+    getSkillProfileSourceData(memberId),
+    getBadgeCalculationData(memberId)
+  ]);
   const roleDefinitions = roles.map((role) => ({
     name: role.name,
     requirements: role.roleRequirements
@@ -150,26 +153,27 @@ export async function getSkillProfile(viewer: ProfileViewer, memberId: string, n
     roles: achievedRoleNames(snapshot.skills, roleDefinitions)
   }));
   const snapshots = orderSkillHistorySnapshots(markedSnapshots);
-  const badgeAchievements = calculateBadgeAchievements({
-    assessments: member.selfAssessments,
-    memberSkills: member.memberSkills,
-    levelChanges: changes,
-    targetRequirements: member.targetRole?.roleRequirements ?? [],
-    mentoredCheers: member.mentoredCheers
-  });
-  const badges = badgeAchievements.flatMap((achievement) => {
-    const definition = badgeDefinitions.find((item) => item.id === achievement.id);
-    return achievement.earnedAt && definition
-      ? [
-          {
-            ...definition,
-            earnedAt: achievement.earnedAt.toISOString(),
-            rarityLabel: badgeRarities[definition.rarity].label,
-            frameColor: badgeRarities[definition.rarity].frame,
-            backgroundColor: badgeRarities[definition.rarity].background
-          }
-        ]
-      : [];
+  const badgeAchievements = calculateBadgeAchievements({ ...badgeData, now });
+  const achievementById = new Map(badgeAchievements.map((item) => [item.id, item]));
+  const progressById = new Map(calculateBadgeProgress({ ...badgeData, now })
+    .map((item) => [item.id, item]));
+  const badges = badgeDefinitions.map((definition) => {
+    const earnedAt = achievementById.get(definition.id)?.earnedAt?.toISOString() ?? null;
+    // 未獲得のシークレットは、名前・条件・絵をブラウザへ送らない
+    const hiddenSecret = definition.group === "secret" && !earnedAt;
+    return {
+    ...definition,
+    name: hiddenSecret ? "？？？" : definition.name,
+    condition: hiddenSecret ? "" : definition.condition,
+    art: hiddenSecret ? secretBadgeArt : definition.art,
+    earnedAt,
+    progress: viewer.memberId === memberId
+      ? progressById.get(definition.id) ?? null
+      : null,
+    rarityLabel: badgeRarities[definition.rarity].label,
+    frameColor: badgeRarities[definition.rarity].frame,
+    backgroundColor: badgeRarities[definition.rarity].background
+    };
   });
   const recent = [...changes]
     .filter(
@@ -214,8 +218,6 @@ export async function getSkillProfile(viewer: ProfileViewer, memberId: string, n
     now
   });
   const skillGroups = splitTopSkills(skills);
-  const pinnedBadges = selectPinnedBadges(badges, member.pinnedBadgeIds);
-
   return {
     id: member.id,
     name: member.name,
@@ -225,13 +227,11 @@ export async function getSkillProfile(viewer: ProfileViewer, memberId: string, n
     avatarUpdatedAt: member.avatarUpdatedAt?.toISOString() ?? null,
     profileMessage: member.profileMessage,
     consultTopics: member.consultTopics,
-    pinnedBadgeIds: member.pinnedBadgeIds,
     skills,
     topSkills: skillGroups.top,
     otherSkills: skillGroups.rest,
     achievedRoles: achievedRoleNames(skills, roleDefinitions),
     badges,
-    pinnedBadges,
     stats,
     targetRole: member.targetRole
       ? { name: member.targetRole.name, evaluation: targetEvaluation! }
@@ -244,21 +244,9 @@ export async function getSkillProfile(viewer: ProfileViewer, memberId: string, n
 
 export async function updateMyProfile(
   memberId: string,
-  input: { profileMessage: string; consultTopics: string[]; pinnedBadgeIds: string[] }
+  input: { profileMessage: string; consultTopics: string[] }
 ) {
-  const { member } = await getSkillProfileSourceData(memberId);
-  const earnedIds = new Set(
-    calculateBadgeAchievements({
-      assessments: member.selfAssessments,
-      memberSkills: member.memberSkills,
-      levelChanges: member.skillLevelChanges,
-      targetRequirements: member.targetRole?.roleRequirements ?? [],
-      mentoredCheers: member.mentoredCheers
-    })
-      .filter((badge) => badge.earnedAt)
-      .map((badge) => badge.id)
-  );
-  const parsed = parseProfileInput(input, earnedIds);
+  const parsed = parseProfileInput(input);
   return updateMemberProfile(memberId, parsed);
 }
 
