@@ -11,6 +11,7 @@ import { buildMemberDashboardViewModel } from "@/modules/dashboard/presentation/
 import { TeamDashboard } from "@/modules/dashboard/presentation/team-dashboard";
 import { buildTeamDashboardViewModel } from "@/modules/dashboard/presentation/team-dashboard-view-model";
 import { getDepartmentLevelUpFeed } from "@/modules/growth/application/growth-service";
+import { getMonthlyRecap } from "@/modules/growth/application/monthly-recap-service";
 import { getCurrentSession } from "@/server/auth/session";
 
 export const dynamic = "force-dynamic";
@@ -60,10 +61,11 @@ export default async function DashboardPage({
   const personal =
     Boolean(session?.user.memberId) && (!management || view === "personal");
   if (session?.user.memberId && personal) {
-    const [data, feed, skillReminders] = await Promise.all([
+    const [data, feed, skillReminders, monthlyRecap] = await Promise.all([
       getMemberDashboard(session.user.memberId),
       getDepartmentLevelUpFeed(session.user.memberId, 5),
-      getMemberSkillReminders(session.user.memberId)
+      getMemberSkillReminders(session.user.memberId),
+      getMonthlyRecap(session.user.memberId)
     ]);
     const model = buildMemberDashboardViewModel(data);
     if (!model) redirect("/login");
@@ -73,6 +75,7 @@ export default async function DashboardPage({
         <MemberDashboard
           viewModel={model}
           skillReminders={skillReminders}
+          monthlyRecap={monthlyRecap?.months.length ? monthlyRecap.recap : null}
           levelUpFeed={feed.map((item) => ({
             ...item,
             avatarUpdatedAt: item.avatarUpdatedAt?.toISOString() ?? null,

@@ -15,8 +15,10 @@ import {
   getLevelUpCelebrations,
   getRoleAchievementCelebration
 } from "@/modules/growth/application/growth-service";
+import { getMonthlyRecapCelebration } from "@/modules/growth/application/monthly-recap-service";
 import { CheerCelebrationDialog } from "@/modules/growth/presentation/cheer-celebration-dialog";
 import { LevelUpCelebrationDialog } from "@/modules/growth/presentation/level-up-celebration-dialog";
+import { MonthlyRecapDialog } from "@/modules/growth/presentation/monthly-recap-dialog";
 import {
   countUnreadNotifications,
   listLatestUnreadNotifications
@@ -57,6 +59,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     levelUpCelebrations,
     roleAchievementCelebration,
     cheerCelebrations,
+    monthlyRecapCelebration,
     avatarUpdatedAt,
     hasTargetRole
   ] = await Promise.all([
@@ -87,6 +90,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     session.user.memberId && !session.user.passwordChangeRequired
       ? getCheerCelebrations(session.user.memberId)
       : Promise.resolve([]),
+    session.user.memberId && !session.user.passwordChangeRequired
+      ? getMonthlyRecapCelebration(session.user.memberId)
+      : Promise.resolve(null),
     session.user.memberId
       ? getMyAvatarUpdatedAt(session.user.memberId)
       : Promise.resolve(null),
@@ -129,6 +135,15 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             : cheerCelebrations[0]?.notificationId ?? "no-cheer-celebrations"
         }
         celebrations={levelUpCelebrations.length === 0 ? cheerCelebrations : []}
+      />
+      <MonthlyRecapDialog
+        celebration={
+          levelUpCelebrations.length === 0 &&
+          cheerCelebrations.length === 0 &&
+          !roleAchievementCelebration
+            ? monthlyRecapCelebration
+            : null
+        }
       />
     </AppShell>
   );

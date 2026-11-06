@@ -174,6 +174,7 @@ model Member {
   reports               Member[]              @relation("MemberManager")
   targetRoleId          String?
   targetRole            Role?                 @relation("MemberTargetRole", fields: [targetRoleId], references: [id])
+  lastRecapSeenMonth    String?
   users                 User[]
   memberSkills          MemberSkill[]         @relation("MemberSkills")
   approvedMemberSkills  MemberSkill[]         @relation("ApprovedMemberSkills")
