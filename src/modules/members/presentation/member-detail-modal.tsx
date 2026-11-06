@@ -7,6 +7,7 @@ import type { Route } from "next";
 import { GrowthHintPanel } from "@/modules/ai-evaluation/presentation/growth-hint-panel";
 import { getManagedMemberMonthlyRecapAction } from "@/modules/growth/presentation/monthly-recap-actions";
 import { buildRecapNoteDraft } from "@/modules/growth/domain/monthly-recap";
+import { FirstMoverBadge } from "@/modules/growth/presentation/first-mover-badge";
 
 import {
   createOneOnOneNoteAction,
@@ -234,6 +235,7 @@ function MemberRecapPanel({
     ...recap.levelUps.map((item) => ({
       id: `level-${item.id}`,
       label: `${item.skillName}：${item.fromLevel === null ? "新しく登録" : `Lv${item.fromLevel} → Lv${item.toLevel}`}`,
+      isFirstMover: item.isFirstMover,
       draft: buildRecapNoteDraft({
         kind: item.fromLevel === null ? "new-skill" : "level-up",
         skillName: item.skillName,
@@ -243,6 +245,7 @@ function MemberRecapPanel({
     ...recap.rejectedAssessments.map((item, index) => ({
       id: `rejected-${item.skillId}-${index}`,
       label: `${item.skillName}：差し戻し`,
+      isFirstMover: false,
       draft: buildRecapNoteDraft({
         kind: "rejected",
         skillName: item.skillName
@@ -251,6 +254,7 @@ function MemberRecapPanel({
     ...(recap.roleProgress && !recap.roleProgress.achieved ? [{
       id: "target-role",
       label: `目標ロール：月初 ${recap.roleProgress.startPercentage}% → 月末 ${recap.roleProgress.endPercentage}%`,
+      isFirstMover: false,
       draft: buildRecapNoteDraft({
         kind: "target-role",
         missingCount: recap.roleProgress.missingCount,
@@ -288,6 +292,7 @@ function MemberRecapPanel({
           {events.map((event) => (
             <li key={event.id} className="rounded-xl border border-[var(--border)] p-4">
               <p className="text-sm font-semibold">{event.label}</p>
+              {event.isFirstMover ? <span className="mt-1 block"><FirstMoverBadge /></span> : null}
               {canAddNotes ? added.has(event.id) ? (
                 <p className="mt-2 text-xs font-semibold text-[var(--primary)]">メモに追加済み</p>
               ) : (

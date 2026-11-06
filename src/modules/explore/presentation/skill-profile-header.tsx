@@ -2,7 +2,6 @@ import { ExternalLink } from "lucide-react";
 import type { getSkillProfile } from "@/modules/explore/application/explore-service";
 import { MemberAvatar } from "@/shared/ui/member-avatar";
 import { AvatarEditor } from "./avatar-editor";
-import { EarnedBadge } from "./earned-badge";
 import { ProfileEditor } from "./profile-editor";
 import { ProfileVisibility } from "./profile-visibility";
 
@@ -21,6 +20,7 @@ export function SkillProfileHeader({
     [`${profile.achievedRoles.length}つ`, "達成したロール"],
     [String(profile.stats.encouragementCount), "受け取った応援・リアクション"],
     [`${profile.stats.mentoredCount}人`, "から「教えてもらえそうな人」に"],
+    [`バッジ ${profile.badges.filter((badge) => badge.earnedAt).length}`, "獲得したバッジ"],
   ];
 
   return (
@@ -68,13 +68,6 @@ export function SkillProfileHeader({
                 相談する
                 <ExternalLink className="h-4 w-4" aria-hidden="true" />
               </a>
-            ) : null}
-            {profile.pinnedBadges.length ? (
-              <div className="flex gap-2" aria-label="飾っているバッジ">
-                {profile.pinnedBadges.map((badge) => (
-                  <EarnedBadge key={badge.id} badge={badge} />
-                ))}
-              </div>
             ) : null}
             {isOwner ? (
               <div className="flex flex-wrap items-center gap-2">

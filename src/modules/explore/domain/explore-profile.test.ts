@@ -7,7 +7,6 @@ import {
   markSnapshotChanges,
   parseProfileInput,
   restoreSkillSnapshots,
-  selectPinnedBadges,
   splitTopSkills
 } from "./explore-profile";
 
@@ -105,59 +104,36 @@ describe("explore and profile rules", () => {
 });
 
 describe("profile details", () => {
-  it("入力を整え、上限、重複、未獲得バッジを拒否する", () => {
+  it("入力を整え、上限と重複を拒否する", () => {
     expect(
       parseProfileInput(
         {
           profileMessage: "  hello  ",
-          consultTopics: [" React ", ""],
-          pinnedBadgeIds: ["earned"]
-        },
-        new Set(["earned"])
+          consultTopics: [" React ", ""]
+        }
       )
     ).toEqual({
       profileMessage: "hello",
-      consultTopics: ["React"],
-      pinnedBadgeIds: ["earned"]
+      consultTopics: ["React"]
     });
     expect(() =>
       parseProfileInput(
-        { profileMessage: "a".repeat(121), consultTopics: [], pinnedBadgeIds: [] },
-        new Set()
+        { profileMessage: "a".repeat(121), consultTopics: [] }
       )
     ).toThrow();
     expect(() =>
       parseProfileInput(
-        { profileMessage: "", consultTopics: Array(9).fill("topic"), pinnedBadgeIds: [] },
-        new Set()
+        { profileMessage: "", consultTopics: Array(9).fill("topic") }
       )
     ).toThrow();
     expect(() =>
       parseProfileInput(
-        { profileMessage: "", consultTopics: ["a".repeat(21)], pinnedBadgeIds: [] },
-        new Set()
+        { profileMessage: "", consultTopics: ["a".repeat(21)] }
       )
     ).toThrow();
     expect(() =>
       parseProfileInput(
-        { profileMessage: "", consultTopics: ["same", "same"], pinnedBadgeIds: [] },
-        new Set()
-      )
-    ).toThrow();
-    expect(() =>
-      parseProfileInput(
-        { profileMessage: "", consultTopics: [], pinnedBadgeIds: ["not-earned"] },
-        new Set()
-      )
-    ).toThrow("獲得済み");
-    expect(() =>
-      parseProfileInput(
-        {
-          profileMessage: "",
-          consultTopics: [],
-          pinnedBadgeIds: ["1", "2", "3", "4"]
-        },
-        new Set(["1", "2", "3", "4"])
+        { profileMessage: "", consultTopics: ["same", "same"] }
       )
     ).toThrow();
   });
@@ -199,12 +175,4 @@ describe("profile details", () => {
     expect(result.rest.map((skill) => skill.skillName)).toEqual(["e"]);
   });
 
-  it("未設定の飾るバッジは獲得日の新しい順に3つ選ぶ", () => {
-    const badges = [1, 4, 2, 3].map((day) => ({
-      id: String(day),
-      earnedAt: `2026-01-0${day}`
-    }));
-    expect(selectPinnedBadges(badges, []).map((badge) => badge.id)).toEqual(["4", "3", "2"]);
-    expect(selectPinnedBadges(badges, ["1"]).map((badge) => badge.id)).toEqual(["1"]);
-  });
 });

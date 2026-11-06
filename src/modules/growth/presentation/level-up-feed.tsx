@@ -24,6 +24,7 @@ import { Button } from "@/shared/ui/button";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { Tooltip } from "@/shared/ui/tooltip";
 import { MemberAvatar } from "@/shared/ui/member-avatar";
+import { FirstMoverBadge } from "@/modules/growth/presentation/first-mover-badge";
 
 type ReactionType = "CONGRATS" | "AMAZING" | "WANT_TO_LEARN";
 type ReactionState = LevelUpFeedItem["reactions"][number] & { memberNames?: string[] };
@@ -167,6 +168,7 @@ function FeedItem({
             <p className="text-sm text-[var(--foreground)]">
               <Link href={`/people/${initialItem.memberId}` as Route} className="font-semibold hover:text-[var(--primary)] hover:underline">{initialItem.memberName} さん</Link>
               が <span className="font-semibold">{initialItem.skillName}</span> を <span className="font-semibold">Lv{initialItem.toLevel}</span> に
+              {initialItem.isFirstMover ? <><span>・社内で最初に身につけました</span> <FirstMoverBadge /></> : null}
             </p>
             <time className="shrink-0 text-xs text-[var(--muted-foreground)]" dateTime={initialItem.changedAt}>
               {formatNotificationDate(new Date(initialItem.changedAt))}

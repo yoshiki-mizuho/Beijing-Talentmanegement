@@ -3,6 +3,7 @@ import { RecentLevelUps } from "@/modules/explore/presentation/recent-level-ups"
 import { SkillHistory } from "@/modules/explore/presentation/skill-history";
 import { SkillProfileHeader } from "@/modules/explore/presentation/skill-profile-header";
 import { ProfileCards } from "@/modules/explore/presentation/profile-cards";
+import { ProfileBadges } from "@/modules/explore/presentation/profile-badges";
 import { requirePasswordReadyMember } from "@/server/auth/authorization";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +33,7 @@ export default async function SkillProfilePage({
       <SkillProfileHeader profile={profile} isOwner={memberId === session.user.memberId} />
       <div className="mx-auto max-w-6xl space-y-5 px-4 sm:px-6">
         <ProfileCards profile={profile} isOwner={memberId === session.user.memberId} />
+        <ProfileBadges profile={profile} isOwner={memberId === session.user.memberId} />
         <RecentLevelUps items={profile.recent} />
         <SkillHistory name={profile.name} snapshots={profile.snapshots} />
       </div>

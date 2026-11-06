@@ -13,14 +13,16 @@ import {
   getMemberGrowthData,
   listMonthlyRecapAssessments
 } from "@/modules/growth/infrastructure/member-growth-repository";
+import { getBadgeCalculationData } from "@/modules/growth/infrastructure/badge-calculation-repository";
 import { prisma } from "@/server/db/prisma";
 import { getMemberScope, memberIsInScope } from "@/modules/members/application/member-scope";
 import { AuthorizationError } from "@/server/auth/authorization";
 
 export async function getMonthlyRecap(memberId: string, requestedMonth?: string, now: Date = new Date()) {
-  const [data, recapAssessments] = await Promise.all([
+  const [data, recapAssessments, badgeData] = await Promise.all([
     getMemberGrowthData(memberId),
-    listMonthlyRecapAssessments(memberId)
+    listMonthlyRecapAssessments(memberId),
+    getBadgeCalculationData(memberId)
   ]);
   if (!data.member) return null;
   const months = getViewableRecapMonths(data.member.createdAt, now);
@@ -28,13 +30,7 @@ export async function getMonthlyRecap(memberId: string, requestedMonth?: string,
   const month = requestedMonth && months.includes(requestedMonth)
     ? requestedMonth
     : latestCompletedMonth;
-  const achievements = calculateBadgeAchievements({
-    assessments: data.assessments,
-    memberSkills: data.member.memberSkills,
-    levelChanges: data.levelChanges,
-    targetRequirements: data.member.targetRole?.roleRequirements ?? [],
-    mentoredCheers: data.mentoredCheers
-  });
+  const achievements = calculateBadgeAchievements(badgeData);
   const badgeNameById = new Map(badgeDefinitions.map((badge) => [badge.id, badge.name]));
   const voices = [
     ...data.receivedCheers.map((cheer) => ({
@@ -88,7 +84,8 @@ export async function getMonthlyRecap(memberId: string, requestedMonth?: string,
       source: change.source,
       changedAt: change.changedAt,
       reactionCount: change._count.reactions,
-      commentCount: change._count.comments
+      commentCount: change._count.comments,
+      isFirstMover: badgeData.firstMoverLevelChangeIds.includes(change.id)
     })),
     assessments: recapAssessments.map((assessment) => ({
       skillId: assessment.skillId,

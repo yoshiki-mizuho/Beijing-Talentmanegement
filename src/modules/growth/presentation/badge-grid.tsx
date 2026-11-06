@@ -1,14 +1,47 @@
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { badgePalette } from "@/modules/growth/domain/badge-art";
 import type { MemberDashboardViewModel } from "@/modules/dashboard/presentation/member-dashboard-view-model";
 
 type DashboardBadge = MemberDashboardViewModel["badges"][number];
 
-export function BadgeGrid({ badges }: { badges: DashboardBadge[] }) {
+export function BadgeGrid({ badges, memberId }: { badges: DashboardBadge[]; memberId: string }) {
+  const earned = badges
+    .filter((badge) => badge.earnedAt)
+    .sort((left, right) => new Date(right.earnedAt!).getTime() - new Date(left.earnedAt!).getTime());
+  const next = badges
+    .filter((badge) =>
+      !badge.earnedAt &&
+      badge.group !== "secret" &&
+      badge.progress?.current !== undefined &&
+      Boolean(badge.progress.target) &&
+      badge.progress.current < badge.progress.target!
+    )
+    .sort((left, right) => (right.progress!.current! / right.progress!.target!) - (left.progress!.current! / left.progress!.target!))
+    .slice(0, 2);
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-      {badges.map((badge) => (
-        <BadgeItem key={badge.id} badge={badge} />
-      ))}
+    <div>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs text-[var(--muted-foreground)]">{earned.length} / {badges.length}</span>
+        <Link href={`/people/${memberId}#badges`} className="inline-flex min-h-11 items-center text-xs font-semibold text-[var(--primary)]">すべて見る<ChevronRight className="h-4 w-4" aria-hidden="true" /></Link>
+      </div>
+      {earned.length ? (
+        <>
+          <p className="mb-2 text-xs text-[var(--muted-foreground)]">最近とったバッジ</p>
+          <div className="grid grid-cols-3 gap-3">
+            {earned.slice(0, 3).map((badge) => <BadgeItem key={badge.id} badge={badge} />)}
+          </div>
+        </>
+      ) : <p className="text-sm">最初のバッジは、スキルの申請で取れます</p>}
+      {next.length ? <p className="mb-2 mt-4 text-xs text-[var(--muted-foreground)]">次に取れそう</p> : null}
+      <ul className="space-y-3">
+        {next.map((badge) => (
+          <li key={badge.id}>
+            <div className="flex justify-between gap-2 text-xs"><strong>{badge.name}</strong><span>{badge.progress?.text}</span></div>
+            <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[var(--border)]"><div className="h-full bg-[var(--primary)]" style={{ width: `${Math.round((badge.progress!.current! / badge.progress!.target!) * 100)}%` }} /></div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

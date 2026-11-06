@@ -7,7 +7,6 @@ import type { getSkillProfile } from "@/modules/explore/application/explore-serv
 import { Button } from "@/shared/ui/button";
 import { Dialog } from "@/shared/ui/dialog";
 import { updateMyProfileAction } from "./actions";
-import { EarnedBadge } from "./earned-badge";
 
 type Profile = NonNullable<Awaited<ReturnType<typeof getSkillProfile>>>;
 
@@ -16,7 +15,6 @@ export function ProfileEditor({ profile, compact = false }: { profile: Profile; 
   const [message, setMessage] = useState(profile.profileMessage ?? "");
   const [topics, setTopics] = useState(profile.consultTopics);
   const [topicInput, setTopicInput] = useState("");
-  const [badgeIds, setBadgeIds] = useState(profile.pinnedBadgeIds);
   const [pending, startTransition] = useTransition();
 
   function addTopic() {
@@ -32,20 +30,9 @@ export function ProfileEditor({ profile, compact = false }: { profile: Profile; 
     addTopic();
   }
 
-  function toggleBadge(id: string) {
-    setBadgeIds((current) =>
-      current.includes(id)
-        ? current.filter((badgeId) => badgeId !== id)
-        : current.length < 3
-          ? [...current, id]
-          : current
-    );
-  }
-
   function close() {
     setMessage(profile.profileMessage ?? "");
     setTopics(profile.consultTopics);
-    setBadgeIds(profile.pinnedBadgeIds);
     setTopicInput("");
     setOpen(false);
   }
@@ -54,7 +41,6 @@ export function ProfileEditor({ profile, compact = false }: { profile: Profile; 
     const formData = new FormData();
     formData.set("profileMessage", message);
     topics.forEach((topic) => formData.append("consultTopics", topic));
-    badgeIds.forEach((id) => formData.append("pinnedBadgeIds", id));
     startTransition(async () => {
       const result = await updateMyProfileAction(formData);
       toast[result.status === "success" ? "success" : "error"](result.message);
@@ -123,27 +109,6 @@ export function ProfileEditor({ profile, compact = false }: { profile: Profile; 
                   </button>
                 </span>
               ))}
-            </div>
-          </div>
-          <div>
-            <p className="text-sm font-semibold">飾るバッジ</p>
-            <div className="mt-3 flex flex-wrap gap-3">
-              {profile.badges.map((badge) => {
-                const selected = badgeIds.includes(badge.id);
-                return (
-                  <button
-                    key={badge.id}
-                    type="button"
-                    aria-label={`${badge.name}を飾る`}
-                    aria-pressed={selected}
-                    disabled={!selected && badgeIds.length >= 3}
-                    onClick={() => toggleBadge(badge.id)}
-                    className="rounded-xl p-1 aria-pressed:ring-2 aria-pressed:ring-[var(--primary)] disabled:opacity-40"
-                  >
-                    <EarnedBadge badge={badge} focusable={false} />
-                  </button>
-                );
-              })}
             </div>
           </div>
         </div>

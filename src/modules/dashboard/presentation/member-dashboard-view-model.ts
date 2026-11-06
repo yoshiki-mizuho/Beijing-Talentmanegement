@@ -2,16 +2,18 @@ import { badgeDefinitions, badgeRarities } from "@/modules/growth/domain/badge-a
 import { isGrowthLevelChange } from "@/modules/growth/domain/level-change-source";
 import {
   calculateBadgeAchievements,
+  calculateBadgeProgress,
   calculateCategoryAverages,
   findPotentialMentors,
   getMonthlyEncouragement,
   getTokyoDateParts
 } from "@/modules/growth/domain/growth-insights";
 import type { MemberGrowthData } from "@/modules/growth/infrastructure/member-growth-repository";
+import type { BadgeCalculationData } from "@/modules/growth/infrastructure/badge-calculation-repository";
 import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
 
 export function buildMemberDashboardViewModel(
-  data: MemberGrowthData,
+  data: MemberGrowthData & { badgeData?: BadgeCalculationData },
   now: Date = new Date()
 ) {
   if (!data.member) return null;
@@ -26,16 +28,19 @@ export function buildMemberDashboardViewModel(
   const targetRole = data.member.targetRole
     ? buildTargetRole(data.member.targetRole, skills)
     : null;
-  const achievements = calculateBadgeAchievements({
+  const badgeInput = data.badgeData ?? {
     assessments: data.assessments,
     memberSkills: data.member.memberSkills,
     levelChanges: data.levelChanges,
     targetRequirements: data.member.targetRole?.roleRequirements ?? [],
     mentoredCheers: data.mentoredCheers
-  });
+  };
+  const achievements = calculateBadgeAchievements(badgeInput);
   const achievementById = new Map(
     achievements.map((achievement) => [achievement.id, achievement])
   );
+  const progressById = new Map(calculateBadgeProgress({ ...badgeInput, now })
+    .map((progress) => [progress.id, progress]));
   const currentSkillIds = new Set(skills.map((skill) => skill.id));
   const nowParts = getTokyoDateParts(now);
   const monthlyLevelUps = data.levelChanges.filter((change) => {
@@ -73,7 +78,8 @@ export function buildMemberDashboardViewModel(
       frameColor: badgeRarities[definition.rarity].frame,
       backgroundColor: badgeRarities[definition.rarity].background,
       earnedAt:
-        achievementById.get(definition.id)?.earnedAt?.toISOString() ?? null
+        achievementById.get(definition.id)?.earnedAt?.toISOString() ?? null,
+      progress: progressById.get(definition.id) ?? null
     })),
     radar: calculateCategoryAverages(
       data.categories,
@@ -111,7 +117,8 @@ export function buildMemberDashboardViewModel(
         toLevel: change.toLevel,
         changedAt: change.changedAt.toISOString(),
         reactionCount: change._count.reactions,
-        commentCount: change._count.comments
+        commentCount: change._count.comments,
+        isFirstMover: data.badgeData?.firstMoverLevelChangeIds.includes(change.id) ?? false
       })),
     mentors: findPotentialMentors({
       memberId: data.member.id,
