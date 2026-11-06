@@ -71,6 +71,7 @@ const nonNavigationRoutes: readonly Pick<AppNavigationItem, "href" | "allowedRol
   { href: "/account/password", allowedRoles: allRoles },
   { href: "/people", allowedRoles: allRoles },
   { href: "/notifications", allowedRoles: allRoles },
+  { href: "/my/recap", allowedRoles: allRoles },
   { href: "/level-ups", allowedRoles: allRoles }
 ];
 const appRouteRules: readonly Pick<AppNavigationItem, "href" | "allowedRoles">[] = [

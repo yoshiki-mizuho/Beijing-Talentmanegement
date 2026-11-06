@@ -51,12 +51,20 @@ test("レベルアップのリアクション、コメント、返信を通知�
     await secondReaction.click();
     await expect(secondReaction).toHaveAttribute("aria-pressed", "true");
     // 2人目のリアクションでも通知は1件のまま、未読に戻る（サーバーの処理を待ってから確かめる）
+    // デモアカウントは共用なので、このレベルアップの通知だけを数える
     await expect(async () => {
-      await member.page.goto("/notifications?view=unread");
-      await expect(
-        member.page.getByRole("main").getByText("レベルアップにリアクションが届きました", { exact: true })
-      ).toHaveCount(1, { timeout: 1_000 });
+      const notifications = await prisma.notification.findMany({
+        where: { skillLevelChangeId: levelChangeId, type: "LEVEL_UP_REACTED" },
+        select: { status: true, body: true }
+      });
+      expect(notifications).toHaveLength(1);
+      expect(notifications[0]?.status).toBe("UNREAD");
+      expect(notifications[0]?.body).toMatch(/ほか 1人が/);
     }).toPass({ timeout: 20_000 });
+    await member.page.goto("/notifications?view=unread");
+    await expect(
+      member.page.getByRole("main").getByText("レベルアップにリアクションが届きました", { exact: true }).first()
+    ).toBeVisible();
 
     await member.page.goto(href);
 

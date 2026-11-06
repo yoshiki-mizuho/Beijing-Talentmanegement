@@ -144,7 +144,7 @@ export function buildMemberDashboardViewModel(
           .find((candidate) => candidate.id === mentor.memberId)
           ?.avatarUpdatedAt?.toISOString() ?? null
     })),
-    cheers: data.receivedCheers.map((cheer) => ({
+    cheers: data.receivedCheers.slice(0, 3).map((cheer) => ({
       id: cheer.id,
       senderId: cheer.fromMember.id,
       senderName: cheer.fromMember.name,

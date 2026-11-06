@@ -14,6 +14,8 @@ export async function getMemberGrowthData(memberId: string) {
         select: {
           id: true,
           name: true,
+          createdAt: true,
+          lastRecapSeenMonth: true,
           manager: { select: { name: true } },
           targetRoleId: true,
           targetRole: {
@@ -90,6 +92,20 @@ export async function getMemberGrowthData(memberId: string) {
           toLevel: true,
           source: true,
           changedAt: true,
+          reactions: {
+            select: {
+              type: true,
+              createdAt: true,
+              member: { select: { id: true, name: true } }
+            }
+          },
+          comments: {
+            select: {
+              body: true,
+              createdAt: true,
+              authorMember: { select: { id: true, name: true } }
+            }
+          },
           _count: { select: { reactions: true, comments: true } },
           skill: {
             select: {
@@ -120,8 +136,7 @@ export async function getMemberGrowthData(memberId: string) {
             }
           }
         },
-        orderBy: { createdAt: "desc" },
-        take: 3
+        orderBy: { createdAt: "desc" }
       }),
       prisma.member.findMany({
         where: { status: MemberStatus.ACTIVE, id: { not: memberId } },
@@ -162,6 +177,19 @@ export async function getMemberGrowthData(memberId: string) {
 }
 
 export type MemberGrowthData = Awaited<ReturnType<typeof getMemberGrowthData>>;
+
+export function listMonthlyRecapAssessments(memberId: string) {
+  return prisma.skillSelfAssessment.findMany({
+    where: { memberId },
+    select: {
+      skillId: true,
+      createdAt: true,
+      status: true,
+      skill: { select: { name: true } }
+    },
+    orderBy: { createdAt: "asc" }
+  });
+}
 
 export function listUnreadLevelUpNotifications(memberId: string) {
   return prisma.notification.findMany({

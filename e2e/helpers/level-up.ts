@@ -4,12 +4,12 @@ import { expect, type Page } from "@playwright/test";
 export async function dismissExistingLevelUpDialogs(page: Page) {
   for (let attempt = 0; attempt < 10; attempt += 1) {
     await page.waitForLoadState("networkidle");
-    const dialog = page.getByRole("dialog").filter({ hasText: /LEVEL UP|CHEER|ROLE COMPLETE/ });
+    const dialog = page.getByRole("dialog").filter({ hasText: /LEVEL UP|CHEER|ROLE COMPLETE|先月の振り返り/ });
     if ((await dialog.count()) === 0) return;
 
     await dialog.getByRole("button", { name: "ダイアログを閉じる" }).click();
     await expect(dialog).toHaveCount(0);
     await page.reload();
   }
-  throw new Error("既存のレベルアップ・応援通知を10件以内に確認できませんでした。");
+  throw new Error("既存のレベルアップ・応援・振り返り通知を10件以内に確認できませんでした。");
 }

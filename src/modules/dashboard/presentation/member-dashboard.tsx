@@ -9,6 +9,7 @@ import { GrowthCalendar } from "@/modules/growth/presentation/growth-calendar";
 import { GrowthRadarChart } from "@/modules/growth/presentation/growth-radar-chart";
 import { LevelUpFeed, type SerializableFeedItem } from "@/modules/growth/presentation/level-up-feed";
 import { TargetRoleCard } from "@/modules/growth/presentation/target-role-card";
+import type { getMonthlyRecap } from "@/modules/growth/application/monthly-recap-service";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { MemberAvatar } from "@/shared/ui/member-avatar";
 import { PageHeader } from "@/shared/ui/page-header";
@@ -19,7 +20,8 @@ const TIMELINE_LIMIT = 5;
 export function MemberDashboard({
   viewModel,
   levelUpFeed,
-  skillReminders
+  skillReminders,
+  monthlyRecap
 }: {
   viewModel: MemberDashboardViewModel;
   levelUpFeed: SerializableFeedItem[];
@@ -28,6 +30,7 @@ export function MemberDashboard({
     newSkills: Array<{ id: string; name: string }>;
     staleSkills: Array<{ id: string; name: string; level: number; monthsAgo: number }>;
   };
+  monthlyRecap: NonNullable<Awaited<ReturnType<typeof getMonthlyRecap>>>["recap"] | null;
 }) {
   if (viewModel.onboardingState !== "regular") {
     return (
@@ -44,6 +47,21 @@ export function MemberDashboard({
         title={`おかえりなさい、${viewModel.memberName}さん`}
         description={viewModel.encouragement}
       />
+
+      {monthlyRecap ? (
+        <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5" aria-labelledby="monthly-recap-heading">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold text-[var(--primary)]">{Number(monthlyRecap.month.slice(5))}月のあなた</p>
+              <h2 id="monthly-recap-heading" className="mt-1 font-semibold">{monthlyRecap.hasEvents ? monthlyRecap.encouragement : "先月は記録がありませんでした。今月はひとつ申請してみませんか"}</h2>
+              {monthlyRecap.hasEvents ? <p className="mt-2 text-sm text-[var(--muted-foreground)]">レベルアップ {monthlyRecap.levelUpCount}・新しいスキル {monthlyRecap.newSkillCount}・届いた声 {monthlyRecap.voiceCount}</p> : null}
+            </div>
+            <Link href={(monthlyRecap.hasEvents ? "/my/recap" : "/my/skills") as Route} className="inline-flex h-10 shrink-0 items-center justify-center rounded-md bg-[var(--primary)] px-4 text-sm font-semibold text-white hover:bg-[var(--primary-hover)]">
+              {monthlyRecap.hasEvents ? "振り返りを見る" : "スキルシートを開く"}
+            </Link>
+          </div>
+        </section>
+      ) : null}
 
       {viewModel.approvedSkillCount < 5 || viewModel.targetRole === null ? (
         <section

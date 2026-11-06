@@ -292,7 +292,7 @@ function getTokyoDateKey(value: Date | string) {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
-function getTokyoMonthKey(value: Date | string) {
+export function getTokyoMonthKey(value: Date | string) {
   const { year, month } = getTokyoDateParts(value);
   return `${year}-${String(month).padStart(2, "0")}`;
 }
