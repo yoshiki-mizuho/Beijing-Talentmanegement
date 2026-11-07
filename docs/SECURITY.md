@@ -55,7 +55,7 @@ MR のパイプラインの `security` ステージで動きます（`.gitlab-ci
 | ジョブ | 内容 | 動く条件 |
 | --- | --- | --- |
 | `dependency_audit` | `npm audit --omit=dev --audit-level=high`。本番の依存に高・重大の脆弱性があれば失敗する | アプリに関わるファイルが変わった MR |
-| `secret_detection` | GitLab の Secret Detection。コミットに秘密情報が混ざっていないかを調べる | すべての MR |
+| `secret_detection` | GitLab の Secret Detection。コミットに秘密情報が混ざっていないかを調べ、見つかれば失敗する（報告は成果物の `gl-secret-detection-report.json`） | すべての MR |
 | `semgrep-sast` | GitLab の SAST（Semgrep）。コードの危ない書き方を調べる | `src`・`prisma`・`scripts`・依存が変わった MR |
 
 `dependency_audit` が新しく公開された脆弱性で失敗した場合は、`npm audit fix` などで直す MR を先に出します。直せない場合は、影響と理由をこのファイルの「受け入れたリスク」に書いてから進めます。
