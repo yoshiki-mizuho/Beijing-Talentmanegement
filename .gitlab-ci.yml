@@ -127,6 +127,26 @@ semgrep-sast:
         - package.json
         - package-lock.json
 
+# 本番で使う依存パッケージに、既知の高・重大の脆弱性がないかを確かめる。
+# npm ci は不要（package-lock.json だけで判定できる）なので before_script を空にする。
+dependency_audit:
+  extends: .mr_app_changes
+  stage: security
+  before_script: []
+  script:
+    - npm audit --omit=dev --audit-level=high
+
+# 秘密情報（API キー、パスワード、秘密鍵など）がコミットに混ざっていないかを確かめる。
+# ドキュメントにも混ざりうるので、変更の種類を問わず MR ごとに動かす。
+secret_detection:
+  stage: security
+  inherit:
+    default: false
+  tags: [$RUNNER_TAG]
+  interruptible: true
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
 demo_db_migrate:
   stage: demo_db
   tags: [$DEMO_DB_RUNNER_TAG]
@@ -178,3 +198,4 @@ demo_db_seed:
 
 include:
   - template: Security/SAST.gitlab-ci.yml
+  - template: Security/Secret-Detection.gitlab-ci.yml

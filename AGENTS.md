@@ -18,6 +18,7 @@
 - MVPからの継承・再設計方針は `docs/MVP_REVIEW.md` を確認する。
 - ローカルDB、seed、検証コマンドは `docs/LOCAL_DEVELOPMENT.md` を確認する。
 - 画面のレイアウト、部品、文言、演出を判断する場合は `docs/DESIGN_GUIDELINES.md` を確認する。
+- セキュリティの対策、CI の検査、受け入れたリスクを判断する場合は `docs/SECURITY.md` を確認する。
 
 ## Codex作業ルール
 
