@@ -28,8 +28,8 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@next-auth/prisma-adapter": "^1.0.7",
-    "@prisma/adapter-pg": "^7.8.0",
-    "@prisma/client": "^7.8.0",
+    "@prisma/adapter-pg": "^7.10.1",
+    "@prisma/client": "^7.10.1",
     "@tanstack/react-query": "^5.101.0",
     "@tanstack/react-table": "^8.21.3",
     "bcryptjs": "^3.0.3",
@@ -56,7 +56,7 @@
     "@types/react-dom": "^19.2.3",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.4.2",
-    "prisma": "^7.8.0",
+    "prisma": "^7.10.1",
     "tailwindcss": "^4.3.1",
     "tsx": "^4.22.4",
     "typescript": "^5.9.3",
@@ -64,8 +64,8 @@
   },
   "allowScripts": {
     "esbuild@0.28.1": true,
-    "prisma@7.8.0": true,
+    "prisma@7.10.1": true,
     "unrs-resolver@1.12.2": true,
-    "@prisma/engines@7.8.0": true
+    "@prisma/engines@7.10.1": true
   }
 }
