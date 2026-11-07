@@ -138,14 +138,23 @@ dependency_audit:
 
 # 秘密情報（API キー、パスワード、秘密鍵など）がコミットに混ざっていないかを確かめる。
 # ドキュメントにも混ざりうるので、変更の種類を問わず MR ごとに動かす。
+# テンプレートは見つけてもジョブを失敗させないので、報告に検出があれば失敗させて MR を止める。
 secret_detection:
   stage: security
   inherit:
     default: false
   tags: [$RUNNER_TAG]
   interruptible: true
+  allow_failure: false
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+  script:
+    - /analyzer run
+    - |
+      if tr -d ' \n\r\t' < gl-secret-detection-report.json | grep -q '"vulnerabilities":\[{'; then
+        echo "秘密情報の可能性がある箇所が見つかりました。ジョブの成果物 gl-secret-detection-report.json を確認してください。"
+        exit 1
+      fi
 
 demo_db_migrate:
   stage: demo_db
