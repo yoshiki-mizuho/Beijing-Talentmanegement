@@ -21,10 +21,10 @@ test("キーボードでスキルを別カテゴリへ並び替えられる", as
     for (const name of [sourceCategory, targetCategory]) {
       await categoryDialog.getByLabel("カテゴリ名").first().fill(name);
       await categoryDialog.getByRole("button", { name: "追加", exact: true }).click();
-      await expect(admin.page.getByText("カテゴリを登録しました。")).toBeVisible();
+      // 登録済みのカテゴリは名前を編集できる入力欄として並ぶので、その欄が現れるまで待つ
+      await expect(categoryDialog.locator(`input[value="${name}"]`)).toHaveCount(1);
     }
     await categoryDialog.getByRole("button", { name: "ダイアログを閉じる" }).click();
-    // 1件目の登録のトーストが残っていると2件目の完了を待てないため、両方のカテゴリが出るまで待つ
     for (const name of [sourceCategory, targetCategory]) {
       await expect(admin.page.getByRole("button", { name, exact: true })).toBeVisible();
     }
