@@ -1,12 +1,41 @@
 import { describe, expect, it } from "vitest";
 
-import { readDemoSeedPasswords } from "./seed-config";
+import { assertDemoSeedAllowed, readDemoSeedPasswords } from "./seed-config";
 
 const validEnvironment = {
   DEMO_ADMIN_PASSWORD: "admin-secret-123",
   DEMO_MANAGER_PASSWORD: "manager-secret-123",
   DEMO_MEMBER_PASSWORD: "member-secret-123"
 };
+
+describe("assertDemoSeedAllowed", () => {
+  it.each(["localhost", "127.0.0.1", "postgres"])(
+    "allows the database host %s",
+    (host) => {
+      expect(() =>
+        assertDemoSeedAllowed(`postgresql://user:secret@${host}:5432/app`, undefined)
+      ).not.toThrow();
+    }
+  );
+
+  it("allows a remote database only with the explicit opt-in", () => {
+    expect(() =>
+      assertDemoSeedAllowed(
+        "postgresql://user:secret@db.example.com/app",
+        "true"
+      )
+    ).not.toThrow();
+  });
+
+  it.each([undefined, "not-a-url", "postgresql://user:secret@db.example.com/app"])(
+    "rejects an unsafe database URL without exposing it",
+    (databaseUrl) => {
+      expect(() => assertDemoSeedAllowed(databaseUrl, undefined)).toThrow(
+        "Demo seed is disabled for this database."
+      );
+    }
+  );
+});
 
 describe("readDemoSeedPasswords", () => {
   it("accepts three strong, distinct passwords", () => {

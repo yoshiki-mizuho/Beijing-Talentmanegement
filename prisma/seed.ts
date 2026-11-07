@@ -14,7 +14,7 @@ import {
 } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
-import { readDemoSeedPasswords } from "./seed-config";
+import { assertDemoSeedAllowed, readDemoSeedPasswords } from "./seed-config";
 import {
   buildSkillAssessmentRequestNotificationBody,
   demoDepartments,
@@ -35,6 +35,11 @@ import {
   demoTargetRoleAssignments,
   existingDemoMemberEmployeeNos
 } from "./seed-demo-data";
+
+assertDemoSeedAllowed(
+  process.env.DATABASE_URL,
+  process.env.ALLOW_DEMO_SEED
+);
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({

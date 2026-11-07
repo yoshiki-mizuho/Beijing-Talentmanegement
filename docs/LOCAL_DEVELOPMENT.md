@@ -34,6 +34,8 @@ APIキーはサーバー専用であり、`NEXT_PUBLIC_`を付けない。
 
 4. 依存関係をインストールし、migrationとseedを実行する。seedのパスワードはローカル専用の値を指定し、コミットしない。
 
+seedは`localhost`、`127.0.0.1`、`postgres`への接続ではそのまま実行でき、その他の接続先では`ALLOW_DEMO_SEED=true`の明示が必要になる。
+
 ```powershell
 npm.cmd ci
 npm.cmd exec -- prisma migrate deploy
