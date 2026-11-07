@@ -1,6 +1,11 @@
 import { AiUsageStatus } from "@prisma/client";
 
 import { prisma } from "@/server/db/prisma";
+import {
+  AI_USER_RATE_LIMIT_WINDOW_MS,
+  getAiUsageMonth,
+  hasReachedAiUserRateLimit,
+} from "@/modules/ai-evaluation/domain/ai-usage-summary";
 
 export type AiUsageEntry = {
   feature: string;
@@ -17,6 +22,94 @@ export type AiUsageEntry = {
 
 export async function recordAiUsage(entry: AiUsageEntry) {
   return prisma.aiUsageLog.create({ data: entry });
+}
+
+export type AiUsageReservation =
+  | { kind: "reserved"; id: string }
+  | { kind: "monthly_limit" }
+  | { kind: "rate_limited_user" };
+
+export async function reserveAiUsage(input: {
+  feature: string;
+  actorMemberId: string;
+  targetMemberId?: string | null;
+  reservedTokens: number;
+  monthlyTokenLimit: number | null;
+  now?: Date;
+}): Promise<AiUsageReservation> {
+  const now = input.now ?? new Date();
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(7246102026)`;
+    const month = getAiUsageMonth(undefined, now);
+    const [tokens, recentCalls] = await Promise.all([
+      tx.aiUsageLog.aggregate({
+        where: { createdAt: { gte: month.start, lt: month.end } },
+        _sum: { totalTokens: true },
+      }),
+      tx.aiUsageLog.count({
+        where: {
+          actorMemberId: input.actorMemberId,
+          createdAt: {
+            gte: new Date(now.getTime() - AI_USER_RATE_LIMIT_WINDOW_MS),
+            lte: now,
+          },
+          OR: [
+            { errorCode: null },
+            {
+              errorCode: {
+                notIn: [
+                  "not_configured",
+                  "monthly_limit",
+                  "rate_limited_user",
+                ],
+              },
+            },
+          ],
+        },
+      }),
+    ]);
+    if (hasReachedAiUserRateLimit(recentCalls)) {
+      return { kind: "rate_limited_user" };
+    }
+    const totalTokens = tokens._sum.totalTokens ?? 0;
+    if (
+      input.monthlyTokenLimit !== null &&
+      totalTokens + input.reservedTokens > input.monthlyTokenLimit
+    ) {
+      return { kind: "monthly_limit" };
+    }
+    const reservation = await tx.aiUsageLog.create({
+      data: {
+        feature: input.feature,
+        actorMemberId: input.actorMemberId,
+        targetMemberId: input.targetMemberId,
+        status: "FAILED",
+        errorCode: "in_progress",
+        totalTokens: input.reservedTokens,
+        latencyMs: 0,
+      },
+      select: { id: true },
+    });
+    return { kind: "reserved", id: reservation.id };
+  });
+}
+
+export async function completeAiUsageReservation(
+  id: string,
+  result: Omit<AiUsageEntry, "feature" | "actorMemberId" | "targetMemberId">,
+) {
+  return prisma.aiUsageLog.update({
+    where: { id },
+    data: {
+      model: result.model,
+      status: result.status,
+      promptTokens: result.promptTokens,
+      completionTokens: result.completionTokens,
+      ...(result.totalTokens == null ? {} : { totalTokens: result.totalTokens }),
+      latencyMs: result.latencyMs,
+      errorCode: result.errorCode,
+    },
+  });
 }
 
 export async function sumAiTokensSince(date: Date, feature?: string) {

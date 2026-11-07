@@ -6,8 +6,6 @@ import {
 import { parseSkillPrerequisiteSuggestions } from "@/modules/ai-evaluation/domain/skill-prerequisite-suggestion";
 import {
   getAiMonthlyTokenLimit,
-  getAiUsageMonth,
-  hasReachedMonthlyTokenLimit,
 } from "@/modules/ai-evaluation/domain/ai-usage-summary";
 import {
   AiClientError,
@@ -18,6 +16,9 @@ import * as usageRepository from "@/modules/ai-evaluation/infrastructure/ai-usag
 import { getSkillPrerequisiteSuggestionContext } from "@/modules/skills/application/skill-service";
 
 const FEATURE = "skill_prerequisite_suggestion";
+
+// 最大400件の候補を含む既存プロンプトの実測を余裕を持って覆う予約量。
+const RESERVED_TOKENS = 16_000;
 
 export async function generateSkillPrerequisiteSuggestions(
   scope: "unrelated" | "all",
@@ -68,23 +69,30 @@ export async function generateSkillPrerequisiteSuggestions(
   };
   const truncated = scoped.length > 150 || context.skills.length > 400;
   const config = getAiConfig();
-  const tokenLimit = getAiMonthlyTokenLimit();
-  if (tokenLimit !== null) {
-    const used = await usageRepository.sumAiTokensSince(
-      getAiUsageMonth(undefined).start,
-    );
-    if (hasReachedMonthlyTokenLimit(used, tokenLimit)) {
-      await logFailure("monthly_limit");
-      return unavailable(
-        "今月の AI の利用上限に達したため、候補を作れませんでした。",
-        truncated,
-      );
-    }
-  }
   if (config.kind === "none") {
     await logFailure("not_configured");
     return unavailable(
       "AI が未設定のため、候補を作れませんでした。",
+      truncated,
+    );
+  }
+  const reservation = await usageRepository.reserveAiUsage({
+    feature: FEATURE,
+    actorMemberId,
+    reservedTokens: RESERVED_TOKENS,
+    monthlyTokenLimit: getAiMonthlyTokenLimit(),
+  });
+  if (reservation.kind === "monthly_limit") {
+    await logFailure("monthly_limit");
+    return unavailable(
+      "今月の AI の利用上限に達したため、候補を作れませんでした。",
+      truncated,
+    );
+  }
+  if (reservation.kind === "rate_limited_user") {
+    await logFailure("rate_limited_user");
+    return unavailable(
+      "短い時間に何度も作り直したため、少し待ってからもう一度お試しください。",
       truncated,
     );
   }
@@ -117,9 +125,7 @@ export async function generateSkillPrerequisiteSuggestions(
           ]
         : [];
     });
-    await usageRepository.recordAiUsage({
-      feature: FEATURE,
-      actorMemberId,
+    await usageRepository.completeAiUsageReservation(reservation.id, {
       model: result.model,
       status: "SUCCESS",
       promptTokens: result.usage?.promptTokens,
@@ -130,7 +136,11 @@ export async function generateSkillPrerequisiteSuggestions(
     return { suggestions, message: null, truncated };
   } catch (error) {
     const code = errorCode(error);
-    await logFailure(code);
+    await usageRepository.completeAiUsageReservation(reservation.id, {
+      status: "FAILED",
+      latencyMs: Date.now() - startedAt,
+      errorCode: code,
+    });
     return unavailable(
       code === "invalid_response"
         ? "AI の応答を読み取れなかったため、候補を作れませんでした。もう一度試してください。"

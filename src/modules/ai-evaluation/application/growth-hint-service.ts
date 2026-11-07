@@ -31,9 +31,10 @@ import {
 import { AuthorizationError } from "@/server/auth/authorization";
 import {
   getAiMonthlyTokenLimit,
-  getAiUsageMonth,
-  hasReachedMonthlyTokenLimit,
 } from "@/modules/ai-evaluation/domain/ai-usage-summary";
+
+// 通常の入力と出力を十分に含み、usage 欠落時にも過少計上しない予約量。
+const RESERVED_TOKENS = 4_000;
 
 export type GrowthHintViewer = { memberId: string; role: AuthRole };
 
@@ -96,27 +97,6 @@ export async function generateGrowthHint(
   const previous = await hintRepository.findGrowthHint(memberId);
   const base = await buildComputedContent(memberId, input);
   const config = getAiConfig();
-  const tokenLimit = getAiMonthlyTokenLimit();
-
-  if (tokenLimit !== null) {
-    const totalTokens = await usageRepository.sumAiTokensSince(
-      getAiUsageMonth(undefined).start,
-    );
-    if (hasReachedMonthlyTokenLimit(totalTokens, tokenLimit)) {
-      const saved = await saveContent(
-        "FALLBACK",
-        createFallbackGrowthHint(input),
-        null,
-      );
-      await log("FALLBACK", Date.now() - startedAt, "monthly_limit");
-      return {
-        hint: toView(saved, inputHash, context.managerId === viewer.memberId),
-        keptPrevious: false,
-        message: "今月の AI の利用上限に達したため、簡易版で作りました。",
-      };
-    }
-  }
-
   if (config.kind === "none") {
     const saved = await saveContent(
       "FALLBACK",
@@ -131,6 +111,48 @@ export async function generateGrowthHint(
     };
   }
 
+  const reservation = await usageRepository.reserveAiUsage({
+    feature: "growth_hint",
+    actorMemberId: viewer.memberId,
+    targetMemberId: memberId,
+    reservedTokens: RESERVED_TOKENS,
+    monthlyTokenLimit: getAiMonthlyTokenLimit(),
+  });
+  if (reservation.kind === "monthly_limit") {
+    const saved = await saveContent(
+      "FALLBACK",
+      createFallbackGrowthHint(input),
+      null,
+    );
+    await log("FALLBACK", Date.now() - startedAt, "monthly_limit");
+    return {
+      hint: toView(saved, inputHash, context.managerId === viewer.memberId),
+      keptPrevious: false,
+      message: "今月の AI の利用上限に達したため、簡易版で作りました。",
+    };
+  }
+  if (reservation.kind === "rate_limited_user") {
+    await log("FAILED", Date.now() - startedAt, "rate_limited_user");
+    const message = "短い時間に何度も作り直したため、少し待ってからもう一度お試しください。";
+    if (previous) {
+      return {
+        hint: toView(previous, inputHash, context.managerId === viewer.memberId),
+        keptPrevious: true,
+        message,
+      };
+    }
+    const saved = await saveContent(
+      "FALLBACK",
+      createFallbackGrowthHint(input),
+      null,
+    );
+    return {
+      hint: toView(saved, inputHash, context.managerId === viewer.memberId),
+      keptPrevious: false,
+      message,
+    };
+  }
+
   try {
     const result = await createChatCompletion({
       messages: buildGrowthHintMessages(input),
@@ -141,10 +163,7 @@ export async function generateGrowthHint(
       parseAiGrowthHint(result.content),
       result.model,
     );
-    await usageRepository.recordAiUsage({
-      feature: "growth_hint",
-      actorMemberId: viewer.memberId,
-      targetMemberId: memberId,
+    await usageRepository.completeAiUsageReservation(reservation.id, {
       model: result.model,
       status: "SUCCESS",
       promptTokens: result.usage?.promptTokens,
@@ -159,7 +178,11 @@ export async function generateGrowthHint(
     };
   } catch (error) {
     const errorCode = getErrorCode(error);
-    await log("FAILED", Date.now() - startedAt, errorCode);
+    await usageRepository.completeAiUsageReservation(reservation.id, {
+      status: "FAILED",
+      latencyMs: Date.now() - startedAt,
+      errorCode,
+    });
     if (previous) {
       return {
         hint: toView(
