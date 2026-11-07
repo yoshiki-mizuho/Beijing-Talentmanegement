@@ -120,7 +120,7 @@ export function Tooltip({
     ? cloneElement(childElement, {
         "aria-describedby": [childElement.props["aria-describedby"], open ? id : undefined]
           .filter(Boolean)
-          .join(" ")
+          .join(" ") || undefined
       })
     : children;
 

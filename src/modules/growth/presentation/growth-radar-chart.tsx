@@ -42,7 +42,7 @@ export function GrowthRadarChart({
             <text x={label.x} y={label.y} textAnchor={anchor} dominantBaseline="middle" className="fill-[var(--muted-foreground)] text-[10px]">
               {truncate(value.name)}
             </text>
-            <title>{value.name}: 平均 Lv{value.average}</title>
+            <title>{`${value.name}: 平均 Lv${value.average}`}</title>
           </g>
         );
       })}

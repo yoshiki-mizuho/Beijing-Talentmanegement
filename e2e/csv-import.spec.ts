@@ -10,24 +10,31 @@ test("管理者が部署CSVを確認して登録し監査ログを確認でき�
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
   const suffix = Date.now();
   const code = `E2E-${suffix}`;
+  const initialName = "E2E部署";
+  const updatedName = "E2E部署 更新後";
   let created = false;
   try {
+    await importByApi(
+      admin.page,
+      "departments",
+      `department_code,department_name,parent_department_code,is_active\r\n${code},${initialName},,true\r\n`,
+    );
+    created = true;
     await admin.page.goto("/csv");
     await admin.page.getByLabel("部署のCSVファイル").setInputFiles({
       name: "departments.csv",
       mimeType: "text/csv",
       buffer: Buffer.from(
-        `department_code,department_name,parent_department_code,is_active\r\n${code},E2E部署,,true\r\nDEV,開発部 E2E,,true\r\n`,
+        `department_code,department_name,parent_department_code,is_active\r\n${code},${updatedName},,true\r\n${code}-NEW,E2E部署 新規,,true\r\n`,
       ),
     });
     await expect(admin.page.getByText("新規").first()).toBeVisible();
     await expect(admin.page.getByText("更新").first()).toBeVisible();
-    await expect(admin.page.getByText(`${code} E2E部署`)).toBeVisible();
+    await expect(admin.page.getByText(`${code} ${updatedName}`)).toBeVisible();
     await admin.page.getByRole("button", { name: "2件を登録" }).click();
     await expect(
       admin.page.getByRole("heading", { name: "登録しました" }),
     ).toBeVisible();
-    created = true;
     await admin.page.getByRole("link", { name: "監査ログを見る" }).click();
     await expect(
       admin.page.getByText(/部署.*CSV を取り込み/).first(),
@@ -37,7 +44,7 @@ test("管理者が部署CSVを確認して登録し監査ログを確認でき�
       await importByApi(
         admin.page,
         "departments",
-        `department_code,department_name,parent_department_code,is_active\r\n${code},E2E部署,,false\r\nDEV,開発部,,true\r\n`,
+        `department_code,department_name,parent_department_code,is_active\r\n${code},${updatedName},,false\r\n${code}-NEW,E2E部署 新規,,false\r\n`,
       );
     }
     await admin.context.close();
@@ -148,8 +155,14 @@ test("管理者がメンバーCSVでログインユーザー付きのメンバ�
 
 test("管理者がメンバースキルCSVでレベルを更新し監査ログを確認できる", async ({ browser }) => {
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
-  const csv = (level: number) => `employee_no,skill_code,level,years_of_experience,last_assessed_at\r\nTM0001,DEMO-SKILL-016,${level},6,2026-10-17\r\n`;
+  const suffix = Date.now();
+  const employeeNo = `E2EMS${suffix}`;
+  const email = `e2e-member-skill-${suffix}@example.com`;
+  const memberCsv = (status: "active" | "inactive") => `employee_no,name,email,department_code,job_title,status,manager_employee_no,target_role_name\r\n${employeeNo},E2E評価メンバー,${email},DEV,Engineer,${status},,\r\n`;
+  const csv = (level: number) => `employee_no,skill_code,level,years_of_experience,last_assessed_at\r\n${employeeNo},DEMO-SKILL-016,${level},6,2026-10-17\r\n`;
   try {
+    await importByApi(admin.page, "members", memberCsv("active"));
+    await importByApi(admin.page, "member-skills", csv(4));
     await admin.page.goto("/csv");
     await admin.page.getByRole("button", { name: "メンバースキル", exact: true }).click();
     await admin.page.getByLabel("メンバースキルのCSVファイル").setInputFiles({ name: "member-skills.csv", mimeType: "text/csv", buffer: Buffer.from(csv(5)) });
@@ -158,7 +171,7 @@ test("管理者がメンバースキルCSVでレベルを更新し監査ログ�
     await admin.page.getByRole("link", { name: "監査ログを見る" }).click();
     await expect(admin.page.getByText(/メンバースキル.*更新/).first()).toBeVisible();
   } finally {
-    await importByApi(admin.page, "member-skills", csv(4));
+    await importByApi(admin.page, "members", memberCsv("inactive"));
     await admin.context.close();
   }
 });
