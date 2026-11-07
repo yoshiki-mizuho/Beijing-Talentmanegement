@@ -5,6 +5,7 @@ import {
   isCsvSizeError,
 } from "@/modules/csv-import/application/csv-import-service";
 import { isCsvImportTarget } from "@/modules/csv-import/domain/csv-import-columns";
+import { sanitizeImportFileName } from "@/modules/csv-import/domain/import-file-name";
 import { adminOnly, authorizeApi } from "@/server/auth/authorization";
 
 export async function POST(
@@ -20,10 +21,10 @@ export async function POST(
     return NextResponse.json({ error: "Not Found" }, { status: 404 });
   }
   const previewToken = request.headers.get("x-preview-token") ?? "";
-  const originalName = decodeURIComponent(
-    request.headers.get("x-file-name") ?? "import.csv",
-  );
   try {
+    const originalName = sanitizeImportFileName(
+      request.headers.get("x-file-name"),
+    );
     const bytes = new Uint8Array(await request.arrayBuffer());
     const result = await commitCsvImport({
       target,

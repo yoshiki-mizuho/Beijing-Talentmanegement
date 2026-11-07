@@ -6,10 +6,14 @@ import {
   applyAuthTokenToSession,
   revalidateAuthToken
 } from "@/modules/auth/application/session-revalidation";
+import { assertProductionAuthSecret, resolveAuthSecret } from "@/server/auth/auth-secret";
 import { prisma } from "@/server/db/prisma";
+
+assertProductionAuthSecret();
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
+  secret: resolveAuthSecret(),
   session: {
     strategy: "jwt",
     maxAge: 8 * 60 * 60,

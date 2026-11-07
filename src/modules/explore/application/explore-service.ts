@@ -1,4 +1,5 @@
 import { isGrowthLevelChange } from "@/modules/growth/domain/level-change-source";
+import { buildChatUrl } from "@/modules/explore/domain/chat-link";
 import {
   achievedRoleNames,
   aggregateTrendingSkills,
@@ -190,9 +191,7 @@ export async function getSkillProfile(viewer: ProfileViewer, memberId: string, n
       changedAt: item.changedAt.toISOString()
     }));
   const template = process.env.CHAT_LINK_TEMPLATE;
-  const chatUrl = template?.includes("{email}")
-    ? template.replaceAll("{email}", encodeURIComponent(member.email))
-    : null;
+  const chatUrl = buildChatUrl(template, member.email);
 
   const targetEvaluation = member.targetRole
     ? evaluateRoleAchievement(
