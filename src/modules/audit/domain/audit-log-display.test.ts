@@ -304,6 +304,19 @@ describe("audit log display", () => {
     expect(buildAuditSummary(input)).toBe("新規 12件・更新 3件");
   });
 
+  it("CSV 取り込み失敗の段階とエラー件数を表示する", () => {
+    const input = {
+      action: "csv.import.failed",
+      targetType: "Csv",
+      targetName: "（削除済み）",
+      before: null,
+      after: null,
+      metadata: { target: "members", stage: "preview", errorCount: 3 },
+    };
+    expect(buildActionDescription(input).suffix).toBe(" の CSV 取り込みに失敗");
+    expect(buildAuditSummary(input)).toBe("確認・エラー 3件");
+  });
+
   it("削除済み対象は記録時の名前を使い、複合対象はメンバー名とスキル名を使う", () => {
     const base = {
       targetId: "deleted-1",

@@ -6,10 +6,11 @@ const mocks = vi.hoisted(() => ({
   findGrowthHint: vi.fn(),
   saveGrowthHint: vi.fn(),
   recordAiUsage: vi.fn(),
+  reserveAiUsage: vi.fn(),
+  completeAiUsageReservation: vi.fn(),
   getContext: vi.fn(),
   getScope: vi.fn(),
   mentors: vi.fn(),
-  sumAiTokensSince: vi.fn(),
 }));
 
 vi.mock(
@@ -35,7 +36,8 @@ vi.mock(
 );
 vi.mock("@/modules/ai-evaluation/infrastructure/ai-usage-repository", () => ({
   recordAiUsage: mocks.recordAiUsage,
-  sumAiTokensSince: mocks.sumAiTokensSince,
+  reserveAiUsage: mocks.reserveAiUsage,
+  completeAiUsageReservation: mocks.completeAiUsageReservation,
 }));
 vi.mock("@/modules/members/application/member-service", () => ({
   getGrowthHintMemberContext: mocks.getContext,
@@ -103,7 +105,7 @@ describe("generateGrowthHint", () => {
     mocks.getScope.mockResolvedValue({ memberIds: ["member"] });
     mocks.mentors.mockResolvedValue([]);
     mocks.findGrowthHint.mockResolvedValue(null);
-    mocks.sumAiTokensSince.mockResolvedValue(0);
+    mocks.reserveAiUsage.mockResolvedValue({ kind: "reserved", id: "usage" });
     vi.stubEnv("AI_MONTHLY_TOKEN_LIMIT", "");
     mocks.saveGrowthHint.mockImplementation(async (value) => ({
       ...stored(value.source),
@@ -114,7 +116,6 @@ describe("generateGrowthHint", () => {
 
   it("上限未満ならAIを呼ぶ", async () => {
     vi.stubEnv("AI_MONTHLY_TOKEN_LIMIT", "10");
-    mocks.sumAiTokensSince.mockResolvedValue(9);
     mocks.getAiConfig.mockReturnValue({ kind: "fake" });
     mocks.createChatCompletion.mockResolvedValue({
       content: JSON.stringify({
@@ -132,7 +133,7 @@ describe("generateGrowthHint", () => {
 
   it("上限以上ならAIを呼ばず簡易版を保存する", async () => {
     vi.stubEnv("AI_MONTHLY_TOKEN_LIMIT", "10");
-    mocks.sumAiTokensSince.mockResolvedValue(10);
+    mocks.reserveAiUsage.mockResolvedValue({ kind: "monthly_limit" });
     mocks.getAiConfig.mockReturnValue({ kind: "fake" });
     const result = await generateGrowthHint("member", viewer);
     expect(mocks.createChatCompletion).not.toHaveBeenCalled();
@@ -171,7 +172,8 @@ describe("generateGrowthHint", () => {
     });
     const result = await generateGrowthHint("member", viewer);
     expect(result.hint.source).toBe("AI");
-    expect(mocks.recordAiUsage).toHaveBeenCalledWith(
+    expect(mocks.completeAiUsageReservation).toHaveBeenCalledWith(
+      "usage",
       expect.objectContaining({ status: "SUCCESS", totalTokens: 3 }),
     );
   });
@@ -186,7 +188,8 @@ describe("generateGrowthHint", () => {
       "作り直しに失敗しました。前回のヒントを表示しています。",
     );
     expect(mocks.saveGrowthHint).not.toHaveBeenCalled();
-    expect(mocks.recordAiUsage).toHaveBeenCalledWith(
+    expect(mocks.completeAiUsageReservation).toHaveBeenCalledWith(
+      "usage",
       expect.objectContaining({ status: "FAILED" }),
     );
   });
@@ -212,11 +215,27 @@ describe("generateGrowthHint", () => {
     expect(result.message).toBe(
       "AI が混み合っていたため、簡易版で作りました。時間をおいて作り直してください。",
     );
-    expect(mocks.recordAiUsage).toHaveBeenCalledWith(
+    expect(mocks.completeAiUsageReservation).toHaveBeenCalledWith(
+      "usage",
       expect.objectContaining({
         status: "FAILED",
         errorCode: "http_error:503",
       }),
+    );
+  });
+
+  it("回数制限なら前回を残してAIを呼ばない", async () => {
+    mocks.getAiConfig.mockReturnValue({ kind: "fake" });
+    mocks.findGrowthHint.mockResolvedValue(stored());
+    mocks.reserveAiUsage.mockResolvedValue({ kind: "rate_limited_user" });
+
+    const result = await generateGrowthHint("member", viewer);
+
+    expect(result.keptPrevious).toBe(true);
+    expect(result.message).toContain("少し待って");
+    expect(mocks.createChatCompletion).not.toHaveBeenCalled();
+    expect(mocks.recordAiUsage).toHaveBeenCalledWith(
+      expect.objectContaining({ errorCode: "rate_limited_user" }),
     );
   });
 

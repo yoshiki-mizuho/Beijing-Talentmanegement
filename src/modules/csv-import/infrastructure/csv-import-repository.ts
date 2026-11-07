@@ -30,6 +30,44 @@ import type {
   SkillState,
 } from "../domain/skill-import";
 
+export async function recordCsvImportValidationFailure(input: {
+  actorMemberId: string;
+  target: CsvImportTarget;
+  stage: "preview" | "commit";
+  originalName?: string;
+  totalRows?: number;
+  errors: Array<{ row?: number; column?: string; message: string }>;
+}) {
+  try {
+    await prisma.$transaction((tx) =>
+      recordAuditLog(tx, {
+        actorMemberId: input.actorMemberId,
+        action: AUDIT_ACTION.CSV_IMPORT_FAILED,
+        targetType: AUDIT_TARGET_TYPE.CSV,
+        targetId: null,
+        metadata: {
+          target: input.target,
+          stage: input.stage,
+          ...(input.originalName ? { originalName: input.originalName } : {}),
+          ...(input.totalRows === undefined
+            ? {}
+            : { totalRows: input.totalRows }),
+          errorCount: input.errors.length,
+          errors: input.errors.slice(0, 5).map((error) => ({
+            ...(error.row === undefined ? {} : { row: error.row }),
+            ...(error.column === undefined ? {} : { column: error.column }),
+            message: error.column
+              ? `${error.column} の検証に失敗しました`
+              : error.message,
+          })),
+        },
+      }),
+    );
+  } catch {
+    // 監査ログの失敗で、利用者へ返す CSV の結果は変えない。
+  }
+}
+
 export async function loadDepartmentImportState(): Promise<DepartmentState[]> {
   const rows = await prisma.department.findMany({
     select: {
@@ -519,7 +557,15 @@ async function recordFailedImport(input: ApplyInput, error: unknown) {
       targetType: AUDIT_TARGET_TYPE.CSV,
       targetId: null,
       csvImportJobId: job.id,
-      metadata: { target: input.target, error: safeError(error) },
+      metadata: {
+        target: input.target,
+        stage: "commit",
+        originalName: input.originalName,
+        totalRows: input.totalRows,
+        errorCount: 1,
+        error: safeError(error),
+        errors: [{ message: safeError(error) }],
+      },
     });
   });
 }

@@ -314,7 +314,18 @@ export function buildAuditSummary(input: AuditDisplayInput) {
     return `新規 ${metadata?.created ?? 0}件・更新 ${metadata?.updated ?? 0}件`;
   }
   if (action === "csv.import.failed") {
-    return "取り込み失敗";
+    const stage =
+      metadata?.stage === "preview"
+        ? "確認"
+        : metadata?.stage === "commit"
+          ? "取り込み"
+          : null;
+    const count = metadata?.errorCount;
+    return (
+      [stage, count === undefined ? null : `エラー ${count}件`]
+        .filter(Boolean)
+        .join("・") || "取り込み失敗"
+    );
   }
   if (action === "skill_assessment.reject") {
     return String(metadata?.comment ?? "差し戻し");

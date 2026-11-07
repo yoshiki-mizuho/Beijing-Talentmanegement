@@ -4,7 +4,11 @@ import {
 } from "../domain/csv-import-columns";
 import { validateDepartmentImport } from "../domain/department-import";
 import type { DepartmentChange } from "../domain/department-import";
-import { CsvParseError, parseCsvBytes } from "../domain/csv-parse";
+import {
+  CsvParseError,
+  parseCsvBytes,
+  type ParsedCsv,
+} from "../domain/csv-parse";
 import { createPreviewToken } from "../domain/preview-token";
 import { validateSkillImport } from "../domain/skill-import";
 import type { SkillChange } from "../domain/skill-import";
@@ -16,6 +20,7 @@ import {
   loadSkillImportState,
   loadMemberImportState,
   loadMemberSkillImportState,
+  recordCsvImportValidationFailure,
 } from "../infrastructure/csv-import-repository";
 
 export type CsvImportPreview = Awaited<ReturnType<typeof previewCsvImport>>;
@@ -23,26 +28,43 @@ export type CsvImportPreview = Awaited<ReturnType<typeof previewCsvImport>>;
 export async function previewCsvImport(
   target: CsvImportTarget,
   bytes: Uint8Array,
+  actorMemberId: string,
+  auditStage: "preview" | "commit" = "preview",
+  originalName?: string,
 ) {
-  const csv = parseCsvBytes(bytes);
+  let csv: ParsedCsv;
+  try {
+    csv = parseCsvBytes(bytes);
+  } catch (error) {
+    await recordCsvImportValidationFailure({
+      actorMemberId,
+      target,
+      stage: auditStage,
+      originalName,
+      errors: [{ message: csvImportErrorMessage(error) }],
+    });
+    throw error;
+  }
   const mapped = mapCsvRecords(target, csv);
   if (mapped.errors.length > 0) {
-    return buildPreview(csv.rows.length, [], mapped.errors);
+    const preview = buildPreview(csv.rows.length, [], mapped.errors);
+    await recordInvalidPreview(preview);
+    return preview;
   }
   if (target === "departments") {
     const state = await loadDepartmentImportState();
     const result = validateDepartmentImport(mapped.records, state);
-    return buildPreview(csv.rows.length, result.changes, result.errors);
+    return finish(result.changes, result.errors);
   }
   if (target === "members") {
     const state = await loadMemberImportState();
     const result = validateMemberImport(mapped.records, state);
-    return buildPreview(csv.rows.length, result.changes, result.errors);
+    return finish(result.changes, result.errors);
   }
   if (target === "member-skills") {
     const state = await loadMemberSkillImportState();
     const result = validateMemberSkillImport(mapped.records, state);
-    return buildPreview(csv.rows.length, result.changes, result.errors);
+    return finish(result.changes, result.errors);
   }
   const state = await loadSkillImportState();
   const result = validateSkillImport(
@@ -50,7 +72,31 @@ export async function previewCsvImport(
     state.skills,
     state.categories,
   );
-  return buildPreview(csv.rows.length, result.changes, result.errors);
+  return finish(result.changes, result.errors);
+
+  async function finish<T extends { kind: "new" | "update" | "unchanged" }>(
+    changes: T[],
+    errors: Array<{ row: number; column: string; message: string }>,
+  ) {
+    const preview = buildPreview(csv.rows.length, changes, errors);
+    await recordInvalidPreview(preview);
+    return preview;
+  }
+
+  async function recordInvalidPreview(preview: {
+    totalRows: number;
+    errors: Array<{ row: number; column: string; message: string }>;
+  }) {
+    if (preview.errors.length === 0) return;
+    await recordCsvImportValidationFailure({
+      actorMemberId,
+      target,
+      stage: auditStage,
+      originalName,
+      totalRows: preview.totalRows,
+      errors: preview.errors,
+    });
+  }
 }
 
 export async function commitCsvImport(input: {
@@ -60,11 +106,25 @@ export async function commitCsvImport(input: {
   originalName: string;
   actorMemberId: string;
 }) {
-  const preview = await previewCsvImport(input.target, input.bytes);
+  const preview = await previewCsvImport(
+    input.target,
+    input.bytes,
+    input.actorMemberId,
+    "commit",
+    input.originalName,
+  );
   if (preview.errors.length > 0) {
     return { status: "invalid" as const, preview };
   }
   if (preview.previewToken !== input.previewToken) {
+    await recordCsvImportValidationFailure({
+      actorMemberId: input.actorMemberId,
+      target: input.target,
+      stage: "commit",
+      originalName: input.originalName,
+      totalRows: preview.totalRows,
+      errors: [{ message: "プレビュー時の内容と一致しません" }],
+    });
     return { status: "conflict" as const };
   }
   const common = {

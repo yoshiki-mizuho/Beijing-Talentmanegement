@@ -4,6 +4,7 @@ import {
   calculatePercentage,
   getAiMonthlyTokenLimit,
   getAiUsageMonth,
+  hasReachedAiUserRateLimit,
   hasReachedMonthlyTokenLimit,
   translateAiErrorCode,
 } from "./ai-usage-summary";
@@ -42,5 +43,15 @@ describe("AI利用状況の集計", () => {
     expect(hasReachedMonthlyTokenLimit(10, null)).toBe(false);
     expect(hasReachedMonthlyTokenLimit(9, 10)).toBe(false);
     expect(hasReachedMonthlyTokenLimit(10, 10)).toBe(true);
+  });
+
+  it("直近のAI呼び出しが10件に達したら回数制限する", () => {
+    expect(hasReachedAiUserRateLimit(9)).toBe(false);
+    expect(hasReachedAiUserRateLimit(10)).toBe(true);
+  });
+
+  it("予約中と回数制限の理由を表示用に変換する", () => {
+    expect(translateAiErrorCode("in_progress")).toBe("処理中または中断");
+    expect(translateAiErrorCode("rate_limited_user")).toBe("回数制限");
   });
 });

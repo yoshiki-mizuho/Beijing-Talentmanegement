@@ -7,6 +7,13 @@ export type AiUsageMonth = {
 
 const TOKYO_OFFSET_HOURS = 9;
 
+export const AI_USER_RATE_LIMIT_COUNT = 10;
+export const AI_USER_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+
+export function hasReachedAiUserRateLimit(count: number) {
+  return count >= AI_USER_RATE_LIMIT_COUNT;
+}
+
 export function getAiUsageMonth(
   value: string | undefined,
   now = new Date(),
@@ -66,6 +73,8 @@ const reasonLabels: Record<string, string> = {
   network: "通信エラー",
   invalid_response: "応答の形式が不正",
   monthly_limit: "月の上限",
+  in_progress: "処理中または中断",
+  rate_limited_user: "回数制限",
 };
 
 export function translateAiErrorCode(code: string | null) {

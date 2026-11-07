@@ -21,7 +21,9 @@ export async function POST(
   }
   try {
     const bytes = new Uint8Array(await request.arrayBuffer());
-    return NextResponse.json(await previewCsvImport(target, bytes));
+    return NextResponse.json(
+      await previewCsvImport(target, bytes, auth.session.user.memberId),
+    );
   } catch (error) {
     return NextResponse.json(
       { error: csvImportErrorMessage(error) },
