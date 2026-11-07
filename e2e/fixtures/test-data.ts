@@ -1,0 +1,97 @@
+import { randomBytes } from "node:crypto";
+
+import type { AuthRole, Department, Member, Role, Skill, SkillCategory } from "@prisma/client";
+import bcrypt from "bcryptjs";
+
+import { deleteE2eData, type E2eDataIds } from "../../prisma/delete-e2e-data";
+import { prisma } from "../../src/server/db/prisma";
+import type { DemoCredential } from "../helpers/credentials";
+
+export function createE2ePrefix() {
+  return `E2E-${Date.now()}-${randomBytes(4).toString("hex")}`;
+}
+
+export function createE2eTestData() {
+  const prefix = createE2ePrefix();
+  const ids: E2eDataIds = {
+    memberIds: [], skillIds: [], categoryIds: [], roleIds: [], departmentIds: [],
+  };
+  let sequence = 0;
+  const unique = (label: string) => `${prefix}-${label}-${++sequence}`;
+
+  return {
+    prefix,
+    async createDepartment(label: string, parentDepartmentId?: string): Promise<Department> {
+      const value = unique(label);
+      const department = await prisma.department.create({
+        data: { code: value, name: value, parentDepartmentId },
+      });
+      ids.departmentIds.push(department.id);
+      return department;
+    },
+    async createMember(input: {
+      label: string;
+      departmentId: string;
+      role?: AuthRole;
+      managerId?: string;
+      targetRoleId?: string;
+    }): Promise<{ member: Member; credential: DemoCredential }> {
+      const value = unique(input.label);
+      // ラベルは日本語のことがあるので、メールアドレスは接頭辞と連番だけで作る（形式チェックを通すため）
+      const email = `e2e-${prefix.toLowerCase()}-${sequence}@example.com`;
+      const password = randomBytes(24).toString("base64url");
+      const passwordHash = await bcrypt.hash(password, 12);
+      const member = await prisma.member.create({
+        data: {
+          employeeNo: value,
+          name: value,
+          email,
+          departmentId: input.departmentId,
+          managerId: input.managerId,
+          targetRoleId: input.targetRoleId,
+          lastRecapSeenMonth: "2000-01",
+          users: { create: {
+            name: value,
+            email,
+            role: input.role ?? "MEMBER",
+            passwordHash,
+            passwordChangeRequired: false,
+          } },
+        },
+      });
+      ids.memberIds.push(member.id);
+      return { member, credential: { email, password } };
+    },
+    async createSkill(label: string): Promise<{ category: SkillCategory; skill: Skill }> {
+      const categoryValue = unique(`${label}-category`);
+      const category = await prisma.skillCategory.create({ data: { name: categoryValue } });
+      ids.categoryIds.push(category.id);
+      const skillValue = unique(label);
+      const skill = await prisma.skill.create({
+        data: { code: skillValue, name: skillValue, categoryId: category.id },
+      });
+      ids.skillIds.push(skill.id);
+      return { category, skill };
+    },
+    async createRole(label: string, requirements: Array<{ skillId: string; requiredLevel: number }>): Promise<Role> {
+      const value = unique(label);
+      const role = await prisma.role.create({
+        data: {
+          name: value,
+          roleRequirements: { create: requirements.map((item) => ({ ...item, isRequired: true })) },
+        },
+      });
+      ids.roleIds.push(role.id);
+      return role;
+    },
+    async createMemberSkill(input: { memberId: string; skillId: string; level: number; approvedByMemberId?: string }) {
+      return prisma.memberSkill.create({ data: input });
+    },
+    async createLevelChange(input: { memberId: string; skillId: string; fromLevel: number; toLevel: number; changedByMemberId: string }) {
+      return prisma.skillLevelChange.create({ data: { ...input, source: "DIRECT_EDIT" } });
+    },
+    cleanup() {
+      return deleteE2eData(prisma, ids);
+    },
+  };
+}
