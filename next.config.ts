@@ -4,6 +4,8 @@ const nextConfig: NextConfig = {
   output: "standalone",
   typedRoutes: true,
   poweredByHeader: false,
+  // next dev が AGENTS.md に英語の注意書きを書き足さないようにする（同じ内容を日本語で AGENTS.md に書いている）
+  agentRules: false,
   async headers() {
     const headers = [
       { key: "X-Content-Type-Options", value: "nosniff" },
