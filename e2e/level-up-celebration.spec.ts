@@ -1,39 +1,30 @@
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
+import { createE2eTestData } from "./fixtures/test-data";
 import { openLoggedInContext } from "./helpers/auth";
-import { readDemoCredentials } from "./helpers/credentials";
-import { dismissExistingLevelUpDialogs } from "./helpers/level-up";
-
-const credentials = readDemoCredentials();
 
 test("承認後のレベルアップ演出は閉じると再表示されない", async ({ browser }) => {
-  const member = await openLoggedInContext(browser, credentials.MEMBER);
-
+  const data = createE2eTestData();
+  let member: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
+  let manager: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
   try {
-    await dismissExistingLevelUpDialogs(member.page);
+    const department = await data.createDepartment("レベルアップ部署");
+    const managerAccount = await data.createMember({ label: "レベルアップ管理者", departmentId: department.id, role: "MANAGER" });
+    const memberAccount = await data.createMember({ label: "レベルアップ申請者", departmentId: department.id, managerId: managerAccount.member.id });
+    const { skill } = await data.createSkill("レベルアップスキル");
+    await data.createMemberSkill({ memberId: memberAccount.member.id, skillId: skill.id, level: 1, approvedByMemberId: managerAccount.member.id });
+    member = await openLoggedInContext(browser, memberAccount.credential);
     await member.page.goto("/my/skills");
-    const selection = await findUpgradeableSkill(
-      member.page.locator('[role="group"][aria-label$="のレベル"]')
-    );
-    await selection.button.click();
+    await member.page.locator(`[role="group"][aria-label="${skill.name}のレベル"]`).getByRole("button", { name: "Lv2", exact: true }).click();
     await member.page.getByRole("button", { name: "1件を申請", exact: true }).click();
     await expect(member.page.getByText("1件のスキルを申請しました。マネージャーの承認をお待ちください。")).toBeVisible();
 
-    const manager = await openLoggedInContext(browser, credentials.MANAGER);
-    try {
-      await manager.page.goto("/skill-approvals");
-      const approval = manager.page.getByRole("listitem", {
-        name: `Member User / ${selection.skillName}の承認`
-      });
-      await expect(approval).toBeVisible();
-      await approval.getByRole("button", {
-        name: `Member Userの${selection.skillName}を承認`,
-        exact: true
-      }).click();
-      await expect(manager.page.getByText("スキル申請を承認しました。")).toBeVisible();
-    } finally {
-      await manager.context.close();
-    }
+    manager = await openLoggedInContext(browser, managerAccount.credential);
+    await manager.page.goto("/skill-approvals");
+    const approval = manager.page.getByRole("listitem", { name: `${memberAccount.member.name} / ${skill.name}の承認` });
+    await expect(approval).toBeVisible();
+    await approval.getByRole("button", { name: `${memberAccount.member.name}の${skill.name}を承認`, exact: true }).click();
+    await expect(manager.page.getByText("スキル申請を承認しました。")).toBeVisible();
 
     await member.page.goto("/dashboard");
     const dialog = member.page.getByRole("dialog");
@@ -45,32 +36,8 @@ test("承認後のレベルアップ演出は閉じると再表示されない",
     await member.page.reload();
     await expect(member.page.getByRole("dialog")).toHaveCount(0);
   } finally {
-    await member.context.close();
+    await manager?.context.close();
+    await member?.context.close();
+    await data.cleanup();
   }
 });
-
-async function findUpgradeableSkill(groups: Locator) {
-  for (let index = 0; index < await groups.count(); index += 1) {
-    const group = groups.nth(index);
-    const groupName = await group.getAttribute("aria-label");
-    const skillName = groupName?.replace(/のレベル$/, "");
-    if (!skillName) continue;
-
-    const buttons = group.getByRole("button");
-    let currentLevel = 0;
-    for (let buttonIndex = 0; buttonIndex < await buttons.count(); buttonIndex += 1) {
-      const button = buttons.nth(buttonIndex);
-      if (await button.isDisabled()) {
-        currentLevel = -1;
-        break;
-      }
-      if ((await button.getAttribute("aria-pressed")) === "true") {
-        currentLevel = buttonIndex + 1;
-      }
-    }
-    if (currentLevel < 0 || currentLevel >= 5) continue;
-
-    return { skillName, button: buttons.nth(currentLevel) };
-  }
-  throw new Error("承認待ちではなく、現在値より高いレベルを申請できるスキルがありません。 ");
-}

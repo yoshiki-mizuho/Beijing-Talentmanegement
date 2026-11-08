@@ -1,6 +1,18 @@
 import { randomBytes } from "node:crypto";
 
-import type { AuthRole, Department, Member, Role, Skill, SkillCategory } from "@prisma/client";
+import type {
+  AuthRole,
+  Department,
+  LevelUpReactionType,
+  Member,
+  NotificationStatus,
+  NotificationType,
+  Role,
+  Skill,
+  SkillCategory,
+  SkillLevelChangeSource,
+  SkillSelfAssessmentStatus,
+} from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 import { deleteE2eData, type E2eDataIds } from "../../prisma/delete-e2e-data";
@@ -35,6 +47,8 @@ export function createE2eTestData() {
       role?: AuthRole;
       managerId?: string;
       targetRoleId?: string;
+      createdAt?: Date;
+      lastRecapSeenMonth?: string | null;
     }): Promise<{ member: Member; credential: DemoCredential }> {
       const value = unique(input.label);
       // ラベルは日本語のことがあるので、メールアドレスは接頭辞と連番だけで作る（形式チェックを通すため）
@@ -49,7 +63,10 @@ export function createE2eTestData() {
           departmentId: input.departmentId,
           managerId: input.managerId,
           targetRoleId: input.targetRoleId,
-          lastRecapSeenMonth: "2000-01",
+          createdAt: input.createdAt,
+          lastRecapSeenMonth: input.lastRecapSeenMonth === undefined
+            ? "2000-01"
+            : input.lastRecapSeenMonth,
           users: { create: {
             name: value,
             email,
@@ -87,8 +104,53 @@ export function createE2eTestData() {
     async createMemberSkill(input: { memberId: string; skillId: string; level: number; approvedByMemberId?: string }) {
       return prisma.memberSkill.create({ data: input });
     },
-    async createLevelChange(input: { memberId: string; skillId: string; fromLevel: number; toLevel: number; changedByMemberId: string }) {
-      return prisma.skillLevelChange.create({ data: { ...input, source: "DIRECT_EDIT" } });
+    async createSelfAssessment(input: {
+      memberId: string;
+      skillId: string;
+      requestedLevel: number;
+      status?: SkillSelfAssessmentStatus;
+      applicantComment?: string;
+      managerComment?: string;
+      reviewedByMemberId?: string;
+      reviewedAt?: Date;
+      createdAt?: Date;
+    }) {
+      return prisma.skillSelfAssessment.create({ data: input });
+    },
+    async createNotification(input: {
+      recipientMemberId: string;
+      type: NotificationType;
+      status?: NotificationStatus;
+      skillSelfAssessmentId?: string;
+      skillLevelChangeId?: string;
+      title: string;
+      body?: string;
+      createdAt?: Date;
+    }) {
+      return prisma.notification.create({ data: input });
+    },
+    async createLevelChange(input: {
+      memberId: string;
+      skillId: string;
+      fromLevel: number | null;
+      toLevel: number;
+      changedByMemberId?: string;
+      source?: SkillLevelChangeSource;
+      skillSelfAssessmentId?: string;
+      changedAt?: Date;
+      createdAt?: Date;
+    }) {
+      return prisma.skillLevelChange.create({
+        data: { ...input, source: input.source ?? "DIRECT_EDIT" },
+      });
+    },
+    async createLevelUpReaction(input: {
+      levelChangeId: string;
+      memberId: string;
+      type: LevelUpReactionType;
+      createdAt?: Date;
+    }) {
+      return prisma.levelUpReaction.create({ data: input });
     },
     cleanup() {
       return deleteE2eData(prisma, ids);

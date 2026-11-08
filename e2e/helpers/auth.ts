@@ -3,6 +3,8 @@ import { expect, type Browser, type BrowserContext, type Page } from "@playwrigh
 import { prisma } from "../../src/server/db/prisma";
 import type { DemoCredential } from "./credentials";
 
+const sharedDemoEmails = new Set(["admin@example.com", "manager@example.com", "member@example.com"]);
+
 // 月初の振り返りの演出が、共用のデモアカウントでほかのテストの操作をふさがないようにする。
 // 演出そのものは e2e/monthly-recap.spec.ts で確かめる。
 async function markPreviousMonthRecapSeen(email: string) {
@@ -27,7 +29,10 @@ export async function login(
   // 初回ログインではパスワードを決める画面へ移る
   expectedUrl: RegExp = /\/dashboard(?:\?.*)?$/
 ) {
-  await markPreviousMonthRecapSeen(credential.email);
+  // 専用データのアカウントは、テストが用意した振り返りの状態をそのまま使う
+  if (sharedDemoEmails.has(credential.email)) {
+    await markPreviousMonthRecapSeen(credential.email);
+  }
   await page.goto("/login");
   await page.getByLabel("メールアドレス", { exact: true }).fill(credential.email);
   await page.getByLabel("パスワード", { exact: true }).fill(credential.password);
