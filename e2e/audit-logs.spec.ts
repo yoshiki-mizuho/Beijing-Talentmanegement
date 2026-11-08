@@ -1,10 +1,12 @@
 import { expect, test } from "@playwright/test";
+import { createE2eTestData } from "./fixtures/test-data";
 import { openLoggedInContext } from "./helpers/auth";
 import { readDemoCredentials } from "./helpers/credentials";
 
 const credentials = readDemoCredentials();
 test("管理者が監査ログの差分と期間入力を確認できる", async ({ browser }) => {
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
+  const data = createE2eTestData();
   const categoryName = `E2E監査カテゴリ-${Date.now()}-${test.info().workerIndex}`;
   try {
     await admin.page.goto("/skills");
@@ -15,6 +17,7 @@ test("管理者が監査ログの差分と期間入力を確認できる", async
     await expect(
       admin.page.getByText("カテゴリを登録しました。"),
     ).toBeVisible();
+    await data.trackCreated({ categoryNames: [categoryName] });
     await admin.page.goto("/audit-logs?period=today");
     const row = admin.page
       .locator("details")
@@ -32,5 +35,6 @@ test("管理者が監査ログの差分と期間入力を確認できる", async
     await expect(admin.page).not.toHaveURL(/to=2026-01-05/);
   } finally {
     await admin.context.close();
+    await data.cleanup();
   }
 });

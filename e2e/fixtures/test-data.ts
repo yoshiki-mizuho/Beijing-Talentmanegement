@@ -30,9 +30,41 @@ export function createE2eTestData() {
   };
   let sequence = 0;
   const unique = (label: string) => `${prefix}-${label}-${++sequence}`;
+  const appendUnique = (target: string[], values: string[]) => {
+    for (const value of values) {
+      if (!target.includes(value)) target.push(value);
+    }
+  };
 
   return {
     prefix,
+    track(input: Partial<E2eDataIds>) {
+      appendUnique(ids.memberIds, input.memberIds ?? []);
+      appendUnique(ids.skillIds, input.skillIds ?? []);
+      appendUnique(ids.categoryIds, input.categoryIds ?? []);
+      appendUnique(ids.roleIds, input.roleIds ?? []);
+      appendUnique(ids.departmentIds, input.departmentIds ?? []);
+    },
+    async trackCreated(input: {
+      memberEmails?: string[];
+      skillNames?: string[];
+      categoryNames?: string[];
+      roleNames?: string[];
+      departmentCodes?: string[];
+    }) {
+      const [members, skills, categories, roles, departments] = await Promise.all([
+        prisma.member.findMany({ where: { email: { in: input.memberEmails ?? [] } }, select: { id: true } }),
+        prisma.skill.findMany({ where: { name: { in: input.skillNames ?? [] } }, select: { id: true } }),
+        prisma.skillCategory.findMany({ where: { name: { in: input.categoryNames ?? [] } }, select: { id: true } }),
+        prisma.role.findMany({ where: { name: { in: input.roleNames ?? [] } }, select: { id: true } }),
+        prisma.department.findMany({ where: { code: { in: input.departmentCodes ?? [] } }, select: { id: true } }),
+      ]);
+      appendUnique(ids.memberIds, members.map((item) => item.id));
+      appendUnique(ids.skillIds, skills.map((item) => item.id));
+      appendUnique(ids.categoryIds, categories.map((item) => item.id));
+      appendUnique(ids.roleIds, roles.map((item) => item.id));
+      appendUnique(ids.departmentIds, departments.map((item) => item.id));
+    },
     async createDepartment(label: string, parentDepartmentId?: string): Promise<Department> {
       const value = unique(label);
       const department = await prisma.department.create({

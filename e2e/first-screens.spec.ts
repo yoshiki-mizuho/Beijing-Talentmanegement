@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 
+import { createE2eTestData } from "./fixtures/test-data";
 import { openLoggedInContext } from "./helpers/auth";
 import { readDemoCredentials } from "./helpers/credentials";
 
@@ -8,6 +9,7 @@ const credentials = readDemoCredentials();
 test("初めてのメンバーを3ステップで案内し、複数承認を1回で祝う", async ({ browser }) => {
   test.slow();
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
+  const data = createE2eTestData();
   const suffix = `${Date.now()}-${test.info().workerIndex}`;
   const employeeNo = `FIRST-${suffix}`;
   const memberName = `初回画面-${suffix}`;
@@ -23,6 +25,7 @@ test("初めてのメンバーを3ステップで案内し、複数承認を1回
     await createDialog.getByLabel("メール").fill(email);
     await createDialog.getByRole("button", { name: "メンバーを追加", exact: true }).click();
     const resultDialog = admin.page.getByRole("dialog", { name: `${memberName}さんを登録しました` });
+    await data.trackCreated({ memberEmails: [email] });
     const initialPassword = await resultDialog.locator("p.font-mono").textContent();
     expect(initialPassword).not.toBeNull();
     await resultDialog.getByRole("button", { name: "閉じる" }).last().click();
@@ -69,17 +72,7 @@ test("初めてのメンバーを3ステップで案内し、複数承認を1回
     await expect(memberContext.page.getByLabel("はじめの3ステップ進捗")).toHaveAttribute("aria-valuenow", "2");
   } finally {
     await memberContext?.context.close();
-    await admin.page.goto("/members");
-    await admin.page.getByLabel("キーワード").fill(employeeNo);
-    const row = admin.page.getByRole("row").filter({ hasText: employeeNo });
-    if (await row.count()) {
-      await row.getByRole("button", { name: `${memberName}の詳細を開く` }).click();
-      const detail = admin.page.getByRole("dialog", { name: `${memberName}の詳細` });
-      await detail.getByRole("tab", { name: "アカウント" }).click();
-      await detail.getByRole("button", { name: "無効化", exact: true }).click();
-      await admin.page.getByRole("dialog", { name: "メンバーを無効化しますか" })
-        .getByRole("button", { name: "無効化する" }).click();
-    }
     await admin.context.close();
+    await data.cleanup();
   }
 });

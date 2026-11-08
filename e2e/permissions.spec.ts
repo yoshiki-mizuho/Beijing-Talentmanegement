@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 
+import { createE2eTestData } from "./fixtures/test-data";
 import { openLoggedInContext } from "./helpers/auth";
 import { readDemoCredentials, type DemoRole } from "./helpers/credentials";
 import { dismissExistingLevelUpDialogs } from "./helpers/level-up";
@@ -116,21 +117,25 @@ test("MEMBER のメンバー API は 403", async ({ browser }) => {
 });
 
 test("ADMIN が権限を変更し監査ログを確認できる", async ({ browser }) => {
+  const data = createE2eTestData();
+  const department = await data.createDepartment("権限変更部署");
+  const adminAccount = await data.createMember({ label: "権限変更管理者", departmentId: department.id, role: "ADMIN" });
+  const memberAccount = await data.createMember({ label: "権限変更対象", departmentId: department.id });
   const { context, page } = await openLoggedInContext(
     browser,
-    credentials.ADMIN,
+    adminAccount.credential,
   );
   try {
     await page.goto("/members");
-    await page.getByLabel("キーワード").fill("TM0003");
-    const memberRow = page.getByRole("row").filter({ hasText: "TM0003" });
+    await page.getByLabel("キーワード").fill(memberAccount.member.employeeNo);
+    const memberRow = page.getByRole("row").filter({ hasText: memberAccount.member.employeeNo });
     await expect(memberRow).toBeVisible();
     await memberRow
-      .getByRole("button", { name: "Member Userの詳細を開く" })
+      .getByRole("button", { name: `${memberAccount.member.name}の詳細を開く` })
       .click();
-    const detail = page.getByRole("dialog", { name: "Member Userの詳細" });
+    const detail = page.getByRole("dialog", { name: `${memberAccount.member.name}の詳細` });
     await detail.getByRole("tab", { name: "アカウント" }).click();
-    const permission = detail.getByLabel("権限");
+    const permission = detail.getByLabel("権限", { exact: true });
     await permission.selectOption("MANAGER");
     await detail.getByRole("button", { name: "変更", exact: true }).click();
     await page
@@ -145,36 +150,20 @@ test("ADMIN が権限を変更し監査ログを確認できる", async ({ brows
     ).toBeVisible();
 
     await page.goto("/members");
-    await page.getByLabel("キーワード").fill("TM0003");
-    const resetRow = page.getByRole("row").filter({ hasText: "TM0003" });
-    await resetRow
-      .getByRole("button", { name: "Member Userの詳細を開く" })
-      .click();
-    const resetDetail = page.getByRole("dialog", { name: "Member Userの詳細" });
-    await resetDetail.getByRole("tab", { name: "アカウント" }).click();
-    await resetDetail.getByLabel("権限").selectOption("MEMBER");
-    await resetDetail
-      .getByRole("button", { name: "変更", exact: true })
-      .click();
-    await page
-      .getByRole("dialog", { name: "権限を変更しますか" })
-      .getByRole("button", { name: "変更する" })
-      .click();
-
-    await page.goto("/members");
-    await page.getByLabel("キーワード").fill("TM0001");
-    const selfRow = page.getByRole("row").filter({ hasText: "TM0001" });
+    await page.getByLabel("キーワード").fill(adminAccount.member.employeeNo);
+    const selfRow = page.getByRole("row").filter({ hasText: adminAccount.member.employeeNo });
     await selfRow
-      .getByRole("button", { name: "Admin Userの詳細を開く" })
+      .getByRole("button", { name: `${adminAccount.member.name}の詳細を開く` })
       .click();
     await page
-      .getByRole("dialog", { name: "Admin Userの詳細" })
+      .getByRole("dialog", { name: `${adminAccount.member.name}の詳細` })
       .getByRole("tab", { name: "アカウント" })
       .click();
     await expect(
-      page.getByRole("dialog", { name: "Admin Userの詳細" }).getByLabel("権限"),
+      page.getByRole("dialog", { name: `${adminAccount.member.name}の詳細` }).getByLabel("権限", { exact: true }),
     ).toBeDisabled();
   } finally {
     await context.close();
+    await data.cleanup();
   }
 });

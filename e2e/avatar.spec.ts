@@ -1,18 +1,18 @@
 import { expect, test } from "@playwright/test";
 
+import { createE2eTestData } from "./fixtures/test-data";
 import { login } from "./helpers/auth";
-import { readDemoCredentials } from "./helpers/credentials";
-import { dismissExistingLevelUpDialogs } from "./helpers/level-up";
-
-const credentials = readDemoCredentials();
 const onePixelPng = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGPgL8sDAAGLAPQ8xSAqAAAAAElFTkSuQmCC",
   "base64"
 );
 
 test("本人がアイコン画像を登録して削除できる", async ({ page }) => {
-  await login(page, credentials.MEMBER);
-  await dismissExistingLevelUpDialogs(page);
+  const data = createE2eTestData();
+  try {
+  const department = await data.createDepartment("アイコン部署");
+  const member = await data.createMember({ label: "アイコン本人", departmentId: department.id });
+  await login(page, member.credential);
   await page.getByLabel("アカウントメニューを開く").click();
   await page.getByRole("link", { name: "スキルプロフィール" }).click();
   await page.waitForURL("**/people/**");
@@ -38,4 +38,7 @@ test("本人がアイコン画像を登録して削除できる", async ({ page 
   await page.getByRole("button", { name: "画像を削除" }).click();
   await expect(page.getByText("アイコン画像を削除しました。")).toBeVisible();
   await expect(page.getByLabel("アカウントメニューを開く").locator("img")).toHaveCount(0);
+  } finally {
+    await data.cleanup();
+  }
 });

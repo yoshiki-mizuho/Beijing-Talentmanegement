@@ -1,13 +1,18 @@
 import { expect, test } from "@playwright/test";
 
+import { createE2eTestData } from "./fixtures/test-data";
 import { login } from "./helpers/auth";
-import { readDemoCredentials } from "./helpers/credentials";
-
-const credentials = readDemoCredentials();
 
 test("ADMINがAI候補と手動追加を登録し削除できる", async ({ page }) => {
-  await login(page, credentials.ADMIN);
+  const data = createE2eTestData();
+  try {
+  const department = await data.createDepartment("前提スキル部署");
+  const admin = await data.createMember({ label: "前提スキル管理者", departmentId: department.id, role: "ADMIN" });
+  const { skill } = await data.createSkill("前提元");
+  const { skill: prerequisite } = await data.createSkill("前提先");
+  await login(page, admin.credential);
   await page.goto("/skills?tab=prerequisites");
+  const existingAiRows = await page.getByRole("row").filter({ hasText: "AI の候補から" }).count();
   await page.getByRole("button", { name: "候補を作る" }).click();
 
   const candidateChecks = page.locator('input[type="checkbox"]');
@@ -21,11 +26,11 @@ test("ADMINがAI候補と手動追加を登録し削除できる", async ({ page
 
   await page.getByRole("button", { name: "＋ 手で追加" }).click();
   const skillBox = page.getByRole("combobox", { name: "スキル", exact: true });
-  await skillBox.fill("Python");
+  await skillBox.fill(skill.name);
   await skillBox.press("ArrowDown");
   await skillBox.press("Enter");
   const prerequisiteBox = page.getByRole("combobox", { name: "前提スキル", exact: true });
-  await prerequisiteBox.fill("PostgreSQL");
+  await prerequisiteBox.fill(prerequisite.name);
   await prerequisiteBox.press("ArrowDown");
   await prerequisiteBox.press("Enter");
   await page.getByRole("button", { name: "登録", exact: true }).click();
@@ -35,18 +40,20 @@ test("ADMINがAI候補と手動追加を登録し削除できる", async ({ page
   const manualRow = page
     .getByRole("row")
     .filter({ hasText: "手で追加" })
-    .filter({ hasText: "Python" })
-    .filter({ hasText: "PostgreSQL" });
+    .filter({ hasText: skill.name })
+    .filter({ hasText: prerequisite.name });
   await manualRow.getByRole("button", { name: /関係を削除/ }).click();
   await page.getByRole("button", { name: "削除する" }).click();
   await expect(manualRow).toHaveCount(0);
 
   // 1件ずつ、一覧から消えたのを確かめてから次を削除する
   const aiRows = page.getByRole("row").filter({ hasText: "AI の候補から" });
-  // 前回の失敗で残った分も含めて、AI の候補から登録した関係をすべて消す
-  for (let remaining = await aiRows.count(); remaining > 0; remaining -= 1) {
+  for (let remaining = await aiRows.count(); remaining > existingAiRows; remaining -= 1) {
     await aiRows.first().getByRole("button", { name: /関係を削除/ }).click();
     await page.getByRole("button", { name: "削除する" }).click();
     await expect(aiRows).toHaveCount(remaining - 1);
+  }
+  } finally {
+    await data.cleanup();
   }
 });

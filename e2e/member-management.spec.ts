@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 
+import { createE2eTestData } from "./fixtures/test-data";
 import { login, openLoggedInContext } from "./helpers/auth";
 import { readDemoCredentials } from "./helpers/credentials";
 import { dismissExistingLevelUpDialogs } from "./helpers/level-up";
@@ -12,6 +13,7 @@ test("管理者がメンバーを登録し、詳細で役職を更新して無�
   // 登録したメンバーでの初回ログインとパスワードの設定も含むため長めにする
   test.slow();
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
+  const data = createE2eTestData();
   const uniqueSuffix = `${Date.now()}-${test.info().workerIndex}`;
   const employeeNo = `E2E-${uniqueSuffix}`;
   const memberName = `E2Eメンバー-${uniqueSuffix}`;
@@ -37,6 +39,7 @@ test("管理者がメンバーを登録し、詳細で役職を更新して無�
     const resultDialog = admin.page.getByRole("dialog", {
       name: `${memberName}さんを登録しました`,
     });
+    await data.trackCreated({ memberEmails: [email] });
     const initialPassword = await resultDialog.locator("p.font-mono").textContent();
     expect(initialPassword).toMatch(/^[A-HJ-NP-Za-km-z2-9]{4}(?:-[A-HJ-NP-Za-km-z2-9]{4}){2}$/);
     // 右上の × も「閉じる」なので、下の「閉じる」ボタンを押す
@@ -121,26 +124,35 @@ test("管理者がメンバーを登録し、詳細で役職を更新して無�
     await expect(createdRow).toHaveCount(0);
   } finally {
     await admin.context.close();
+    await data.cleanup();
   }
 });
 
 test("マネージャーの一覧と更新APIは自組織の範囲に制限される", async ({
   browser,
 }) => {
-  const admin = await openLoggedInContext(browser, credentials.ADMIN);
-  const manager = await openLoggedInContext(browser, credentials.MANAGER);
+  const data = createE2eTestData();
+  const department = await data.createDepartment("範囲内部署");
+  const outsideDepartment = await data.createDepartment("範囲外部署");
+  const managerAccount = await data.createMember({ label: "範囲管理者", departmentId: department.id, role: "MANAGER" });
+  const adminAccount = await data.createMember({ label: "範囲確認管理者", departmentId: department.id, role: "ADMIN" });
+  const report = await data.createMember({ label: "範囲内本人", departmentId: department.id, managerId: managerAccount.member.id });
+  const outside = await data.createMember({ label: "範囲外本人", departmentId: outsideDepartment.id });
+  const { skill } = await data.createSkill("範囲確認スキル");
+  await data.createMemberSkill({ memberId: report.member.id, skillId: skill.id, level: 1, approvedByMemberId: managerAccount.member.id });
+  const admin = await openLoggedInContext(browser, adminAccount.credential);
+  const manager = await openLoggedInContext(browser, managerAccount.credential);
   try {
-    const response = await admin.page.request.get("/api/members?q=TM0103");
+    const response = await admin.page.request.get(`/api/members?q=${outside.member.employeeNo}`);
     const outsideMembers = (await response.json()) as { id: string }[];
     expect(outsideMembers).toHaveLength(1);
 
     await manager.page.goto("/members");
-    await dismissExistingLevelUpDialogs(manager.page);
-    await manager.page.getByLabel("キーワード").fill("TM0103");
-    await expect(manager.page.getByText("デモメンバー03")).toHaveCount(0);
+    await manager.page.getByLabel("キーワード").fill(outside.member.employeeNo);
+    await expect(manager.page.getByText(outside.member.name)).toHaveCount(0);
 
-    await manager.page.getByLabel("キーワード").fill("TM0003");
-    const reportRow = manager.page.getByRole("row").filter({ hasText: "TM0003" });
+    await manager.page.getByLabel("キーワード").fill(report.member.employeeNo);
+    const reportRow = manager.page.getByRole("row").filter({ hasText: report.member.employeeNo });
     await expect(reportRow).toBeVisible();
     await reportRow.getByRole("button", { name: /の詳細を開く/ }).click();
     const managerDetail = manager.page.getByRole("dialog");
@@ -183,13 +195,14 @@ test("マネージャーの一覧と更新APIは自組織の範囲に制限さ�
     expect(forbiddenInScope.status()).toBe(403);
 
     const forbidden = await manager.page.request.patch(
-      `/api/members/${outsideMembers[0].id}`,
+      `/api/members/${outside.member.id}`,
       { data: {} },
     );
     expect(forbidden.status()).toBe(403);
   } finally {
     await admin.context.close();
     await manager.context.close();
+    await data.cleanup();
   }
 });
 

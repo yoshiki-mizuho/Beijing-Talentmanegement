@@ -1,47 +1,30 @@
 import { expect, test } from "@playwright/test";
 
+import { createE2eTestData } from "./fixtures/test-data";
 import { openLoggedInContext } from "./helpers/auth";
 import { readDemoCredentials } from "./helpers/credentials";
-import { dismissExistingLevelUpDialogs } from "./helpers/level-up";
 
 const credentials = readDemoCredentials();
 
 test("MEMBERがロールを確認して目標を変更し元に戻せる", async ({ browser }) => {
-  const member = await openLoggedInContext(browser, credentials.MEMBER);
+  const data = createE2eTestData();
+  const department = await data.createDepartment("目標ロール部署");
+  const account = await data.createMember({ label: "目標ロール本人", departmentId: department.id });
+  // 要件のないロールは「達成」扱いで「目標にする」が出ないので、まだ持っていないスキルを要件にする
+  const { skill } = await data.createSkill("目標ロール要件");
+  const roleA = await data.createRole("目標ロールA", [{ skillId: skill.id, requiredLevel: 3 }]);
+  const roleB = await data.createRole("目標ロールB", [{ skillId: skill.id, requiredLevel: 3 }]);
+  const member = await openLoggedInContext(browser, account.credential);
   try {
-    await member.page.goto("/roles");
-    await dismissExistingLevelUpDialogs(member.page);
-    const originalTarget = member.page
-      .getByText("目標", { exact: true })
-      .first()
-      .locator("xpath=ancestor::a");
-    const originalHref = (await originalTarget.count())
-      ? await originalTarget.getAttribute("href")
-      : null;
-    const targetButton = member.page.getByRole("button", {
-      name: "目標にする",
-    });
-    if ((await targetButton.count()) === 0) {
-      await member.page
-        .locator('a[href^="/roles?role="]')
-        .filter({ hasNot: member.page.getByText("目標", { exact: true }) })
-        .first()
-        .click();
-    }
-    await member.page.getByRole("button", { name: "目標にする" }).click();
-    await expect(
-      member.page.getByText("目標ロールを更新しました。"),
-    ).toBeVisible();
-
-    if (originalHref) {
-      await member.page.goto(originalHref);
+    // 専用のメンバーは目標ロールが未設定なので、専用のロールAを目標にしてからBへ変える
+    for (const role of [roleA, roleB]) {
+      await member.page.goto(`/roles?role=${encodeURIComponent(role.id)}`);
       await member.page.getByRole("button", { name: "目標にする" }).click();
-      await expect(
-        member.page.getByText("目標ロールを更新しました。"),
-      ).toBeVisible();
+      await expect(member.page.getByText("目標ロールを更新しました。")).toBeVisible();
     }
   } finally {
     await member.context.close();
+    await data.cleanup();
   }
 });
 
@@ -49,6 +32,7 @@ test("ADMINが必要なスキルを2つ選んでロールを作成できる", as
   browser,
 }) => {
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
+  const data = createE2eTestData();
   const roleName = `E2E要件付きロール-${Date.now()}-${test.info().workerIndex}`;
   try {
     await admin.page.goto("/roles");
@@ -75,6 +59,7 @@ test("ADMINが必要なスキルを2つ選んでロールを作成できる", as
     await skillSelects.nth(1).selectOption(secondValue);
     await dialog.getByRole("button", { name: "保存", exact: true }).click();
     await expect(admin.page.getByText("ロールを登録しました。")).toBeVisible();
+    await data.trackCreated({ roleNames: [roleName] });
 
     await admin.page.getByRole("link", { name: new RegExp(roleName) }).click();
     await expect(admin.page.getByRole("row")).toHaveCount(3);
@@ -93,5 +78,6 @@ test("ADMINが必要なスキルを2つ選んでロールを作成できる", as
     await expect(admin.page.getByText("ロールを削除しました。")).toBeVisible();
   } finally {
     await admin.context.close();
+    await data.cleanup();
   }
 });
