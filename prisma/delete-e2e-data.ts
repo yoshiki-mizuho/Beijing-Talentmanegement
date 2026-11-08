@@ -55,6 +55,16 @@ export async function deleteE2eData(
   const levelChangeIds = levelChanges.map((item) => item.id);
   const cheerIds = cheers.map((item) => item.id);
   const csvImportJobIds = csvImportJobs.map((item) => item.id);
+  const notifications = await prisma.notification.findMany({
+    where: { OR: [
+      { recipientMemberId: { in: memberIds } },
+      { skillSelfAssessmentId: { in: assessmentIds } },
+      { skillLevelChangeId: { in: levelChangeIds } },
+      { cheerId: { in: cheerIds } },
+    ] },
+    select: { id: true },
+  });
+  const notificationIds = notifications.map((item) => item.id);
   const targetIds = [
     ...memberIds,
     ...skillIds,
@@ -65,6 +75,7 @@ export async function deleteE2eData(
     ...levelChangeIds,
     ...cheerIds,
     ...csvImportJobIds,
+    ...notificationIds,
   ];
 
   return prisma.$transaction(async (tx) => {

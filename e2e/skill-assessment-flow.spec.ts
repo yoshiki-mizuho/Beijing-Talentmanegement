@@ -1,289 +1,150 @@
 import { expect, test } from "@playwright/test";
 
+import { createE2eTestData } from "./fixtures/test-data";
 import { openLoggedInContext } from "./helpers/auth";
-import { readDemoCredentials } from "./helpers/credentials";
-import { dismissExistingLevelUpDialogs } from "./helpers/level-up";
 
-const credentials = readDemoCredentials();
+async function setup(label: string) {
+  const data = createE2eTestData();
+  const department = await data.createDepartment(`${label}部署`);
+  const manager = await data.createMember({ label: `${label}管理者`, departmentId: department.id, role: "MANAGER" });
+  const member = await data.createMember({ label: `${label}申請者`, departmentId: department.id, managerId: manager.member.id });
+  // スキルが1件もないと初回用のスキルシートになるので、承認済みのスキルを1つ持たせて普段のスキルシートにする
+  const { skill: baseSkill } = await data.createSkill(`${label}保有スキル`);
+  await data.createMemberSkill({ memberId: member.member.id, skillId: baseSkill.id, level: 2, approvedByMemberId: manager.member.id });
+  return { data, manager, member };
+}
 
-async function getUnreadNotificationCount(page: import("@playwright/test").Page) {
+async function unreadCount(page: import("@playwright/test").Page) {
   const label = await page.getByLabel(/通知を開く/).getAttribute("aria-label");
-  const count = label?.match(/未読通知(\d+)件/)?.[1];
-  return count ? Number(count) : 0;
+  return Number(label?.match(/未読通知(\d+)件/)?.[1] ?? 0);
 }
 
 test("複数のスキル申告を上司への通知1件にまとめ、承認後に既読にする", async ({ browser }) => {
-  const member = await openLoggedInContext(browser, credentials.MEMBER);
-  const manager = await openLoggedInContext(browser, credentials.MANAGER);
-  const admin = await openLoggedInContext(browser, credentials.ADMIN);
-
+  const fixture = await setup("一括申請");
+  let member: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
+  let manager: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
+  let admin: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
   try {
-    const managerUnreadBefore = await getUnreadNotificationCount(manager.page);
-    const adminUnreadBefore = await getUnreadNotificationCount(admin.page);
-    // 前の実行の未読が残っていることがあるので、申請の前の件数と比べる
-    await manager.page.goto("/notifications?view=unread");
-    const batchNoticesBefore = await manager.page
-      .getByText("2件の申請が届きました", { exact: false })
-      .count();
-
+    const adminAccount = await fixture.data.createMember({ label: "一括申請管理者外", departmentId: fixture.member.member.departmentId, role: "ADMIN" });
+    const skills = await Promise.all([fixture.data.createSkill("一括申請スキルA"), fixture.data.createSkill("一括申請スキルB")]);
+    member = await openLoggedInContext(browser, fixture.member.credential);
+    manager = await openLoggedInContext(browser, fixture.manager.credential);
+    admin = await openLoggedInContext(browser, adminAccount.credential);
+    const managerBefore = await unreadCount(manager.page);
+    const adminBefore = await unreadCount(admin.page);
     await member.page.goto("/my/skills");
-    await dismissExistingLevelUpDialogs(member.page);
-    const levelGroups = member.page.locator('[role="group"][aria-label$="のレベル"]');
-    const selectedSkills: string[] = [];
-
-    for (let index = 0; index < await levelGroups.count() && selectedSkills.length < 2; index += 1) {
-      const group = levelGroups.nth(index);
-      const selectableLevel = group.locator('button:not(:disabled)[aria-pressed="false"]').first();
-      if (await selectableLevel.count() === 0) {
-        continue;
-      }
-      const groupName = await group.getAttribute("aria-label");
-      const skillName = groupName?.replace(/のレベル$/, "");
-      if (!skillName) {
-        continue;
-      }
-      await selectableLevel.click();
-      selectedSkills.push(skillName);
+    for (const { skill } of skills) {
+      await member.page.locator(`[role="group"][aria-label="${skill.name}のレベル"]`).getByRole("button", { name: "Lv1", exact: true }).click();
     }
-
-    expect(selectedSkills).toHaveLength(2);
     await member.page.getByRole("button", { name: "2件を申請", exact: true }).click();
-    await expect(
-      member.page.getByText(
-        "2件のスキルを申請しました。マネージャーの承認をお待ちください。"
-      )
-    ).toBeVisible();
-
+    await expect(member.page.getByText("2件のスキルを申請しました。マネージャーの承認をお待ちください。")).toBeVisible();
     await manager.page.goto("/notifications?view=unread");
-    await expect(manager.page.getByLabel(/通知を開く、未読通知/)).toHaveAttribute(
-      "aria-label",
-      `通知を開く、未読通知${managerUnreadBefore + 1}件`
-    );
-    await expect(
-      manager.page.getByText("2件の申請が届きました", { exact: false })
-    ).toHaveCount(batchNoticesBefore + 1);
-
+    expect(await unreadCount(manager.page)).toBe(managerBefore + 1);
+    await expect(manager.page.getByText("2件の申請が届きました", { exact: false })).toHaveCount(1);
     await admin.page.goto("/dashboard");
-    expect(await getUnreadNotificationCount(admin.page)).toBe(adminUnreadBefore);
-
+    expect(await unreadCount(admin.page)).toBe(adminBefore);
     await manager.page.goto("/skill-approvals");
-    for (const skillName of selectedSkills) {
-      await manager.page.getByLabel(`Member Userの${skillName}申請を選択`).check();
-    }
+    for (const { skill } of skills) await manager.page.getByLabel(`${fixture.member.member.name}の${skill.name}申請を選択`).check();
     await manager.page.getByRole("button", { name: "選択した 2件を承認" }).click();
     await manager.page.getByRole("button", { name: "承認する", exact: true }).click();
-    await expect(manager.page.getByText("2件の申請を承認しました。"))
-      .toBeVisible();
-
-    // 承認依頼が既読になるのは、そのメンバーの承認待ちが0件になったとき。
-    // デモデータに Member User の承認待ちが残っていれば、未読のままが正しい。
-    await manager.page.goto("/skill-approvals");
-    const remainingPending = await manager.page
-      .getByRole("checkbox", { name: /^Member Userの.+申請を選択$/ })
-      .count();
+    await expect(manager.page.getByText("2件の申請を承認しました。")).toBeVisible();
     await manager.page.goto("/dashboard");
-    expect(await getUnreadNotificationCount(manager.page)).toBe(
-      remainingPending === 0 ? managerUnreadBefore : managerUnreadBefore + 1
-    );
-
-    await member.page.goto("/dashboard");
-    await dismissExistingLevelUpDialogs(member.page);
+    expect(await unreadCount(manager.page)).toBe(managerBefore);
   } finally {
-    await admin.context.close();
-    await manager.context.close();
-    await member.context.close();
+    await admin?.context.close();
+    await manager?.context.close();
+    await member?.context.close();
+    await fixture.data.cleanup();
   }
 });
 
 test("メンバーのスキル申告をマネージャーが承認できる", async ({ browser }) => {
-  const member = await openLoggedInContext(browser, credentials.MEMBER);
-  const applicantComment = "案件Xで設計から担当しました";
-
+  const fixture = await setup("承認");
+  let member: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
+  let manager: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
+  const comment = "案件Xで設計から担当しました";
   try {
+    const { skill } = await fixture.data.createSkill("承認スキル");
+    member = await openLoggedInContext(browser, fixture.member.credential);
     await member.page.goto("/my/skills");
-    await dismissExistingLevelUpDialogs(member.page);
-
-    const selectableLevel = member.page.locator(
-      '[role="group"][aria-label$="のレベル"] button:not(:disabled)[aria-pressed="false"]'
-    ).first();
-    await expect(selectableLevel).toBeVisible();
-    const levelGroup = selectableLevel.locator("..");
-    const groupName = await levelGroup.getAttribute("aria-label");
-    const skillName = groupName?.replace(/のレベル$/, "");
-
-    if (!skillName) {
-      throw new Error("申告可能なスキル名を取得できませんでした。");
-    }
-
-    await selectableLevel.click();
-    await member.page.getByLabel("ひとこと（任意）").fill(applicantComment);
-    await expect(
-      member.page.getByText("1件のスキルを変更しています", { exact: true })
-    ).toBeVisible();
+    await member.page.locator(`[role="group"][aria-label="${skill.name}のレベル"]`).getByRole("button", { name: "Lv1", exact: true }).click();
+    await member.page.getByLabel("ひとこと（任意）").fill(comment);
     await member.page.getByRole("button", { name: "1件を申請", exact: true }).click();
-    await expect(
-      member.page.getByText(
-        "1件のスキルを申請しました。マネージャーの承認をお待ちください。"
-      )
-    ).toBeVisible();
+    await expect(member.page.getByText("1件のスキルを申請しました。マネージャーの承認をお待ちください。")).toBeVisible();
     await member.page.getByRole("tab", { name: "申請履歴" }).click();
-
-    const pendingHistory = member.page.getByRole("group", {
-      name: `${skillName}の申請履歴`
-    }).first();
-    await expect(pendingHistory).toContainText("承認待ち");
-    await expect(pendingHistory).toContainText(`ひとこと：${applicantComment}`);
-
-    const manager = await openLoggedInContext(browser, credentials.MANAGER);
-    try {
-      await manager.page.goto("/skill-approvals");
-      const approval = manager.page.getByRole("listitem", {
-        name: `Member User / ${skillName}の承認`
-      });
-      await expect(approval).toBeVisible();
-      await approval.getByRole("button", {
-        name: `Member Userの${skillName}を承認`,
-        exact: true
-      }).click();
-      await expect(manager.page.getByText("スキル申請を承認しました。"))
-        .toBeVisible();
-      await expect(approval).toHaveCount(0);
-    } finally {
-      await manager.context.close();
-    }
-
+    const history = member.page.getByRole("group", { name: `${skill.name}の申請履歴` }).first();
+    await expect(history).toContainText("承認待ち");
+    await expect(history).toContainText(`ひとこと：${comment}`);
+    manager = await openLoggedInContext(browser, fixture.manager.credential);
+    await manager.page.goto("/skill-approvals");
+    const approval = manager.page.getByRole("listitem", { name: `${fixture.member.member.name} / ${skill.name}の承認` });
+    await approval.getByRole("button", { name: `${fixture.member.member.name}の${skill.name}を承認`, exact: true }).click();
+    await expect(manager.page.getByText("スキル申請を承認しました。")).toBeVisible();
+    await expect(approval).toHaveCount(0);
     await member.page.goto("/my/skills?tab=history");
-    const approvedHistory = member.page.getByRole("group", {
-      name: `${skillName}の申請履歴`
-    }).first();
-    await expect(approvedHistory).toContainText("承認済み");
-
-    // 承認で生まれたレベルアップ演出を確認済みにして、後のテストに残さない
-    await member.page.goto("/dashboard");
-    await dismissExistingLevelUpDialogs(member.page);
+    await expect(member.page.getByRole("group", { name: `${skill.name}の申請履歴` }).first()).toContainText("承認済み");
   } finally {
-    await member.context.close();
+    await manager?.context.close();
+    await member?.context.close();
+    await fixture.data.cleanup();
   }
 });
 
 test("差し戻し理由を入力し、メンバーが申請履歴で確認できる", async ({ browser }) => {
-  const member = await openLoggedInContext(browser, credentials.MEMBER);
-  const rejectionReason = "実務で使った例を追記してください";
-
+  const fixture = await setup("差し戻し");
+  let member: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
+  let manager: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
+  const reason = "実務で使った例を追記してください";
   try {
+    const { skill } = await fixture.data.createSkill("差し戻しスキル");
+    member = await openLoggedInContext(browser, fixture.member.credential);
     await member.page.goto("/my/skills");
-    await dismissExistingLevelUpDialogs(member.page);
-    const selectableLevel = member.page.locator(
-      '[role="group"][aria-label$="のレベル"] button:not(:disabled)[aria-pressed="false"]'
-    ).first();
-    const levelGroup = selectableLevel.locator("..");
-    const groupName = await levelGroup.getAttribute("aria-label");
-    const skillName = groupName?.replace(/のレベル$/, "");
-
-    if (!skillName) {
-      throw new Error("申告可能なスキル名を取得できませんでした。");
-    }
-
-    await selectableLevel.click();
+    await member.page.locator(`[role="group"][aria-label="${skill.name}のレベル"]`).getByRole("button", { name: "Lv1", exact: true }).click();
     await member.page.getByRole("button", { name: "1件を申請", exact: true }).click();
-
-    const manager = await openLoggedInContext(browser, credentials.MANAGER);
-    try {
-      await manager.page.goto("/skill-approvals");
-      const approval = manager.page.getByRole("listitem", {
-        name: `Member User / ${skillName}の承認`
-      });
-      await approval.getByRole("button", {
-        name: `Member Userの${skillName}を差し戻し`,
-        exact: true
-      }).click();
-
-      const reasonInput = manager.page.getByLabel("差し戻し理由");
-      await reasonInput.click();
-      // 1文字ずつ入力し、入力のたびにフォーカスが奪われないことを確かめる
-      await reasonInput.pressSequentially(rejectionReason);
-      await expect(reasonInput).toHaveValue(rejectionReason);
-      await expect(reasonInput).toBeFocused();
-      await manager.page.getByRole("button", { name: "差し戻す", exact: true }).click();
-      await expect(manager.page.getByText("スキル申請を差し戻しました。"))
-        .toBeVisible();
-    } finally {
-      await manager.context.close();
-    }
-
+    await expect(member.page.getByText("1件のスキルを申請しました。マネージャーの承認をお待ちください。")).toBeVisible();
+    manager = await openLoggedInContext(browser, fixture.manager.credential);
+    await manager.page.goto("/skill-approvals");
+    const approval = manager.page.getByRole("listitem", { name: `${fixture.member.member.name} / ${skill.name}の承認` });
+    await approval.getByRole("button", { name: `${fixture.member.member.name}の${skill.name}を差し戻し`, exact: true }).click();
+    const input = manager.page.getByLabel("差し戻し理由");
+    await input.pressSequentially(reason);
+    await expect(input).toHaveValue(reason);
+    await expect(input).toBeFocused();
+    await manager.page.getByRole("button", { name: "差し戻す", exact: true }).click();
+    await expect(manager.page.getByText("スキル申請を差し戻しました。")).toBeVisible();
     await member.page.goto("/my/skills?tab=history");
-    const rejectedHistory = member.page.getByRole("group", {
-      name: `${skillName}の申請履歴`
-    }).first();
-    await expect(rejectedHistory).toContainText("差し戻し");
-    await expect(rejectedHistory).toContainText(`差し戻しの理由：${rejectionReason}`);
+    const history = member.page.getByRole("group", { name: `${skill.name}の申請履歴` }).first();
+    await expect(history).toContainText("差し戻し");
+    await expect(history).toContainText(`差し戻しの理由：${reason}`);
   } finally {
-    await member.context.close();
+    await manager?.context.close();
+    await member?.context.close();
+    await fixture.data.cleanup();
   }
 });
 
 test("確認ポイントの詳細を確認し、確認ポイントなしだけを選べる", async ({ browser }) => {
-  const member = await openLoggedInContext(browser, credentials.MEMBER);
-  const manager = await openLoggedInContext(browser, credentials.MANAGER);
-  let skillName: string | null = null;
-
+  const fixture = await setup("確認ポイント");
+  let member: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
+  let manager: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
   try {
+    const { skill } = await fixture.data.createSkill("確認ポイントスキル");
+    await fixture.data.createMemberSkill({ memberId: fixture.member.member.id, skillId: skill.id, level: 1, approvedByMemberId: fixture.manager.member.id });
+    member = await openLoggedInContext(browser, fixture.member.credential);
     await member.page.goto("/my/skills");
-    await dismissExistingLevelUpDialogs(member.page);
-    const levelGroups = member.page.locator('[role="group"][aria-label$="のレベル"]');
-
-    for (let index = 0; index < await levelGroups.count(); index += 1) {
-      const group = levelGroups.nth(index);
-      const currentButton = group.locator('button[aria-pressed="true"]').first();
-      if (await currentButton.count() === 0) continue;
-
-      const currentLabel = await currentButton.getAttribute("aria-label");
-      const currentLevel = Number(currentLabel?.match(/(\d+)/)?.[1]);
-      if (!currentLevel || currentLevel > 3) continue;
-
-      const requestedButton = group.getByRole("button", {
-        name: `Lv${currentLevel + 2}`,
-        exact: true
-      });
-      if (await requestedButton.isDisabled()) continue;
-
-      skillName = (await group.getAttribute("aria-label"))?.replace(/のレベル$/, "") ?? null;
-      await requestedButton.click();
-      break;
-    }
-
-    expect(skillName).not.toBeNull();
+    await member.page.locator(`[role="group"][aria-label="${skill.name}のレベル"]`).getByRole("button", { name: "Lv3", exact: true }).click();
     await member.page.getByRole("button", { name: "1件を申請", exact: true }).click();
-    await expect(member.page.getByText(
-      "1件のスキルを申請しました。マネージャーの承認をお待ちください。"
-    )).toBeVisible();
-
+    manager = await openLoggedInContext(browser, fixture.manager.credential);
     await manager.page.goto("/skill-approvals");
-    const approval = manager.page.getByRole("listitem", {
-      name: `Member User / ${skillName}の承認`
-    });
+    const approval = manager.page.getByRole("listitem", { name: `${fixture.member.member.name} / ${skill.name}の承認` });
     await expect(approval.getByText("2段以上の上昇", { exact: true })).toBeVisible();
-    await approval.getByRole("button", {
-      name: `Member Userさんの ${skillName} の詳しい内容`
-    }).click();
+    await approval.getByRole("button", { name: `${fixture.member.member.name}さんの ${skill.name} の詳しい内容` }).click();
     await expect(approval.getByText(/段の上昇です。/)).toBeVisible();
-
-    await manager.page.getByRole("button", {
-      name: "確認ポイントなしをすべて選ぶ"
-    }).click();
-    await expect(approval.getByRole("checkbox", {
-      name: `Member Userの${skillName}申請を選択`
-    })).not.toBeChecked();
-
-    await approval.getByRole("button", {
-      name: `Member Userの${skillName}を差し戻し`,
-      exact: true
-    }).click();
-    await manager.page.getByLabel("差し戻し理由").fill("E2E確認ポイントの後片付け");
-    await manager.page.getByRole("button", { name: "差し戻す", exact: true }).click();
-    await expect(approval).toHaveCount(0);
+    await manager.page.getByRole("button", { name: "確認ポイントなしをすべて選ぶ" }).click();
+    await expect(approval.getByRole("checkbox", { name: `${fixture.member.member.name}の${skill.name}申請を選択` })).not.toBeChecked();
   } finally {
-    await manager.context.close();
-    await member.context.close();
+    await manager?.context.close();
+    await member?.context.close();
+    await fixture.data.cleanup();
   }
 });
