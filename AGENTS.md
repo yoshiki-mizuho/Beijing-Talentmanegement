@@ -19,6 +19,7 @@
 - ローカルDB、seed、検証コマンドは `docs/LOCAL_DEVELOPMENT.md` を確認する。
 - 画面のレイアウト、部品、文言、演出を判断する場合は `docs/DESIGN_GUIDELINES.md` を確認する。
 - セキュリティの対策、CI の検査、受け入れたリスクを判断する場合は `docs/SECURITY.md` を確認する。
+- Next.js 16 は、学習データの頃の Next.js と API・規約・ファイル構成が変わっている。Next.js の機能を使うコードを書く前に `node_modules/next/dist/docs/` の該当するガイドを確かめ、非推奨の案内に従う。
 
 ## Codex作業ルール
 
