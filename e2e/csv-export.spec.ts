@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { createE2eTestData } from "./fixtures/test-data";
 import { openLoggedInContext } from "./helpers/auth";
 import { readDemoCredentials } from "./helpers/credentials";
 
@@ -7,7 +8,10 @@ const credentials = readDemoCredentials();
 test("管理者が5種類のCSVを出力して監査ログを確認できる", async ({
   browser,
 }) => {
-  const admin = await openLoggedInContext(browser, credentials.ADMIN);
+  const data = createE2eTestData();
+  const department = await data.createDepartment("CSV出力部署");
+  const account = await data.createMember({ label: "CSV出力管理者", departmentId: department.id, role: "ADMIN" });
+  const admin = await openLoggedInContext(browser, account.credential);
   try {
     await admin.page.goto("/csv?tab=export");
     for (const name of [
@@ -44,6 +48,7 @@ test("管理者が5種類のCSVを出力して監査ログを確認できる", a
     ).toBeVisible();
   } finally {
     await admin.context.close();
+    await data.cleanup();
   }
 });
 

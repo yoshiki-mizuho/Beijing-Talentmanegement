@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 
+import { createE2eTestData } from "./fixtures/test-data";
 import { openLoggedInContext } from "./helpers/auth";
 import { readDemoCredentials } from "./helpers/credentials";
 import { dismissExistingLevelUpDialogs } from "./helpers/level-up";
@@ -9,6 +10,7 @@ const credentials = readDemoCredentials();
 test("キーボードでスキルを別カテゴリへ並び替えられる", async ({ browser }) => {
   test.slow();
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
+  const data = createE2eTestData();
   const suffix = `${Date.now()}-${test.info().workerIndex}`;
   const sourceCategory = `E2E並替元-${suffix}`;
   const targetCategory = `E2E並替先-${suffix}`;
@@ -24,6 +26,7 @@ test("キーボードでスキルを別カテゴリへ並び替えられる", as
       // 登録済みのカテゴリは名前を編集できる入力欄として並ぶので、その欄が現れるまで待つ
       await expect(categoryDialog.locator(`input[value="${name}"]`)).toHaveCount(1);
     }
+    await data.trackCreated({ categoryNames: [sourceCategory, targetCategory] });
     await categoryDialog.getByRole("button", { name: "ダイアログを閉じる" }).click();
     for (const name of [sourceCategory, targetCategory]) {
       await expect(admin.page.getByRole("button", { name, exact: true })).toBeVisible();
@@ -35,6 +38,7 @@ test("キーボードでスキルを別カテゴリへ並び替えられる", as
     await createDialog.getByLabel("カテゴリ").selectOption({ label: sourceCategory });
     await createDialog.getByRole("button", { name: "スキルを追加", exact: true }).click();
     await expect(admin.page.getByText("スキルを登録しました。")).toBeVisible();
+    await data.trackCreated({ skillNames: [skillName] });
 
     const handle = admin.page.getByRole("button", { name: `${skillName}を並び替える` });
     await admin.page.getByLabel("スキル名").fill(skillName);
@@ -82,11 +86,13 @@ test("キーボードでスキルを別カテゴリへ並び替えられる", as
     }
   } finally {
     await admin.context.close();
+    await data.cleanup();
   }
 });
 
 test("スキルごとのレベルの目安を保存してスキルシートに表示できる", async ({ browser }) => {
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
+  const data = createE2eTestData();
   const uniqueSuffix = `${Date.now()}-${test.info().workerIndex}`;
   const skillName = `E2E目安スキル-${uniqueSuffix}`;
   const levelGuide = "E2Eで設定したLv3の目安";
@@ -98,6 +104,7 @@ test("スキルごとのレベルの目安を保存してスキルシートに�
     await createDialog.getByLabel("スキル名").fill(skillName);
     await createDialog.getByRole("button", { name: "スキルを追加", exact: true }).click();
     await expect(admin.page.getByText("スキルを登録しました。")).toBeVisible();
+    await data.trackCreated({ skillNames: [skillName] });
 
     const skillRow = admin.page.getByRole("row").filter({ hasText: skillName });
     await skillRow.getByRole("button", { name: `${skillName}を編集` }).click();
@@ -142,6 +149,7 @@ test("スキルごとのレベルの目安を保存してスキルシートに�
     await expect(admin.page.getByText("スキルを削除しました。")).toBeVisible();
   } finally {
     await admin.context.close();
+    await data.cleanup();
   }
 });
 
@@ -175,6 +183,8 @@ test("管理者がスキルを作成・編集・無効化し、ロール要件�
   browser
 }) => {
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
+  const data = createE2eTestData();
+  const role = await data.createRole("スキル編集確認ロール", []);
   const uniqueSuffix = `${Date.now()}-${test.info().workerIndex}`;
   const skillName = `E2Eスキル-${uniqueSuffix}`;
   const editedSkillName = `${skillName}-編集済み`;
@@ -190,6 +200,7 @@ test("管理者がスキルを作成・編集・無効化し、ロール要件�
       .getByRole("button", { name: "スキルを追加", exact: true })
       .click();
     await expect(admin.page.getByText("スキルを登録しました。")).toBeVisible();
+    await data.trackCreated({ skillNames: [skillName] });
 
     const createdRow = admin.page.getByRole("row").filter({ hasText: skillName });
     await expect(createdRow).toBeVisible();
@@ -208,7 +219,7 @@ test("管理者がスキルを作成・編集・無効化し、ロール要件�
     ).toBeVisible();
 
     await admin.page.goto("/roles");
-    await admin.page.locator('a[href^="/roles?role="]').first().click();
+    await admin.page.getByRole("link", { name: new RegExp(role.name) }).click();
     await admin.page.getByRole("button", { name: "編集" }).click();
     const roleDialog = admin.page.getByRole("dialog", { name: /を編集$/ });
     await roleDialog.getByRole("button", { name: "＋ スキルを追加" }).click();
@@ -276,12 +287,14 @@ test("管理者がスキルを作成・編集・無効化し、ロール要件�
     await expect(editedRow).toContainText("無効");
   } finally {
     await admin.context.close();
+    await data.cleanup();
   }
 });
 
 test("管理者がスキルを検索・削除し、要件付きロールも削除できる", async ({ browser }) => {
   test.setTimeout(60_000);
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
+  const data = createE2eTestData();
   const uniqueSuffix = `${Date.now()}-${test.info().workerIndex}`;
   const categoryName = `E2Eカテゴリ-${uniqueSuffix}`;
   const skillName = `E2E削除スキル-${uniqueSuffix}`;
@@ -294,6 +307,7 @@ test("管理者がスキルを検索・削除し、要件付きロールも削�
     await categoryDialog.getByLabel("カテゴリ名").first().fill(categoryName);
     await categoryDialog.getByRole("button", { name: "追加", exact: true }).click();
     await expect(admin.page.getByText("カテゴリを登録しました。")).toBeVisible();
+    await data.trackCreated({ categoryNames: [categoryName] });
     await categoryDialog.getByRole("button", { name: "ダイアログを閉じる" }).click();
 
     await admin.page.getByRole("button", { name: "スキルを追加", exact: true }).click();
@@ -304,6 +318,7 @@ test("管理者がスキルを検索・削除し、要件付きロールも削�
       .getByRole("button", { name: "スキルを追加", exact: true })
       .click();
     await expect(admin.page.getByText("スキルを登録しました。")).toBeVisible();
+    await data.trackCreated({ skillNames: [skillName] });
 
     await admin.page.getByLabel("スキル名").fill(skillName);
     await expect(admin.page.getByRole("row").filter({ hasText: skillName })).toHaveCount(1);
@@ -353,6 +368,7 @@ test("管理者がスキルを検索・削除し、要件付きロールも削�
     await createRoleDialog.getByLabel("ロール名").fill(roleName);
     await createRoleDialog.getByRole("button", { name: "保存", exact: true }).click();
     await expect(admin.page.getByText("ロールを登録しました。")).toBeVisible();
+    await data.trackCreated({ roleNames: [roleName] });
 
     await admin.page.getByRole("link", { name: new RegExp(roleName) }).click();
     await admin.page.getByRole("button", { name: "編集" }).click();
@@ -364,6 +380,7 @@ test("管理者がスキルを検索・削除し、要件付きロールも削�
     await expect(admin.page.getByText(roleName)).toHaveCount(0);
   } finally {
     await admin.context.close();
+    await data.cleanup();
   }
 });
 
@@ -388,10 +405,12 @@ test("スキル検索をクリアして一覧を元に戻せる", async ({ brows
 
 test("大分類を作成してカテゴリを割り当て、削除すると未分類に戻る", async ({ browser }) => {
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
+  const data = createE2eTestData();
   const suffix = `${Date.now()}-${test.info().workerIndex}`;
   const groupName = `E2E大分類-${suffix}`;
   // デモのカテゴリの割り当てを変えないよう、使い捨てのカテゴリで確かめる（後片付けで消える）
   const categoryName = `E2E大分類用-${suffix}`;
+  const skillName = `E2E大分類スキル-${suffix}`;
   try {
     await admin.page.goto("/skills");
     await admin.page.getByRole("button", { name: "カテゴリを管理" }).click();
@@ -399,15 +418,17 @@ test("大分類を作成してカテゴリを割り当て、削除すると未�
     await categoryDialog.getByLabel("カテゴリ名").first().fill(categoryName);
     await categoryDialog.getByRole("button", { name: "追加", exact: true }).click();
     await expect(admin.page.getByText("カテゴリを登録しました。")).toBeVisible();
+    await data.trackCreated({ categoryNames: [categoryName] });
     await categoryDialog.getByRole("button", { name: "ダイアログを閉じる" }).click();
     // スキルのない大分類はスキルシートに出ないため、使い捨てのスキルも1件作る
     await admin.page.getByRole("button", { name: categoryName, exact: true }).waitFor();
     await admin.page.getByRole("button", { name: "スキルを追加", exact: true }).click();
     const createDialog = admin.page.getByRole("dialog", { name: "スキルを追加" });
-    await createDialog.getByLabel("スキル名").fill(`E2E大分類スキル-${suffix}`);
+    await createDialog.getByLabel("スキル名").fill(skillName);
     await createDialog.getByLabel("カテゴリ").selectOption({ label: categoryName });
     await createDialog.getByRole("button", { name: "スキルを追加", exact: true }).click();
     await expect(admin.page.getByText("スキルを登録しました。")).toBeVisible();
+    await data.trackCreated({ skillNames: [skillName] });
 
     await admin.page.goto("/skills?tab=groups");
     await admin.page.getByLabel("新しい大分類").fill(groupName);
@@ -437,6 +458,7 @@ test("大分類を作成してカテゴリを割り当て、削除すると未�
     await expect(admin.page.getByLabel(`${categoryName}の大分類`)).toHaveValue("unclassified");
   } finally {
     await admin.context.close();
+    await data.cleanup();
   }
 });
 
