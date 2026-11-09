@@ -15,7 +15,6 @@
 - 画面一覧、ユーザーフロー、Mermaid図の方針を判断する場合は `docs/SCREEN_AND_FLOW.md` を確認する。
 - 権限、CSV import/export、監査ログ、通知まわりを判断する場合は `docs/CSV_PERMISSION_AUDIT.md` を確認する。
 - GitLab運用、branch、MR、review方針は `docs/DEVELOPMENT_WORKFLOW.md` を確認する。
-- MVPからの継承・再設計方針は `docs/MVP_REVIEW.md` を確認する。
 - ローカルDB、seed、検証コマンドは `docs/LOCAL_DEVELOPMENT.md` を確認する。
 - 画面のレイアウト、部品、文言、演出を判断する場合は `docs/DESIGN_GUIDELINES.md` を確認する。
 - セキュリティの対策、CI の検査、受け入れたリスクを判断する場合は `docs/SECURITY.md` を確認する。

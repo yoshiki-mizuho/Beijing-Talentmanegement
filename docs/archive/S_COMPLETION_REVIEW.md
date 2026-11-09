@@ -69,7 +69,7 @@ S で合意した範囲は完了している。完了条件の4つを満たす�
 
 - 範囲外の項目と受け入れたリスクは `docs/SECURITY.md` にある。認証基盤を切り替えるときに見直す。
 - E2E のデータの独立と既知の失敗4件は、リポジトリの整理で扱う。
-- `Member.pinnedBadgeIds` の列の削除、スマホ幅のヘッダーのはみ出し、大分類の一括割り当てなど、R7 までの申し送りは引き続き残っている（`docs/R7_COMPLETION_REVIEW.md`）。
+- `Member.pinnedBadgeIds` の列の削除、スマホ幅のヘッダーのはみ出し、大分類の一括割り当てなど、R7 までの申し送りは引き続き残っている（`docs/archive/R7_COMPLETION_REVIEW.md`）。
 
 ## 次の順番
 
