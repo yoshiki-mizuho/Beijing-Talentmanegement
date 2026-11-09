@@ -6,7 +6,7 @@
 - `docs/SCREEN_AND_FLOW.md`
 - `docs/CSV_PERMISSION_AUDIT.md`
 - `docs/ROADMAP.md`
-- `docs/MVP_REVIEW.md`
+- `docs/archive/MVP_REVIEW.md`
 
 ## 判定
 

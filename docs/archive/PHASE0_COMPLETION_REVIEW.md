@@ -6,7 +6,7 @@
 - `docs/TECH_STACK.md`
 - `docs/ARCHITECTURE.md`
 - `docs/DEVELOPMENT_WORKFLOW.md`
-- `docs/MVP_REVIEW.md`
+- `docs/archive/MVP_REVIEW.md`
 
 ## 判定
 
