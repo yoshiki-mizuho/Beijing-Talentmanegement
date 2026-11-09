@@ -487,6 +487,8 @@ E2Eを、実行の順番や前のテストの残りに左右されず、毎回�
 - 本番DB migration手順を整理する。
 - rollback方針を整理する。
 - セキュリティ、監査、バックアップ、運用監視、障害対応手順をドキュメント化する。
+- 社内サーバーへ乗せ換えるときに、Vercel向けの設定（`vercel.json`）と`docs/DEMO_DEPLOYMENT.md`のVercelの手順を整理する（デモがVercelで動いている間は、mainだけをデプロイするために`vercel.json`が必要）。
+- `docker-compose.yml`の`AUTH_SECRET`を、ダミーの固定値ではなく`.env`から読む形にする（今のダミー値は32文字以上あり、本番の長さのチェックを通ってしまう）。
 
 ### 完了条件
 
