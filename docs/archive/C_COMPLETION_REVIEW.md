@@ -2,7 +2,7 @@
 
 ## レビュー対象
 
-- C：MR !102〜!106
+- C：MR !102〜!106、利用者のレビュー後の追加の整理 !108〜!111
 - migration 1本：`20261108120000_drop_member_pinned_badge_ids`
 - E2E（`e2e/`）、専用データの仕組み（`e2e/fixtures/test-data.ts`、`prisma/delete-e2e-data.ts`）、関連するドキュメントと設定
 
@@ -67,6 +67,21 @@ C で合意した範囲は完了している。E2E は、続けて2回流して�
 - `e2e/helpers/level-up.ts` の演出を閉じる処理は、まだ複数のテストで使っているので残した。
 - R7 までの申し送り（スマホ幅のヘッダーのはみ出し、大分類の一括割り当て、Phase 4.7 の U7、ロール CSV の OR の組の取り込み、社内で使える AI の窓口）は引き続き残っている。
 
+## 利用者のレビュー後の追加の整理
+
+完了レビュー（!107）の後、利用者がリポジトリを確認し、人が見たときに分かりにくい構成を整理した。2026-11-10 に利用者が C の完了を判断した。
+
+| MR | 内容 |
+| --- | --- |
+| !108 | `next-env.d.ts` を Git の管理から外す。`vercel.json` はデモが Vercel で動いている間は残す |
+| !109 | 過去の記録を `docs/archive/` に移し、ROADMAP を短くする |
+| !110 | ルートに `README.md` を追加。空フォルダの目印（`.gitkeep`）25個、未使用の部品3つ、ひな形のままの `k8s/`、実物とずれていた `docs/api/openapi.yaml`、未使用の `components.json`、1行だけのモジュール README 8個を削除。画面撮影を `e2e/ui-check/` に、E2E の掃除用ファイルを `prisma/` から `e2e/cleanup/` に移動。現行ドキュメントから経緯の記述を取り除く |
+| !111 | 使っていない `public/` と `.claude/skills/local-dev` を削除 |
+
+- 上の「レビュー対象」にある `prisma/delete-e2e-data.ts` は、!110 で `e2e/cleanup/delete-e2e-data.ts` に移った。
+- `prisma/` というフォルダ名は、Prisma の慣習の名前なので変えない（利用者の判断）。
+- `k8s/` と `public/` は、必要になった時点で作り直す。`public/` を作るときは、`Dockerfile` に `COPY --from=builder /app/public ./public` を戻す。
+
 ## 次の順番
 
-利用者がリポジトリを確認し、気になる点があれば相談する（2026-11-07 の利用者の依頼）。その後、Phase 7 の本番化・運用準備へ進む。
+Phase 7 の本番化・運用準備へ進む。
