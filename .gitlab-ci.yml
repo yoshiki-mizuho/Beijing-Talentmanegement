@@ -49,7 +49,6 @@ variables:
         - prisma/**/*
         - e2e/**/*
         - scripts/**/*
-        - public/**/*
         - package.json
         - package-lock.json
         - .npmrc

@@ -48,8 +48,6 @@ Remove-Item Env:DEMO_ADMIN_PASSWORD, Env:DEMO_MANAGER_PASSWORD, Env:DEMO_MEMBER_
 
 5. `npm.cmd run dev` で起動し、`http://localhost:3000/login` から `admin@example.com`、`manager@example.com`、`member@example.com` でログインする。
 
-Claude Code では、`local-dev` スキル（`.claude/skills/local-dev/`）に「ローカルで起動して」などと依頼すると、PostgreSQLの確認、migration、seed、開発サーバーの起動までをまとめて実行できる。
-
 ## 検証コマンド
 
 基本の品質ゲートは、以下の集約コマンドで順番に実行する。
