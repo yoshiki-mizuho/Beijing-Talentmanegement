@@ -74,9 +74,8 @@
 
 ## 今後の順番
 
-1. 利用者がリポジトリを確認し、気になる点があれば相談する。
-2. Phase 7の本番化・運用準備へ進む。
-3. AIの「迷ったときの相談」は、社内で使えるAIの窓口が決まった時点で差し込む。
+1. Phase 7の本番化・運用準備へ進む。
+2. AIの「迷ったときの相談」は、社内で使えるAIの窓口が決まった時点で差し込む。
 
 ## Phase 7: 本番化・運用準備
 
@@ -88,7 +87,7 @@
 
 - Playwrightで主要E2Eを整備する。
 - GitLab Container Registryへのpushを整備する。
-- 環境別deployを整備する。
+- 環境別deployを整備する。Kubernetesのmanifestは、環境構成が決まってから作る（ひな形だった`k8s/`はCで削除した）。
 - production deployにはmanual approvalを挟む。
 - migration checkを整備する。
 - 本番DB migration手順を整理する。

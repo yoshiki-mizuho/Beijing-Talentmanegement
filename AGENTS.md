@@ -43,4 +43,4 @@
 ## 現在の状態
 
 - Phase0〜Phase6と、使い勝手の改善R4・R5、スキルシートと承認の改善R6、振り返りとわくわく感R7、セキュリティ強化S、リポジトリの整理Cは完了済み。デモ環境の運用手順は `docs/DEMO_DEPLOYMENT.md` を確認する。
-- 次の対象は、利用者によるリポジトリの確認と相談。その後にPhase 7。E2Eは専用のデータを作って消す（`docs/LOCAL_DEVELOPMENT.md`）。セキュリティの対策と受け入れたリスクは `docs/SECURITY.md` を確認する。
+- 次の対象はPhase 7（本番化・運用準備）。E2Eは専用のデータを作って消す（`docs/LOCAL_DEVELOPMENT.md`）。セキュリティの対策と受け入れたリスクは `docs/SECURITY.md` を確認する。
