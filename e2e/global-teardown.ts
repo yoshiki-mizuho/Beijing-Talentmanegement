@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 
-import { isLocalDatabaseUrl } from "../prisma/cleanup-e2e-policy";
+import { isLocalDatabaseUrl } from "./cleanup/cleanup-e2e-policy";
 
 // E2E が作ったデータを最後に片付ける。ローカルの DB のときだけ動き、CI では何もしない。
 export default function globalTeardown() {

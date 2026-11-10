@@ -12,7 +12,7 @@
 
 そのため、初期は単一アプリケーションとして開発速度と運用の単純さを保ちながら、内部のモジュール境界を明確にします。将来、外部連携、AI評価ジョブ、CSV取り込みなどを独立させる必要が出た場合にも、分離しやすい構造を目指します。
 
-## 初期モジュール
+## モジュール
 
 | モジュール | 主な責務 |
 | --- | --- |
@@ -26,6 +26,8 @@
 | `audit` | 監査ログ、操作履歴、変更差分、import履歴 |
 | `notifications` | スキル申告、承認依頼、承認結果、差し戻し通知 |
 | `ai-evaluation` | AI評価、評価結果キャッシュ、再評価、利用ログ、フォールバック |
+| `growth` | レベルアップの演出とフィード、バッジ、成長カレンダー、目標ロール、応援、1on1メモ、月の振り返り |
+| `explore` | 探す画面、スキルプロフィール、社内チャットへのリンク |
 
 ## レイヤー構成
 
@@ -38,56 +40,46 @@
 | `infrastructure` | Prisma repository、外部API、永続化、技術詳細 |
 | `presentation` | 画面コンポーネント、Server Actions、Route Handlers、フォーム |
 
+モジュールの説明はこの表を正とし、仕組みの説明が要るモジュール（`ai-evaluation`、`audit`）だけ `README.md` を置きます。
+
 小さなモジュールでは全レイヤーを無理に作らず、複雑さが出た時点で分割します。ただし、DBアクセスや外部API呼び出しを画面コンポーネントへ直接置くことは避けます。
 
-Phase 2で配置している `.gitkeep` だけの空レイヤーディレクトリは、後続実装で迷わないための境界予約です。空ディレクトリがあることを理由に抽象化を先入れせず、実際のuse case、業務ルール、永続化、画面補助が必要になった時点で最小限の実装を追加します。
+空のレイヤーディレクトリは置きません。実際のuse case、業務ルール、永続化、画面補助が必要になった時点で、ディレクトリごと追加します。
 
-## 初期ディレクトリ構成
+## ディレクトリ構成
 
-Phase 0時点の初期案として、アプリケーションコードは以下の構成から開始します。
+アプリケーションコードは以下の構成です。
 
 ```text
 src/
   app/
-    (app)/
-      members/
-      skills/
-      roles/
-      skill-map/
-      dashboard/
-    api/
+    (app)/        ログイン後の画面（ダッシュボード、メンバー、スキルなど）
+    api/          Route Handlers
+    login/
   modules/
-    members/
+    <module>/     上の表のモジュールごとに1つ
       domain/
       application/
       infrastructure/
       presentation/
-    skills/
-      domain/
-      application/
-      infrastructure/
-      presentation/
-    roles/
-      domain/
-      application/
-      infrastructure/
-      presentation/
-    skill-map/
-    dashboard/
-    csv-import/
-    auth/
-    audit/
-    notifications/
-    ai-evaluation/
   shared/
-    ui/
+    auth/         画面とナビゲーションの出し分け
+    domain/       複数モジュールで使う業務の定義（スキルレベル）
     lib/
-    types/
+    ui/
   server/
-    db/
     auth/
+    db/
+    security/     CSPと同一オリジンの検査
+  proxy.ts        リクエストの入口（認証とセキュリティの検査）
 prisma/
   schema.prisma
+  migrations/
+  seed.ts
+e2e/              PlaywrightのE2Eテスト
+  cleanup/        E2Eで作ったデータを消す処理
+  ui-check/       画面撮影（npm run ui:check）
+scripts/          検証とデータ掃除のスクリプト
 ```
 
 配置ルールは以下です。
@@ -98,8 +90,8 @@ prisma/
 - `src/modules/<module>/infrastructure` はPrisma repository、外部API、永続化の実装詳細を置く。
 - `src/modules/<module>/presentation` は該当モジュール専用のフォーム、Server Actions、Route Handlers、画面補助部品を置く。
 - `src/shared` は複数モジュールで利用する汎用UI、純粋なユーティリティ、横断DTOに限定する。
-- `src/server/db` と `src/server/auth` はPrisma ClientやAuth.js設定など、アプリ全体で1つだけ持つサーバー基盤を置く。
-- Prisma schemaはPhase 2開始時点では `prisma/schema.prisma` から開始し、肥大化した場合に分割方針を再検討する。
+- `src/server` はPrisma Client、NextAuthの設定、セキュリティの検査など、アプリ全体で1つだけ持つサーバー基盤を置く。
+- Prisma schemaは `prisma/schema.prisma` の1ファイルで持ち、肥大化した場合に分割方針を再検討する。
 
 ## 依存方向
 
@@ -147,6 +139,6 @@ infrastructure -> domain
 - 特定画面専用のフォームロジック
 - まだ2箇所以上で使われていない処理
 
-## Phase 0での位置づけ
+## このドキュメントの位置づけ
 
-このドキュメントは初期ルールです。ここで定義したディレクトリ構成はPhase 2で実装を開始するための出発点とし、DBスキーマ、画面一覧、CSV項目定義はPhase 1以降で具体化します。
+モジュールやディレクトリを追加・削除したときは、このドキュメントの表と構成図も同じMerge Requestで更新します。

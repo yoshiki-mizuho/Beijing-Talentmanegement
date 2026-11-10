@@ -1,6 +1,6 @@
 import { test, type Page } from "@playwright/test";
-import { login } from "../e2e/helpers/auth";
-import { readDemoCredentials, type DemoRole } from "../e2e/helpers/credentials";
+import { login } from "../helpers/auth";
+import { readDemoCredentials, type DemoRole } from "../helpers/credentials";
 
 const selectedRole = process.env.UI_CHECK_ONLY?.toUpperCase();
 const roles: DemoRole[] = ["ADMIN", "MANAGER", "MEMBER"];

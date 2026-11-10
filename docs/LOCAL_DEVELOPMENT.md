@@ -94,7 +94,7 @@ npm.cmd run db:cleanup-e2e -- --yes
 
 ## 画面確認
 
-`.env` の `DEMO_ADMIN_PASSWORD`、`DEMO_MANAGER_PASSWORD`、`DEMO_MEMBER_PASSWORD` を使い、`npm.cmd run ui:check` で3ロールの主要画面を撮影する。`$env:UI_CHECK_ONLY = "MANAGER"` のように指定すると対象ロールを絞れる。スクリーンショットは `test-results/ui-check/` に保存され、Git管理には含まれない。
+`.env` の `DEMO_ADMIN_PASSWORD`、`DEMO_MANAGER_PASSWORD`、`DEMO_MEMBER_PASSWORD` を使い、`npm.cmd run ui:check` で3ロールの主要画面を撮影する。`$env:UI_CHECK_ONLY = "MANAGER"` のように指定すると対象ロールを絞れる。撮影の台本は `e2e/ui-check/screens.spec.ts`。スクリーンショットは `test-results/ui-check/` に保存され、Git管理には含まれない。
 
 ## DBを作り直す
 
