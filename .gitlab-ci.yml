@@ -48,7 +48,6 @@ variables:
         - src/**/*
         - prisma/**/*
         - e2e/**/*
-        - ui-check/**/*
         - scripts/**/*
         - public/**/*
         - package.json

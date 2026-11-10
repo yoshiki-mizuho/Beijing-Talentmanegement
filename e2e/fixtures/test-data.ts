@@ -15,7 +15,7 @@ import type {
 } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
-import { deleteE2eData, type E2eDataIds } from "../../prisma/delete-e2e-data";
+import { deleteE2eData, type E2eDataIds } from "../cleanup/delete-e2e-data";
 import { prisma } from "../../src/server/db/prisma";
 import type { DemoCredential } from "../helpers/credentials";
 

@@ -4,6 +4,9 @@ const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 
 export default defineConfig({
   testDir: "e2e",
+  // e2e/cleanup の *.test.ts は vitest 用、e2e/ui-check は画面撮影用（npm run ui:check）。
+  testMatch: "**/*.spec.ts",
+  testIgnore: "**/ui-check/**",
   globalTeardown: "./e2e/global-teardown.ts",
   workers: 1,
   retries: process.env.CI ? 1 : 0,

@@ -3,8 +3,8 @@ import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
-import { isE2eMember, isLocalDatabaseUrl } from "../prisma/cleanup-e2e-policy";
-import { deleteE2eData } from "../prisma/delete-e2e-data";
+import { isE2eMember, isLocalDatabaseUrl } from "../e2e/cleanup/cleanup-e2e-policy";
+import { deleteE2eData } from "../e2e/cleanup/delete-e2e-data";
 
 function printCounts(heading: string, counts: Record<string, number>) {
   console.log(heading);

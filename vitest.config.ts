@@ -6,7 +6,8 @@ export default defineConfig({
     include: [
       "src/**/*.test.ts",
       "src/**/*.test.tsx",
-      "prisma/**/*.test.ts"
+      "prisma/**/*.test.ts",
+      "e2e/**/*.test.ts"
     ]
   },
   resolve: {

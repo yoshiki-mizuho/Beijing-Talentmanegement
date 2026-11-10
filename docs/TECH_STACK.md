@@ -2,21 +2,9 @@
 
 ## 目的
 
-このドキュメントは、タレントマネジメントシステムを新規構築するにあたり、MVPアプリの構成を踏まえた推奨テックスタックと設計方針を記録するものです。
+このドキュメントは、TalentHub（タレントマネジメントシステム）のテックスタックと設計方針を記録するものです。
 
-MVPでは、Next.js、TypeScript、Tailwind CSS、localStorage、Repositoryパターンを用いて、メンバー、スキル、ロール、スキルマップ、AI評価の基本機能が実装されていました。新システムではこの方向性を活かしつつ、本番運用に必要なデータ永続化、認証、監査、CI/CD、デプロイ基盤を明確化します。
-
-## MVP構成の前提
-
-- フレームワークは Next.js App Router。
-- 言語は TypeScript。
-- スタイリングは Tailwind CSS。
-- データ永続化は localStorage。
-- データアクセス層は Repositoryパターンで抽象化済み。
-- 主な機能はメンバー管理、スキル管理、ロール管理、スキル検索、スキルマップ、統計ダッシュボード、AI評価。
-- 将来的な PostgreSQL 移行を意識した構成になっている。
-
-## 推奨テックスタック
+## テックスタック
 
 ### Core
 
@@ -25,8 +13,8 @@ MVPでは、Next.js、TypeScript、Tailwind CSS、localStorage、Repositoryパ�
 | フレームワーク | Next.js 16系 App Router | フロントエンドとBFF/APIを同一リポジトリで管理する |
 | 言語 | TypeScript | 型安全性を前提に開発する |
 | Runtime | Node.js 24 LTS | LTS系を利用し、長期運用に備える。セキュリティの修正版を下限にする（2026-10-23 時点で 24.22.1 以上。`package.json` の `engines` と CI のイメージで固定） |
-| スタイリング | Tailwind CSS | MVPの流れを継承し、画面実装速度を保つ |
-| UIコンポーネント | shadcn/ui | フォーム、Dialog、TableなどのUIを標準化する |
+| スタイリング | Tailwind CSS | 画面実装速度を保つ |
+| UIコンポーネント | `src/shared/ui` の自前の部品（shadcn/uiの書き方に倣う） | フォーム、Dialog、TableなどのUIを標準化する |
 | アイコン | lucide-react | 一貫したアイコン体系を利用する |
 
 ### Data/Auth
@@ -87,7 +75,7 @@ Vercelのアプリ実行時はNeonのpool接続を利用し、migrationと初回
 
 ### Next.js 16系 App Router
 
-MVPがNext.js App Routerで構成されているため、画面構成やルーティング設計を継承しやすいです。新システムでは、MVPのように全体をクライアントコンポーネントへ寄せるのではなく、Server Components、Route Handlers、Server Actionsを活用し、データ取得や更新処理をサーバー側へ寄せます。
+フロントエンドとBFF/APIを1つのリポジトリで管理できます。全体をクライアントコンポーネントへ寄せるのではなく、Server Components、Route Handlers、Server Actionsを活用し、データ取得や更新処理をサーバー側へ寄せます。
 
 ### PostgreSQL + Prisma
 
@@ -112,22 +100,21 @@ MVPがNext.js App Routerで構成されているため、画面構成やルー�
 
 このプロジェクトはGitLabリポジトリを前提とするため、CI/CDはGitLab CI/CDへ統一します。GitLab SAST、GitLab Container Registry、GitLab Environmentsを利用し、コード検査からコンテナビルド、環境別デプロイまでを一貫して管理します。
 
-## MVPからの改善ポイント
+## 設計上の方針
 
-- localStorageを廃止し、PostgreSQL + Prismaへ移行する。
-- Repositoryパターンは維持し、DB実装へ差し替える。
-- クライアント側に集約されていた集計処理を、DBクエリ、API、Server Component側へ移す。
+- データはPostgreSQL + Prismaで持ち、Repositoryパターンでアクセスする。
+- 集計処理はDBクエリ、API、Server Component側に置く。
 - CSV importは即時登録ではなく、プレビュー、検証エラー表示、差分確認、トランザクション登録を行う。
-- メンバー自身のスキル申告とmanager承認・補正フローを前提に、通知機能を設計に含める。
-- AI評価は画面から都度大量実行せず、キャッシュ、再評価、ジョブ履歴、失敗時フォールバックを設ける。
-- 監査ログを最初から設計に含める。
+- メンバー自身のスキル申告とmanager承認・補正フローを前提に、通知機能を持つ。
+- AIは画面から都度大量実行せず、キャッシュ、作り直し、利用ログ、失敗時フォールバックを設ける。
+- 重要な操作は監査ログに記録する。
 - 型定義は単一ファイルへ集中させず、DB schema、domain model、DTO、form schemaを分離する。
-- 認証と認可を最初から組み込み、操作権限を明確にする。
-- E2Eテストを導入し、主要業務フローの回帰を検知する。
+- 認証と認可を組み込み、操作権限を明確にする。
+- E2Eテストで主要業務フローの回帰を検知する。
 
 ## GitLab CI/CD方針
 
-Merge Request時には、以下を必須チェックとします。
+現在のパイプラインの詳細は `docs/DEVELOPMENT_WORKFLOW.md` を確認します。Merge Request時には、以下を必須チェックとします。
 
 - lint
 - typecheck
@@ -136,7 +123,7 @@ Merge Request時には、以下を必須チェックとします。
 - migration check
 - SAST
 
-`main` マージ後には、以下を実行します。
+本番化（Phase 7）では、`main` マージ後に以下を実行する想定です。まだ実装していません。
 
 - Docker image build
 - GitLab Container Registryへのpush
@@ -167,7 +154,10 @@ staging、productionへのdeployはGitLab Environmentsで管理し、本番反�
 - 利用する企業IdPの種類。
 - 本番、staging、devそれぞれのKubernetes環境構成。
 - PostgreSQLの運用方式。
-- 権限ロールの詳細。
 - 監査ログの保持期間。
-- AI評価を同期処理にするか、非同期ジョブにするかの初期実装方針。
-- CSV importの承認フロー有無。
+
+### 決定済みの事項
+
+- 権限ロールは `admin`、`manager`、`member` の3つ（`docs/CSV_PERMISSION_AUDIT.md`）。
+- AIは非同期ジョブを使わず、画面操作で呼び出して結果をDBに保存する。
+- CSV importに承認フローは設けない（`admin`だけが行い、差分プレビューで確認する）。

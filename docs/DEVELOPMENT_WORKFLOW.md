@@ -4,7 +4,7 @@
 
 このドキュメントは、GitLabを前提とした開発運用方針を定義するものです。
 
-Phase 0では、Issue、branch、Merge Request、review、merge、CI/CDの基本ルールを決め、開発開始後の迷いを減らします。
+Issue、branch、Merge Request、review、merge、CI/CDの基本ルールを決め、開発中の迷いを減らします。
 
 ## 基本方針
 
@@ -85,7 +85,7 @@ Merge Request時の必須チェックは以下とします。
 - `build`
 - `SAST`
 
-`main` マージ後は以下を実行する想定です。
+本番化（Phase 7）では、`main` マージ後に以下を実行する想定です。まだ実装していません。
 
 - Docker image build
 - GitLab Container Registryへのpush
@@ -117,7 +117,3 @@ DB migrationは、アプリケーション変更と同じMRでレビューしま
 - `docs/AI_COLLABORATION.md`（Claude CodeとCodexの役割分担と開発ループ）
 - `docs/LOCAL_DEVELOPMENT.md`（ローカル開発環境の構築と検証コマンド）
 - `docs/DESIGN_GUIDELINES.md`（TalentHubの画面設計と見た目のルール）
-
-## Phase 0での位置づけ
-
-このドキュメントは初期運用ルールです。GitLab CI/CDの実ファイル、Kubernetes manifest、環境別デプロイ設定はPhase 2以降で具体化します。

@@ -1,4 +1,4 @@
-import { demoMembers, existingDemoMemberEmployeeNos } from "./seed-demo-data";
+import { demoMembers, existingDemoMemberEmployeeNos } from "../../prisma/seed-demo-data";
 
 const localDatabaseHosts = new Set([
   "localhost",
