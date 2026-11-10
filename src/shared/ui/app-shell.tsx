@@ -324,9 +324,17 @@ function SetupProgressIndicator({ progress }: { progress: SetupProgress }) {
 
   return (
     <details ref={detailsRef} className="group relative">
-      <summary className="flex h-11 min-w-[88px] cursor-pointer list-none flex-col justify-center rounded-md px-1.5 hover:bg-[var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] sm:min-w-36 sm:px-2 [&::-webkit-details-marker]:hidden">
+      <summary
+        className="flex h-11 min-w-11 cursor-pointer list-none flex-col justify-center rounded-md px-1.5 hover:bg-[var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] sm:min-w-[88px] sm:min-w-36 sm:px-2 [&::-webkit-details-marker]:hidden"
+        aria-label={`はじめの3ステップ ${progress.completedCount} / ${progress.totalCount}`}
+      >
         <span className="flex items-center justify-between gap-2 text-xs font-semibold">
-          はじめの3ステップ {progress.completedCount} / {progress.totalCount}
+          <span className="hidden sm:inline">
+            はじめの3ステップ {progress.completedCount} / {progress.totalCount}
+          </span>
+          <span className="sm:hidden">
+            {progress.completedCount}/{progress.totalCount}
+          </span>
           <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" aria-hidden="true" />
         </span>
         <span
@@ -343,7 +351,7 @@ function SetupProgressIndicator({ progress }: { progress: SetupProgress }) {
           />
         </span>
       </summary>
-      <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-72 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-xl">
+      <div className="fixed inset-x-3 top-[72px] z-50 w-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-[calc(100%+8px)] sm:w-72">
         <p className="text-sm font-semibold">はじめの3ステップ</p>
         <p className="mt-1 text-xs text-[var(--muted-foreground)]">
           得意なスキルは3つほど選ぶと1分ほどで終わります。あとから増やせます。
