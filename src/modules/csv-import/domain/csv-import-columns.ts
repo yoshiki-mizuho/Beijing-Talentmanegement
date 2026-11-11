@@ -6,6 +6,7 @@ export const csvImportTargets = [
   "members",
   "skills",
   "member-skills",
+  "roles",
 ] as const;
 export type CsvImportTarget = (typeof csvImportTargets)[number];
 

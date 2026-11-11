@@ -10,7 +10,7 @@ import { cn } from "@/shared/lib/utils";
 
 type Change = {
   row: number;
-  kind: "new" | "update" | "unchanged";
+  kind: "new" | "update" | "unchanged" | "delete";
   code: string;
   name: string;
   changes: Record<string, { before: unknown; after: unknown }>;
@@ -21,6 +21,7 @@ type Preview = {
     created: number;
     updated: number;
     unchanged: number;
+    deleted: number;
     errors: number;
   };
   changes: Change[];
@@ -33,6 +34,7 @@ const labels: Record<CsvImportTarget, string> = {
   members: "メンバー",
   skills: "スキル",
   "member-skills": "メンバースキル",
+  roles: "ロール",
 };
 
 export function CsvImportPanel() {
@@ -153,7 +155,9 @@ export function CsvImportPanel() {
     (change) => filter === "all" || change.kind === filter,
   );
   const registerCount =
-    (preview?.summary.created ?? 0) + (preview?.summary.updated ?? 0);
+    (preview?.summary.created ?? 0) +
+    (preview?.summary.updated ?? 0) +
+    (preview?.summary.deleted ?? 0);
   return (
     <div className="space-y-5">
       <ol className="flex items-center gap-2 text-sm" aria-label="取り込み手順">
@@ -173,7 +177,7 @@ export function CsvImportPanel() {
         ))}
       </ol>
       <div className="flex gap-2">
-        {(["departments", "members", "skills", "member-skills"] as const).map((value) => (
+        {(["departments", "members", "skills", "member-skills", "roles"] as const).map((value) => (
           <button
             key={value}
             type="button"
@@ -276,15 +280,24 @@ export function CsvImportPanel() {
               </Button>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div
+            className={cn(
+              "grid grid-cols-2 gap-3",
+              target === "roles" ? "sm:grid-cols-5" : "sm:grid-cols-4",
+            )}
+          >
             {(
               [
                 ["new", "新規", preview.summary.created],
                 ["update", "更新", preview.summary.updated],
                 ["unchanged", "変更なし", preview.summary.unchanged],
+                ["delete", "削除", preview.summary.deleted],
                 ["errors", "エラー", preview.summary.errors],
               ] as const
-            ).map(([value, label, count]) => (
+            )
+              // 削除があるのはロールの取り込みだけなので、ほかの対象では出さない。
+              .filter(([value]) => value !== "delete" || target === "roles")
+              .map(([value, label, count]) => (
               <button
                 key={value}
                 type="button"
@@ -327,8 +340,9 @@ export function CsvImportPanel() {
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] p-4">
               <h2 className="font-semibold">変更の内容</h2>
               <div className="flex gap-1">
-                {(["all", "new", "update", "unchanged"] as const).map(
-                  (value) => (
+                {(["all", "new", "update", "delete", "unchanged"] as const)
+                  .filter((value) => value !== "delete" || target === "roles")
+                  .map((value) => (
                     <button
                       key={value}
                       type="button"
@@ -349,6 +363,7 @@ export function CsvImportPanel() {
                           all: "すべて",
                           new: "新規",
                           update: "更新",
+                          delete: "削除",
                           unchanged: "変更なし",
                         }[value]
                       }
@@ -379,7 +394,9 @@ export function CsvImportPanel() {
                           ? "新規"
                           : change.kind === "update"
                             ? "更新"
-                            : "変更なし"}
+                            : change.kind === "delete"
+                              ? "削除"
+                              : "変更なし"}
                       </td>
                       <td className="p-3">
                         {change.code} {change.name}
@@ -484,6 +501,7 @@ function ErrorTable({
 
 function ChangeSummary({ change }: { change: Change }) {
   if (change.kind === "new") return <>新しく登録</>;
+  if (change.kind === "delete") return <>削除</>;
   const lines = formatImportChanges(change.changes);
   if (lines.length === 0) return <>変更なし</>;
   return (

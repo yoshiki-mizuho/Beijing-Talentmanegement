@@ -29,6 +29,7 @@ import type {
   SkillChange,
   SkillState,
 } from "../domain/skill-import";
+import type { RoleImportChange, RoleImportState } from "../domain/role-import";
 
 export async function recordCsvImportValidationFailure(input: {
   actorMemberId: string;
@@ -181,6 +182,36 @@ export async function loadMemberSkillImportState(): Promise<MemberSkillImportSta
   };
 }
 
+export async function loadRoleImportState(): Promise<RoleImportState> {
+  const [roles, skills] = await Promise.all([
+    prisma.role.findMany({
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        isActive: true,
+        roleRequirements: {
+          select: {
+            id: true,
+            skillId: true,
+            requiredLevel: true,
+            isRequired: true,
+            anyOfGroup: true,
+          },
+        },
+      },
+    }),
+    prisma.skill.findMany({ select: { id: true, code: true, name: true } }),
+  ]);
+  return {
+    roles: roles.map((role) => ({
+      ...role,
+      requirements: role.roleRequirements,
+    })),
+    skills,
+  };
+}
+
 type ApplyInput = {
   target: CsvImportTarget;
   originalName: string;
@@ -191,6 +222,7 @@ type ApplyInput = {
   skillChanges?: SkillChange[];
   memberChanges?: MemberChange[];
   memberSkillChanges?: MemberSkillChange[];
+  roleChanges?: RoleImportChange[];
 };
 
 export async function applyCsvImport(input: ApplyInput) {
@@ -207,6 +239,7 @@ export async function applyCsvImport(input: ApplyInput) {
           ...(input.skillChanges ?? []),
           ...(input.memberChanges ?? []),
           ...(input.memberSkillChanges ?? []),
+          ...(input.roleChanges ?? []),
         ].filter((change) => change.kind !== "unchanged");
         const created = actionable.filter(
           (change) => change.kind === "new",
@@ -257,6 +290,13 @@ export async function applyCsvImport(input: ApplyInput) {
             input.actorMemberId,
             job.id,
           );
+        if (input.roleChanges)
+          await applyRoles(
+            tx,
+            input.roleChanges,
+            input.actorMemberId,
+            job.id,
+          );
         await recordAuditLog(tx, {
           actorMemberId: input.actorMemberId,
           action: AUDIT_ACTION.CSV_IMPORT,
@@ -268,6 +308,7 @@ export async function applyCsvImport(input: ApplyInput) {
             created,
             updated,
             unchanged: input.unchanged,
+            deleted: input.roleChanges?.filter((change) => change.kind === "delete").length ?? 0,
           },
         });
         return { jobId: job.id, created, updated };
@@ -278,6 +319,84 @@ export async function applyCsvImport(input: ApplyInput) {
   } catch (error) {
     await recordFailedImport(input, error);
     throw error;
+  }
+}
+
+async function applyRoles(
+  tx: Prisma.TransactionClient,
+  changes: RoleImportChange[],
+  actorMemberId: string,
+  jobId: string,
+) {
+  const roleIds = new Map(
+    (await tx.role.findMany({ select: { id: true, name: true } })).map((role) => [role.name, role.id]),
+  );
+  for (const change of changes.filter((item) => item.entity === "role" && item.kind !== "unchanged")) {
+    const data = {
+      name: change.roleName,
+      description: change.description ?? null,
+      isActive: change.isActive ?? true,
+    };
+    const saved = change.kind === "new"
+      ? await tx.role.create({ data })
+      : await tx.role.update({ where: { id: change.id }, data });
+    roleIds.set(change.roleName, saved.id);
+    await recordAuditLog(tx, {
+      actorMemberId,
+      csvImportJobId: jobId,
+      action: change.kind === "new" ? AUDIT_ACTION.ROLE_CREATE : AUDIT_ACTION.ROLE_UPDATE,
+      targetType: AUDIT_TARGET_TYPE.ROLE,
+      targetId: saved.id,
+      before: change.kind === "update" ? beforeFromChanges(change.changes) : null,
+      after: change.kind === "new" ? data : afterFromChanges(change.changes),
+      changedFields: change.kind === "update" ? Object.keys(change.changes) : undefined,
+    });
+  }
+  for (const change of changes.filter((item) => item.entity === "requirement" && item.kind !== "unchanged")) {
+    const roleId = roleIds.get(change.roleName);
+    if (!roleId || !change.skillId) throw new Error(`ロール ${change.roleName} の要件登録に失敗しました`);
+    if (change.kind === "delete") {
+      await tx.roleRequirement.delete({
+        where: { roleId_skillId: { roleId, skillId: change.skillId } },
+      });
+      await recordAuditLog(tx, {
+        actorMemberId,
+        csvImportJobId: jobId,
+        action: AUDIT_ACTION.ROLE_REQUIREMENT_REMOVE,
+        targetType: AUDIT_TARGET_TYPE.ROLE,
+        targetId: roleId,
+        before: {
+          requiredLevel: change.requiredLevel,
+          isRequired: change.isRequired,
+          anyOfGroup: change.anyOfGroup ?? null,
+        },
+        metadata: { skillId: change.skillId },
+      });
+      continue;
+    }
+    const data = {
+      roleId,
+      skillId: change.skillId,
+      requiredLevel: change.requiredLevel!,
+      isRequired: change.isRequired!,
+      anyOfGroup: change.anyOfGroup ?? null,
+    };
+    const saved = change.kind === "new"
+      ? await tx.roleRequirement.create({ data })
+      : await tx.roleRequirement.update({ where: { id: change.id }, data });
+    await recordAuditLog(tx, {
+      actorMemberId,
+      csvImportJobId: jobId,
+      action: AUDIT_ACTION.ROLE_REQUIREMENT_SET,
+      targetType: AUDIT_TARGET_TYPE.ROLE,
+      targetId: roleId,
+      before: change.kind === "update" ? beforeFromChanges(change.changes) : null,
+      after: change.kind === "new"
+        ? { requiredLevel: saved.requiredLevel, isRequired: saved.isRequired, anyOfGroup: saved.anyOfGroup }
+        : afterFromChanges(change.changes),
+      changedFields: change.kind === "update" ? Object.keys(change.changes) : undefined,
+      metadata: { skillId: change.skillId },
+    });
   }
 }
 
@@ -580,6 +699,8 @@ function targetType(target: CsvImportTarget) {
       return CsvImportTargetType.SKILLS;
     case "member-skills":
       return CsvImportTargetType.MEMBER_SKILLS;
+    case "roles":
+      return CsvImportTargetType.ROLES;
   }
 }
 
