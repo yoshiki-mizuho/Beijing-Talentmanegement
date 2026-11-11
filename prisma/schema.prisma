@@ -65,6 +65,7 @@ enum CsvImportTargetType {
   MEMBERS
   SKILLS
   MEMBER_SKILLS
+  ROLES
 }
 
 enum CsvImportStatus {

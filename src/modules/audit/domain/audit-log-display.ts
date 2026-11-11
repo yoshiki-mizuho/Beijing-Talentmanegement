@@ -311,7 +311,10 @@ export function buildAuditSummary(input: AuditDisplayInput) {
     return `${metadata?.count ?? 0}件`;
   }
   if (action === "csv.import") {
-    return `新規 ${metadata?.created ?? 0}件・更新 ${metadata?.updated ?? 0}件`;
+    const summary = `新規 ${metadata?.created ?? 0}件・更新 ${metadata?.updated ?? 0}件`;
+    return Number(metadata?.deleted ?? 0) > 0
+      ? `${summary}・削除 ${metadata?.deleted}件`
+      : summary;
   }
   if (action === "csv.import.failed") {
     const stage =

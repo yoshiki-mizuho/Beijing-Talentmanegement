@@ -13,6 +13,9 @@ const fieldLabels: Record<string, string> = {
   level: "レベル",
   yearsOfExperience: "経験年数",
   lastAssessedAt: "最終評価日",
+  requiredLevel: "必要レベル",
+  isRequired: "必須",
+  anyOfGroup: "ORの組",
 };
 
 function formatValue(value: unknown) {

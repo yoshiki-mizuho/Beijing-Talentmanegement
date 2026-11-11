@@ -14,12 +14,14 @@ import { validateSkillImport } from "../domain/skill-import";
 import type { SkillChange } from "../domain/skill-import";
 import { validateMemberImport, type MemberChange } from "../domain/member-import";
 import { validateMemberSkillImport, type MemberSkillChange } from "../domain/member-skill-import";
+import { validateRoleImport, type RoleImportChange } from "../domain/role-import";
 import {
   applyCsvImport,
   loadDepartmentImportState,
   loadSkillImportState,
   loadMemberImportState,
   loadMemberSkillImportState,
+  loadRoleImportState,
   recordCsvImportValidationFailure,
 } from "../infrastructure/csv-import-repository";
 
@@ -66,6 +68,11 @@ export async function previewCsvImport(
     const result = validateMemberSkillImport(mapped.records, state);
     return finish(result.changes, result.errors);
   }
+  if (target === "roles") {
+    const state = await loadRoleImportState();
+    const result = validateRoleImport(mapped.records, state);
+    return finish(result.changes, result.errors);
+  }
   const state = await loadSkillImportState();
   const result = validateSkillImport(
     mapped.records,
@@ -74,7 +81,7 @@ export async function previewCsvImport(
   );
   return finish(result.changes, result.errors);
 
-  async function finish<T extends { kind: "new" | "update" | "unchanged" }>(
+  async function finish<T extends { kind: "new" | "update" | "unchanged" | "delete" }>(
     changes: T[],
     errors: Array<{ row: number; column: string; message: string }>,
   ) {
@@ -154,11 +161,17 @@ export async function commitCsvImport(input: {
           skillChanges: preview.changes as SkillChange[],
         });
       break;
+    case "roles":
+      result = await applyCsvImport({
+          ...common,
+          roleChanges: preview.changes as RoleImportChange[],
+        });
+      break;
   }
   return { status: "applied" as const, ...result };
 }
 
-function buildPreview<T extends { kind: "new" | "update" | "unchanged" }>(
+function buildPreview<T extends { kind: "new" | "update" | "unchanged" | "delete" }>(
   totalRows: number,
   changes: T[],
   errors: Array<{ row: number; column: string; message: string }>,
@@ -167,6 +180,7 @@ function buildPreview<T extends { kind: "new" | "update" | "unchanged" }>(
     created: changes.filter((change) => change.kind === "new").length,
     updated: changes.filter((change) => change.kind === "update").length,
     unchanged: changes.filter((change) => change.kind === "unchanged").length,
+    deleted: changes.filter((change) => change.kind === "delete").length,
     errors: errors.length,
   };
   return {

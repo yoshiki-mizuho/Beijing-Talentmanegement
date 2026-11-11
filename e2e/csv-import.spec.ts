@@ -175,9 +175,50 @@ test("管理者がメンバースキルCSVでレベルを更新し監査ログ�
   }
 });
 
+test("管理者がロールCSVで要件を更新・削除・追加できる", async ({ browser }) => {
+  const data = createE2eTestData();
+  const department = await data.createDepartment("ロールCSV管理部署");
+  const account = await data.createMember({ label: "ロールCSV管理者", departmentId: department.id, role: "ADMIN" });
+  const admin = await openLoggedInContext(browser, account.credential);
+  const first = await data.createSkill("ロールCSV更新");
+  const removed = await data.createSkill("ロールCSV削除");
+  const added = await data.createSkill("ロールCSV追加");
+  const role = await data.createRole("ロールCSV対象", [
+    { skillId: first.skill.id, requiredLevel: 2 },
+    { skillId: removed.skill.id, requiredLevel: 2 },
+  ]);
+  const content = [
+    "role_name,description,is_active,skill_code,required_level,is_required,any_of_group",
+    `${role.name},,true,${first.skill.code},4,true,`,
+    `${role.name},,true,${added.skill.code},3,true,`,
+    "",
+  ].join("\r\n");
+  try {
+    await admin.page.goto("/csv");
+    await admin.page.getByRole("button", { name: "ロール", exact: true }).click();
+    await admin.page.getByLabel("ロールのCSVファイル").setInputFiles({
+      name: "roles.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from(content),
+    });
+    await expect(admin.page.getByText("更新").first()).toBeVisible();
+    await expect(admin.page.getByText("削除").first()).toBeVisible();
+    await expect(admin.page.getByText("新規").first()).toBeVisible();
+    await admin.page.getByRole("button", { name: "3件を登録" }).click();
+    await expect(admin.page.getByRole("heading", { name: "登録しました" })).toBeVisible();
+    await admin.page.goto(`/roles?role=${encodeURIComponent(role.id)}`);
+    await expect(admin.page.getByRole("row", { name: new RegExp(`${first.skill.name}.*Lv4`) })).toBeVisible();
+    await expect(admin.page.getByRole("row", { name: new RegExp(`${added.skill.name}.*Lv3`) })).toBeVisible();
+    await expect(admin.page.getByText(removed.skill.name)).toHaveCount(0);
+  } finally {
+    await admin.context.close();
+    await data.cleanup();
+  }
+});
+
 async function importByApi(
   page: import("@playwright/test").Page,
-  target: "departments" | "members" | "skills" | "member-skills",
+  target: "departments" | "members" | "skills" | "member-skills" | "roles",
   csv: string,
 ) {
   const previewResponse = await page.request.post(
