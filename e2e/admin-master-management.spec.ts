@@ -462,6 +462,59 @@ test("大分類を作成してカテゴリを割り当て、削除すると未�
   }
 });
 
+test("未分類のカテゴリを絞り込んで大分類を一括で割り当てられる", async ({ browser }) => {
+  const admin = await openLoggedInContext(browser, credentials.ADMIN);
+  const data = createE2eTestData();
+  const suffix = `${Date.now()}-${test.info().workerIndex}`;
+  const groupName = `E2E一括大分類-${suffix}`;
+  const categoryNames = [
+    `E2E一括カテゴリA-${suffix}`,
+    `E2E一括カテゴリB-${suffix}`,
+  ];
+  try {
+    await admin.page.goto("/skills");
+    await admin.page.getByRole("button", { name: "カテゴリを管理" }).click();
+    const categoryDialog = admin.page.getByRole("dialog", { name: "カテゴリを管理" });
+    for (const categoryName of categoryNames) {
+      await categoryDialog.getByLabel("カテゴリ名").first().fill(categoryName);
+      await categoryDialog.getByRole("button", { name: "追加", exact: true }).click();
+      await expect(admin.page.getByText("カテゴリを登録しました。")).toBeVisible();
+      // 1件目のトーストを2件目の完了と見間違えないよう、一覧に出るまで待つ
+      await expect(categoryDialog.locator(`input[value="${categoryName}"]`)).toHaveCount(1);
+      await data.trackCreated({ categoryNames: [categoryName] });
+    }
+    await categoryDialog.getByRole("button", { name: "ダイアログを閉じる" }).click();
+
+    await admin.page.goto("/skills?tab=groups");
+    await admin.page.getByLabel("新しい大分類").fill(groupName);
+    await admin.page.getByRole("button", { name: "追加", exact: true }).click();
+    await expect(admin.page.getByText("大分類を追加しました。")).toBeVisible();
+
+    await admin.page.getByRole("button", { name: /未分類のみ \d+/ }).click();
+    for (const categoryName of categoryNames) {
+      await admin.page.getByLabel(`${categoryName}を選択`).check();
+    }
+    await admin.page.getByLabel("まとめて割り当てる大分類").selectOption({ label: groupName });
+    await admin.page.getByRole("button", { name: "割り当てる", exact: true }).click();
+    await expect(admin.page.getByText("2件のカテゴリの大分類を保存しました。")).toBeVisible();
+
+    await admin.page.reload();
+    for (const categoryName of categoryNames) {
+      await expect(
+        admin.page.getByLabel(`${categoryName}の大分類`).locator("option:checked")
+      ).toHaveText(groupName);
+    }
+
+    await admin.page.getByRole("button", { name: `${groupName}を削除` }).click();
+    await admin.page.getByRole("dialog", { name: "大分類を削除しますか" })
+      .getByRole("button", { name: "削除する" }).click();
+    await expect(admin.page.getByText("大分類を削除しました。カテゴリは未分類に戻りました。")).toBeVisible();
+  } finally {
+    await admin.context.close();
+    await data.cleanup();
+  }
+});
+
 test("ロール詳細の全社の状況を切り替えられる", async ({ browser }) => {
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
   try {

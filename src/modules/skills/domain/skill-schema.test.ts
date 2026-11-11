@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   assignSkillCategoryGroupInputSchema,
+  bulkAssignSkillCategoryGroupInputSchema,
   createSkillInputSchema,
   reorderSkillCategoryGroupsInputSchema,
   reorderSkillsInputSchema,
@@ -62,6 +63,24 @@ describe("skill category group schemas", () => {
   it("重複した並び順と空のカテゴリIDを拒否する", () => {
     expect(() => reorderSkillCategoryGroupsInputSchema.parse({ groupIds: ["a", "a"] })).toThrow();
     expect(() => assignSkillCategoryGroupInputSchema.parse({ categoryId: "", groupId: null })).toThrow();
+  });
+
+  it("一括割り当ての正常な入力を受け付ける", () => {
+    expect(bulkAssignSkillCategoryGroupInputSchema.parse({
+      categoryIds: ["category-1", "category-2"],
+      groupId: null
+    })).toEqual({
+      categoryIds: ["category-1", "category-2"],
+      groupId: null
+    });
+  });
+
+  it.each([
+    { categoryIds: [], groupId: null },
+    { categoryIds: ["category-1", "category-1"], groupId: null },
+    { categoryIds: Array.from({ length: 201 }, (_, index) => `category-${index}`), groupId: null }
+  ])("一括割り当ての不正なカテゴリID一覧を拒否する", (input) => {
+    expect(() => bulkAssignSkillCategoryGroupInputSchema.parse(input)).toThrow();
   });
 });
 

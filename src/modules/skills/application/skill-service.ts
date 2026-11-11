@@ -4,6 +4,7 @@ import {
   reorderSkillsInputSchema,
   reorderSkillCategoryGroupsInputSchema,
   assignSkillCategoryGroupInputSchema,
+  bulkAssignSkillCategoryGroupInputSchema,
   skillCategoryGroupInputSchema,
   skillCategoryInputSchema,
   skillInputSchema,
@@ -54,6 +55,12 @@ export function reorderSkillCategoryGroups(input: unknown, actorMemberId: string
 export function assignSkillCategoryGroup(input: unknown, actorMemberId: string | null) {
   return skillRepository.assignSkillCategoryGroup(
     assignSkillCategoryGroupInputSchema.parse(input), actorMemberId
+  );
+}
+
+export function bulkAssignSkillCategoryGroup(input: unknown, actorMemberId: string | null) {
+  return skillRepository.bulkAssignSkillCategoryGroup(
+    bulkAssignSkillCategoryGroupInputSchema.parse(input), actorMemberId
   );
 }
 

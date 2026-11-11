@@ -1,11 +1,12 @@
 "use client";
 
 import { ArrowDown, ArrowUp, Pencil, Trash2 } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import {
   assignSkillCategoryGroupAction,
+  bulkAssignSkillCategoryGroupAction,
   createSkillCategoryGroupAction,
   deleteSkillCategoryGroupAction,
   reorderSkillCategoryGroupsAction,
@@ -15,6 +16,7 @@ import { ActionForm, ConfirmSubmitButton } from "@/shared/ui/action-form";
 import { Button } from "@/shared/ui/button";
 import { Dialog } from "@/shared/ui/dialog";
 import { Input } from "@/shared/ui/input";
+import { EmptyState } from "@/shared/ui/empty-state";
 import { SubmitButton } from "@/shared/ui/submit-button";
 import { cn } from "@/shared/lib/utils";
 
@@ -50,6 +52,29 @@ export function SkillCategoryGroupsPanel({
       : initialGroups;
   const [editing, setEditing] = useState<Group | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [categoryFilter, setCategoryFilter] = useState<"all" | "unclassified">("all");
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [bulkGroupId, setBulkGroupId] = useState<string | null>(null);
+  const selectAllRef = useRef<HTMLInputElement>(null);
+  const unclassifiedCount = categories.filter((category) => category.groupId === null).length;
+  const visibleCategories = categoryFilter === "unclassified"
+    ? categories.filter((category) => category.groupId === null)
+    : categories;
+  const visibleCategoryIds = visibleCategories.map((category) => category.id);
+  // 1件ずつの変更で絞り込みから外れた行は、選択に残っていても数えない。
+  const selectedVisibleIds = visibleCategoryIds.filter((id) =>
+    selectedCategoryIds.includes(id)
+  );
+  const selectedVisibleCount = selectedVisibleIds.length;
+  const allVisibleSelected = visibleCategories.length > 0 &&
+    selectedVisibleCount === visibleCategories.length;
+  const selectedBulkGroupId = bulkGroupId ?? groups[0]?.id ?? "unclassified";
+
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = selectedVisibleCount > 0 && !allVisibleSelected;
+    }
+  }, [allVisibleSelected, selectedVisibleCount]);
 
   function move(index: number, offset: -1 | 1) {
     const target = index + offset;
@@ -77,6 +102,38 @@ export function SkillCategoryGroupsPanel({
       const result = await assignSkillCategoryGroupAction(formData);
       if (result.status === "success") toast.success(result.message);
       else toast.error(result.message);
+    });
+  }
+
+  function changeCategoryFilter(filter: "all" | "unclassified") {
+    const nextVisibleIds = new Set(
+      categories
+        .filter((category) => filter === "all" || category.groupId === null)
+        .map((category) => category.id)
+    );
+    setCategoryFilter(filter);
+    setSelectedCategoryIds((current) => current.filter((id) => nextVisibleIds.has(id)));
+  }
+
+  function toggleAllVisible() {
+    setSelectedCategoryIds((current) => {
+      if (allVisibleSelected) {
+        return current.filter((id) => !visibleCategoryIds.includes(id));
+      }
+      return Array.from(new Set([...current, ...visibleCategoryIds]));
+    });
+  }
+
+  function bulkAssign() {
+    startTransition(async () => {
+      const result = await bulkAssignSkillCategoryGroupAction({
+        categoryIds: selectedVisibleIds,
+        groupId: selectedBulkGroupId === "unclassified" ? null : selectedBulkGroupId,
+      });
+      if (result.status === "success") {
+        toast.success(result.message);
+        setSelectedCategoryIds([]);
+      } else toast.error(result.message);
     });
   }
 
@@ -170,28 +227,101 @@ export function SkillCategoryGroupsPanel({
       <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
         <div className="border-b border-[var(--border)] px-5 py-4">
           <h2 className="text-base font-semibold">カテゴリ</h2>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {([
+              ["all", "すべて"],
+              ["unclassified", `未分類のみ ${unclassifiedCount}`],
+            ] as const).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={categoryFilter === value}
+                onClick={() => changeCategoryFilter(value)}
+                className={cn(
+                  "min-h-9 rounded-full px-4 text-sm font-semibold",
+                  categoryFilter === value
+                    ? "bg-[var(--primary)] text-white"
+                    : "bg-[var(--surface-subtle)] text-[var(--muted-foreground)]",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {selectedVisibleCount > 0 ? (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="text-sm font-semibold">{selectedVisibleCount}件を選択</span>
+              <select
+                aria-label="まとめて割り当てる大分類"
+                value={selectedBulkGroupId}
+                disabled={isPending}
+                onChange={(event) => setBulkGroupId(event.target.value)}
+                className="min-h-11 rounded-lg border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-sm"
+              >
+                <option value="unclassified">未分類</option>
+                {groups.map((group) => (
+                  <option key={group.id} value={group.id}>{group.name}</option>
+                ))}
+              </select>
+              <Button type="button" disabled={isPending} onClick={bulkAssign}>
+                割り当てる
+              </Button>
+            </div>
+          ) : null}
         </div>
+        {visibleCategories.length === 0 ? (
+          <EmptyState title="未分類のカテゴリはありません" />
+        ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-[var(--surface-subtle)] text-left text-xs text-[var(--muted-foreground)]">
               <tr>
+                <th className="w-11 p-0">
+                  <label className="flex min-h-11 min-w-11 items-center justify-center">
+                    <input
+                      ref={selectAllRef}
+                      type="checkbox"
+                      checked={allVisibleSelected}
+                      disabled={isPending}
+                      onChange={toggleAllVisible}
+                      aria-label="表示中のカテゴリをすべて選択"
+                      className="h-4 w-4 accent-[var(--primary)]"
+                    />
+                  </label>
+                </th>
                 <th className="px-4 py-3">カテゴリ</th>
                 <th className="px-4 py-3">スキルの件数</th>
                 <th className="px-4 py-3">大分類</th>
               </tr>
             </thead>
             <tbody>
-              {categories.map((category) => (
+              {visibleCategories.map((category) => (
                 <tr
                   key={category.id}
                   className="border-t border-[var(--border)]"
                 >
+                  <td className="w-11 p-0">
+                    <label className="flex min-h-11 min-w-11 items-center justify-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedCategoryIds.includes(category.id)}
+                        disabled={isPending}
+                        onChange={(event) => setSelectedCategoryIds((current) =>
+                          event.target.checked
+                            ? [...current, category.id]
+                            : current.filter((id) => id !== category.id)
+                        )}
+                        aria-label={`${category.name}を選択`}
+                        className="h-4 w-4 accent-[var(--primary)]"
+                      />
+                    </label>
+                  </td>
                   <td className="px-4 py-3 font-medium">{category.name}</td>
                   <td className="px-4 py-3">{category._count.skills}</td>
                   <td className="px-4 py-3">
                     <select
                       aria-label={`${category.name}の大分類`}
-                      defaultValue={category.groupId ?? "unclassified"}
+                      value={category.groupId ?? "unclassified"}
                       disabled={isPending}
                       onChange={(event) =>
                         assign(category.id, event.target.value)
@@ -216,6 +346,7 @@ export function SkillCategoryGroupsPanel({
             </tbody>
           </table>
         </div>
+        )}
       </section>
 
       <Dialog
