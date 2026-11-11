@@ -10,15 +10,16 @@ import { Card, CardContent } from "@/shared/ui/card";
 import { managerOrAdmin, requirePageRoles } from "@/server/auth/authorization";
 import { getMemberScope } from "@/modules/members/application/member-scope";
 import { parseTargetRoleFilter } from "@/modules/members/presentation/target-role-filter";
+import { parseMemberListSearchParams } from "@/modules/members/domain/member-search";
 
 export const dynamic = "force-dynamic";
 
 export default async function MembersPage({
   searchParams
 }: {
-  searchParams: Promise<{ targetRole?: string | string[] }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { targetRole } = await searchParams;
+  const initialUrlState = parseMemberListSearchParams(await searchParams);
   const session = await requirePageRoles(managerOrAdmin);
   const canCreateMembers = session.user.role === "ADMIN";
   const canDeactivateMembers = session.user.role === "ADMIN";
@@ -108,7 +109,10 @@ export default async function MembersPage({
             canEditGrowthSettings={canEditGrowthSettings}
             viewerMemberId={session.user.memberId}
             scopeName={scope.name}
-            initialTargetRoleFilter={parseTargetRoleFilter(targetRole)}
+            initialFilters={initialUrlState.filters}
+            initialPage={initialUrlState.page}
+            initialMemberId={initialUrlState.memberId}
+            initialTargetRoleFilter={parseTargetRoleFilter(initialUrlState.targetRole)}
           />
         </CardContent>
       </Card>

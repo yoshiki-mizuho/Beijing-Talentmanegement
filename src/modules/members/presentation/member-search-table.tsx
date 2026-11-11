@@ -2,7 +2,12 @@
 
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, FilterX, Search, UsersRound } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  buildMemberListSearchParams,
+  parseMemberListSearchParams
+} from "@/modules/members/domain/member-search";
 import { MemberDetailModal } from "@/modules/members/presentation/member-detail-modal";
 import { MemberCreateDialog } from "@/modules/members/presentation/member-create-dialog";
 import {
@@ -53,6 +58,9 @@ type Props = {
   canEditGrowthSettings: boolean;
   viewerMemberId: string;
   scopeName: string;
+  initialFilters: MemberSearchFilters;
+  initialPage: number;
+  initialMemberId: string | null;
   initialTargetRoleFilter: TargetRoleFilter;
 };
 
@@ -76,27 +84,81 @@ function MemberSearchTableInner({
   canEditGrowthSettings,
   viewerMemberId,
   scopeName,
+  initialFilters,
+  initialPage,
+  initialMemberId,
   initialTargetRoleFilter
 }: Props) {
   const queryClient = useQueryClient();
-  const [filters, setFilters] = useState<MemberSearchFilters>(emptyMemberSearchFilters);
+  const router = useRouter();
+  const [filters, setFilters] = useState<MemberSearchFilters>(initialFilters);
   const [debouncedKeyword, setDebouncedKeyword] = useState(filters.q);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(initialPage);
   const [targetRoleFilter, setTargetRoleFilter] = useState(initialTargetRoleFilter);
-  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
-  const closeMemberDetail = useCallback(() => setSelectedMemberId(null), []);
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(initialMemberId);
+  const openedMemberFromList = useRef(false);
+  const latestState = useRef({ filters, targetRoleFilter, page, selectedMemberId });
+  // URL に反映済みのキーワード。変わったときだけページを1に戻す。
+  const appliedKeyword = useRef(initialFilters.q.trim());
+  const replaceUrl = useCallback((next: typeof latestState.current) => {
+    const params = buildMemberListSearchParams({
+      filters: next.filters,
+      targetRole: next.targetRoleFilter,
+      page: next.page,
+      memberId: next.selectedMemberId
+    });
+    const queryString = params.toString();
+    router.replace(queryString ? `/members?${queryString}` : "/members", { scroll: false });
+  }, [router]);
+  const closeMemberDetail = useCallback(() => {
+    if (openedMemberFromList.current) {
+      router.back();
+      return;
+    }
+    setSelectedMemberId(null);
+    replaceUrl({ ...latestState.current, selectedMemberId: null });
+  }, [replaceUrl, router]);
   const activeInitialMembers = useMemo(
     () => initialMembers.filter((member) => member.status === "ACTIVE"),
     [initialMembers]
   );
 
   useEffect(() => {
+    latestState.current = { filters, targetRoleFilter, page, selectedMemberId };
+  }, [filters, page, selectedMemberId, targetRoleFilter]);
+  useEffect(() => {
     queryClient.setQueryData(["members", "status=ACTIVE"], activeInitialMembers);
   }, [activeInitialMembers, queryClient]);
   useEffect(() => {
-    const id = window.setTimeout(() => setDebouncedKeyword(filters.q.trim()), 300);
+    const id = window.setTimeout(() => {
+      const q = latestState.current.filters.q.trim();
+      if (q === appliedKeyword.current) return;
+      appliedKeyword.current = q;
+      setDebouncedKeyword(q);
+      setPage(1);
+      replaceUrl({
+        ...latestState.current,
+        filters: { ...latestState.current.filters, q },
+        page: 1
+      });
+    }, 300);
     return () => window.clearTimeout(id);
-  }, [filters.q]);
+  }, [filters.q, replaceUrl]);
+  // ブラウザの「戻る・進む」のときだけ、URL から状態を読み戻す。
+  // この画面が自分で書き換えた URL（router.replace / push）では popstate は起きない。
+  useEffect(() => {
+    const onPopState = () => {
+      const next = parseMemberListSearchParams(new URLSearchParams(window.location.search));
+      appliedKeyword.current = next.filters.q;
+      setFilters(next.filters);
+      setDebouncedKeyword(next.filters.q);
+      setPage(next.page);
+      setTargetRoleFilter(next.targetRole);
+      setSelectedMemberId(next.memberId);
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
   const appliedFilters = useMemo(
     () => ({ ...filters, q: debouncedKeyword }),
     [debouncedKeyword, filters]
@@ -129,6 +191,44 @@ function MemberSearchTableInner({
   const updateFilters = (next: MemberSearchFilters) => {
     setFilters(next);
     setPage(1);
+    if (next.q === filters.q) {
+      replaceUrl({ ...latestState.current, filters: next, page: 1 });
+    }
+  };
+  const clearFilters = () => {
+    appliedKeyword.current = "";
+    setFilters(emptyMemberSearchFilters);
+    setDebouncedKeyword("");
+    setTargetRoleFilter("");
+    setPage(1);
+    replaceUrl({
+      filters: emptyMemberSearchFilters,
+      targetRoleFilter: "",
+      page: 1,
+      selectedMemberId: null
+    });
+  };
+  const hasNonInitialConditions =
+    Object.entries(filters).some(
+      ([key, value]) => value !== emptyMemberSearchFilters[key as keyof MemberSearchFilters]
+    ) || targetRoleFilter !== "" || page !== 1;
+
+  useEffect(() => {
+    if (!selectedMemberId || query.isFetching || query.isPending) return;
+    if (members.some((member) => member.id === selectedMemberId)) return;
+    replaceUrl({ ...latestState.current, selectedMemberId: null });
+  }, [members, query.isFetching, query.isPending, replaceUrl, selectedMemberId]);
+
+  const openMemberDetail = (memberId: string) => {
+    openedMemberFromList.current = true;
+    setSelectedMemberId(memberId);
+    const params = buildMemberListSearchParams({
+      filters: latestState.current.filters,
+      targetRole: latestState.current.targetRoleFilter,
+      page: latestState.current.page,
+      memberId
+    });
+    router.push(`/members?${params.toString()}`, { scroll: false });
   };
 
   return (
@@ -266,10 +366,10 @@ function MemberSearchTableInner({
               aria-pressed={targetRoleFilter === value}
               className={chipClass(targetRoleFilter === value)}
               onClick={() => {
-                setTargetRoleFilter((current) =>
-                  current === value ? "" : (value as TargetRoleFilter)
-                );
+                const next = targetRoleFilter === value ? "" : (value as TargetRoleFilter);
+                setTargetRoleFilter(next);
                 setPage(1);
+                replaceUrl({ ...latestState.current, targetRoleFilter: next, page: 1 });
               }}
             >
               {label}
@@ -281,10 +381,7 @@ function MemberSearchTableInner({
           variant="ghost"
           size="small"
           className="ml-auto"
-          onClick={() => {
-            updateFilters(emptyMemberSearchFilters);
-            setTargetRoleFilter("");
-          }}
+          onClick={clearFilters}
         >
           <FilterX className="h-4 w-4" aria-hidden="true" />
           条件をクリア
@@ -303,7 +400,13 @@ function MemberSearchTableInner({
           icon={UsersRound}
           title="条件に一致するメンバーがいません"
           description="検索条件を変更してください。"
-        />
+        >
+          {hasNonInitialConditions ? (
+            <Button type="button" variant="secondary" size="small" onClick={clearFilters}>
+              条件をクリア
+            </Button>
+          ) : null}
+        </EmptyState>
       ) : null}
       {members.length > 0 ? (
         <div
@@ -330,7 +433,7 @@ function MemberSearchTableInner({
                   className="cursor-pointer hover:bg-[var(--surface-subtle)]"
                   onClick={(event) => {
                     if ((event.target as Element).closest("a")) return;
-                    setSelectedMemberId(member.id);
+                    openMemberDetail(member.id);
                   }}
                 >
                   <td className="px-4 py-3">
@@ -349,7 +452,7 @@ function MemberSearchTableInner({
                           aria-label={`${member.name}の詳細を開く`}
                           onClick={(event) => {
                             event.stopPropagation();
-                            setSelectedMemberId(member.id);
+                            openMemberDetail(member.id);
                           }}
                         >
                           {member.name}
@@ -389,7 +492,14 @@ function MemberSearchTableInner({
         </div>
       ) : null}
       {members.length > 0 ? (
-        <Pagination total={members.length} range={range} onPage={setPage} />
+        <Pagination
+          total={members.length}
+          range={range}
+          onPage={(nextPage) => {
+            setPage(nextPage);
+            replaceUrl({ ...latestState.current, page: nextPage });
+          }}
+        />
       ) : null}
       {selectedMember ? (
         <MemberDetailModal

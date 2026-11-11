@@ -225,6 +225,51 @@ test(
   }
 );
 
+test("メンバー一覧の条件と詳細をURLから復元できる", async ({ page }) => {
+  const data = createE2eTestData();
+  const department = await data.createDepartment("URL復元部署");
+  const account = await data.createMember({
+    label: "URL復元対象",
+    departmentId: department.id,
+  });
+
+  try {
+    await login(page, credentials.ADMIN);
+    await page.goto("/members");
+    await page.getByLabel("キーワード").fill(account.member.employeeNo);
+
+    // 社員番号に日本語が入るので、URL ではエンコードされた形で確かめる
+    await expect(page).toHaveURL(new RegExp(`q=${encodeURIComponent(account.member.employeeNo)}`));
+    const memberRow = page.getByRole("row").filter({ hasText: account.member.employeeNo });
+    await expect(memberRow).toBeVisible();
+
+    await page.reload();
+    await expect(page.getByLabel("キーワード")).toHaveValue(account.member.employeeNo);
+    await expect(memberRow).toBeVisible();
+
+    await memberRow.getByRole("button", { name: `${account.member.name}の詳細を開く` }).click();
+    await expect(page).toHaveURL(/member=/);
+    await expect(page.getByRole("dialog", { name: `${account.member.name}の詳細` })).toBeVisible();
+
+    await page.goBack();
+    await expect(page).not.toHaveURL(/member=/);
+    await expect(page.getByRole("dialog", { name: `${account.member.name}の詳細` })).toHaveCount(0);
+
+    // 開いた直後に、URL のページ番号を1ページ目へ書き戻さない（キーワードの反映は 300ms 後に走る）
+    await page.goto("/members?status=ALL&page=2");
+    await expect(page.getByRole("button", { name: "在籍中", exact: true })).toHaveAttribute("aria-pressed", "false");
+    await page.waitForTimeout(600);
+    await expect(page).toHaveURL(/page=2/);
+
+    // 存在しないメンバーの ID は、エラーにせず URL から外す
+    await page.goto("/members?member=not-found-member");
+    await expect(page).not.toHaveURL(/member=/);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  } finally {
+    await data.cleanup();
+  }
+});
+
 test("URLから目標ロール未設定のメンバーに絞り込める", async ({ page }) => {
   await login(page, credentials.ADMIN);
   await page.goto("/members?targetRole=unset");
