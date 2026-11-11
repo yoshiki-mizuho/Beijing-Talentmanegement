@@ -2,6 +2,7 @@ import type {
   CreateSkillInput,
   CommonSkillLevelGuidesInput,
   AssignSkillCategoryGroupInput,
+  BulkAssignSkillCategoryGroupInput,
   ReorderSkillCategoryGroupsInput,
   SkillCategoryGroupInput,
   ReorderSkillsInput,
@@ -24,7 +25,7 @@ import {
 import { prisma } from "@/server/db/prisma";
 import { AUDIT_ACTION, AUDIT_TARGET_TYPE } from "@/modules/audit/domain/audit-action";
 import { diffForAudit } from "@/modules/audit/domain/audit-diff";
-import { recordAuditLog } from "@/modules/audit/infrastructure/audit-repository";
+import { recordAuditLog, recordAuditLogs } from "@/modules/audit/infrastructure/audit-repository";
 import { UserFacingError } from "@/shared/lib/user-facing-error";
 
 const SKILL_CODE_PREFIX = "SKILL-";
@@ -188,6 +189,49 @@ export async function assignSkillCategoryGroup(
       metadata: { targetName: category.name }
     });
     return category;
+  });
+}
+
+export async function bulkAssignSkillCategoryGroup(
+  input: BulkAssignSkillCategoryGroupInput,
+  actorMemberId: string | null
+) {
+  return prisma.$transaction(async (tx) => {
+    const categories = await tx.skillCategory.findMany({
+      where: { id: { in: input.categoryIds } },
+      include: { group: { select: { name: true } } }
+    });
+    if (categories.length !== input.categoryIds.length) {
+      throw new UserFacingError("一覧が更新されています。画面を開き直してください。");
+    }
+    const group = input.groupId === null
+      ? null
+      : await tx.skillCategoryGroup.findUnique({
+          where: { id: input.groupId },
+          select: { name: true }
+        });
+    if (input.groupId !== null && group === null) {
+      throw new UserFacingError("大分類が見つかりません。画面を開き直してください。");
+    }
+    const changedCategories = categories.filter(
+      (category) => category.groupId !== input.groupId
+    );
+    await Promise.all(changedCategories.map((category) =>
+      tx.skillCategory.update({
+        where: { id: category.id },
+        data: { groupId: input.groupId }
+      })
+    ));
+    await recordAuditLogs(tx, changedCategories.map((category) => ({
+      actorMemberId,
+      action: AUDIT_ACTION.SKILL_CATEGORY_GROUP_ASSIGN,
+      targetType: AUDIT_TARGET_TYPE.SKILL_CATEGORY,
+      targetId: category.id,
+      before: { groupName: category.group?.name ?? "未分類" },
+      after: { groupName: group?.name ?? "未分類" },
+      metadata: { targetName: category.name }
+    })));
+    return changedCategories.length;
   });
 }
 

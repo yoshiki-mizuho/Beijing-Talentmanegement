@@ -30,6 +30,14 @@ export const assignSkillCategoryGroupInputSchema = z.object({
   groupId: z.string().trim().min(1).nullable()
 });
 
+export const bulkAssignSkillCategoryGroupInputSchema = z.object({
+  categoryIds: z.array(z.string().trim().min(1)).min(1).max(200).refine(
+    (ids) => new Set(ids).size === ids.length,
+    { message: "カテゴリが重複しています。" }
+  ),
+  groupId: z.string().trim().min(1).nullable()
+});
+
 export const reorderSkillsInputSchema = z.object({
   categories: z.array(z.object({
     categoryId: z.string().trim().min(1),
@@ -83,6 +91,7 @@ export type SkillCategoryInput = z.infer<typeof skillCategoryInputSchema>;
 export type SkillCategoryGroupInput = z.infer<typeof skillCategoryGroupInputSchema>;
 export type ReorderSkillCategoryGroupsInput = z.infer<typeof reorderSkillCategoryGroupsInputSchema>;
 export type AssignSkillCategoryGroupInput = z.infer<typeof assignSkillCategoryGroupInputSchema>;
+export type BulkAssignSkillCategoryGroupInput = z.infer<typeof bulkAssignSkillCategoryGroupInputSchema>;
 export type SkillLevelGuidesInput = z.infer<typeof skillLevelGuidesInputSchema>;
 export type CommonSkillLevelGuidesInput = z.infer<typeof commonSkillLevelGuidesInputSchema>;
 export type ReorderSkillsInput = z.infer<typeof reorderSkillsInputSchema>;

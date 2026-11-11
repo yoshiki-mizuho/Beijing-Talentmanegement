@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import {
   createSkillWithLevelGuides,
   assignSkillCategoryGroup,
+  bulkAssignSkillCategoryGroup,
   createSkillCategoryGroup,
   deleteSkillCategoryGroup,
   reorderSkillCategoryGroups,
@@ -96,6 +97,17 @@ export async function assignSkillCategoryGroupAction(formData: FormData): Promis
     }, session.user.memberId);
     revalidateSkillCategoryGroups();
   }, "カテゴリの大分類を保存しました。");
+}
+
+export async function bulkAssignSkillCategoryGroupAction(input: {
+  categoryIds: string[];
+  groupId: string | null;
+}): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requireRoles(adminOnly);
+    await bulkAssignSkillCategoryGroup(input, session.user.memberId);
+    revalidateSkillCategoryGroups();
+  }, `${input.categoryIds.length}件のカテゴリの大分類を保存しました。`);
 }
 
 export async function updateSkillCategoryAction(formData: FormData): Promise<ActionResult> {
