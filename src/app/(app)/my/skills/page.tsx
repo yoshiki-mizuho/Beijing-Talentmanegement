@@ -112,6 +112,7 @@ export default async function MySkillsPage({
         >
           <CardContent className="pt-6">
             <SkillSheetForm
+              memberId={session.user.memberId}
               key={context.pendingAssessments
                 .map((assessment) => assessment.skillId)
                 .sort()

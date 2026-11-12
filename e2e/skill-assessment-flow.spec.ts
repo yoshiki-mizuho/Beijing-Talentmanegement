@@ -19,6 +19,26 @@ async function unreadCount(page: import("@playwright/test").Page) {
   return Number(label?.match(/未読通知(\d+)件/)?.[1] ?? 0);
 }
 
+test("スキルシートの未送信の選択を画面移動と再読み込み後も保つ", async ({ browser }) => {
+  const fixture = await setup("下書き");
+  let member: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
+  try {
+    const { skill } = await fixture.data.createSkill("下書きスキル");
+    member = await openLoggedInContext(browser, fixture.member.credential);
+    await member.page.goto("/my/skills");
+    const levels = member.page.locator(`[role="group"][aria-label="${skill.name}のレベル"]`);
+    await levels.getByRole("button", { name: "Lv1", exact: true }).click();
+    await member.page.goto("/dashboard");
+    await member.page.goto("/my/skills");
+    await expect(levels.getByRole("button", { name: "Lv1", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await member.page.reload();
+    await expect(levels.getByRole("button", { name: "Lv1", exact: true })).toHaveAttribute("aria-pressed", "true");
+  } finally {
+    await member?.context.close();
+    await fixture.data.cleanup();
+  }
+});
+
 test("複数のスキル申告を上司への通知1件にまとめ、承認後に既読にする", async ({ browser }) => {
   const fixture = await setup("一括申請");
   let member: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;

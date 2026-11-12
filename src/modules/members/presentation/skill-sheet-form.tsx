@@ -2,9 +2,10 @@
 
 import { ChevronDown, Clock, MessageSquare, RotateCcw, Search, SearchX, Send, Target } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 
+import { parseSkillSheetDraft } from "@/modules/members/domain/skill-sheet-draft";
 import { createSkillAssessmentsAction } from "@/modules/members/presentation/actions";
 import { resolveSkillLevelDescription } from "@/modules/skills/domain/skill-level-guide";
 import {
@@ -38,7 +39,10 @@ const filters: Array<{ value: SkillSheetFilter; label: string }> = [
   { value: "changed", label: "変更あり" }
 ];
 
+const subscribeToMount = () => () => {};
+
 export function SkillSheetForm({
+  memberId,
   rows,
   levels,
   encouragement,
@@ -49,6 +53,7 @@ export function SkillSheetForm({
   initialQuery = "",
   popularHeading = "よく登録されているスキル"
 }: {
+  memberId: string;
   rows: SkillSheetRow[];
   levels: Array<{ level: number; description: string }>;
   encouragement: string;
@@ -60,6 +65,12 @@ export function SkillSheetForm({
   popularHeading?: string;
 }) {
   const router = useRouter();
+  const mounted = useSyncExternalStore(
+    subscribeToMount,
+    () => true,
+    () => false
+  );
+  const draftStorageKey = `talenthub:skill-sheet-draft:${memberId}`;
   const [query, setQuery] = useState(initialQuery);
   const [filter, setFilter] = useState<SkillSheetFilter>(initialFilter);
   const [categoryId, setCategoryId] = useState("all");
@@ -68,12 +79,30 @@ export function SkillSheetForm({
     {}
   );
   const [comments, setComments] = useState<Record<string, string>>({});
+  const [draftRestored, setDraftRestored] = useState(false);
   const [activeSkillId, setActiveSkillId] = useState<string | null>(null);
   const [showInitialLevelGuides, setShowInitialLevelGuides] = useState(false);
   // よく登録されているスキルがまだ無いときは、最初から全件を出す
   const [showAllSkills, setShowAllSkills] = useState(
     !initial || popularSkillIds.length === 0 || initialFilter !== "all"
   );
+
+  if (mounted && !draftRestored) {
+    try {
+      const storedDraft = sessionStorage.getItem(draftStorageKey);
+      const draft = storedDraft
+        ? parseSkillSheetDraft(storedDraft, rows)
+        : null;
+      if (draft) {
+        setSelectedLevels(draft.selectedLevels);
+        setComments(draft.comments);
+      }
+    } catch {
+      // sessionStorage が使えない環境では、従来どおりフォームだけを動かす。
+    }
+    setDraftRestored(true);
+  }
+
   const changedSkillIds = useMemo(
     () => new Set(Object.keys(selectedLevels)),
     [selectedLevels]
@@ -169,6 +198,27 @@ export function SkillSheetForm({
     toast.dismiss();
   }, []);
 
+  useEffect(() => {
+    if (!draftRestored) return;
+
+    try {
+      if (
+        Object.keys(selectedLevels).length === 0 &&
+        Object.keys(comments).length === 0
+      ) {
+        sessionStorage.removeItem(draftStorageKey);
+      } else {
+        sessionStorage.setItem(draftStorageKey, JSON.stringify({
+          version: 1,
+          selectedLevels,
+          comments
+        }));
+      }
+    } catch {
+      // sessionStorage が使えない環境では、従来どおりフォームだけを動かす。
+    }
+  }, [comments, draftRestored, draftStorageKey, selectedLevels]);
+
   function selectLevel(row: SkillSheetRow, clickedLevel: number) {
     if (row.pendingLevel !== null) return;
 
@@ -202,6 +252,11 @@ export function SkillSheetForm({
       action={createSkillAssessmentsAction}
       className="space-y-5"
       onSuccess={() => {
+        try {
+          sessionStorage.removeItem(draftStorageKey);
+        } catch {
+          // sessionStorage が使えない環境では、従来どおり成功後の処理を続ける。
+        }
         setSelectedLevels({});
         setComments({});
         setActiveSkillId(null);
