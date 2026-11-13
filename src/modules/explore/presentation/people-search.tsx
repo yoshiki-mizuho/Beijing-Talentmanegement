@@ -2,7 +2,6 @@ import { Compass } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
 import type { getExploreData } from "@/modules/explore/application/explore-service";
-import { EmptyState } from "@/shared/ui/empty-state";
 import { MemberAvatar } from "@/shared/ui/member-avatar";
 import { PeopleSearchFilters } from "./people-search-filters";
 import { SectionHeading } from "./section-heading";
@@ -33,35 +32,32 @@ export function PeopleSearch({
         }))}
         selectedSkill={selectedSkill ?? null}
         level={level}
+        empty={Boolean(selectedSkill) && data.results.length === 0}
       >
-        {selectedSkill && data.results.length === 0 ? (
-          <EmptyState title="条件に合う人はいません" />
-        ) : (
-          <ul className="divide-y divide-[var(--border)]">
-            {data.results.map((person) => (
-              <li key={person.id}>
-                <Link
-                  href={`/people/${person.id}` as Route}
-                  className="flex min-h-16 items-center gap-3 px-2 hover:bg-[var(--surface-subtle)]"
-                >
-                  <MemberAvatar
-                    memberId={person.id}
-                    name={person.name}
-                    avatarUpdatedAt={person.avatarUpdatedAt}
-                  />
-                  <span className="min-w-0 flex-1">
-                    <strong className="block text-sm">{person.name}</strong>
-                    <span className="text-xs text-[var(--muted-foreground)]">
-                      {person.departmentName}
-                      {person.jobTitle ? `・${person.jobTitle}` : ""}
-                    </span>
+        <ul className="divide-y divide-[var(--border)]">
+          {data.results.map((person) => (
+            <li key={person.id}>
+              <Link
+                href={`/people/${person.id}` as Route}
+                className="flex min-h-16 items-center gap-3 px-2 hover:bg-[var(--surface-subtle)]"
+              >
+                <MemberAvatar
+                  memberId={person.id}
+                  name={person.name}
+                  avatarUpdatedAt={person.avatarUpdatedAt}
+                />
+                <span className="min-w-0 flex-1">
+                  <strong className="block text-sm">{person.name}</strong>
+                  <span className="text-xs text-[var(--muted-foreground)]">
+                    {person.departmentName}
+                    {person.jobTitle ? `・${person.jobTitle}` : ""}
                   </span>
-                  <strong className="text-[var(--primary)]">Lv{person.level}</strong>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+                </span>
+                <strong className="text-[var(--primary)]">Lv{person.level}</strong>
+              </Link>
+            </li>
+          ))}
+        </ul>
       </PeopleSearchFilters>
     </section>
   );

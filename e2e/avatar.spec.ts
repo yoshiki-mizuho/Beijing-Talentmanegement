@@ -36,6 +36,11 @@ test("本人がアイコン画像を登録して削除できる", async ({ page 
   expect(response.headers()["content-type"]).toMatch(/^image\//);
 
   await page.getByRole("button", { name: "画像を削除" }).click();
+  const deleteDialog = page.getByRole("dialog", { name: "アイコン画像を削除しますか" });
+  await deleteDialog.getByRole("button", { name: "キャンセル" }).click();
+  await expect(avatar).toBeVisible();
+  await page.getByRole("button", { name: "画像を削除" }).click();
+  await deleteDialog.getByRole("button", { name: "削除する" }).click();
   await expect(page.getByText("アイコン画像を削除しました。")).toBeVisible();
   await expect(page.getByLabel("アカウントメニューを開く").locator("img")).toHaveCount(0);
   } finally {

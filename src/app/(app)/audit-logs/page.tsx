@@ -42,7 +42,6 @@ export default async function AuditLogsPage({
           items={result.items}
           total={result.total}
           page={result.page}
-          pageCount={result.pageCount}
           queryString={queryString}
         />
       </CardContent>

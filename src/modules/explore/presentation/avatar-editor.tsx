@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { deleteMyAvatarAction, updateMyAvatarAction } from "@/modules/explore/presentation/actions";
+import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 
 const sourceMaxBytes = 10 * 1024 * 1024;
 const acceptedTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
@@ -12,6 +13,7 @@ const acceptedTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
 export function AvatarEditor({ hasAvatar }: { hasAvatar: boolean }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   async function handleFile(file: File | undefined) {
     if (!file) return;
@@ -45,6 +47,7 @@ export function AvatarEditor({ hasAvatar }: { hasAvatar: boolean }) {
       toast[result.status === "success" ? "success" : "error"](result.message);
     } finally {
       setPending(false);
+      setConfirmingDelete(false);
     }
   }
 
@@ -70,12 +73,21 @@ export function AvatarEditor({ hasAvatar }: { hasAvatar: boolean }) {
         <button
           type="button"
           disabled={pending}
-          onClick={() => void handleDelete()}
+          onClick={() => setConfirmingDelete(true)}
           className="absolute left-1/2 top-full mt-1 -translate-x-1/2 whitespace-nowrap text-xs text-[var(--destructive)] disabled:opacity-50"
         >
           画像を削除
         </button>
       ) : null}
+      <ConfirmDialog
+        open={confirmingDelete}
+        onClose={() => setConfirmingDelete(false)}
+        onConfirm={() => void handleDelete()}
+        title="アイコン画像を削除しますか"
+        description=""
+        confirmLabel="削除する"
+        destructive
+      />
     </>
   );
 }

@@ -18,15 +18,6 @@ export const emptyMemberSearchFilters: MemberSearchFilters = {
 
 export const MEMBER_PAGE_SIZE = 20;
 
-export function getMemberPageRange(total: number, page: number) {
-  const pageCount = Math.max(1, Math.ceil(total / MEMBER_PAGE_SIZE));
-  const currentPage = Math.min(Math.max(page, 1), pageCount);
-  const start = total === 0 ? 0 : (currentPage - 1) * MEMBER_PAGE_SIZE + 1;
-  const end = Math.min(currentPage * MEMBER_PAGE_SIZE, total);
-
-  return { currentPage, pageCount, start, end };
-}
-
 export function hasMemberSearchFilters(filters: MemberSearchFilters) {
   return Object.values(filters).some(Boolean);
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, FilterX, Search, UsersRound } from "lucide-react";
+import { FilterX, Search, UsersRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
@@ -18,7 +18,6 @@ import {
 import {
   buildMemberSearchParams,
   emptyMemberSearchFilters,
-  getMemberPageRange,
   MEMBER_PAGE_SIZE,
   type MemberSearchFilters
 } from "@/modules/members/presentation/member-search-filters";
@@ -42,6 +41,7 @@ import { Button } from "@/shared/ui/button";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { Input } from "@/shared/ui/input";
 import { QueryProvider } from "@/shared/ui/query-provider";
+import { Pagination } from "@/shared/ui/pagination";
 import { Select } from "@/shared/ui/select";
 import { Tooltip } from "@/shared/ui/tooltip";
 import { useDismissibleDetails } from "@/shared/ui/use-dismissible-details";
@@ -181,10 +181,11 @@ function MemberSearchTableInner({
       ),
     [query.data, roles, targetRoleFilter]
   );
-  const range = getMemberPageRange(members.length, page);
+  const pageCount = Math.max(1, Math.ceil(members.length / MEMBER_PAGE_SIZE));
+  const currentPage = Math.min(Math.max(page, 1), pageCount);
   const pageMembers = members.slice(
-    (range.currentPage - 1) * MEMBER_PAGE_SIZE,
-    range.currentPage * MEMBER_PAGE_SIZE
+    (currentPage - 1) * MEMBER_PAGE_SIZE,
+    currentPage * MEMBER_PAGE_SIZE
   );
   const selectedMember = members.find((member) => member.id === selectedMemberId) ?? null;
   const refreshMembers = useCallback(() => void query.refetch(), [query]);
@@ -494,7 +495,8 @@ function MemberSearchTableInner({
       {members.length > 0 ? (
         <Pagination
           total={members.length}
-          range={range}
+          page={currentPage}
+          pageSize={MEMBER_PAGE_SIZE}
           onPage={(nextPage) => {
             setPage(nextPage);
             replaceUrl({ ...latestState.current, page: nextPage });
@@ -614,56 +616,6 @@ function TargetRoleCell({ member, roles }: { member: MemberRow; roles: RoleOptio
         <p className="text-xs text-[var(--muted-foreground)]">
           {getTargetRoleProgressLabel(result.satisfiedCount, result.requiredCount)}
         </p>
-      </div>
-    </div>
-  );
-}
-function Pagination({
-  total,
-  range,
-  onPage
-}: {
-  total: number;
-  range: ReturnType<typeof getMemberPageRange>;
-  onPage: (page: number) => void;
-}) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <p className="text-sm text-[var(--muted-foreground)]">
-        {total}件中 {range.start}〜{range.end}件
-      </p>
-      <div className="flex items-center gap-1">
-        <Button
-          type="button"
-          variant="ghost"
-          size="small"
-          aria-label="前のページ"
-          disabled={range.currentPage === 1}
-          onClick={() => onPage(range.currentPage - 1)}
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        {Array.from({ length: range.pageCount }, (_, index) => index + 1).map((item) => (
-          <button
-            key={item}
-            type="button"
-            aria-current={item === range.currentPage ? "page" : undefined}
-            className={chipClass(item === range.currentPage)}
-            onClick={() => onPage(item)}
-          >
-            {item}
-          </button>
-        ))}
-        <Button
-          type="button"
-          variant="ghost"
-          size="small"
-          aria-label="次のページ"
-          disabled={range.currentPage === range.pageCount}
-          onClick={() => onPage(range.currentPage + 1)}
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
       </div>
     </div>
   );

@@ -58,10 +58,13 @@ test("本人が公開設定を切り替え、最後に公開へ戻す", async ({
     await expect(page).toHaveURL(/\/people\//);
     const visibility = page.getByRole("switch", { name: "プロフィールを公開" });
     await expect(visibility).toBeVisible();
+    await expect(visibility).toContainText("公開中");
     if ((await visibility.getAttribute("aria-checked")) === "true") await visibility.click();
     await expect(visibility).toHaveAttribute("aria-checked", "false");
+    await expect(visibility).toContainText("非公開");
     await visibility.click();
     await expect(visibility).toHaveAttribute("aria-checked", "true");
+    await expect(visibility).toContainText("公開中");
   } finally {
     await data.cleanup();
   }
