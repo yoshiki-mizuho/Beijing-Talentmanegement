@@ -12,6 +12,7 @@ import {
 } from "@/modules/dashboard/domain/organization-dashboard";
 import { buildOrganizationDashboard } from "@/modules/dashboard/domain/dashboard-summary";
 import { getOrganizationDashboardSource } from "@/modules/dashboard/infrastructure/dashboard-repository";
+import { listRoleAchievements } from "@/modules/roles/application/role-achievement-service";
 
 export async function getDashboardSummary(
   role: AuthRole,
@@ -19,6 +20,15 @@ export async function getDashboardSummary(
   departmentId?: string,
 ) {
   const source = await getOrganizationDashboardSource(memberId);
+  const roleAchievements = await listRoleAchievements({
+    memberIds: source.members.map((member) => member.id)
+  });
+  const sourceMembers = source.members.map((member) => ({
+    ...member,
+    roleAchievements: roleAchievements.filter(
+      (achievement) => achievement.memberId === member.id
+    )
+  }));
   const tree = buildDepartmentTree(source.departments);
   const visibleIds =
     role === "ADMIN"
@@ -39,9 +49,9 @@ export async function getDashboardSummary(
     ? tree.find((item) => item.id === selectedId)
     : null;
   const memberIds = new Set(
-    departmentMemberIds(source.departments, source.members, selectedId),
+    departmentMemberIds(source.departments, sourceMembers, selectedId),
   );
-  const members = source.members.filter((member) => memberIds.has(member.id));
+  const members = sourceMembers.filter((member) => memberIds.has(member.id));
   const changes = source.changes.filter((change) =>
     memberIds.has(change.memberId),
   );
@@ -51,9 +61,9 @@ export async function getDashboardSummary(
     : roots.map((item) => item.id);
   const comparisons = comparisonIds.map((id) => {
     const ids = new Set(
-      departmentMemberIds(source.departments, source.members, id),
+      departmentMemberIds(source.departments, sourceMembers, id),
     );
-    const comparisonMembers = source.members.filter((member) =>
+    const comparisonMembers = sourceMembers.filter((member) =>
       ids.has(member.id),
     );
     return {
@@ -83,7 +93,7 @@ export async function getDashboardSummary(
       const ids = new Set(collectDescendantIds(source.departments, item.id));
       return [
         item.id,
-        source.members.filter((member) => ids.has(member.departmentId)).length,
+        sourceMembers.filter((member) => ids.has(member.departmentId)).length,
       ];
     }),
   );

@@ -1,7 +1,7 @@
 import { isGrowthLevelChange } from "@/modules/growth/domain/level-change-source";
 import { buildChatUrl } from "@/modules/explore/domain/chat-link";
 import {
-  achievedRoleNames,
+  achievedRoleNamesAt,
   aggregateTrendingSkills,
   calculateProfileStats,
   canViewProfile,
@@ -23,6 +23,7 @@ import { badgeDefinitions, badgeRarities, secretBadgeArt } from "@/modules/growt
 import { calculateBadgeAchievements, calculateBadgeProgress } from "@/modules/growth/domain/growth-insights";
 import { getBadgeCalculationData } from "@/modules/growth/infrastructure/badge-calculation-repository";
 import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
+import { listMemberRoleAchievements } from "@/modules/roles/application/role-achievement-service";
 
 export async function getExploreData(
   viewer: ProfileViewer,
@@ -115,14 +116,11 @@ export async function getSkillProfile(viewer: ProfileViewer, memberId: string, n
   const guard = await getProfileVisibility(memberId);
   if (!guard || !canViewProfile(viewer, guard)) return null;
 
-  const [{ member, roles }, badgeData] = await Promise.all([
+  const [{ member }, badgeData, roleAchievements] = await Promise.all([
     getSkillProfileSourceData(memberId),
-    getBadgeCalculationData(memberId)
+    getBadgeCalculationData(memberId),
+    listMemberRoleAchievements(memberId)
   ]);
-  const roleDefinitions = roles.map((role) => ({
-    name: role.name,
-    requirements: role.roleRequirements
-  }));
   const skills = member.memberSkills
     .map((item) => ({
       skillId: item.skillId,
@@ -151,12 +149,19 @@ export async function getSkillProfile(viewer: ProfileViewer, memberId: string, n
     yearsAgo: historyPoints.find((point) => point.at.getTime() === snapshot.at.getTime())!.yearsAgo,
     at: snapshot.at.toISOString(),
     skills: markSnapshotChanges(snapshot, all[index - 1]),
-    roles: achievedRoleNames(snapshot.skills, roleDefinitions)
+    roles: achievedRoleNamesAt(
+      roleAchievements.map((achievement) => ({
+        roleName: achievement.role.name,
+        achievedAt: achievement.achievedAt
+      })),
+      snapshot.at
+    )
   }));
   const snapshots = orderSkillHistorySnapshots(markedSnapshots);
-  const badgeAchievements = calculateBadgeAchievements({ ...badgeData, now });
+  const badgeInput = { ...badgeData, targetAchievements: roleAchievements, now };
+  const badgeAchievements = calculateBadgeAchievements(badgeInput);
   const achievementById = new Map(badgeAchievements.map((item) => [item.id, item]));
-  const progressById = new Map(calculateBadgeProgress({ ...badgeData, now })
+  const progressById = new Map(calculateBadgeProgress(badgeInput)
     .map((item) => [item.id, item]));
   const badges = badgeDefinitions.map((definition) => {
     const earnedAt = achievementById.get(definition.id)?.earnedAt?.toISOString() ?? null;
@@ -229,7 +234,20 @@ export async function getSkillProfile(viewer: ProfileViewer, memberId: string, n
     skills,
     topSkills: skillGroups.top,
     otherSkills: skillGroups.rest,
-    achievedRoles: achievedRoleNames(skills, roleDefinitions),
+    achievedRoles: roleAchievements.map((achievement) => ({
+      name: achievement.role.name,
+      achievedAt: achievement.achievedAt.toISOString(),
+      requirementsUpdated: !evaluateRoleAchievement(
+        achievement.role.roleRequirements.map((requirement) => ({
+          skillId: requirement.skillId,
+          skillName: requirement.skill.name,
+          requiredLevel: requirement.requiredLevel,
+          isRequired: true,
+          anyOfGroup: requirement.anyOfGroup
+        })),
+        skills
+      ).achieved
+    })),
     badges,
     stats,
     targetRole: member.targetRole

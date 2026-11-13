@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, GitFork, Plus, Target, X } from "lucide-react";
+import { AlertTriangle, Check, GitFork, Plus, Target, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useMemo, useState, type MouseEvent } from "react";
@@ -22,6 +22,7 @@ import { FormField, TextareaField } from "@/shared/ui/form-field";
 import { MemberAvatar } from "@/shared/ui/member-avatar";
 import { PageHeader } from "@/shared/ui/page-header";
 import { SubmitButton } from "@/shared/ui/submit-button";
+import { Tooltip } from "@/shared/ui/tooltip";
 
 type RoleItem = ReturnType<
   typeof import("./role-page-view-model").buildRolePageViewModel
@@ -163,6 +164,13 @@ function RoleList({
                 {role.isTarget ? <Badge variant="warning">目標</Badge> : null}
                 {role.ownAchievement.achieved ? (
                   <Badge variant="success">達成</Badge>
+                ) : null}
+                {role.ownAchievement.status === "requirements_updated" ? (
+                  <Tooltip content="要件が更新されました">
+                    <span tabIndex={0} aria-label="要件が更新されました">
+                      <AlertTriangle className="h-4 w-4 text-[var(--muted-foreground)]" aria-hidden="true" />
+                    </span>
+                  </Tooltip>
                 ) : null}
                 {!role.isActive ? <Badge variant="neutral">無効</Badge> : null}
               </span>
@@ -356,6 +364,13 @@ function MemberStatus({ role, title }: { role: RoleItem; title: string }) {
               />
               <div className="min-w-0">
                 <p className="truncate font-medium">{member.name}</p>
+                {member.requirementsUpdated ? (
+                  <Tooltip content="要件が更新されました">
+                    <span tabIndex={0} aria-label="要件が更新されました">
+                      <AlertTriangle className="h-4 w-4 text-[var(--muted-foreground)]" aria-hidden="true" />
+                    </span>
+                  </Tooltip>
+                ) : null}
                 <p className="text-xs text-[var(--muted-foreground)]">
                   {member.achieved
                     ? "達成"

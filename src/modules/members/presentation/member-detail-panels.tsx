@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, KeyRound } from "lucide-react";
+import { AlertTriangle, CheckCircle2, KeyRound } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
@@ -40,6 +40,7 @@ import {
 import { FormField, SelectField, TextareaField } from "@/shared/ui/form-field";
 import { SubmitButton } from "@/shared/ui/submit-button";
 import { InitialPasswordNotice } from "@/modules/members/presentation/initial-password-notice";
+import { Tooltip } from "@/shared/ui/tooltip";
 
 const memberStatuses = ["ACTIVE", "LEAVE", "INACTIVE"] as const;
 const skillLevels = [1, 2, 3, 4, 5] as const;
@@ -90,6 +91,9 @@ export function MemberOverviewPanel({
   const remainingSkillCount = targetRoleEvaluation
     ? targetRoleEvaluation.requiredCount - targetRoleEvaluation.satisfiedCount
     : 0;
+  const targetRoleAchieved = member.targetRoleId !== null && member.roleAchievements.some(
+    (achievement) => achievement.roleId === member.targetRoleId
+  );
 
   return (
     <section
@@ -133,7 +137,20 @@ export function MemberOverviewPanel({
               </p>
               {member.targetRole ? (
                 <div className="mt-1 text-sm text-[var(--muted-foreground)]">
-                  <p>あと {remainingSkillCount} スキル</p>
+                  {targetRoleAchieved ? (
+                    <p className="flex items-center gap-1 font-semibold text-[var(--primary)]">
+                      達成
+                      {targetRoleEvaluation && !targetRoleEvaluation.achieved ? (
+                        <Tooltip content="要件が更新されました">
+                          <span tabIndex={0} aria-label="要件が更新されました">
+                            <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+                          </span>
+                        </Tooltip>
+                      ) : null}
+                    </p>
+                  ) : (
+                    <p>あと {remainingSkillCount} スキル</p>
+                  )}
                   <Link
                     href={`/roles?role=${encodeURIComponent(member.targetRole.id)}`}
                     className="inline-flex min-h-11 items-center font-semibold text-[var(--primary)] hover:underline"

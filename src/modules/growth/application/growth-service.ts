@@ -9,10 +9,7 @@ import {
   oneOnOneNoteUpdateInputSchema
 } from "@/modules/growth/domain/growth-schema";
 import { calculateBadgeAchievements } from "@/modules/growth/domain/growth-insights";
-import {
-  buildNextRoleCandidates,
-  detectNewRoleAchievement
-} from "@/modules/growth/domain/role-achievement-celebration";
+import { buildNextRoleCandidates } from "@/modules/growth/domain/role-achievement-celebration";
 import * as growthRepository from "@/modules/growth/infrastructure/growth-repository";
 import { getBadgeCalculationData, listFirstMoverLevelChangeIds } from "@/modules/growth/infrastructure/badge-calculation-repository";
 import {
@@ -22,6 +19,11 @@ import {
 } from "@/modules/growth/infrastructure/member-growth-repository";
 import type { UnreadCheerNotification } from "@/modules/growth/infrastructure/member-growth-repository";
 import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
+import {
+  getPendingRoleAchievementCelebration,
+  listMemberRoleAchievements,
+  markRoleAchievementCelebrated
+} from "@/modules/roles/application/role-achievement-service";
 import { resolveSkillLevelDescription } from "@/modules/skills/domain/skill-level-guide";
 import { AuthorizationError } from "@/server/auth/authorization";
 import { UserFacingError } from "@/shared/lib/user-facing-error";
@@ -160,13 +162,17 @@ export function listSkillMentorCandidates(skillIds: string[]) {
 export async function getLevelUpCelebrations(memberId: string) {
   const notifications = await listUnreadLevelUpNotifications(memberId);
   if (notifications.length === 0) return [];
-  const [growthData, badgeData] = await Promise.all([
+  const [growthData, badgeData, roleAchievements] = await Promise.all([
     fetchMemberGrowthData(memberId),
-    getBadgeCalculationData(memberId)
+    getBadgeCalculationData(memberId),
+    listMemberRoleAchievements(memberId)
   ]);
   if (!growthData.member) return [];
 
-  const achievements = calculateBadgeAchievements(badgeData);
+  const achievements = calculateBadgeAchievements({
+    ...badgeData,
+    targetAchievements: roleAchievements
+  });
   const progress = buildTargetProgress(growthData);
   return notifications.flatMap((notification) => {
     const assessment = notification.skillSelfAssessment;
@@ -252,78 +258,62 @@ export type LevelUpCelebration = Awaited<
 >[number];
 
 export async function getRoleAchievementCelebration(memberId: string) {
-  const notifications = await listUnreadLevelUpNotifications(memberId);
-  if (notifications.length === 0) return null;
-  const growthData = await fetchMemberGrowthData(memberId);
+  const [record, growthData, roleAchievements] = await Promise.all([
+    getPendingRoleAchievementCelebration(memberId),
+    fetchMemberGrowthData(memberId),
+    listMemberRoleAchievements(memberId)
+  ]);
   const member = growthData.member;
-  const role = member?.targetRole;
-  if (!member || !role?.isActive || role.roleRequirements.length === 0) return null;
-
-  const changes = notifications.flatMap((notification) => {
-    const change = notification.skillLevelChange ??
-      notification.skillSelfAssessment?.skillLevelChanges[0];
-    // レベルアップ演出と同じく、上がった変更だけを見る（下がった変更の通知は演出で既読にならず残るため）
-    if (!change || (change.fromLevel !== null && change.toLevel <= change.fromLevel)) {
-      return [];
-    }
-    return [{
-      id: change.id,
-      skillId: change.skillId,
-      fromLevel: change.fromLevel,
-      changedAt: change.changedAt
-    }];
-  });
-  if (changes.length === 0) return null;
-
-  const requirements = role.roleRequirements.map((requirement) => ({
-    skillId: requirement.skillId,
-    skillName: requirement.skill.name,
-    requiredLevel: requirement.requiredLevel,
-    isRequired: requirement.isRequired,
-    anyOfGroup: requirement.anyOfGroup
-  }));
+  if (!record || !member) return null;
+  const requirements = Array.isArray(record.requirements)
+    ? record.requirements.flatMap((value) => {
+        if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+        const requirement = value as Record<string, unknown>;
+        if (
+          typeof requirement.skillId !== "string" ||
+          typeof requirement.requiredLevel !== "number" ||
+          requirement.isRequired === false
+        ) return [];
+        return [{
+          skillId: requirement.skillId,
+          skillName: typeof requirement.skillName === "string"
+            ? requirement.skillName
+            : "スキル",
+          requiredLevel: requirement.requiredLevel
+        }];
+      })
+    : [];
   const currentSkills = member.memberSkills.map((skill) => ({
     skillId: skill.skillId,
     skillName: skill.skill.name,
     level: skill.level
   }));
-  const achievement = detectNewRoleAchievement({ requirements, currentSkills, changes });
-  if (!achievement) return null;
-
   const achievements = calculateBadgeAchievements({
     assessments: growthData.assessments,
     memberSkills: member.memberSkills,
     levelChanges: growthData.levelChanges,
-    targetRequirements: role.roleRequirements,
+    targetRequirements: member.targetRole?.roleRequirements ?? [],
+    targetAchievements: roleAchievements,
     mentoredCheers: growthData.mentoredCheers
   });
-  const changedTimes = new Set(changes.map((change) => change.changedAt.getTime()));
   const newBadges = achievements.flatMap((badge) => {
-    if (!badge.earnedAt || !changedTimes.has(badge.earnedAt.getTime())) return [];
+    if (!badge.earnedAt || badge.earnedAt.getTime() !== record.achievedAt.getTime()) return [];
     const definition = badgeDefinitions.find((candidate) => candidate.id === badge.id);
     return definition ? [{ id: definition.id, name: definition.name }] : [];
   }).filter((badge, index, badges) =>
     badges.findIndex((candidate) => candidate.id === badge.id) === index
   );
-  const satisfiedRequirements = achievement.units.map((unit) => {
-    const requirement = unit.kind === "single"
-      ? unit.requirement
-      : unit.requirements.find((candidate) => candidate.satisfied)!;
-    return {
-      skillId: requirement.skillId,
-      skillName: requirement.skillName ?? "スキル",
-      requiredLevel: requirement.requiredLevel
-    };
-  });
+  const recordedRoleIds = new Set(roleAchievements.map((achievement) => achievement.roleId));
 
   return {
-    roleName: role.name,
-    satisfiedRequirements,
+    achievementId: record.id,
+    roleName: record.role.name,
+    satisfiedRequirements: requirements,
     newBadges,
     candidates: buildNextRoleCandidates({
-      currentRoleId: role.id,
+      currentRoleId: record.role.id,
       currentSkills,
-      roles: growthData.roles.map((candidate) => ({
+      roles: growthData.roles.filter((candidate) => !recordedRoleIds.has(candidate.id)).map((candidate) => ({
         id: candidate.id,
         name: candidate.name,
         requirements: candidate.roleRequirements.map((requirement) => ({
@@ -336,6 +326,13 @@ export async function getRoleAchievementCelebration(memberId: string) {
       }))
     })
   };
+}
+
+export function acknowledgeRoleAchievementCelebration(
+  achievementId: string,
+  memberId: string
+) {
+  return markRoleAchievementCelebrated(achievementId, memberId);
 }
 
 export type RoleAchievementCelebration = NonNullable<Awaited<

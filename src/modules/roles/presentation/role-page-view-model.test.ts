@@ -59,6 +59,10 @@ function build(viewerRole: AuthRole, scopedMemberIds: string[]) {
     scopedMemberIds,
     roles,
     activeMembers,
+    achievements: [
+      { memberId: "report", roleId: "role-1" },
+      { memberId: "outside", roleId: "role-1" }
+    ]
   });
 }
 

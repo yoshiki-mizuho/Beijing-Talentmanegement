@@ -16,6 +16,7 @@ export type OrganizationMember = {
     }[];
   };
   memberSkills: { skillId: string; level: number }[];
+  roleAchievements?: { roleId: string }[];
 };
 
 export function buildOrganizationDashboard(input: {
@@ -56,10 +57,9 @@ export function buildOrganizationDashboard(input: {
   }));
   const targets = input.members.filter((member) => member.targetRole);
   const isAchieved = (member: OrganizationMember) =>
-    evaluateRoleAchievement(
-      member.targetRole!.roleRequirements,
-      member.memberSkills,
-    ).achieved;
+    (member.roleAchievements ?? []).some(
+      (achievement) => achievement.roleId === member.targetRole?.id
+    );
   const missing = new Map<
     string,
     { skillId: string; name: string; count: number }

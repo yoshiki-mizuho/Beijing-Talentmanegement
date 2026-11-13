@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import {
+  acknowledgeRoleAchievementCelebration,
   addLevelUpReaction,
   createCheer,
   createLevelUpComment,
@@ -95,4 +96,17 @@ export async function listOneOnOneNotesAction(memberId: string) {
     discussedAt: note.discussedAt?.toISOString() ?? null,
     updatedAt: note.updatedAt.toISOString()
   }));
+}
+
+export async function acknowledgeRoleAchievementCelebrationAction(
+  achievementId: string
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requirePasswordReadyMember();
+    await acknowledgeRoleAchievementCelebration(
+      achievementId,
+      session.user.memberId
+    );
+    revalidatePath("/dashboard");
+  }, "ロール達成のお祝いを確認しました。");
 }

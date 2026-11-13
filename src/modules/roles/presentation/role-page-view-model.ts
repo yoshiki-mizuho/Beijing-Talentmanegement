@@ -1,6 +1,7 @@
 import type { AuthRole } from "@prisma/client";
 
 import { evaluateMemberForRole } from "@/modules/roles/application/role-service";
+import { resolveRoleAchievementStatus } from "@/modules/roles/domain/role-achievement";
 
 type RoleSource = {
   id: string;
@@ -35,6 +36,7 @@ export function buildRolePageViewModel(input: {
   scopedMemberIds: string[];
   roles: RoleSource[];
   activeMembers: MemberSource[];
+  achievements: { memberId: string; roleId: string }[];
 }) {
   const viewer = input.activeMembers.find(
     (member) => member.id === input.viewerMemberId,
@@ -55,9 +57,15 @@ export function buildRolePageViewModel(input: {
         requirements,
         viewer.memberSkills,
       );
+      const recordedMemberIds = new Set(
+        input.achievements
+          .filter((achievement) => achievement.roleId === role.id)
+          .map((achievement) => achievement.memberId)
+      );
       const allStatuses = input.activeMembers.map((member) => ({
         member,
         result: evaluateMemberForRole(requirements, member.memberSkills),
+        recorded: recordedMemberIds.has(member.id)
       }));
       const visibleStatuses =
         input.viewerRole === "MEMBER"
@@ -65,17 +73,18 @@ export function buildRolePageViewModel(input: {
           : allStatuses
               .filter(({ member }) => input.scopedMemberIds.includes(member.id))
               .filter(
-                ({ member, result }) =>
-                  member.targetRoleId === role.id || result.achieved,
+                ({ member, recorded }) =>
+                  member.targetRoleId === role.id || recorded,
               )
-              .map(({ member, result }) => ({
+              .map(({ member, result, recorded }) => ({
                 id: member.id,
                 name: member.name,
                 avatarUpdatedAt: member.avatarUpdatedAt?.toISOString() ?? null,
                 departmentName: member.department.name,
                 jobTitle: member.jobTitle,
                 isTarget: member.targetRoleId === role.id,
-                achieved: result.achieved,
+                achieved: recorded,
+                requirementsUpdated: recorded && !result.achieved,
                 achievementRate: result.achievementRate,
                 missingRequirements: result.missingRequirements.map(
                   (requirement) => ({
@@ -95,7 +104,11 @@ export function buildRolePageViewModel(input: {
         isTarget: viewer.targetRoleId === role.id,
         canDelete: role._count.roleAchievements === 0,
         ownAchievement: {
-          achieved: ownStatus.achieved,
+          achieved: recordedMemberIds.has(viewer.id),
+          status: resolveRoleAchievementStatus({
+            recorded: recordedMemberIds.has(viewer.id),
+            currentlySatisfied: ownStatus.achieved
+          }),
           achievementRate: ownStatus.achievementRate,
           satisfiedCount: ownStatus.satisfiedCount,
           requiredCount: ownStatus.requiredCount,
@@ -122,7 +135,7 @@ export function buildRolePageViewModel(input: {
             },
           };
         }),
-        achievedMemberCount: allStatuses.filter(({ result }) => result.achieved)
+        achievedMemberCount: allStatuses.filter(({ recorded }) => recorded)
           .length,
         visibleMemberStatuses: visibleStatuses,
       };

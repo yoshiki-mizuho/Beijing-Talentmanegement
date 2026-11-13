@@ -21,8 +21,11 @@ export function matchesTargetRoleFilter(
   if (!filter) return true;
   const evaluation = evaluateMemberTargetRole(member, roles);
   if (filter === "unset") return evaluation === null;
-  if (filter === "achieved") return evaluation?.achieved === true;
-  return evaluation?.achieved === false;
+  const recorded = member.targetRoleId !== null && member.roleAchievements.some(
+    (achievement) => achievement.roleId === member.targetRoleId
+  );
+  if (filter === "achieved") return recorded;
+  return evaluation !== null && !recorded;
 }
 
 export function parseTargetRoleFilter(value: string | string[] | undefined): TargetRoleFilter {

@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 
 import { selectNewRoleAchievements } from "@/modules/roles/domain/role-achievement-record";
+import { prisma } from "@/server/db/prisma";
 
 export async function recordRoleAchievements(
   tx: Prisma.TransactionClient,
@@ -67,5 +68,83 @@ export async function recordRoleAchievements(
   return tx.roleAchievement.createMany({
     data: records,
     skipDuplicates: true
+  });
+}
+
+export function listRoleAchievements(input?: {
+  memberIds?: string[];
+  roleIds?: string[];
+}) {
+  return prisma.roleAchievement.findMany({
+    where: {
+      ...(input?.memberIds ? { memberId: { in: input.memberIds } } : {}),
+      ...(input?.roleIds ? { roleId: { in: input.roleIds } } : {})
+    },
+    select: {
+      id: true,
+      memberId: true,
+      roleId: true,
+      achievedAt: true,
+      achievedAsTarget: true,
+      celebratedAt: true
+    },
+    orderBy: [{ achievedAt: "desc" }, { id: "asc" }]
+  });
+}
+
+export function listMemberRoleAchievements(memberId: string) {
+  return prisma.roleAchievement.findMany({
+    where: { memberId },
+    select: {
+      id: true,
+      memberId: true,
+      roleId: true,
+      achievedAt: true,
+      achievedAsTarget: true,
+      celebratedAt: true,
+      requirements: true,
+      role: {
+        select: {
+          id: true,
+          name: true,
+          isActive: true,
+          roleRequirements: {
+            where: { isRequired: true },
+            select: {
+              skillId: true,
+              requiredLevel: true,
+              isRequired: true,
+              anyOfGroup: true,
+              skill: { select: { name: true } }
+            }
+          }
+        }
+      }
+    },
+    orderBy: [{ achievedAt: "desc" }, { id: "asc" }]
+  });
+}
+
+export function getPendingRoleAchievementCelebration(memberId: string) {
+  return prisma.roleAchievement.findFirst({
+    where: { memberId, celebratedAt: null },
+    select: {
+      id: true,
+      achievedAt: true,
+      requirements: true,
+      role: { select: { id: true, name: true } }
+    },
+    orderBy: [{ achievedAt: "asc" }, { id: "asc" }]
+  });
+}
+
+export function markRoleAchievementCelebrated(
+  achievementId: string,
+  memberId: string,
+  celebratedAt = new Date()
+) {
+  return prisma.roleAchievement.updateMany({
+    where: { id: achievementId, memberId, celebratedAt: null },
+    data: { celebratedAt }
   });
 }

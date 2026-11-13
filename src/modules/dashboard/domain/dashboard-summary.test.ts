@@ -9,6 +9,7 @@ const members: OrganizationMember[] = [
     id: "m1",
     department: { id: "d1", name: "開発部" },
     memberSkills: [{ skillId: "s1", level: 4 }],
+    roleAchievements: [{ roleId: "r1" }],
     targetRole: {
       id: "r1",
       name: "Engineer",

@@ -30,6 +30,7 @@ export type OrganizationDashboardMember = {
       skill: { name: string };
     }[];
   };
+  roleAchievements?: { roleId: string; achievedAt: Date }[];
 };
 
 export function completedMonths(now: Date, count = 12) {
@@ -184,12 +185,16 @@ export function buildDepartmentMetrics(input: {
     skills: { skillId: string; level: number }[],
   ) => evaluateRoleAchievement(member.targetRole!.roleRequirements, skills);
   const achievedCount = targetMembers.filter(
-    (member) => evaluation(member, member.memberSkills).achieved,
+    (member) => (member.roleAchievements ?? []).some(
+      (achievement) => achievement.roleId === member.targetRole?.id
+    ),
   ).length;
   const achievedYearAgo = targetMembers.filter(
-    (member) =>
-      evaluation(member, restoreSkillsAt(member, input.changes, yearAgo))
-        .achieved,
+    (member) => (member.roleAchievements ?? []).some(
+      (achievement) =>
+        achievement.roleId === member.targetRole?.id &&
+        achievement.achievedAt <= yearAgo
+    ),
   ).length;
   const average = (at?: Date) =>
     targetMembers.length

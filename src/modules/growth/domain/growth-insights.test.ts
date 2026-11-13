@@ -42,6 +42,9 @@ describe("growth insights", () => {
       memberSkills: Array.from({ length: 10 }, (_, index) => ({ skillId: `s${index + 1}`, level: index === 0 ? 4 : 2 })),
       levelChanges,
       targetRequirements: [{ skillId: "s1", requiredLevel: 4 }],
+      targetAchievements: [
+        { achievedAt: "2026-01-05T00:00:00Z", achievedAsTarget: true }
+      ],
       mentoredCheers: [
         { toMemberId: "a", createdAt: "2026-01-01T00:00:00Z" },
         { toMemberId: "a", createdAt: "2026-01-02T00:00:00Z" },

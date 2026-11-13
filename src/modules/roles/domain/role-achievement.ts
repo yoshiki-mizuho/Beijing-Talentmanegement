@@ -27,6 +27,16 @@ export type RoleAchievementResult = {
   requiredCount: number;
 };
 
+export type RoleAchievementStatus = "unachieved" | "achieved" | "requirements_updated";
+
+export function resolveRoleAchievementStatus(input: {
+  recorded: boolean;
+  currentlySatisfied: boolean;
+}): RoleAchievementStatus {
+  if (!input.recorded) return "unachieved";
+  return input.currentlySatisfied ? "achieved" : "requirements_updated";
+}
+
 export type RequirementUnit =
   | { kind: "single"; requirement: SkillLevelRequirement }
   | { kind: "anyOf"; group: number; requirements: SkillLevelRequirement[] };

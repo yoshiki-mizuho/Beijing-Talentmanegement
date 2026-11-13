@@ -10,6 +10,7 @@ import {
   isPendingAssessment
 } from "@/modules/dashboard/infrastructure/team-dashboard-repository";
 import { getLevelUpFeed, listSkillMentorCandidates } from "@/modules/growth/application/growth-service";
+import { listRoleAchievements } from "@/modules/roles/application/role-achievement-service";
 
 export async function getTeamDashboard(
   managerMemberId: string,
@@ -19,6 +20,9 @@ export async function getTeamDashboard(
   const month = parseDashboardMonth(monthValue, now);
   const data = await getTeamDashboardData(managerMemberId);
   if (!data) return null;
+  const roleAchievements = await listRoleAchievements({
+    memberIds: data.reports.map((member) => member.id)
+  });
 
   const members: TeamMemberSnapshot[] = data.reports.map((member) => ({
     id: member.id,
@@ -27,6 +31,7 @@ export async function getTeamDashboard(
     createdAt: member.createdAt,
     targetRole: member.targetRole
       ? {
+          id: member.targetRole.id,
           name: member.targetRole.name,
           roleRequirements: member.targetRole.roleRequirements.map((requirement) => ({
             skillId: requirement.skillId,
@@ -41,7 +46,10 @@ export async function getTeamDashboard(
       .filter((assessment) => isPendingAssessment(assessment.status))
       .map((assessment) => ({ skillId: assessment.skillId })),
     assessmentDates: member.selfAssessments.map((assessment) => assessment.createdAt),
-    levelChangeDates: member.skillLevelChanges.map((change) => change.changedAt)
+    levelChangeDates: member.skillLevelChanges.map((change) => change.changedAt),
+    roleAchievements: roleAchievements.filter(
+      (achievement) => achievement.memberId === member.id
+    )
   }));
   const memberIds = members.map((member) => member.id);
   const topMissingSkill = aggregateMissingSkills(members)[0];

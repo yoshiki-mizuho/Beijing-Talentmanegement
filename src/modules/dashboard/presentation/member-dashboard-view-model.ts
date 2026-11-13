@@ -13,7 +13,10 @@ import type { BadgeCalculationData } from "@/modules/growth/infrastructure/badge
 import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
 
 export function buildMemberDashboardViewModel(
-  data: MemberGrowthData & { badgeData?: BadgeCalculationData },
+  data: MemberGrowthData & {
+    badgeData?: BadgeCalculationData;
+    roleAchievements?: { roleId: string }[];
+  },
   now: Date = new Date()
 ) {
   if (!data.member) return null;
@@ -26,7 +29,13 @@ export function buildMemberDashboardViewModel(
     level: memberSkill.level
   }));
   const targetRole = data.member.targetRole
-    ? buildTargetRole(data.member.targetRole, skills)
+    ? buildTargetRole(
+        data.member.targetRole,
+        skills,
+        data.roleAchievements?.some(
+          (achievement) => achievement.roleId === data.member?.targetRoleId
+        ) ?? false
+      )
     : null;
   const badgeInput = data.badgeData ?? {
     assessments: data.assessments,
@@ -169,7 +178,8 @@ export function buildMemberDashboardViewModel(
 
 function buildTargetRole(
   role: NonNullable<NonNullable<MemberGrowthData["member"]>["targetRole"]>,
-  skills: Array<{ id: string; name: string; level: number; categoryName: string }>
+  skills: Array<{ id: string; name: string; level: number; categoryName: string }>,
+  recorded: boolean
 ) {
   const evaluation = evaluateRoleAchievement(
     role.roleRequirements.map((requirement) => ({
@@ -226,7 +236,8 @@ function buildTargetRole(
       role.roleRequirements.length === 0
         ? 0
         : Math.round(evaluation.achievementRate * 100),
-    achieved: evaluation.achieved && role.roleRequirements.length > 0,
+    achieved: recorded,
+    requirementsUpdated: recorded && !evaluation.achieved,
     requiredSkillCount: evaluation.requiredCount,
     satisfiedSkillCount: evaluation.satisfiedCount,
     requirements,

@@ -8,6 +8,7 @@ import { useEffect, useRef, useState, useTransition, type KeyboardEvent } from "
 import { toast } from "sonner";
 
 import type { RoleAchievementCelebration } from "@/modules/growth/application/growth-service";
+import { acknowledgeRoleAchievementCelebrationAction } from "@/modules/growth/presentation/actions";
 import { updateMemberTargetRoleAction } from "@/modules/members/presentation/actions";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
@@ -66,9 +67,18 @@ export function RoleAchievedDialog({
   }, [open, step]);
 
   const closeAndRefresh = (message?: string) => {
-    onClose();
-    router.refresh();
-    if (message) toast.success(message);
+    startTransition(async () => {
+      const result = await acknowledgeRoleAchievementCelebrationAction(
+        celebration.achievementId
+      );
+      if (result.status === "error") {
+        toast.error(result.message);
+        return;
+      }
+      onClose();
+      router.refresh();
+      if (message) toast.success(message);
+    });
   };
 
   const chooseRole = () => {

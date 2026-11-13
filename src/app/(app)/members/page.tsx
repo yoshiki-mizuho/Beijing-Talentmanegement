@@ -56,6 +56,10 @@ export default async function MembersPage({
       : null,
     role: member.users[0]?.role ?? null,
     pendingAssessments: member.selfAssessments,
+    roleAchievements: member.roleAchievements.map((achievement) => ({
+      roleId: achievement.roleId,
+      achievedAt: achievement.achievedAt.toISOString()
+    })),
     memberSkills: member.memberSkills.map((memberSkill) => ({
       id: memberSkill.id,
       skillId: memberSkill.skillId,
