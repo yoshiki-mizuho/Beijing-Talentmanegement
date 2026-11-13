@@ -54,12 +54,11 @@ export function validateSkillImport(
         ...assignedCodes,
       ]);
       assignedCodes.push(code);
-    } else if (!existingByCode.has(code) && code.length > 32) {
-      // DB にないコードは、そのコードの新しいスキルとして登録する。長さは画面の登録と同じ上限にする
+    } else if (!existingByCode.has(code)) {
       errors.push({
         row: record.row,
         column: "skill_code",
-        message: "skill_code は32文字以内にしてください",
+        message: `スキルコード ${code} が見つかりません。新しいスキルはコードを空にしてください`,
       });
     }
     const levelGuides = levelGuidesIncluded

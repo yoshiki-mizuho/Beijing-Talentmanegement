@@ -150,10 +150,7 @@ export async function updateSkillAction(formData: FormData): Promise<ActionResul
     const session = await requireRoles(adminOnly);
     await updateSkillWithLevelGuides(
       getString(formData, "id"),
-      {
-        ...parseSkillForm(formData),
-        code: getString(formData, "code")
-      },
+      parseSkillForm(formData),
       {
         guides: [1, 2, 3, 4, 5].map((level) => ({
           level,

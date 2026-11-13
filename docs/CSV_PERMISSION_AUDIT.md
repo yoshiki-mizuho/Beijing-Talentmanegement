@@ -98,7 +98,7 @@ flowchart TD
 - 値の表記：真偽値は `true`／`false`、日付は `YYYY-MM-DD`、空の値は空欄。メンバーの状態は `active`／`inactive`／`leave`。
 - 表計算ソフトで数式として実行されないよう、出力では先頭が `=`、`+`、`-`、`@` の値の前に `'` を付ける。取り込みでは、この `'` を取り除く。
 - メンバーとメンバースキルの出力は、範囲を「在籍中」（初期）と「すべて（休職・退職を含む）」から選べる。
-- 追加の列：スキルCSVは `skill_code`、`skill_name`、`category_name`、`description`、`is_active`、`level_guide_1`、`level_guide_2`、`level_guide_3`、`level_guide_4`、`level_guide_5`。ロールCSVは `role_name`、`description`、`is_active`、`skill_code`、`required_level`、`is_required`、`any_of_group`。
+- 追加の列：スキルCSVは `skill_code`、`skill_name`、`category_name`、`description`、`is_active`、`level_guide_1`、`level_guide_2`、`level_guide_3`、`level_guide_4`、`level_guide_5`。ロールCSVは `role_code`、`role_name`、`description`、`is_active`、`skill_code`、`required_level`、`is_required`、`any_of_group`。
 - ロールCSVは1行に1つの要件を出力する。
 - 要件がないロールは要件の列を空欄にして1行出力する。
 - ロール要件のOR組は `any_of_group` に1以上の同じ整数を指定し、2件以上の要件を「いずれか1つ」の組として扱う。
@@ -125,13 +125,13 @@ flowchart TD
 | `job_title` | 任意 | 役職、職種 |
 | `status` | 必須 | `active`、`inactive`、`leave` |
 | `manager_employee_no` | 任意 | 上司の社員番号。自分自身と循環は拒否する |
-| `target_role_name` | 任意 | 目標ロールの名前 |
+| `target_role_code` | 任意 | 目標ロールのコード。空欄は目標なし |
 
 ### スキルCSV
 
 | 項目 | 必須 | 説明 |
 | --- | --- | --- |
-| `skill_code` | 任意 | スキルコード。一意。空の行は新規として扱い、コードを自動で振る。登録済みのコードの行は、そのスキルの更新として扱う。登録のないコードの行は、そのコード（32文字以内）の新しいスキルとして登録する |
+| `skill_code` | 任意 | スキルコード。一意。空欄は新規として扱い、コードを自動で振る。登録済みのコードは更新に使い、登録のないコードはエラーにする |
 | `skill_name` | 必須 | スキル名 |
 | `category_name` | 必須 | スキルカテゴリ名 |
 | `description` | 任意 | 説明 |
@@ -160,7 +160,8 @@ flowchart TD
 
 | 項目 | 必須 | 説明 |
 | --- | --- | --- |
-| `role_name` | 必須 | ロール名。既存ロールとの照合に使うため、CSVで名前は変更できない |
+| `role_code` | 任意 | 登録済みのコードは更新に使う。空欄は新規として自動採番し、登録のないコードはエラーにする |
+| `role_name` | 必須 | ロール名。`role_code` を指定した更新では名前も変更できる |
 | `description` | 任意 | 説明 |
 | `is_active` | 必須 | `true` または `false` |
 | `skill_code` | 要件がある場合は必須 | 要件のスキルコード |
@@ -168,7 +169,7 @@ flowchart TD
 | `is_required` | 要件がある場合は必須 | `true` または `false` |
 | `any_of_group` | 任意 | OR組を表す1以上の整数。同じ番号を2件以上に指定する |
 
-CSVに載っているロールの要件はCSVの内容に置き換え、CSVにない要件は削除する。CSVに載っていないロールは変更しない。ロール名を変えた行は新しいロールとして登録され、既存ロールの名前変更にはならない。ロール自体の削除は行わず、無効化は `is_active=false` を指定する。
+CSVに載っているロールの要件はCSVの内容に置き換え、CSVにない要件は削除する。CSVに載っていないロールは変更しない。`role_code` が空欄の行は `role_name` ごとに1つの新規ロールとしてまとめ、登録済みの名前と同じ場合はエラーにする。同じ `role_code` の行では、ロール名、説明、状態をそろえる。ロール自体の削除は行わず、無効化は `is_active=false` を指定する。
 
 ## CSV import処理
 

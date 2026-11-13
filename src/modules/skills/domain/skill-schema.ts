@@ -9,6 +9,7 @@ export const skillInputSchema = z.object({
 });
 
 export const createSkillInputSchema = skillInputSchema.omit({ code: true });
+export const updateSkillInputSchema = skillInputSchema.omit({ code: true });
 
 export const skillCategoryInputSchema = z.object({
   name: z.string().trim().min(1).max(120)
@@ -87,6 +88,7 @@ export const commonSkillLevelGuidesInputSchema = z.object({
 
 export type SkillInput = z.infer<typeof skillInputSchema>;
 export type CreateSkillInput = z.infer<typeof createSkillInputSchema>;
+export type UpdateSkillInput = z.infer<typeof updateSkillInputSchema>;
 export type SkillCategoryInput = z.infer<typeof skillCategoryInputSchema>;
 export type SkillCategoryGroupInput = z.infer<typeof skillCategoryGroupInputSchema>;
 export type ReorderSkillCategoryGroupsInput = z.infer<typeof reorderSkillCategoryGroupsInputSchema>;

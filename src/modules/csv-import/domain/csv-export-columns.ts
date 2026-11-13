@@ -29,7 +29,7 @@ export const csvExportDefinitions = {
       "job_title",
       "status",
       "manager_employee_no",
-      "target_role_name",
+      "target_role_code",
     ],
   },
   skills: {
@@ -60,6 +60,7 @@ export const csvExportDefinitions = {
   roles: {
     label: "ロール",
     columns: [
+      "role_code",
       "role_name",
       "description",
       "is_active",
@@ -75,7 +76,6 @@ export const csvExportDefinitions = {
 >;
 
 type RelatedCode = { code: string } | null;
-type RelatedName = { name: string } | null;
 type RelatedEmployee = { employeeNo: string } | null;
 
 export type CsvExportRows = {
@@ -93,7 +93,7 @@ export type CsvExportRows = {
     jobTitle: string | null;
     status: string;
     manager: RelatedEmployee;
-    targetRole: RelatedName;
+    targetRole: RelatedCode;
   }>;
   skills: Array<{
     code: string;
@@ -111,6 +111,7 @@ export type CsvExportRows = {
     lastAssessedAt: Date | null;
   }>;
   roles: Array<{
+    code: string;
     name: string;
     description: string | null;
     isActive: boolean;
@@ -148,7 +149,7 @@ export function toCsvExportRows<T extends CsvExportTarget>(
         row.jobTitle ?? "",
         row.status.toLowerCase(),
         row.manager?.employeeNo ?? "",
-        row.targetRole?.name ?? "",
+        row.targetRole?.code ?? "",
       ]);
     case "skills":
       return (rows as CsvExportRows["skills"]).map((row) => [
@@ -176,6 +177,7 @@ export function toCsvExportRows<T extends CsvExportTarget>(
           ? row.roleRequirements
           : [{ skill: null, requiredLevel: null, isRequired: null, anyOfGroup: null }];
         return requirements.map((requirement) => [
+          row.code,
           row.name,
           row.description ?? "",
           row.isActive,

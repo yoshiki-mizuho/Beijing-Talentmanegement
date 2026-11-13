@@ -4,6 +4,7 @@ import {
   assignSkillCategoryGroupInputSchema,
   bulkAssignSkillCategoryGroupInputSchema,
   createSkillInputSchema,
+  updateSkillInputSchema,
   reorderSkillCategoryGroupsInputSchema,
   reorderSkillsInputSchema,
   skillCategoryGroupInputSchema,
@@ -48,6 +49,17 @@ describe("skill schemas", () => {
       name: "TypeScript",
       categoryId: "category-1"
     });
+  });
+
+  it("更新入力からコードを除外する", () => {
+    expect(
+      updateSkillInputSchema.parse({
+        code: "書き換えたいコード",
+        name: "TypeScript",
+        categoryId: "category-1",
+        isActive: true
+      })
+    ).not.toHaveProperty("code");
   });
 });
 

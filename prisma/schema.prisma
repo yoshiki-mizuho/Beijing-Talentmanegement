@@ -399,6 +399,7 @@ model Notification {
 
 model Role {
   id               String            @id @default(cuid())
+  code             String            @unique
   name             String            @unique
   description      String?
   isActive         Boolean           @default(true)

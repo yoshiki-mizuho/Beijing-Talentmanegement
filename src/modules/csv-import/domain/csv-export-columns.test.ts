@@ -32,7 +32,7 @@ describe("CSV export columns", () => {
           jobTitle: null,
           status: "LEAVE",
           manager: { employeeNo: "E000" },
-          targetRole: { name: "リード" },
+          targetRole: { code: "ROLE-0001" },
         },
       ]),
     ).toEqual([
@@ -44,7 +44,7 @@ describe("CSV export columns", () => {
         "",
         "leave",
         "E000",
-        "リード",
+        "ROLE-0001",
       ],
     ]);
   });
@@ -93,6 +93,7 @@ describe("CSV export columns", () => {
     expect(
       toCsvExportRows("roles", [
         {
+          code: "ROLE-0001",
           name: "リード",
           description: null,
           isActive: true,
@@ -106,20 +107,21 @@ describe("CSV export columns", () => {
           ],
         },
       ]),
-    ).toEqual([["リード", "", true, "TS", 4, false, 2]]);
+    ).toEqual([["ROLE-0001", "リード", "", true, "TS", 4, false, 2]]);
   });
 
   it("要件のないロールを空欄の要件付きで1行にする", () => {
     expect(
       toCsvExportRows("roles", [
         {
+          code: "ROLE-0002",
           name: "メンバー",
           description: "標準ロール",
           isActive: true,
           roleRequirements: [],
         },
       ]),
-    ).toEqual([["メンバー", "標準ロール", true, "", "", "", ""]]);
+    ).toEqual([["ROLE-0002", "メンバー", "標準ロール", true, "", "", "", ""]]);
   });
 
   it("メンバースキルの日付と経験年数を変換する", () => {

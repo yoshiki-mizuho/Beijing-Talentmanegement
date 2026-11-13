@@ -10,6 +10,7 @@ const state: RoleImportState = {
   ],
   roles: [{
     id: "role-1",
+    code: "ROLE-0001",
     name: "リード",
     description: "説明",
     isActive: true,
@@ -27,6 +28,7 @@ function row(
   return {
     row: line,
     values: {
+      role_code: "ROLE-0001",
       role_name: "リード",
       description: "説明",
       is_active: "true",
@@ -64,6 +66,46 @@ describe("validateRoleImport", () => {
     expect(result.changes.every((change) => change.kind === "unchanged")).toBe(true);
   });
 
+  it("コードを保った名前の変更を更新にする", () => {
+    const result = validateRoleImport([
+      row(2, { role_name: "テックリード" }),
+      row(3, { role_name: "テックリード", skill_code: "S002", required_level: "2" }),
+    ], state);
+    expect(result.errors).toEqual([]);
+    expect(result.changes[0]).toMatchObject({
+      kind: "update",
+      roleCode: "ROLE-0001",
+      roleName: "テックリード",
+      changes: { name: { before: "リード", after: "テックリード" } },
+    });
+  });
+
+  it("コードが空の複数行を1つの新規ロールにまとめる", () => {
+    const result = validateRoleImport([
+      row(2, { role_code: "", role_name: "新規", skill_code: "S001" }),
+      row(3, { role_code: "", role_name: "新規", skill_code: "S002", required_level: "2" }),
+    ], state);
+    expect(result.errors).toEqual([]);
+    expect(result.changes[0]).toMatchObject({
+      kind: "new",
+      roleCode: "ROLE-0002",
+      roleName: "新規",
+    });
+    expect(result.changes.filter((change) => change.entity === "role")).toHaveLength(1);
+  });
+
+  it("登録にないコードを拒否する", () => {
+    const result = validateRoleImport([row(2, { role_code: "ROLE-9999" })], state);
+    expect(result.errors[0]).toMatchObject({ row: 2, column: "role_code" });
+    expect(result.changes).toEqual([]);
+  });
+
+  it("登録済みの名前と同じ新規ロールを拒否する", () => {
+    const result = validateRoleImport([row(2, { role_code: "" })], state);
+    expect(result.errors[0]).toMatchObject({ row: 2, column: "role_name" });
+    expect(result.changes).toEqual([]);
+  });
+
   it.each([
     ["ロール名の必須", [row(2, { role_name: "" })], "role_name"],
     ["ロール名の長さ", [row(2, { role_name: "あ".repeat(121) })], "role_name"],
@@ -78,6 +120,7 @@ describe("validateRoleImport", () => {
     ["1件だけのOR組", [row(2, { any_of_group: "1" })], "any_of_group"],
     ["状態の食い違い", [row(2), row(3, { skill_code: "S002", is_active: "false" })], "is_active"],
     ["説明の食い違い", [row(2), row(3, { skill_code: "S002", description: "別の説明" })], "description"],
+    ["名前の食い違い", [row(2), row(3, { role_name: "別名", skill_code: "S002" })], "role_name"],
     ["要件なしとの混在", [row(2), row(3, { skill_code: "", required_level: "", is_required: "" })], "skill_code"],
   ])("%sを行と列つきで拒否する", (_name, records, column) => {
     const result = validateRoleImport(records as CsvRecord[], state);

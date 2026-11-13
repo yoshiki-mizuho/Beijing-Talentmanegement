@@ -31,6 +31,7 @@ import type {
   SkillState,
 } from "../domain/skill-import";
 import type { RoleImportChange, RoleImportState } from "../domain/role-import";
+import { generateNextRoleCodeFromExistingCodes } from "@/modules/roles/domain/role-code";
 
 export async function recordCsvImportValidationFailure(input: {
   actorMemberId: string;
@@ -140,7 +141,7 @@ export async function loadMemberImportState(): Promise<MemberImportState> {
       },
     }),
     prisma.department.findMany({ select: { id: true, code: true } }),
-    prisma.role.findMany({ select: { id: true, name: true, isActive: true } }),
+    prisma.role.findMany({ select: { id: true, code: true, name: true, isActive: true } }),
   ]);
   return {
     members: members.map((member) => ({
@@ -192,6 +193,7 @@ export async function loadRoleImportState(): Promise<RoleImportState> {
     prisma.role.findMany({
       select: {
         id: true,
+        code: true,
         name: true,
         description: true,
         isActive: true,
@@ -334,18 +336,26 @@ async function applyRoles(
   jobId: string,
 ) {
   const roleIds = new Map(
-    (await tx.role.findMany({ select: { id: true, name: true } })).map((role) => [role.name, role.id]),
+    (await tx.role.findMany({ select: { id: true, code: true } })).map((role) => [role.code, role.id]),
   );
+  const assignedCodes: string[] = [];
   for (const change of changes.filter((item) => item.entity === "role" && item.kind !== "unchanged")) {
-    const data = {
+    const code = change.kind === "new"
+      ? generateNextRoleCodeFromExistingCodes([
+          ...roleIds.keys(),
+          ...assignedCodes,
+        ])
+      : change.roleCode;
+    if (change.kind === "new") assignedCodes.push(code);
+    const roleData = {
       name: change.roleName,
       description: change.description ?? null,
       isActive: change.isActive ?? true,
     };
     const saved = change.kind === "new"
-      ? await tx.role.create({ data })
-      : await tx.role.update({ where: { id: change.id }, data });
-    roleIds.set(change.roleName, saved.id);
+      ? await tx.role.create({ data: { ...roleData, code } })
+      : await tx.role.update({ where: { id: change.id }, data: roleData });
+    roleIds.set(change.roleCode, saved.id);
     await recordAuditLog(tx, {
       actorMemberId,
       csvImportJobId: jobId,
@@ -353,12 +363,14 @@ async function applyRoles(
       targetType: AUDIT_TARGET_TYPE.ROLE,
       targetId: saved.id,
       before: change.kind === "update" ? beforeFromChanges(change.changes) : null,
-      after: change.kind === "new" ? data : afterFromChanges(change.changes),
+      after: change.kind === "new"
+        ? { ...roleData, code }
+        : afterFromChanges(change.changes),
       changedFields: change.kind === "update" ? Object.keys(change.changes) : undefined,
     });
   }
   for (const change of changes.filter((item) => item.entity === "requirement" && item.kind !== "unchanged")) {
-    const roleId = roleIds.get(change.roleName);
+    const roleId = roleIds.get(change.roleCode);
     if (!roleId || !change.skillId) throw new Error(`ロール ${change.roleName} の要件登録に失敗しました`);
     if (change.kind === "delete") {
       await tx.roleRequirement.delete({
@@ -626,8 +638,7 @@ async function applySkills(
     const categoryId = categoryIds.get(change.categoryName);
     if (!categoryId) throw new Error(`カテゴリ ${change.categoryName} の登録に失敗しました`);
     const movedCategory = change.kind === "new" || change.categoryId !== categoryId;
-    const data = {
-      code: change.code,
+    const skillData = {
       name: change.name,
       categoryId,
       description: change.description,
@@ -646,9 +657,9 @@ async function applySkills(
     );
     const saved =
       change.kind === "new"
-        ? await tx.skill.create({ data })
+        ? await tx.skill.create({ data: { ...skillData, code: change.code } })
         : Object.keys(skillChanges).length > 0
-          ? await tx.skill.update({ where: { id: change.id }, data })
+          ? await tx.skill.update({ where: { id: change.id }, data: skillData })
           : await tx.skill.findUniqueOrThrow({ where: { id: change.id } });
     if (change.kind === "new" || Object.keys(skillChanges).length > 0) {
       await recordAuditLog(tx, {
@@ -662,7 +673,9 @@ async function applySkills(
         csvImportJobId: jobId,
         before:
           change.kind === "update" ? beforeFromChanges(skillChanges) : null,
-        after: change.kind === "new" ? data : afterFromChanges(skillChanges),
+        after: change.kind === "new"
+          ? { ...skillData, code: change.code }
+          : afterFromChanges(skillChanges),
         changedFields:
           change.kind === "update" ? Object.keys(skillChanges) : undefined,
       });

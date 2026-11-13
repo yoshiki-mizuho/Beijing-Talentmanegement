@@ -142,9 +142,9 @@ describe("skill import", () => {
     ]);
   });
 
-  it("DBにない新しいコードは32文字までにする", () => {
+  it("DBにないコードを拒否する", () => {
     const result = validateSkillImport(
-      [record(2, "A".repeat(33), "長いコード")],
+      [record(2, "NEW-SKILL", "コード付き新規")],
       existing,
       categories,
     );
@@ -153,26 +153,5 @@ describe("skill import", () => {
       expect.objectContaining({ row: 2, column: "skill_code" }),
     ]);
     expect(result.changes).toEqual([]);
-  });
-
-  it("DBにないコードの新規スキルにも目安を設定できる", () => {
-    const newSkill = record(2, "NEW-SKILL", "コード付き新規");
-    newSkill.values.level_guide_1 = "新規Lv1";
-    const result = validateSkillImport(
-      [newSkill],
-      existing,
-      categories,
-      true,
-    );
-
-    expect(result.errors).toEqual([]);
-    expect(result.changes[0]).toMatchObject({
-      kind: "new",
-      code: "NEW-SKILL",
-    });
-    expect(result.changes[0].levelGuides?.[0]).toEqual({
-      level: 1,
-      description: "新規Lv1",
-    });
   });
 });

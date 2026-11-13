@@ -7,7 +7,7 @@ import type {
   SkillCategoryGroupInput,
   ReorderSkillsInput,
   SkillCategoryInput,
-  SkillInput,
+  UpdateSkillInput,
   SkillLevelGuidesInput
 } from "@/modules/skills/domain/skill-schema";
 import { MemberStatus, type Prisma } from "@prisma/client";
@@ -650,7 +650,7 @@ export async function createSkillWithLevelGuides(
 
 export async function updateSkill(
   id: string,
-  input: SkillInput,
+  input: UpdateSkillInput,
   actorMemberId: string | null
 ) {
   return prisma.$transaction(async (tx) => {
@@ -680,7 +680,7 @@ export async function updateSkill(
 
 export async function updateSkillWithLevelGuides(
   id: string,
-  input: SkillInput,
+  input: UpdateSkillInput,
   levelGuides: SkillLevelGuidesInput,
   actorMemberId: string | null
 ) {

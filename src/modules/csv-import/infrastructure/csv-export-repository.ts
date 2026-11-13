@@ -35,7 +35,7 @@ export async function loadCsvExportRows<T extends CsvExportTarget>(
           jobTitle: true,
           status: true,
           manager: { select: { employeeNo: true } },
-          targetRole: { select: { name: true } },
+          targetRole: { select: { code: true } },
         },
         orderBy: { employeeNo: "asc" },
       }) as Promise<CsvExportRows[T]>;
@@ -72,6 +72,7 @@ export async function loadCsvExportRows<T extends CsvExportTarget>(
     case "roles":
       return prisma.role.findMany({
         select: {
+          code: true,
           name: true,
           description: true,
           isActive: true,

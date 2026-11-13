@@ -18,7 +18,7 @@ export type MemberImportState = {
     canManage: boolean;
   }>;
   departments: Array<{ id: string; code: string }>;
-  roles: Array<{ id: string; name: string; isActive: boolean }>;
+  roles: Array<{ id: string; code: string; name: string; isActive: boolean }>;
 };
 
 export type MemberChange = {
@@ -53,7 +53,7 @@ export function validateMemberImport(
   const roles = new Map(
     state.roles
       .filter((role) => role.isActive)
-      .map((role) => [role.name, role]),
+      .map((role) => [role.code, role]),
   );
   const rowsByNo = new Map<string, CsvRecord>();
   const emailRows = new Map<string, number>();
@@ -118,12 +118,12 @@ export function validateMemberImport(
         "status",
         "status は active、inactive、leave のいずれかにしてください",
       );
-    const targetRole = record.values.target_role_name;
+    const targetRole = record.values.target_role_code;
     if (targetRole && !roles.has(targetRole))
       addError(
         errors,
         record,
-        "target_role_name",
+        "target_role_code",
         `有効なロール ${targetRole} が見つかりません`,
       );
   }
@@ -192,7 +192,7 @@ export function validateMemberImport(
     const department = departments.get(record.values.department_code);
     if (!department || invalidRows.has(record.row)) return [];
     const current = existingByNo.get(record.values.employee_no);
-    const role = roles.get(record.values.target_role_name);
+    const role = roles.get(record.values.target_role_code);
     const manager = existingByNo.get(record.values.manager_employee_no);
     const value = {
       row: record.row,

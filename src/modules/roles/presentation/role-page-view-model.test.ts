@@ -6,6 +6,7 @@ import { buildRolePageViewModel } from "@/modules/roles/presentation/role-page-v
 const roles = [
   {
     id: "role-1",
+    code: "ROLE-0001",
     name: "リード",
     description: null,
     isActive: true,
