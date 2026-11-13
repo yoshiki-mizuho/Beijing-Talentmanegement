@@ -180,6 +180,7 @@ export async function getLevelUpCelebrations(memberId: string) {
       notification.skillLevelChange ?? assessment?.skillLevelChanges[0];
     if (
       !levelChange ||
+      levelChange.toLevel === null ||
       (levelChange.fromLevel !== null &&
         levelChange.toLevel <= levelChange.fromLevel)
     ) {

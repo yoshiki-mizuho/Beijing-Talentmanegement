@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   transaction: vi.fn(),
   memberFindUniqueOrThrow: vi.fn(),
   memberUpdate: vi.fn(),
+  memberCount: vi.fn(),
   skillFindMany: vi.fn(),
   assessmentFindMany: vi.fn(),
   assessmentFindUnique: vi.fn(),
@@ -16,6 +17,8 @@ const mocks = vi.hoisted(() => ({
   assessmentUpdate: vi.fn(),
   assessmentCount: vi.fn(),
   userFindMany: vi.fn(),
+  userFindFirst: vi.fn(),
+  userUpdateMany: vi.fn(),
   notificationCreateMany: vi.fn(),
   notificationCreate: vi.fn(),
   notificationUpdateMany: vi.fn(),
@@ -46,7 +49,8 @@ import {
 const transactionClient = {
   member: {
     findUniqueOrThrow: mocks.memberFindUniqueOrThrow,
-    update: mocks.memberUpdate
+    update: mocks.memberUpdate,
+    count: mocks.memberCount
   },
   skill: { findMany: mocks.skillFindMany },
   skillSelfAssessment: {
@@ -56,7 +60,11 @@ const transactionClient = {
     create: mocks.assessmentCreate,
     count: mocks.assessmentCount
   },
-  user: { findMany: mocks.userFindMany },
+  user: {
+    findMany: mocks.userFindMany,
+    findFirst: mocks.userFindFirst,
+    updateMany: mocks.userUpdateMany
+  },
   notification: {
     createMany: mocks.notificationCreateMany,
     create: mocks.notificationCreate,
@@ -89,6 +97,9 @@ describe("updateMember audit log", () => {
     vi.clearAllMocks();
     mocks.transaction.mockImplementation(async (callback) => callback(transactionClient));
     mocks.memberFindUniqueOrThrow.mockResolvedValue(before);
+    mocks.userFindFirst.mockResolvedValue(null);
+    mocks.userUpdateMany.mockResolvedValue({ count: 1 });
+    mocks.memberCount.mockResolvedValue(0);
     mocks.auditLogCreate.mockResolvedValue({});
   });
 
@@ -137,6 +148,47 @@ describe("updateMember audit log", () => {
     }, "actor-1");
 
     expect(mocks.auditLogCreate).not.toHaveBeenCalled();
+  });
+
+  it("updates the login email in lowercase with the member email", async () => {
+    mocks.memberUpdate.mockResolvedValue({
+      ...before,
+      email: "new@example.com"
+    });
+
+    await updateMember("member-1", {
+      employeeNo: "E001",
+      name: "変更前",
+      email: "NEW@EXAMPLE.COM",
+      departmentId: "department-1",
+      jobTitle: "Engineer",
+      profile: "変更前プロフィール",
+      status: "ACTIVE"
+    }, "actor-1");
+
+    expect(mocks.memberUpdate).toHaveBeenCalledWith({
+      where: { id: "member-1" },
+      data: expect.objectContaining({ email: "new@example.com" })
+    });
+    expect(mocks.userUpdateMany).toHaveBeenCalledWith({
+      where: { memberId: "member-1" },
+      data: { email: "new@example.com" }
+    });
+  });
+
+  it("rejects an email used by another login user", async () => {
+    mocks.userFindFirst.mockResolvedValue({ id: "user-2" });
+
+    await expect(updateMember("member-1", {
+      employeeNo: "E001",
+      name: "変更前",
+      email: "used@example.com",
+      departmentId: "department-1",
+      jobTitle: "Engineer",
+      profile: "変更前プロフィール",
+      status: "ACTIVE"
+    }, "actor-1")).rejects.toThrow("このメールアドレスは使われています");
+    expect(mocks.memberUpdate).not.toHaveBeenCalled();
   });
 });
 

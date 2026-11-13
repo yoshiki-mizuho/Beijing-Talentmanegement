@@ -48,6 +48,7 @@ export async function getMonthlyRecap(memberId: string, requestedMonth?: string,
     ...data.levelChanges
       .filter((change) =>
         isGrowthLevelChange(change.source) &&
+        change.toLevel !== null &&
         (change.fromLevel === null || change.toLevel > change.fromLevel)
       )
       .flatMap((change) => change.reactions.map((reaction) => ({
@@ -60,6 +61,7 @@ export async function getMonthlyRecap(memberId: string, requestedMonth?: string,
     ...data.levelChanges
       .filter((change) =>
         isGrowthLevelChange(change.source) &&
+        change.toLevel !== null &&
         (change.fromLevel === null || change.toLevel > change.fromLevel)
       )
       .flatMap((change) => change.comments.map((comment) => ({

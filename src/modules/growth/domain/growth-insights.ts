@@ -10,7 +10,7 @@ export type GrowthLevelChange = {
   id?: string;
   skillId: string;
   fromLevel: number | null;
-  toLevel: number;
+  toLevel: number | null;
   source: string;
   changedAt: Date | string;
   categoryGroupId?: string | null;
@@ -58,7 +58,9 @@ export function calculateBadgeAchievements(input: {
 }): BadgeAchievement[] {
   const assessments = sortByDate(input.assessments, "createdAt");
   const changes = sortByDate(input.levelChanges, "changedAt");
-  const newSkillChanges = changes.filter((change) => change.fromLevel === null);
+  const newSkillChanges = changes.filter(
+    (change) => change.fromLevel === null && change.toLevel !== null
+  );
   const targetAchievement = [...(input.targetAchievements ?? [])]
     .filter((achievement) => achievement.achievedAsTarget)
     .sort(
@@ -101,7 +103,7 @@ export function calculateBadgeAchievements(input: {
     ),
     achievement(
       "lv4-unlock",
-      changes.find((change) => change.toLevel >= 4)?.changedAt
+      changes.find((change) => change.toLevel !== null && change.toLevel >= 4)?.changedAt
     ),
     achievement("build-streak", findThreeMonthStreakDate(changes)),
     achievement("deployed", targetChangedAt),
@@ -111,7 +113,7 @@ export function calculateBadgeAchievements(input: {
     ),
     achievement(
       "master",
-      changes.find((change) => change.toLevel >= 5)?.changedAt
+      changes.find((change) => change.toLevel !== null && change.toLevel >= 5)?.changedAt
     ),
     achievement("rubber-duck", thirdMenteeAt),
     achievement("first-mover", firstMover?.changedAt),
@@ -170,7 +172,9 @@ function progress(id: BadgeId, current: number, target: number, text: string): B
 }
 
 function isLevelUp(change: GrowthLevelChange) {
-  return isGrowthLevelChange(change.source) && (change.fromLevel === null || change.toLevel > change.fromLevel);
+  return isGrowthLevelChange(change.source) &&
+    change.toLevel !== null &&
+    (change.fromLevel === null || change.toLevel > change.fromLevel);
 }
 
 function nthUniqueDate<T extends DatedValue>(values: ReadonlyArray<T>, key: keyof T, target: number) {
@@ -247,7 +251,11 @@ function findGroundworkDate(assessments: ReadonlyArray<DatedValue & { skillId?: 
     if (!required.length) continue;
     const at = new Date(assessment.createdAt).getTime();
     const levels = new Map<string, number>();
-    for (const change of changes) if (new Date(change.changedAt).getTime() <= at) levels.set(change.skillId, change.toLevel);
+    for (const change of changes) {
+      if (new Date(change.changedAt).getTime() > at) continue;
+      if (change.toLevel === null) levels.delete(change.skillId);
+      else levels.set(change.skillId, change.toLevel);
+    }
     if (required.every((item) => (levels.get(item.prerequisiteSkillId) ?? 0) >= 3)) return assessment.createdAt;
   }
   return null;
@@ -268,6 +276,7 @@ function findThreeMonthStreakDate(changes: ReadonlyArray<GrowthLevelChange>) {
   const upgrades = changes.filter(
     (change) =>
       isGrowthLevelChange(change.source) &&
+      change.toLevel !== null &&
       (change.fromLevel === null || change.toLevel > change.fromLevel)
   );
   const firstByMonth = new Map<string, GrowthLevelChange>();
@@ -323,6 +332,7 @@ export function buildGrowthCalendar(input: {
       .filter(
         (change) =>
           isGrowthLevelChange(change.source) &&
+          change.toLevel !== null &&
           (change.fromLevel === null || change.toLevel > change.fromLevel)
       )
       .map((change) => change.changedAt)

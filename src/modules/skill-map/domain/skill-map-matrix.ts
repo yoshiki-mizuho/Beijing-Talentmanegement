@@ -16,7 +16,7 @@ export type SkillMapSource = {
     changedAt: Date;
     source: string;
     fromLevel: number | null;
-    toLevel: number;
+    toLevel: number | null;
   }[];
 };
 
@@ -49,6 +49,7 @@ export function buildSkillMap(input: { skills: SkillMapSource[]; now: Date }) {
         (item) =>
           item.changedAt >= boundary &&
           isGrowthLevelChange(item.source) &&
+          item.toLevel !== null &&
           item.toLevel > (item.fromLevel ?? 0),
       ).length;
       return {

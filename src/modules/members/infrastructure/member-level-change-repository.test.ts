@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   transaction: vi.fn(),
   memberSkillFind: vi.fn(),
   memberSkillUpsert: vi.fn(),
+  memberSkillDelete: vi.fn(),
   levelChangeCreate: vi.fn(),
   assessmentFind: vi.fn(),
   assessmentUpdate: vi.fn(),
@@ -28,13 +29,15 @@ vi.mock("@/modules/roles/application/role-achievement-service", () => ({
 
 import {
   reviewSkillAssessment,
+  removeMemberSkill,
   upsertMemberSkill
 } from "@/modules/members/infrastructure/member-repository";
 
 const transactionClient = {
   memberSkill: {
     findUnique: mocks.memberSkillFind,
-    upsert: mocks.memberSkillUpsert
+    upsert: mocks.memberSkillUpsert,
+    delete: mocks.memberSkillDelete
   },
   skillLevelChange: { create: mocks.levelChangeCreate },
   skillSelfAssessment: {
@@ -89,6 +92,23 @@ describe("member skill level change recording", () => {
     }, null);
 
     expect(mocks.levelChangeCreate).not.toHaveBeenCalled();
+  });
+
+  it("records a removed member skill with an empty destination level", async () => {
+    mocks.memberSkillDelete.mockResolvedValue({ id: "member-skill", level: 3 });
+
+    await removeMemberSkill("member-1", "skill-1", "manager-1");
+
+    expect(mocks.levelChangeCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        memberId: "member-1",
+        skillId: "skill-1",
+        fromLevel: 3,
+        toLevel: null,
+        source: SkillLevelChangeSource.DIRECT_EDIT,
+        changedByMemberId: "manager-1"
+      })
+    });
   });
 
   it("keeps the requested level and records a corrected approval", async () => {

@@ -434,7 +434,7 @@ model SkillLevelChange {
   skillId               String
   skill                 Skill                  @relation(fields: [skillId], references: [id])
   fromLevel             Int?
-  toLevel               Int
+  toLevel               Int?
   source                SkillLevelChangeSource
   skillSelfAssessmentId String?
   skillSelfAssessment   SkillSelfAssessment?   @relation(fields: [skillSelfAssessmentId], references: [id])

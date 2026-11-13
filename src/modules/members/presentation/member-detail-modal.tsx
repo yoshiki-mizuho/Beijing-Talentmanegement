@@ -239,7 +239,7 @@ function MemberRecapPanel({
       draft: buildRecapNoteDraft({
         kind: item.fromLevel === null ? "new-skill" : "level-up",
         skillName: item.skillName,
-        level: item.toLevel
+        level: item.toLevel ?? undefined
       })
     })),
     ...recap.rejectedAssessments.map((item, index) => ({

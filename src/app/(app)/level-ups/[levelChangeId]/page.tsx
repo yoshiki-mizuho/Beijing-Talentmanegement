@@ -23,7 +23,7 @@ export default async function LevelUpThreadPage({
     memberId: session.user.memberId,
     role: session.user.role
   });
-  if (!thread) notFound();
+  if (!thread || thread.toLevel === null) notFound();
 
   const reactionTypes = ["CONGRATS", "AMAZING", "WANT_TO_LEARN"] as const;
   const reactions = reactionTypes.map((type) => {

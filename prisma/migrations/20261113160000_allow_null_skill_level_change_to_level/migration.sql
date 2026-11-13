@@ -1,0 +1,1 @@
+ALTER TABLE "SkillLevelChange" ALTER COLUMN "toLevel" DROP NOT NULL;

@@ -121,7 +121,8 @@ export async function countGoalProgress(goal: TeamGoal, start: Date, end: Date) 
     select: { memberId: true, fromLevel: true, toLevel: true }
   });
   const increases = changes.filter((change) =>
-    change.fromLevel === null || change.toLevel > change.fromLevel
+    change.toLevel !== null &&
+    (change.fromLevel === null || change.toLevel > change.fromLevel)
   );
   return goal.kind === "LEVEL_UP_COUNT"
     ? increases.length

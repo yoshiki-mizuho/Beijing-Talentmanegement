@@ -59,7 +59,9 @@ export async function getExploreData(
           departmentId: candidate.departmentId,
           skills: candidate.memberSkills,
           recentLevelUp: candidate.skillLevelChanges.some(
-            (change) => change.fromLevel === null || change.toLevel > change.fromLevel
+            (change) =>
+              change.toLevel !== null &&
+              (change.fromLevel === null || change.toLevel > change.fromLevel)
           )
         },
         viewerDepartmentId: viewerMember?.departmentId ?? "",
@@ -185,6 +187,7 @@ export async function getSkillProfile(viewer: ProfileViewer, memberId: string, n
     .filter(
       (change) =>
         isGrowthLevelChange(change.source) &&
+        change.toLevel !== null &&
         (change.fromLevel === null || change.toLevel > change.fromLevel)
     )
     .sort((left, right) => new Date(right.changedAt).getTime() - new Date(left.changedAt).getTime())

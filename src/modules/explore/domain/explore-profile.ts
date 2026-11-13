@@ -29,7 +29,7 @@ export function parseProfileInput(input: z.input<typeof profileInputSchema>) {
 
 export function calculateProfileStats(input: {
   createdAt: Date | string;
-  levelChanges: ReadonlyArray<{ fromLevel: number | null; toLevel: number; source: string }>;
+  levelChanges: ReadonlyArray<{ fromLevel: number | null; toLevel: number | null; source: string }>;
   receivedCheerCount: number;
   receivedReactionCount: number;
   mentoredCheers: ReadonlyArray<{ toMemberId: string; createdAt: Date | string }>;
@@ -52,6 +52,7 @@ export function calculateProfileStats(input: {
     levelUpCount: input.levelChanges.filter(
       (change) =>
         isGrowthLevelChange(change.source) &&
+        change.toLevel !== null &&
         (change.fromLevel === null || change.toLevel > change.fromLevel)
     ).length,
     encouragementCount: input.receivedCheerCount + input.receivedReactionCount,
@@ -89,7 +90,7 @@ export type LevelChange = {
   skillId: string;
   skillName: string;
   fromLevel: number | null;
-  toLevel: number;
+  toLevel: number | null;
   source: string;
   changedAt: Date | string;
 };
@@ -102,6 +103,7 @@ export function aggregateTrendingSkills(
   const counts = new Map<string, { skillId: string; skillName: string; count: number }>();
   for (const change of changes) {
     if (!isGrowthLevelChange(change.source) || new Date(change.changedAt) < since) continue;
+    if (change.toLevel === null) continue;
     if (change.fromLevel !== null && change.toLevel <= change.fromLevel) continue;
     const item = counts.get(change.skillId) ?? {
       skillId: change.skillId,
@@ -171,7 +173,7 @@ export function restoreSkillSnapshots(
         {
           at,
           skills: [...latest.values()]
-            .filter((item) => item.toLevel > 0)
+            .filter((item): item is LevelChange & { toLevel: number } => item.toLevel !== null)
             .map((item) => ({
               skillId: item.skillId,
               skillName: item.skillName,
