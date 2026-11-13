@@ -3,12 +3,15 @@ import { describe, expect, it } from "vitest";
 import {
   formatTeamGoalPeriod,
   formatTeamGoalRange,
+  formatTeamGoalCelebrationAriaLabel,
+  formatTeamGoalCelebrationResult,
   formatTeamGoalText,
   getPreviousTeamGoalPeriod,
   getRemainingDays,
   getTeamGoalPeriod,
   getTokyoMonth,
   isDateInTeamGoalPeriod,
+  selectTeamGoalCelebration,
   teamGoalInputSchema,
   teamGoalUnit
 } from "./team-goal";
@@ -65,5 +68,21 @@ describe("team goal domain", () => {
 
   it("requires a skill and level for skill reach", () => {
     expect(teamGoalInputSchema.safeParse({ kind: "SKILL_REACH", targetCount: 2, months: 1 }).success).toBe(false);
+  });
+
+  it("selects the newest unacknowledged celebration in the current period for a relevant manager", () => {
+    const candidates = [
+      { id: "old", managerId: "manager", achievedAt: new Date("2026-11-02T00:00:00Z"), startMonth: "2026-11", months: 1 },
+      { id: "new", managerId: "manager", achievedAt: new Date("2026-11-03T00:00:00Z"), startMonth: "2026-11", months: 1 },
+      { id: "other", managerId: "other", achievedAt: new Date("2026-11-04T00:00:00Z"), startMonth: "2026-11", months: 1 },
+      { id: "ended", managerId: "manager", achievedAt: new Date("2026-10-03T00:00:00Z"), startMonth: "2026-10", months: 1 }
+    ];
+    expect(selectTeamGoalCelebration(candidates, ["manager"], new Date("2026-11-10T00:00:00Z"))?.id).toBe("new");
+  });
+
+  it("builds the celebration result and accessible image label", () => {
+    expect(formatTeamGoalCelebrationResult({ kind: "LEVEL_UP_COUNT", targetCount: 18, targetLevel: null, skillName: null })).toBe("レベルアップ 18 / 18件");
+    expect(formatTeamGoalCelebrationResult({ kind: "SKILL_REACH", targetCount: 1, targetLevel: 3, skillName: "TypeScript" })).toBe("TypeScript Lv3 以上 1 / 1人");
+    expect(formatTeamGoalCelebrationAriaLabel(18, "件")).toBe("18件中18件を達成");
   });
 });

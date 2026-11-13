@@ -28,10 +28,22 @@ import { Label } from "@/shared/ui/label";
 import { Select } from "@/shared/ui/select";
 import { SubmitButton } from "@/shared/ui/submit-button";
 import { MemberAvatar } from "@/shared/ui/member-avatar";
-import type { ManagerTeamGoalData } from "@/modules/team-goals/application/team-goal-service";
+import type {
+  ManagerTeamGoalData,
+  TeamGoalCelebrationData
+} from "@/modules/team-goals/application/team-goal-service";
 import { ManagerTeamGoalCard } from "@/modules/team-goals/presentation/team-goal-card";
+import { TeamGoalCelebrationDialog } from "@/modules/team-goals/presentation/team-goal-celebration-dialog";
 
-export function TeamDashboard({ viewModel, teamGoal }: { viewModel: TeamDashboardViewModel; teamGoal: ManagerTeamGoalData | null }) {
+export function TeamDashboard({
+  viewModel,
+  teamGoal,
+  teamGoalCelebration
+}: {
+  viewModel: TeamDashboardViewModel;
+  teamGoal: ManagerTeamGoalData | null;
+  teamGoalCelebration: TeamGoalCelebrationData | null;
+}) {
   const [cheerTarget, setCheerTarget] = useState<TeamDashboardViewModel["almostThere"][number] | null>(null);
   const [cheeredIds, setCheeredIds] = useState(() => new Set(viewModel.almostThere.filter((item) => item.cheered).map((item) => item.memberId)));
   const [noteTarget, setNoteTarget] = useState<TeamDashboardViewModel["inactiveMembers"][number] | null>(null);
@@ -54,6 +66,7 @@ export function TeamDashboard({ viewModel, teamGoal }: { viewModel: TeamDashboar
 
   return (
     <div className="space-y-5">
+      <TeamGoalCelebrationDialog celebration={teamGoalCelebration} />
       <header className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>

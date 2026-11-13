@@ -71,3 +71,42 @@ export function formatTeamGoalText(input: {
 export function teamGoalUnit(kind: TeamGoalKindValue) {
   return kind === "LEVEL_UP_COUNT" ? "件" : "人";
 }
+
+export type TeamGoalCelebrationCandidate = {
+  id: string;
+  managerId: string;
+  achievedAt: Date | null;
+  startMonth: string;
+  months: number;
+};
+
+export function selectTeamGoalCelebration<T extends TeamGoalCelebrationCandidate>(
+  candidates: T[],
+  relevantManagerIds: string[],
+  now: Date
+): T | null {
+  const relevantManagers = new Set(relevantManagerIds);
+  return candidates
+    .filter((candidate) =>
+      relevantManagers.has(candidate.managerId) &&
+      candidate.achievedAt !== null &&
+      isDateInTeamGoalPeriod(now, candidate.startMonth, candidate.months)
+    )
+    .sort((left, right) => right.achievedAt!.getTime() - left.achievedAt!.getTime())[0] ?? null;
+}
+
+export function formatTeamGoalCelebrationResult(input: {
+  kind: TeamGoalKindValue;
+  targetCount: number;
+  targetLevel: number | null;
+  skillName: string | null;
+}) {
+  const result = `${input.targetCount} / ${input.targetCount}${teamGoalUnit(input.kind)}`;
+  if (input.kind === "LEVEL_UP_COUNT") return `レベルアップ ${result}`;
+  if (input.kind === "LEVEL_UP_MEMBERS") return `レベルアップした人 ${result}`;
+  return `${input.skillName ?? "スキル"} Lv${input.targetLevel} 以上 ${result}`;
+}
+
+export function formatTeamGoalCelebrationAriaLabel(targetCount: number, unit: string) {
+  return `${targetCount}${unit}中${targetCount}${unit}を達成`;
+}
