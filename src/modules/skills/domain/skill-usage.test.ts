@@ -7,7 +7,8 @@ const unused: SkillUsage = {
   selfAssessments: 0,
   skillLevelChanges: 0,
   cheers: 0,
-  roleRequirements: 0
+  roleRequirements: 0,
+  teamGoals: 0
 };
 
 describe("getSkillDeletionState", () => {

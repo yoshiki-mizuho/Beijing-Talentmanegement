@@ -28,8 +28,10 @@ import { Label } from "@/shared/ui/label";
 import { Select } from "@/shared/ui/select";
 import { SubmitButton } from "@/shared/ui/submit-button";
 import { MemberAvatar } from "@/shared/ui/member-avatar";
+import type { ManagerTeamGoalData } from "@/modules/team-goals/application/team-goal-service";
+import { ManagerTeamGoalCard } from "@/modules/team-goals/presentation/team-goal-card";
 
-export function TeamDashboard({ viewModel }: { viewModel: TeamDashboardViewModel }) {
+export function TeamDashboard({ viewModel, teamGoal }: { viewModel: TeamDashboardViewModel; teamGoal: ManagerTeamGoalData | null }) {
   const [cheerTarget, setCheerTarget] = useState<TeamDashboardViewModel["almostThere"][number] | null>(null);
   const [cheeredIds, setCheeredIds] = useState(() => new Set(viewModel.almostThere.filter((item) => item.cheered).map((item) => item.memberId)));
   const [noteTarget, setNoteTarget] = useState<TeamDashboardViewModel["inactiveMembers"][number] | null>(null);
@@ -80,6 +82,8 @@ export function TeamDashboard({ viewModel }: { viewModel: TeamDashboardViewModel
           </nav>
         </div>
       </header>
+
+      {teamGoal ? <ManagerTeamGoalCard data={teamGoal} /> : null}
 
       <section aria-labelledby="team-kpi-heading">
         <h2 id="team-kpi-heading" className="sr-only">チームの指標</h2>

@@ -29,6 +29,7 @@ const targetTypeLabels: Record<string, string> = {
   AuditLog: "監査ログ",
   Csv: "CSV",
   Department: "部署",
+  TeamGoal: "チーム目標",
 };
 const mapJson = (value: Prisma.JsonValue | null): JsonMap | null =>
   value && typeof value === "object" && !Array.isArray(value)

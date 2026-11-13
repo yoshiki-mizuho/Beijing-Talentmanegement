@@ -262,6 +262,13 @@ export function buildActionDescription(
   if (action === "audit_log.export") {
     return { prefix: "", target: "監査ログ", suffix: " を CSV で出力" };
   }
+  if (action === "team_goal.create" || action === "team_goal.update") {
+    return {
+      prefix: "",
+      target: "チーム目標",
+      suffix: action.endsWith(".create") ? " を作成" : " を変更",
+    };
+  }
   if (action === "csv.export") {
     return {
       prefix: "",

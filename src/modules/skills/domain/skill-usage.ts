@@ -4,6 +4,7 @@ export type SkillUsage = {
   skillLevelChanges: number;
   cheers: number;
   roleRequirements: number;
+  teamGoals: number;
 };
 
 const usageLabels: { key: keyof SkillUsage; label: string }[] = [
@@ -11,7 +12,8 @@ const usageLabels: { key: keyof SkillUsage; label: string }[] = [
   { key: "selfAssessments", label: "申請" },
   { key: "skillLevelChanges", label: "履歴" },
   { key: "cheers", label: "応援" },
-  { key: "roleRequirements", label: "ロール要件" }
+  { key: "roleRequirements", label: "ロール要件" },
+  { key: "teamGoals", label: "チーム目標" }
 ];
 
 export function getSkillDeletionState(usage: SkillUsage) {

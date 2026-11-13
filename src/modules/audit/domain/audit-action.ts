@@ -41,6 +41,8 @@ export const AUDIT_ACTION = {
   CSV_IMPORT_FAILED: "csv.import.failed",
   DEPARTMENT_CREATE: "department.create",
   DEPARTMENT_UPDATE: "department.update",
+  TEAM_GOAL_CREATE: "team_goal.create",
+  TEAM_GOAL_UPDATE: "team_goal.update",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTION)[keyof typeof AUDIT_ACTION];
@@ -57,6 +59,7 @@ export const AUDIT_TARGET_TYPE = {
   AUDIT_LOG: "AuditLog",
   CSV: "Csv",
   DEPARTMENT: "Department",
+  TEAM_GOAL: "TeamGoal",
 } as const;
 
 export type AuditTargetType =
