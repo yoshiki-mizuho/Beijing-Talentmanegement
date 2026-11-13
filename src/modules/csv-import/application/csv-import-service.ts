@@ -78,6 +78,7 @@ export async function previewCsvImport(
     mapped.records,
     state.skills,
     state.categories,
+    mapped.skillLevelGuidesIncluded,
   );
   return finish(result.changes, result.errors);
 

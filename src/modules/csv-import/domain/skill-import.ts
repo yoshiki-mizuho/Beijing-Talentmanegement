@@ -10,6 +10,7 @@ export type SkillState = {
   categoryName: string;
   description: string | null;
   isActive: boolean;
+  levelGuides: Array<{ level: number; description: string }>;
 };
 export type SkillCategoryState = { id: string; name: string };
 export type SkillChange = {
@@ -22,6 +23,7 @@ export type SkillChange = {
   categoryName: string;
   description: string | null;
   isActive: boolean;
+  levelGuides: Array<{ level: number; description: string }> | null;
   changes: Record<string, { before: unknown; after: unknown }>;
 };
 
@@ -29,6 +31,7 @@ export function validateSkillImport(
   records: CsvRecord[],
   existing: SkillState[],
   categories: SkillCategoryState[],
+  levelGuidesIncluded = false,
 ) {
   const errors: CsvImportError[] = [];
   const existingByCode = new Map(existing.map((item) => [item.code, item]));
@@ -51,12 +54,28 @@ export function validateSkillImport(
         ...assignedCodes,
       ]);
       assignedCodes.push(code);
-    } else if (!existingByCode.has(code)) {
+    } else if (!existingByCode.has(code) && code.length > 32) {
+      // DB にないコードは、そのコードの新しいスキルとして登録する。長さは画面の登録と同じ上限にする
       errors.push({
         row: record.row,
         column: "skill_code",
-        message: `スキルコード ${code} が見つかりません。新しいスキルはコードを空にしてください`,
+        message: "skill_code は32文字以内にしてください",
       });
+    }
+    const levelGuides = levelGuidesIncluded
+      ? [1, 2, 3, 4, 5].map((level) => ({
+          level,
+          description: record.values[`level_guide_${level}`].trim(),
+        }))
+      : null;
+    for (const guide of levelGuides ?? []) {
+      if (guide.description.length > 300) {
+        errors.push({
+          row: record.row,
+          column: `level_guide_${guide.level}`,
+          message: `level_guide_${guide.level} は300文字以内にしてください`,
+        });
+      }
     }
     if (seenCodes.has(code)) {
       errors.push({
@@ -71,7 +90,7 @@ export function validateSkillImport(
       id: `new:${categoryName}`,
       name: categoryName,
     };
-    return { record, code, category };
+    return { record, code, category, levelGuides };
   });
   const names = new Map<string, number>();
   for (const item of prepared) {
@@ -121,6 +140,7 @@ export function validateSkillImport(
           categoryName: item.category.name,
           description,
           isActive,
+          levelGuides: item.levelGuides,
           changes: {},
         },
       ];
@@ -136,6 +156,15 @@ export function validateSkillImport(
     );
     addDiff(diff, "description", current.description, description);
     addDiff(diff, "isActive", current.isActive, isActive);
+    for (const guide of item.levelGuides ?? []) {
+      addDiff(
+        diff,
+        `levelGuide${guide.level}`,
+        current.levelGuides.find((currentGuide) => currentGuide.level === guide.level)
+          ?.description ?? "",
+        guide.description,
+      );
+    }
     return [
       {
         row: item.record.row,
@@ -147,6 +176,7 @@ export function validateSkillImport(
         categoryName: item.category.name,
         description,
         isActive,
+        levelGuides: item.levelGuides,
         changes: diff,
       },
     ];

@@ -16,6 +16,11 @@ const fieldLabels: Record<string, string> = {
   requiredLevel: "必要レベル",
   isRequired: "必須",
   anyOfGroup: "ORの組",
+  levelGuide1: "Lv1 の目安",
+  levelGuide2: "Lv2 の目安",
+  levelGuide3: "Lv3 の目安",
+  levelGuide4: "Lv4 の目安",
+  levelGuide5: "Lv5 の目安",
 };
 
 function formatValue(value: unknown) {

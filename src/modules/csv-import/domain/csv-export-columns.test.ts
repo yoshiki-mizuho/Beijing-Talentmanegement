@@ -50,6 +50,18 @@ describe("CSV export columns", () => {
   });
 
   it("スキルと要件のあるロールを変換する", () => {
+    expect(csvExportDefinitions.skills.columns).toEqual([
+      "skill_code",
+      "skill_name",
+      "category_name",
+      "description",
+      "is_active",
+      "level_guide_1",
+      "level_guide_2",
+      "level_guide_3",
+      "level_guide_4",
+      "level_guide_5",
+    ]);
     expect(
       toCsvExportRows("skills", [
         {
@@ -58,9 +70,26 @@ describe("CSV export columns", () => {
           category: { name: "開発" },
           description: null,
           isActive: false,
+          levelGuides: [
+            { level: 1, description: "基本を理解している" },
+            { level: 3, description: "自立して実践できる" },
+          ],
         },
       ]),
-    ).toEqual([["TS", "TypeScript", "開発", "", false]]);
+    ).toEqual([
+      [
+        "TS",
+        "TypeScript",
+        "開発",
+        "",
+        false,
+        "基本を理解している",
+        "",
+        "自立して実践できる",
+        "",
+        "",
+      ],
+    ]);
     expect(
       toCsvExportRows("roles", [
         {

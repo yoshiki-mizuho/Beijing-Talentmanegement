@@ -98,7 +98,7 @@ flowchart TD
 - 値の表記：真偽値は `true`／`false`、日付は `YYYY-MM-DD`、空の値は空欄。メンバーの状態は `active`／`inactive`／`leave`。
 - 表計算ソフトで数式として実行されないよう、出力では先頭が `=`、`+`、`-`、`@` の値の前に `'` を付ける。取り込みでは、この `'` を取り除く。
 - メンバーとメンバースキルの出力は、範囲を「在籍中」（初期）と「すべて（休職・退職を含む）」から選べる。
-- 追加の列：ロールCSVは `role_name`、`description`、`is_active`、`skill_code`、`required_level`、`is_required`、`any_of_group`。
+- 追加の列：スキルCSVは `skill_code`、`skill_name`、`category_name`、`description`、`is_active`、`level_guide_1`、`level_guide_2`、`level_guide_3`、`level_guide_4`、`level_guide_5`。ロールCSVは `role_name`、`description`、`is_active`、`skill_code`、`required_level`、`is_required`、`any_of_group`。
 - ロールCSVは1行に1つの要件を出力する。
 - 要件がないロールは要件の列を空欄にして1行出力する。
 - ロール要件のOR組は `any_of_group` に1以上の同じ整数を指定し、2件以上の要件を「いずれか1つ」の組として扱う。
@@ -131,11 +131,18 @@ flowchart TD
 
 | 項目 | 必須 | 説明 |
 | --- | --- | --- |
-| `skill_code` | 任意 | スキルコード。一意。空の行は新規として扱い、コードを自動で振る。コードがある行は、そのスキルの更新として扱う |
+| `skill_code` | 任意 | スキルコード。一意。空の行は新規として扱い、コードを自動で振る。登録済みのコードの行は、そのスキルの更新として扱う。登録のないコードの行は、そのコード（32文字以内）の新しいスキルとして登録する |
 | `skill_name` | 必須 | スキル名 |
 | `category_name` | 必須 | スキルカテゴリ名 |
 | `description` | 任意 | 説明 |
 | `is_active` | 必須 | `true` または `false` |
+| `level_guide_1` | 任意 | Lv1 の目安。300文字以内 |
+| `level_guide_2` | 任意 | Lv2 の目安。300文字以内 |
+| `level_guide_3` | 任意 | Lv3 の目安。300文字以内 |
+| `level_guide_4` | 任意 | Lv4 の目安。300文字以内 |
+| `level_guide_5` | 任意 | Lv5 の目安。300文字以内 |
+
+レベルの目安の列は、5つすべてをそろえるか、5つとも省略する。5つとも省略した場合は既存の目安を変更しない。列がある場合はCSVの内容に置き換え、空欄のレベルは目安なしとして個別の目安を削除し、共通の目安を使う。
 
 ### メンバースキルCSV
 
