@@ -23,13 +23,17 @@ const mocks = vi.hoisted(() => ({
   memberSkillUpsert: vi.fn(),
   skillLevelChangeCreate: vi.fn(),
   auditLogCreate: vi.fn(),
-  auditLogCreateMany: vi.fn()
+  auditLogCreateMany: vi.fn(),
+  recordRoleAchievements: vi.fn()
 }));
 
 vi.mock("@/server/db/prisma", () => ({
   prisma: {
     $transaction: mocks.transaction
   }
+}));
+vi.mock("@/modules/roles/application/role-achievement-service", () => ({
+  recordRoleAchievements: mocks.recordRoleAchievements
 }));
 
 import {

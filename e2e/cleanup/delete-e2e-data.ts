@@ -119,6 +119,9 @@ export async function deleteE2eData(
       { skillId: { in: skillIds } }, { prerequisiteSkillId: { in: skillIds } },
       { createdById: { in: memberIds } },
     ] } }));
+    await record("roleAchievements", tx.roleAchievement.deleteMany({ where: { OR: [
+      { memberId: { in: memberIds } }, { roleId: { in: roleIds } },
+    ] } }));
     await record("roleRequirements", tx.roleRequirement.deleteMany({ where: { OR: [
       { roleId: { in: roleIds } }, { skillId: { in: skillIds } },
     ] } }));

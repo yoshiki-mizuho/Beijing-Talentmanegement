@@ -384,6 +384,47 @@ test("管理者がスキルを検索・削除し、要件付きロールも削�
   }
 });
 
+test("達成記録があるロールは削除できない", async ({ browser }) => {
+  const admin = await openLoggedInContext(browser, credentials.ADMIN);
+  const data = createE2eTestData();
+  try {
+    const department = await data.createDepartment("達成記録部署");
+    const { skill } = await data.createSkill("達成記録スキル");
+    const role = await data.createRole("達成記録ロール", [
+      { skillId: skill.id, requiredLevel: 2 },
+    ]);
+    const { member } = await data.createMember({
+      label: "達成記録メンバー",
+      departmentId: department.id,
+    });
+    await data.createMemberSkill({
+      memberId: member.id,
+      skillId: skill.id,
+      level: 3,
+    });
+
+    await admin.page.goto(`/roles?role=${role.id}`);
+    await admin.page.getByRole("button", { name: "編集" }).click();
+    const roleDialog = admin.page.getByRole("dialog", { name: `${role.name}を編集` });
+    await roleDialog.getByLabel("必要レベル").selectOption("3");
+    await roleDialog.getByRole("button", { name: "保存", exact: true }).click();
+    await expect(admin.page.getByText("ロールを更新しました。")).toBeVisible();
+    // 保存してもダイアログは開いたままなので、閉じてから開き直し、最新の状態を読む
+    await admin.page.keyboard.press("Escape");
+    await expect(roleDialog).toBeHidden();
+
+    await admin.page.getByRole("button", { name: "編集" }).click();
+    const updatedDialog = admin.page.getByRole("dialog", { name: `${role.name}を編集` });
+    await expect(updatedDialog.getByRole("button", { name: "削除", exact: true })).toBeDisabled();
+    await expect(updatedDialog.getByText(
+      "達成した人がいるロールは削除できません。無効にしてください。",
+    )).toBeVisible();
+  } finally {
+    await admin.context.close();
+    await data.cleanup();
+  }
+});
+
 test("スキル検索をクリアして一覧を元に戻せる", async ({ browser }) => {
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
   try {

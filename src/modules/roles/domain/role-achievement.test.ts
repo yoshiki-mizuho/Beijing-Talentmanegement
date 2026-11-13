@@ -56,9 +56,9 @@ describe("isRoleAchieved", () => {
     ]);
   });
 
-  it("treats a role with no required requirements as achieved", () => {
-    expect(evaluateRoleAchievement([], []).achieved).toBe(true);
-    expect(evaluateRoleAchievement([], []).achievementRate).toBe(1);
+  it("does not treat a role with no required requirements as achieved", () => {
+    expect(evaluateRoleAchievement([], []).achieved).toBe(false);
+    expect(evaluateRoleAchievement([], []).achievementRate).toBe(0);
   });
 
   it("treats an any-of group as one unit and accepts either candidate", () => {
