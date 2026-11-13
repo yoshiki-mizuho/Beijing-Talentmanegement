@@ -8,9 +8,11 @@ test("目標ロール達成を祝い、次の目標をあとで決めると再�
   const data = createE2eTestData();
   let member: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
   let manager: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
+  let admin: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
   try {
     const department = await data.createDepartment("ロール達成部署");
     const managerAccount = await data.createMember({ label: "ロール達成管理者", departmentId: department.id, role: "MANAGER" });
+    const adminAccount = await data.createMember({ label: "ロール達成ADMIN", departmentId: department.id, role: "ADMIN" });
     const { skill } = await data.createSkill("ロール達成スキル");
     const role = await data.createRole("ロール達成目標", [{ skillId: skill.id, requiredLevel: 2 }]);
     const memberAccount = await data.createMember({ label: "ロール達成申請者", departmentId: department.id, managerId: managerAccount.member.id });
@@ -42,7 +44,22 @@ test("目標ロール達成を祝い、次の目標をあとで決めると再�
     await expect(dialog).toHaveCount(0);
     await member.page.reload();
     await expect(member.page.getByRole("dialog")).toHaveCount(0);
+
+    admin = await openLoggedInContext(browser, adminAccount.credential);
+    await admin.page.goto(`/roles?role=${encodeURIComponent(role.id)}`);
+    await admin.page.getByRole("button", { name: "編集" }).click();
+    const editDialog = admin.page.getByRole("dialog", { name: `${role.name}を編集` });
+    await editDialog.getByLabel("必要レベル").selectOption("3");
+    await editDialog.getByRole("button", { name: "保存", exact: true }).click();
+    await expect(admin.page.getByText("ロールを更新しました。")).toBeVisible();
+
+    await member.page.goto(`/people/${memberAccount.member.id}`);
+    const updatedMark = member.page.getByLabel("要件が更新されました");
+    await expect(updatedMark).toBeVisible();
+    await updatedMark.hover();
+    await expect(member.page.getByRole("tooltip", { name: "要件が更新されました" })).toBeVisible();
   } finally {
+    await admin?.context.close();
     await manager?.context.close();
     await member?.context.close();
     await data.cleanup();

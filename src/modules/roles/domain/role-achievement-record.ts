@@ -42,3 +42,12 @@ export function selectNewRoleAchievements(
     }];
   });
 }
+
+export function selectPendingRoleAchievement<T extends {
+  achievedAt: Date;
+  celebratedAt: Date | null;
+}>(achievements: ReadonlyArray<T>) {
+  return achievements
+    .filter((achievement) => achievement.celebratedAt === null)
+    .sort((left, right) => left.achievedAt.getTime() - right.achievedAt.getTime())[0] ?? null;
+}

@@ -1,9 +1,11 @@
-import { ExternalLink } from "lucide-react";
+import { AlertTriangle, ExternalLink } from "lucide-react";
 import type { getSkillProfile } from "@/modules/explore/application/explore-service";
 import { MemberAvatar } from "@/shared/ui/member-avatar";
 import { AvatarEditor } from "./avatar-editor";
 import { ProfileEditor } from "./profile-editor";
 import { ProfileVisibility } from "./profile-visibility";
+import { Badge } from "@/shared/ui/badge";
+import { Tooltip } from "@/shared/ui/tooltip";
 
 type Profile = NonNullable<Awaited<ReturnType<typeof getSkillProfile>>>;
 
@@ -88,6 +90,22 @@ export function SkillProfileHeader({
               </div>
             ))}
           </div>
+          {profile.achievedRoles.length > 0 ? (
+            <div className="flex flex-wrap gap-2 md:col-span-3">
+              {profile.achievedRoles.map((role) => (
+                <Badge key={`${role.name}-${role.achievedAt}`} variant="primary">
+                  {role.name}
+                  {role.requirementsUpdated ? (
+                    <Tooltip content="要件が更新されました">
+                      <span tabIndex={0} aria-label="要件が更新されました">
+                        <AlertTriangle className="ml-1 h-3.5 w-3.5" aria-hidden="true" />
+                      </span>
+                    </Tooltip>
+                  ) : null}
+                </Badge>
+              ))}
+            </div>
+          ) : null}
         </header>
       </div>
     </>

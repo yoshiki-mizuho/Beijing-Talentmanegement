@@ -215,3 +215,16 @@ export function achievedRoleNames(
     )
     .map((role) => role.name);
 }
+
+export function achievedRoleNamesAt(
+  achievements: ReadonlyArray<{ roleName: string; achievedAt: Date | string }>,
+  at: Date
+) {
+  return achievements
+    .filter((achievement) => new Date(achievement.achievedAt) <= at)
+    .sort(
+      (left, right) =>
+        new Date(right.achievedAt).getTime() - new Date(left.achievedAt).getTime()
+    )
+    .map((achievement) => achievement.roleName);
+}

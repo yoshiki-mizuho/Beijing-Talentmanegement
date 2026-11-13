@@ -3,6 +3,7 @@ import { AuthRole } from "@prisma/client";
 import { getMemberScope } from "@/modules/members/application/member-scope";
 import { listMembers } from "@/modules/members/application/member-service";
 import { listRoles } from "@/modules/roles/application/role-service";
+import { listRoleAchievements } from "@/modules/roles/application/role-achievement-service";
 import { canManageRoles } from "@/modules/roles/presentation/role-permissions";
 import { RolePage } from "@/modules/roles/presentation/role-page";
 import { buildRolePageViewModel } from "@/modules/roles/presentation/role-page-view-model";
@@ -23,10 +24,11 @@ export default async function RolesPage({
   const scope = session.user.role === "MEMBER"
     ? null
     : await getMemberScope(session.user.role, session.user.memberId);
-  const [roles, skills, activeMembers, params] = await Promise.all([
+  const [roles, skills, activeMembers, achievements, params] = await Promise.all([
     listRoles(),
     canManage ? listSkills() : Promise.resolve([]),
     listMembers({ status: "ACTIVE" }),
+    listRoleAchievements(),
     searchParams
   ]);
   const roleItems = buildRolePageViewModel({
@@ -34,7 +36,8 @@ export default async function RolesPage({
     viewerMemberId: session.user.memberId,
     scopedMemberIds: scope?.memberIds ?? [session.user.memberId],
     roles,
-    activeMembers
+    activeMembers,
+    achievements
   });
 
   return (

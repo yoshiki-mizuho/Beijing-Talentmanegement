@@ -27,6 +27,7 @@ export function getTeamDashboardData(managerMemberId: string) {
           createdAt: true,
           targetRole: {
             select: {
+              id: true,
               name: true,
               roleRequirements: {
                 where: { isRequired: true },

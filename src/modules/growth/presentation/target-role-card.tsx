@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Target } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Target } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -11,6 +11,7 @@ import { ActionForm } from "@/shared/ui/action-form";
 import { Button } from "@/shared/ui/button";
 import { Select } from "@/shared/ui/select";
 import { SubmitButton } from "@/shared/ui/submit-button";
+import { Tooltip } from "@/shared/ui/tooltip";
 
 type TargetRequirement = NonNullable<MemberDashboardViewModel["targetRole"]>["requirements"][number];
 type TargetRequirementUnit =
@@ -85,7 +86,16 @@ export function TargetRoleCard({
                 </Link>
               </h3>
               {role.achieved ? (
-                <p className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-50 p-3 text-sm font-medium text-emerald-800"><CheckCircle2 className="h-4 w-4" aria-hidden="true" />必須要件をすべて達成しています。</p>
+                <p className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-50 p-3 text-sm font-medium text-emerald-800">
+                  <CheckCircle2 className="h-4 w-4" aria-hidden="true" />達成
+                  {role.requirementsUpdated ? (
+                    <Tooltip content="要件が更新されました">
+                      <span tabIndex={0} aria-label="要件が更新されました">
+                        <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+                      </span>
+                    </Tooltip>
+                  ) : null}
+                </p>
               ) : (
                 <>
                   <p className="mt-2 text-sm font-semibold text-[var(--primary)]">あと {role.gaps.length} スキルで達成</p>

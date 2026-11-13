@@ -100,10 +100,13 @@ describe("organization dashboard", () => {
     });
     const metrics = buildDepartmentMetrics({
       members: [
-        member("m1", [
-          ["a", 2],
-          ["b", 2],
-        ]),
+        {
+          ...member("m1", [
+            ["a", 2],
+            ["b", 2],
+          ]),
+          roleAchievements: [{ roleId: "r", achievedAt: new Date(2026, 10, 1) }],
+        },
         member("m2", [["a", 2]]),
       ],
       changes: [],

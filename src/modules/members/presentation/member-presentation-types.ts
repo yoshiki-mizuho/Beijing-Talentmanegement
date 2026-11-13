@@ -17,6 +17,7 @@ export type MemberRow = {
   targetRoleId: string | null;
   targetRole: { id: string; name: string; isActive: boolean } | null;
   growthHint?: { generatedAt: string } | null;
+  roleAchievements: { roleId: string; achievedAt: string }[];
   role: "ADMIN" | "MANAGER" | "MEMBER" | null;
   pendingAssessments?: {
     skillId: string;

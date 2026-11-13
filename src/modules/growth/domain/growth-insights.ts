@@ -46,6 +46,7 @@ export function calculateBadgeAchievements(input: {
   memberSkills: ReadonlyArray<{ skillId: string; level: number }>;
   levelChanges: ReadonlyArray<GrowthLevelChange>;
   targetRequirements: ReadonlyArray<{ skillId: string; requiredLevel: number; isRequired?: boolean; anyOfGroup?: number | null }>;
+  targetAchievements?: ReadonlyArray<{ achievedAt: Date | string; achievedAsTarget: boolean }>;
   mentoredCheers: ReadonlyArray<{ toMemberId: string; createdAt: Date | string }>;
   memberCreatedAt?: Date | string;
   sentCheers?: ReadonlyArray<{ toMemberId: string; createdAt: Date | string }>;
@@ -58,18 +59,13 @@ export function calculateBadgeAchievements(input: {
   const assessments = sortByDate(input.assessments, "createdAt");
   const changes = sortByDate(input.levelChanges, "changedAt");
   const newSkillChanges = changes.filter((change) => change.fromLevel === null);
-  const targetAchieved =
-    input.targetRequirements.length > 0 &&
-    isRoleAchieved(
-      input.targetRequirements.map((requirement) => ({ ...requirement, isRequired: requirement.isRequired ?? true })),
-      [...input.memberSkills]
-    );
-  const targetSkillIds = new Set(
-    input.targetRequirements.map((requirement) => requirement.skillId)
-  );
-  const targetChangedAt = targetAchieved
-    ? findTargetAchievementDate(input.targetRequirements, changes, targetSkillIds)
-    : null;
+  const targetAchievement = [...(input.targetAchievements ?? [])]
+    .filter((achievement) => achievement.achievedAsTarget)
+    .sort(
+      (left, right) =>
+        new Date(left.achievedAt).getTime() - new Date(right.achievedAt).getTime()
+    )[0];
+  const targetChangedAt = targetAchievement?.achievedAt ?? null;
   const uniqueMentees = new Set<string>();
   let thirdMenteeAt: Date | string | null = null;
   for (const cheer of sortByDate(input.mentoredCheers, "createdAt")) {
@@ -292,29 +288,6 @@ function findThreeMonthStreakDate(changes: ReadonlyArray<GrowthLevelChange>) {
     }
   }
   return null;
-}
-
-function findTargetAchievementDate(
-  requirements: ReadonlyArray<{ skillId: string; requiredLevel: number; isRequired?: boolean; anyOfGroup?: number | null }>,
-  changes: ReadonlyArray<GrowthLevelChange>,
-  targetSkillIds: ReadonlySet<string>
-) {
-  const knownLevels = new Map<string, number>();
-  const relevantChanges = changes.filter((change) =>
-    targetSkillIds.has(change.skillId)
-  );
-  for (const change of relevantChanges) {
-    knownLevels.set(change.skillId, change.toLevel);
-    if (
-      isRoleAchieved(
-        requirements.map((requirement) => ({ ...requirement, isRequired: requirement.isRequired ?? true })),
-        [...knownLevels].map(([skillId, level]) => ({ skillId, level }))
-      )
-    ) {
-      return change.changedAt;
-    }
-  }
-  return relevantChanges.at(-1)?.changedAt ?? null;
 }
 
 export type GrowthCalendarDay = {

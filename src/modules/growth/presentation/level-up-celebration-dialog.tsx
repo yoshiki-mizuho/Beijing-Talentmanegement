@@ -28,7 +28,9 @@ export function LevelUpCelebrationDialog({
   const router = useRouter();
   const [index, setIndex] = useState(0);
   const [open, setOpen] = useState(celebrations.length > 0);
-  const [showRoleAchievement, setShowRoleAchievement] = useState(false);
+  const [showRoleAchievement, setShowRoleAchievement] = useState(
+    celebrations.length === 0 && roleAchievement !== null
+  );
   const [pending, startTransition] = useTransition();
   const contentRef = useRef<HTMLDivElement>(null);
   const current = celebrations[index];
@@ -105,7 +107,16 @@ export function LevelUpCelebrationDialog({
     [confirmAndThen, roleAchievement]
   );
 
-  if (!current) return null;
+  if (!current) {
+    return roleAchievement ? (
+      <RoleAchievedDialog
+        open={showRoleAchievement}
+        celebration={roleAchievement}
+        memberId={memberId}
+        onClose={() => setShowRoleAchievement(false)}
+      />
+    ) : null;
+  }
 
   return (<>
     <Dialog

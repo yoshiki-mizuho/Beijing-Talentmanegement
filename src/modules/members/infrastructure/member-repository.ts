@@ -31,7 +31,6 @@ import type {
   SkillAssessmentInput,
   SkillAssessmentReviewInput
 } from "@/modules/members/domain/skill-assessment-schema";
-import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
 import { recordRoleAchievements } from "@/modules/roles/application/role-achievement-service";
 import { collectDescendantIds } from "@/modules/members/domain/department-hierarchy";
 import { prisma } from "@/server/db/prisma";
@@ -135,6 +134,7 @@ export async function listMembers(input?: MemberSearchInput, memberIds?: string[
       manager: { select: { id: true, name: true } },
       targetRole: { select: { id: true, name: true, isActive: true } },
       growthHint: { select: { generatedAt: true } },
+      roleAchievements: { select: { roleId: true, achievedAt: true } },
       selfAssessments: {
         where: { status: SkillSelfAssessmentStatus.PENDING },
         select: {
@@ -165,32 +165,8 @@ export async function listMembers(input?: MemberSearchInput, memberIds?: string[
     return members;
   }
 
-  const role = await prisma.role.findUnique({
-    where: { id: input.roleId },
-    include: {
-      roleRequirements: true
-    }
-  });
-
-  if (!role) {
-    return [];
-  }
-
-  const requirements = role.roleRequirements.map((requirement) => ({
-    skillId: requirement.skillId,
-    requiredLevel: requirement.requiredLevel,
-    isRequired: requirement.isRequired,
-    anyOfGroup: requirement.anyOfGroup
-  }));
-
   return members.filter((member) =>
-    evaluateRoleAchievement(
-      requirements,
-      member.memberSkills.map((memberSkill) => ({
-        skillId: memberSkill.skillId,
-        level: memberSkill.level
-      }))
-    ).achieved
+    member.roleAchievements.some((achievement) => achievement.roleId === input.roleId)
   );
 }
 

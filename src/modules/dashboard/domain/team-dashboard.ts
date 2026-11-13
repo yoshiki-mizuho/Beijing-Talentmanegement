@@ -6,6 +6,7 @@ export type TeamMemberSnapshot = {
   avatarUpdatedAt: Date | null;
   createdAt: Date;
   targetRole: {
+    id?: string;
     name: string;
     roleRequirements: {
       skillId: string;
@@ -19,6 +20,7 @@ export type TeamMemberSnapshot = {
   pendingAssessments: { skillId: string }[];
   assessmentDates: Date[];
   levelChangeDates: Date[];
+  roleAchievements?: { roleId: string }[];
 };
 
 export type MonthRange = {
@@ -161,11 +163,10 @@ export function aggregateMissingSkills(members: TeamMemberSnapshot[]) {
 }
 
 export function hasAchievedTargetRole(member: TeamMemberSnapshot) {
-  if (!member.targetRole || member.targetRole.roleRequirements.length === 0) return false;
-  return evaluateRoleAchievement(
-    member.targetRole.roleRequirements.map((requirement) => ({ ...requirement, isRequired: requirement.isRequired ?? true })),
-    member.memberSkills
-  ).achieved;
+  if (!member.targetRole) return false;
+  return (member.roleAchievements ?? []).some(
+    (achievement) => achievement.roleId === member.targetRole?.id
+  );
 }
 
 function tokyoMonthStart(year: number, month: number) {
