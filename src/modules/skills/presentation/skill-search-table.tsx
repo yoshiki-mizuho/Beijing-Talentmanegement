@@ -157,6 +157,10 @@ function SkillSearchTableInner({
     placeholderData: keepPreviousData
   });
   const rows = query.data ?? [];
+  const hasNonInitialConditions =
+    filters.q !== emptySkillSearchFilters.q ||
+    filters.categoryId !== emptySkillSearchFilters.categoryId ||
+    filters.isActive !== emptySkillSearchFilters.isActive;
   // 編集中のスキルは一覧の最新のデータから引く。保存直後に開き直しても、再取得が届いたら最新の内容に置き換わる
   const editingSkill = rows.find((skill) => skill.id === editingSkillId) ?? null;
   const reorderDisabled = savingOrder || filters.q.trim() !== "" || filters.categoryId !== "";
@@ -499,7 +503,18 @@ function SkillSearchTableInner({
           icon={SearchX}
           title="条件に一致するスキルがありません"
           description="キーワードやカテゴリ、状態を変更して再度検索してください。"
-        />
+        >
+          {hasNonInitialConditions ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="small"
+              onClick={() => setFilters(emptySkillSearchFilters)}
+            >
+              条件をクリア
+            </Button>
+          ) : null}
+        </EmptyState>
       ) : (
         <SortableContext
           items={order.map((category) => categoryKey(category.id))}

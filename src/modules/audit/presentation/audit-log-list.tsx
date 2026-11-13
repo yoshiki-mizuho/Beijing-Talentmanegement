@@ -1,10 +1,11 @@
 import Link from "next/link";
 import type { Route } from "next";
-import { ChevronLeft, ChevronRight, ScrollText } from "lucide-react";
+import { ScrollText } from "lucide-react";
 import type { AuditLogListItem } from "../application/audit-log-service";
 import { MemberAvatar } from "@/shared/ui/member-avatar";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { cn } from "@/shared/lib/utils";
+import { Pagination } from "@/shared/ui/pagination";
 
 const dateHeading = new Intl.DateTimeFormat("ja-JP", {
   timeZone: "Asia/Tokyo",
@@ -24,13 +25,11 @@ export function AuditLogList({
   items,
   total,
   page,
-  pageCount,
   queryString,
 }: {
   items: AuditLogListItem[];
   total: number;
   page: number;
-  pageCount: number;
   queryString: string;
 }) {
   if (!items.length)
@@ -53,8 +52,6 @@ export function AuditLogList({
     params.set("page", String(next));
     return `/audit-logs?${params}`;
   };
-  const start = (page - 1) * 50 + 1;
-  const end = Math.min(page * 50, total);
   return (
     <div id="audit-log-list" className="space-y-5 transition-opacity">
       {[...groups.entries()].map(([date, rows]) => (
@@ -72,34 +69,7 @@ export function AuditLogList({
           </div>
         </section>
       ))}
-      <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-[var(--muted-foreground)]">
-        <p>
-          {total}件中 {start}〜{end}件
-        </p>
-        <div className="flex items-center gap-2">
-          {page > 1 ? (
-            <Link
-              className="rounded-md border p-2"
-              aria-label="前のページ"
-              href={href(page - 1) as Route}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Link>
-          ) : null}
-          <span>
-            {page} / {pageCount}
-          </span>
-          {page < pageCount ? (
-            <Link
-              className="rounded-md border p-2"
-              aria-label="次のページ"
-              href={href(page + 1) as Route}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Link>
-          ) : null}
-        </div>
-      </div>
+      <Pagination total={total} page={page} pageSize={50} href={href} />
     </div>
   );
 }

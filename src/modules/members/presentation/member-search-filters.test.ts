@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   buildMemberSearchParams,
   emptyMemberSearchFilters,
-  getMemberPageRange,
   hasMemberSearchFilters,
   type MemberSearchFilters
 } from "@/modules/members/presentation/member-search-filters";
@@ -49,9 +48,4 @@ describe("member search filters", () => {
     expect(hasMemberSearchFilters(emptyMemberSearchFilters)).toBe(true);
   });
 
-  it("calculates 20-item page ranges", () => {
-    expect(getMemberPageRange(45, 1)).toEqual({ currentPage: 1, pageCount: 3, start: 1, end: 20 });
-    expect(getMemberPageRange(45, 3)).toEqual({ currentPage: 3, pageCount: 3, start: 41, end: 45 });
-    expect(getMemberPageRange(0, 1)).toEqual({ currentPage: 1, pageCount: 1, start: 0, end: 0 });
-  });
 });

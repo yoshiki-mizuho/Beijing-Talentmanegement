@@ -403,6 +403,23 @@ test("スキル検索をクリアして一覧を元に戻せる", async ({ brows
   }
 });
 
+test("スキル管理の0件表示から条件をクリアして一覧を元に戻せる", async ({ browser }) => {
+  const admin = await openLoggedInContext(browser, credentials.ADMIN);
+  try {
+    await admin.page.goto("/skills");
+    const searchInput = admin.page.getByLabel("スキル名");
+    await expect(admin.page.getByRole("row").nth(1)).toBeVisible();
+    await searchInput.fill(`存在しないスキル-${Date.now()}`);
+    await expect(admin.page.getByText("条件に一致するスキルがありません")).toBeVisible();
+    await admin.page.getByRole("button", { name: "条件をクリア" }).click();
+
+    await expect(searchInput).toHaveValue("");
+    await expect(admin.page.getByRole("row").nth(1)).toBeVisible();
+  } finally {
+    await admin.context.close();
+  }
+});
+
 test("大分類を作成してカテゴリを割り当て、削除すると未分類に戻る", async ({ browser }) => {
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
   const data = createE2eTestData();

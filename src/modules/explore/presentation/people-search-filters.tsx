@@ -7,16 +7,20 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/shared/lib/utils";
 import { Combobox } from "@/shared/ui/combobox";
 import type { ComboboxOption } from "@/shared/ui/combobox-filter";
+import { Button } from "@/shared/ui/button";
+import { EmptyState } from "@/shared/ui/empty-state";
 
 export function PeopleSearchFilters({
   options,
   selectedSkill,
   level,
+  empty,
   children
 }: {
   options: ComboboxOption[];
   selectedSkill: string | null;
   level: number;
+  empty: boolean;
   children: ReactNode;
 }) {
   const router = useRouter();
@@ -37,6 +41,14 @@ export function PeopleSearchFilters({
     params.set("level", String(minimumLevel));
     startTransition(() => {
       router.replace(`/explore?${params.toString()}`, { scroll: false });
+    });
+  }
+
+  function clearFilters() {
+    latestSkill.current = null;
+    latestLevel.current = 1;
+    startTransition(() => {
+      router.replace("/explore", { scroll: false });
     });
   }
 
@@ -83,7 +95,13 @@ export function PeopleSearchFilters({
         className={cn("mt-5 transition-opacity", isPending ? "opacity-50" : undefined)}
         aria-busy={isPending}
       >
-        {children}
+        {empty ? (
+          <EmptyState title="条件に合う人はいません">
+            <Button type="button" variant="secondary" size="small" onClick={clearFilters}>
+              条件をクリア
+            </Button>
+          </EmptyState>
+        ) : children}
       </div>
     </>
   );
