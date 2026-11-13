@@ -6,6 +6,7 @@ import { AUDIT_ACTION, AUDIT_TARGET_TYPE } from "@/modules/audit/domain/audit-ac
 import { diffForAudit } from "@/modules/audit/domain/audit-diff";
 import { recordAuditLog } from "@/modules/audit/infrastructure/audit-repository";
 import { UserFacingError } from "@/shared/lib/user-facing-error";
+import { recordRoleAchievements } from "@/modules/roles/infrastructure/role-achievement-repository";
 
 const ROLE_CODE_PREFIX = "ROLE-";
 
@@ -70,7 +71,8 @@ export async function listRoles() {
             name: "asc"
           }
         }
-      }
+      },
+      _count: { select: { roleAchievements: true } }
     },
     orderBy: { name: "asc" }
   });
@@ -137,6 +139,7 @@ export async function createRoleWithRequirements(
         metadata: { skillId: requirement.skillId }
       });
     }
+    await recordRoleAchievements(tx, { roleIds: [role.id] });
     return role;
   });
 }
@@ -155,6 +158,7 @@ export async function updateRole(id: string, input: RoleInput, actorMemberId: st
         ...diff
       });
     }
+    await recordRoleAchievements(tx, { roleIds: [id] });
     return role;
   });
 }
@@ -239,6 +243,7 @@ export async function updateRoleWithRequirements(
         metadata: { skillId: requirement.skillId }
       });
     }
+    await recordRoleAchievements(tx, { roleIds: [id] });
     return role;
   });
 }
@@ -264,6 +269,10 @@ export async function deactivateRole(id: string, actorMemberId: string | null) {
 export async function deleteRole(id: string, actorMemberId: string | null) {
   return prisma.$transaction(async (transaction) => {
     const before = await transaction.role.findUniqueOrThrow({ where: { id } });
+    const achievementCount = await transaction.roleAchievement.count({ where: { roleId: id } });
+    if (achievementCount > 0) {
+      throw new UserFacingError("達成した人がいるロールは削除できません。無効にしてください。");
+    }
     await transaction.roleRequirement.deleteMany({ where: { roleId: id } });
     const cleared = await transaction.member.updateMany({
       where: { targetRoleId: id },
@@ -327,6 +336,7 @@ export async function upsertRoleRequirement(
         metadata: { skillId: input.skillId }
       });
     }
+    await recordRoleAchievements(tx, { roleIds: [input.roleId] });
     return requirement;
   });
 }

@@ -92,10 +92,11 @@ export function evaluateRoleAchievement(
     )[0];
   });
   const satisfiedCount = units.filter((unit) => unit.satisfied).length;
+  const hasRequirements = units.length > 0;
 
   return {
-    achieved: units.every((unit) => unit.satisfied),
-    achievementRate: units.length === 0 ? 1 : satisfiedCount / units.length,
+    achieved: hasRequirements && units.every((unit) => unit.satisfied),
+    achievementRate: hasRequirements ? satisfiedCount / units.length : 0,
     satisfiedRequirements,
     missingRequirements,
     units,

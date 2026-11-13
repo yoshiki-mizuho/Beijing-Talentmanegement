@@ -203,6 +203,7 @@ model Member {
   createdSkillPrerequisites SkillPrerequisite[] @relation("SkillPrerequisiteCreatedBy")
   teamGoals             TeamGoal[]             @relation("TeamGoalManager")
   teamGoalAcknowledgements TeamGoalAcknowledgement[]
+  roleAchievements      RoleAchievement[]
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
 
@@ -405,8 +406,25 @@ model Role {
   isActive         Boolean           @default(true)
   roleRequirements RoleRequirement[]
   targetMembers    Member[]          @relation("MemberTargetRole")
+  roleAchievements RoleAchievement[]
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
+}
+
+model RoleAchievement {
+  id               String   @id @default(cuid())
+  memberId         String
+  member           Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  roleId           String
+  role             Role     @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  achievedAt       DateTime
+  achievedAsTarget Boolean
+  celebratedAt     DateTime?
+  requirements     Json
+  createdAt        DateTime @default(now())
+
+  @@unique([memberId, roleId])
+  @@index([roleId])
 }
 
 model SkillLevelChange {

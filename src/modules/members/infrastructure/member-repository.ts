@@ -32,6 +32,7 @@ import type {
   SkillAssessmentReviewInput
 } from "@/modules/members/domain/skill-assessment-schema";
 import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
+import { recordRoleAchievements } from "@/modules/roles/application/role-achievement-service";
 import { collectDescendantIds } from "@/modules/members/domain/department-hierarchy";
 import { prisma } from "@/server/db/prisma";
 import { UserFacingError } from "@/shared/lib/user-facing-error";
@@ -178,7 +179,8 @@ export async function listMembers(input?: MemberSearchInput, memberIds?: string[
   const requirements = role.roleRequirements.map((requirement) => ({
     skillId: requirement.skillId,
     requiredLevel: requirement.requiredLevel,
-    isRequired: requirement.isRequired
+    isRequired: requirement.isRequired,
+    anyOfGroup: requirement.anyOfGroup
   }));
 
   return members.filter((member) =>
@@ -499,6 +501,8 @@ export async function upsertMemberSkill(
         metadata: { memberId: input.memberId, skillId: input.skillId }
       });
     }
+
+    await recordRoleAchievements(tx, { memberIds: [input.memberId] });
 
     return memberSkill;
   });
@@ -1033,6 +1037,7 @@ async function reviewSkillAssessmentInTransaction(
           }
         });
       }
+      await recordRoleAchievements(tx, { memberIds: [assessment.memberId] });
     }
 
     const reviewedAssessment = await tx.skillSelfAssessment.update({

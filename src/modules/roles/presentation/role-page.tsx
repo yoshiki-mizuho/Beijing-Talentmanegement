@@ -637,6 +637,12 @@ function RoleFormDialog({
               <ConfirmSubmitButton
                 variant="destructive"
                 pendingLabel="削除中…"
+                disabled={!role.canDelete}
+                title={
+                  role.canDelete
+                    ? "ロールを削除"
+                    : "達成した人がいるロールは削除できません"
+                }
                 confirm={{
                   title: "ロールを削除しますか",
                   description: "この操作は取り消せません。",
@@ -647,6 +653,11 @@ function RoleFormDialog({
                 削除
               </ConfirmSubmitButton>
             </ActionForm>
+            {role.canDelete ? null : (
+              <p className="text-xs text-[var(--muted-foreground)]">
+                達成した人がいるロールは削除できません。無効にしてください。
+              </p>
+            )}
           </div>
         ) : null}
       </div>

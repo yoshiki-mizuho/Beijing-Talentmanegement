@@ -31,6 +31,7 @@ import type {
   SkillState,
 } from "../domain/skill-import";
 import type { RoleImportChange, RoleImportState } from "../domain/role-import";
+import { recordRoleAchievements } from "@/modules/roles/application/role-achievement-service";
 import { generateNextRoleCodeFromExistingCodes } from "@/modules/roles/domain/role-code";
 
 export async function recordCsvImportValidationFailure(input: {
@@ -415,6 +416,12 @@ async function applyRoles(
       metadata: { skillId: change.skillId },
     });
   }
+  await recordRoleAchievements(tx, {
+    roleIds: [...new Set(changes
+      .filter((change) => change.kind !== "unchanged")
+      .map((change) => roleIds.get(change.roleCode))
+      .filter((roleId): roleId is string => Boolean(roleId)))]
+  });
 }
 
 async function applyMembers(
@@ -528,6 +535,11 @@ async function applyMemberSkills(
       metadata: { memberId: change.memberId, skillId: change.skillId },
     });
   }
+  await recordRoleAchievements(tx, {
+    memberIds: [...new Set(changes
+      .filter((change) => change.kind !== "unchanged")
+      .map((change) => change.memberId))]
+  });
 }
 
 async function applyDepartments(

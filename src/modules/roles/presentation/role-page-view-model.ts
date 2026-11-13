@@ -16,6 +16,7 @@ type RoleSource = {
     anyOfGroup?: number | null;
     skill: { name: string; category: { name: string } };
   }[];
+  _count: { roleAchievements: number };
 };
 
 type MemberSource = {
@@ -92,6 +93,7 @@ export function buildRolePageViewModel(input: {
         description: role.description,
         isActive: role.isActive,
         isTarget: viewer.targetRoleId === role.id,
+        canDelete: role._count.roleAchievements === 0,
         ownAchievement: {
           achieved: ownStatus.achieved,
           achievementRate: ownStatus.achievementRate,

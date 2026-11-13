@@ -10,6 +10,7 @@ const roles = [
     name: "リード",
     description: null,
     isActive: true,
+    _count: { roleAchievements: 0 },
     roleRequirements: [
       {
         id: "requirement-1",
