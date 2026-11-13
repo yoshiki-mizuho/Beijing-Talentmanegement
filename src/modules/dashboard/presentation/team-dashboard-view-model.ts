@@ -85,13 +85,14 @@ export function buildTeamDashboardViewModel(data: TeamDashboardResult) {
 }
 
 function isLevelUpInRange(
-  change: { fromLevel: number | null; toLevel: number; changedAt: Date },
+  change: { fromLevel: number | null; toLevel: number | null; changedAt: Date },
   start: Date,
   end: Date
 ) {
   return (
     change.changedAt >= start &&
     change.changedAt < end &&
+    change.toLevel !== null &&
     (change.fromLevel === null || change.toLevel > change.fromLevel)
   );
 }

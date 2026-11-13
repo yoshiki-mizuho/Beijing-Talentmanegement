@@ -117,7 +117,7 @@ export async function listFirstMoverLevelChangeIds(input: {
 
   const earliest = await prisma.skillLevelChange.groupBy({
     by: ["skillId"],
-    where: { skillId: { in: skillIds } },
+    where: { skillId: { in: skillIds }, toLevel: { not: null } },
     _min: { changedAt: true }
   });
   const earliestBySkill = new Map(
@@ -128,7 +128,7 @@ export async function listFirstMoverLevelChangeIds(input: {
   const candidates = input.levelChangeIds?.length
     ? requestedChanges
     : await prisma.skillLevelChange.findMany({
-        where: { skillId: { in: skillIds } },
+        where: { skillId: { in: skillIds }, toLevel: { not: null } },
         select: { id: true, skillId: true, changedAt: true }
       });
 

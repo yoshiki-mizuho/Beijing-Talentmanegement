@@ -1,7 +1,7 @@
 import { AuthRole } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 
-import { getMemberRoleChangeError } from "./member-role-policy";
+import { getActiveReportError, getMemberRoleChangeError } from "./member-role-policy";
 
 const base = {
   actorMemberId: "admin-1",
@@ -50,5 +50,12 @@ describe("member role policy", () => {
         nextRole: AuthRole.MANAGER,
       }),
     ).toBeNull();
+  });
+
+  it("在籍中の部下がいるメンバーの無効化を拒否する", () => {
+    expect(getActiveReportError(1, "無効にできません")).toBe(
+      "部下がいるメンバーは無効にできません。先に部下の上司を付け替えてください。",
+    );
+    expect(getActiveReportError(0, "無効にできません")).toBeNull();
   });
 });

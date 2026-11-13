@@ -123,7 +123,7 @@ export async function loadSkillImportState(): Promise<{
 }
 
 export async function loadMemberImportState(): Promise<MemberImportState> {
-  const [members, departments, roles] = await Promise.all([
+  const [members, departments, roles, users] = await Promise.all([
     prisma.member.findMany({
       select: {
         id: true,
@@ -143,6 +143,7 @@ export async function loadMemberImportState(): Promise<MemberImportState> {
     }),
     prisma.department.findMany({ select: { id: true, code: true } }),
     prisma.role.findMany({ select: { id: true, code: true, name: true, isActive: true } }),
+    prisma.user.findMany({ select: { email: true, memberId: true } }),
   ]);
   return {
     members: members.map((member) => ({
@@ -156,6 +157,7 @@ export async function loadMemberImportState(): Promise<MemberImportState> {
     })),
     departments,
     roles,
+    users,
   };
 }
 
@@ -446,6 +448,12 @@ async function applyMembers(
       change.kind === "new"
         ? (await createMemberWithUser(tx, data, initialPasswordHash)).member
         : await tx.member.update({ where: { id: change.id }, data });
+    if (change.kind === "update") {
+      await tx.user.updateMany({
+        where: { memberId: change.id },
+        data: { email: change.email }
+      });
+    }
     await recordAuditLog(tx, {
       actorMemberId,
       action:

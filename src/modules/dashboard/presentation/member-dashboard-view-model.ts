@@ -56,6 +56,7 @@ export function buildMemberDashboardViewModel(
     const parts = getTokyoDateParts(change.changedAt);
     return (
       isGrowthLevelChange(change.source) &&
+      change.toLevel !== null &&
       (change.fromLevel === null || change.toLevel > change.fromLevel) &&
       parts.year === nowParts.year &&
       parts.month === nowParts.month
@@ -114,7 +115,9 @@ export function buildMemberDashboardViewModel(
     timeline: [...data.levelChanges]
       .filter(
         (change) =>
-          isGrowthLevelChange(change.source) && currentSkillIds.has(change.skillId)
+          isGrowthLevelChange(change.source) &&
+          change.toLevel !== null &&
+          currentSkillIds.has(change.skillId)
       )
       .sort((left, right) => right.changedAt.getTime() - left.changedAt.getTime())
       .slice(0, 8)

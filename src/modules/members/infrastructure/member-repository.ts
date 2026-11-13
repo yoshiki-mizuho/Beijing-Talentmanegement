@@ -24,7 +24,7 @@ import type { MemberSearchInput } from "@/modules/members/domain/member-search";
 import { canReviewSkillAssessment } from "@/modules/members/domain/skill-assessment-policy";
 import { shouldRecordSkillLevelChange } from "@/modules/members/domain/skill-level-change-policy";
 import { assertUserCanLinkToMember } from "@/modules/members/domain/member-user-policy";
-import { getMemberRoleChangeError } from "@/modules/members/domain/member-role-policy";
+import { getActiveReportError, getMemberRoleChangeError } from "@/modules/members/domain/member-role-policy";
 import type {
   SkillAssessmentApprovalBatchInput,
   SkillAssessmentBatchInput,
@@ -224,7 +224,9 @@ export async function updateMemberRole(
       select: {
         status: true,
         users: { select: { id: true, role: true } },
-        _count: { select: { reports: true } }
+        _count: {
+          select: { reports: { where: { status: "ACTIVE" } } }
+        }
       }
     });
     const user = member.users[0];
@@ -376,7 +378,29 @@ export async function updateMember(
 ) {
   return prisma.$transaction(async (tx) => {
     const before = await tx.member.findUniqueOrThrow({ where: { id } });
-    const member = await tx.member.update({ where: { id }, data: input });
+    const email = input.email.toLowerCase();
+    const conflictingUser = await tx.user.findFirst({
+      where: { email, memberId: { not: id } },
+      select: { id: true }
+    });
+    if (conflictingUser) {
+      throw new UserFacingError("このメールアドレスは使われています");
+    }
+    if (before.status === "ACTIVE" && input.status !== "ACTIVE") {
+      const reportCount = await tx.member.count({
+        where: { managerId: id, status: "ACTIVE" }
+      });
+      const error = getActiveReportError(reportCount, "無効にできません");
+      if (error) throw new UserFacingError(error);
+    }
+    const member = await tx.member.update({
+      where: { id },
+      data: { ...input, email }
+    });
+    await tx.user.updateMany({
+      where: { memberId: id },
+      data: { email }
+    });
     const diff = diffForAudit(
       { ...memberAuditFields(before), profile: before.profile },
       { ...memberAuditFields(member), profile: member.profile },
@@ -398,6 +422,11 @@ export async function updateMember(
 export async function deactivateMember(id: string, actorMemberId: string | null) {
   return prisma.$transaction(async (tx) => {
     const before = await tx.member.findUniqueOrThrow({ where: { id }, select: { status: true } });
+    const reportCount = await tx.member.count({
+      where: { managerId: id, status: "ACTIVE" }
+    });
+    const error = getActiveReportError(reportCount, "無効にできません");
+    if (error) throw new UserFacingError(error);
     const member = await tx.member.update({ where: { id }, data: { status: "INACTIVE" } });
     const diff = diffForAudit(before, { status: member.status });
     if (diff) {
@@ -490,12 +519,24 @@ export async function removeMemberSkill(
   actorMemberId: string | null
 ) {
   return prisma.$transaction(async (tx) => {
+    const changedAt = new Date();
     const removed = await tx.memberSkill.delete({
       where: {
         memberId_skillId: {
           memberId,
           skillId
         }
+      }
+    });
+    await tx.skillLevelChange.create({
+      data: {
+        memberId,
+        skillId,
+        fromLevel: removed.level,
+        toLevel: null,
+        source: SkillLevelChangeSource.DIRECT_EDIT,
+        changedByMemberId: actorMemberId,
+        changedAt
       }
     });
     await recordAuditLog(tx, {

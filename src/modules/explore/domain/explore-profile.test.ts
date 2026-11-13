@@ -37,6 +37,7 @@ describe("explore and profile rules", () => {
           { ...base, skillId: "ts", fromLevel: 2, toLevel: 3 },
           { ...base, skillId: "ts", fromLevel: null, toLevel: 1 },
           { ...base, skillId: "ts", fromLevel: 3, toLevel: 2 },
+          { ...base, skillId: "ts", fromLevel: 2, toLevel: null },
           {
             ...base,
             skillId: "old",
@@ -101,6 +102,34 @@ describe("explore and profile rules", () => {
       { skillId: "b", skillName: "B", level: 2, marker: { type: "new" } }
     ]);
   });
+
+  it("手放したスキルを削除後の時点では保有していないものとして復元する", () => {
+    const snapshots = restoreSkillSnapshots(
+      [
+        {
+          skillId: "a",
+          skillName: "A",
+          fromLevel: null,
+          toLevel: 2,
+          source: "DIRECT_EDIT",
+          changedAt: "2020-01-01"
+        },
+        {
+          skillId: "a",
+          skillName: "A",
+          fromLevel: 2,
+          toLevel: null,
+          source: "DIRECT_EDIT",
+          changedAt: "2022-01-01"
+        }
+      ],
+      [new Date("2021-01-01"), new Date("2023-01-01")]
+    );
+    expect(snapshots[0]?.skills).toEqual([
+      { skillId: "a", skillName: "A", level: 2 }
+    ]);
+    expect(snapshots[1]?.skills).toEqual([]);
+  });
 });
 
 describe("profile details", () => {
@@ -145,7 +174,8 @@ describe("profile details", () => {
         now: new Date("2026-01-03T00:00:00Z"),
         levelChanges: [
           { fromLevel: 1, toLevel: 2, source: "DIRECT_EDIT" },
-          { fromLevel: 2, toLevel: 1, source: "DIRECT_EDIT" }
+          { fromLevel: 2, toLevel: 1, source: "DIRECT_EDIT" },
+          { fromLevel: 1, toLevel: null, source: "DIRECT_EDIT" }
         ],
         receivedCheerCount: 2,
         receivedReactionCount: 3,

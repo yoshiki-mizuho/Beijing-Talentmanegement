@@ -296,7 +296,10 @@ function buildInput(context: Context): GrowthHintInput {
         : [];
     }),
     recentGrowth: context.skillLevelChanges
-      .filter((item) => isGrowthLevelChange(item.source))
+      .filter(
+        (item): item is typeof item & { toLevel: number } =>
+          isGrowthLevelChange(item.source) && item.toLevel !== null
+      )
       .map((item) => ({
         skillId: item.skillId,
         name: item.skill.name,

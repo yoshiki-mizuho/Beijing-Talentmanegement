@@ -8,7 +8,7 @@ export type RecapLevelChange = {
   skillId: string;
   skillName: string;
   fromLevel: number | null;
-  toLevel: number;
+  toLevel: number | null;
   source: string;
   changedAt: Date | string;
   reactionCount: number;
@@ -239,5 +239,6 @@ function tokyoMonthStart(month: string) {
 
 function isLevelUp(change: RecapLevelChange) {
   return isGrowthLevelChange(change.source) &&
+    change.toLevel !== null &&
     (change.fromLevel === null || change.toLevel > change.fromLevel);
 }

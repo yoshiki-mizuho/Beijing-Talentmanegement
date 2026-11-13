@@ -31,6 +31,9 @@ export function addLevelUpReaction(input: LevelUpReactionInput) {
         skill: { select: { name: true } }
       }
     });
+    if (levelChange.toLevel === null) {
+      throw new UserFacingError("この記録にはリアクションできません。");
+    }
     if (levelChange.memberId === input.memberId) return reaction;
 
     const [actor, reactors, notification] = await Promise.all([
@@ -94,6 +97,7 @@ export async function getLevelUpInteractionAccess(
       where: { id: levelChangeId },
       select: {
         memberId: true,
+        toLevel: true,
         member: { select: { managerId: true, departmentId: true } }
       }
     }),
@@ -102,7 +106,12 @@ export async function getLevelUpInteractionAccess(
       select: { departmentId: true, status: true }
     })
   ]);
-  if (!levelChange || !viewer || viewer.status !== MemberStatus.ACTIVE) return null;
+  if (
+    !levelChange ||
+    levelChange.toLevel === null ||
+    !viewer ||
+    viewer.status !== MemberStatus.ACTIVE
+  ) return null;
   const canView =
     viewerRole === AuthRole.ADMIN ||
     levelChange.member.managerId === viewerMemberId ||
@@ -125,6 +134,9 @@ export function createLevelUpComment(input: LevelUpCommentInput) {
         }
       }
     });
+    if (levelChange.toLevel === null) {
+      throw new UserFacingError("この記録にはコメントできません。");
+    }
     const comment = await tx.levelUpComment.create({ data: input });
 
     if (levelChange.memberId !== input.authorMemberId) {

@@ -12,7 +12,7 @@ export type OrganizationLevelChange = {
   changedAt: Date;
   source: string;
   fromLevel: number | null;
-  toLevel: number;
+  toLevel: number | null;
   categoryName: string;
 };
 export type OrganizationDashboardMember = {
@@ -156,6 +156,7 @@ export function buildDepartmentMetrics(input: {
       item.changedAt >= start &&
       item.changedAt < end &&
       isGrowthLevelChange(item.source) &&
+      item.toLevel !== null &&
       item.toLevel > (item.fromLevel ?? 0),
   );
   const monthly = months.map((month) => ({

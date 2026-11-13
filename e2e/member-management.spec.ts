@@ -225,6 +225,57 @@ test(
   }
 );
 
+test("部下がいる上司は無効化できず、上司を外した後は無効化できる", async ({ browser }) => {
+  const data = createE2eTestData();
+  const department = await data.createDepartment("無効化確認部署");
+  const manager = await data.createMember({
+    label: "無効化確認上司",
+    departmentId: department.id,
+    role: "MANAGER",
+  });
+  const report = await data.createMember({
+    label: "無効化確認部下",
+    departmentId: department.id,
+    managerId: manager.member.id,
+  });
+  const admin = await openLoggedInContext(browser, credentials.ADMIN);
+  try {
+    await admin.page.goto("/members");
+    await admin.page.getByLabel("キーワード").fill(manager.member.employeeNo);
+    const managerRow = admin.page.getByRole("row").filter({ hasText: manager.member.employeeNo });
+    await managerRow.getByRole("button", { name: `${manager.member.name}の詳細を開く` }).click();
+    let detailDialog = admin.page.getByRole("dialog", { name: `${manager.member.name}の詳細` });
+    await detailDialog.getByRole("tab", { name: "アカウント" }).click();
+    await detailDialog.getByRole("button", { name: "無効化", exact: true }).click();
+    await admin.page.getByRole("dialog", { name: "メンバーを無効化しますか" })
+      .getByRole("button", { name: "無効化する", exact: true }).click();
+    await expect(admin.page.getByText("部下がいるメンバーは無効にできません。先に部下の上司を付け替えてください。")).toBeVisible();
+    await detailDialog.getByRole("button", { name: "ダイアログを閉じる" }).click();
+
+    await admin.page.getByLabel("キーワード").fill(report.member.employeeNo);
+    const reportRow = admin.page.getByRole("row").filter({ hasText: report.member.employeeNo });
+    await reportRow.getByRole("button", { name: `${report.member.name}の詳細を開く` }).click();
+    detailDialog = admin.page.getByRole("dialog", { name: `${report.member.name}の詳細` });
+    await detailDialog.getByRole("tab", { name: "アカウント" }).click();
+    await detailDialog.getByLabel("上司").selectOption("");
+    await detailDialog.getByRole("button", { name: "上司を更新" }).click();
+    await expect(admin.page.getByText("上司を更新しました。")).toBeVisible();
+    await detailDialog.getByRole("button", { name: "ダイアログを閉じる" }).click();
+
+    await admin.page.getByLabel("キーワード").fill(manager.member.employeeNo);
+    await managerRow.getByRole("button", { name: `${manager.member.name}の詳細を開く` }).click();
+    detailDialog = admin.page.getByRole("dialog", { name: `${manager.member.name}の詳細` });
+    await detailDialog.getByRole("tab", { name: "アカウント" }).click();
+    await detailDialog.getByRole("button", { name: "無効化", exact: true }).click();
+    await admin.page.getByRole("dialog", { name: "メンバーを無効化しますか" })
+      .getByRole("button", { name: "無効化する", exact: true }).click();
+    await expect(admin.page.getByText("メンバーを無効化しました。")).toBeVisible();
+  } finally {
+    await admin.context.close();
+    await data.cleanup();
+  }
+});
+
 test("メンバー一覧の条件と詳細をURLから復元できる", async ({ page }) => {
   const data = createE2eTestData();
   const department = await data.createDepartment("URL復元部署");

@@ -26,7 +26,7 @@ export function buildOrganizationDashboard(input: {
     changedAt: Date;
     source: string;
     fromLevel: number | null;
-    toLevel: number;
+    toLevel: number | null;
   }[];
   pendingAssessments: { memberId: string; createdAt: Date }[];
   now: Date;
@@ -45,7 +45,9 @@ export function buildOrganizationDashboard(input: {
   });
   const changes = input.levelChanges.filter(
     (item) =>
-      isGrowthLevelChange(item.source) && item.toLevel > (item.fromLevel ?? 0),
+      isGrowthLevelChange(item.source) &&
+      item.toLevel !== null &&
+      item.toLevel > (item.fromLevel ?? 0),
   );
   const monthlyLevelUps = months.map((month) => ({
     label: month.label,

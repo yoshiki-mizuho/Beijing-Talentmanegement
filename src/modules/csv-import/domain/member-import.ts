@@ -19,6 +19,7 @@ export type MemberImportState = {
   }>;
   departments: Array<{ id: string; code: string }>;
   roles: Array<{ id: string; code: string; name: string; isActive: boolean }>;
+  users: Array<{ email: string; memberId: string | null }>;
 };
 
 export type MemberChange = {
@@ -92,12 +93,16 @@ export function validateMemberImport(
         `メールアドレス ${email} がCSV内で重複しています`,
       );
     if (email) emailRows.set(email, record.row);
-    const conflicting = state.members.find(
+    const current = existingByNo.get(employeeNo);
+    const conflictingUser = state.users.find(
+      (user) => user.email.toLowerCase() === email && user.memberId !== current?.id,
+    );
+    const conflictingMember = state.members.find(
       (member) =>
         member.email.toLowerCase() === email &&
         member.employeeNo !== employeeNo,
     );
-    if (conflicting)
+    if (conflictingUser || conflictingMember)
       addError(
         errors,
         record,
@@ -138,9 +143,37 @@ export function validateMemberImport(
       record.values.employee_no,
       record.values.manager_employee_no || null,
     );
+  const finalMembers = new Map(
+    state.members.map((member) => [
+      member.employeeNo,
+      { status: member.status, managerEmployeeNo: member.managerEmployeeNo }
+    ])
+  );
+  for (const record of records) {
+    finalMembers.set(record.values.employee_no, {
+      status: record.values.status.toUpperCase(),
+      managerEmployeeNo: record.values.manager_employee_no || null
+    });
+  }
   for (const record of records) {
     const employeeNo = record.values.employee_no;
     const managerNo = record.values.manager_employee_no;
+    const status = record.values.status.toUpperCase();
+    if (status === "INACTIVE" || status === "LEAVE") {
+      const reportCount = [...finalMembers.values()].filter(
+        (member) =>
+          member.status === "ACTIVE" &&
+          member.managerEmployeeNo === employeeNo
+      ).length;
+      if (reportCount > 0) {
+        addError(
+          errors,
+          record,
+          "status",
+          "部下がいるメンバーは無効にできません。先に部下の上司を付け替えてください。",
+        );
+      }
+    }
     if (!managerNo) continue;
     const manager = existingByNo.get(managerNo);
     if (!manager && rowsByNo.has(managerNo))
@@ -198,7 +231,7 @@ export function validateMemberImport(
       row: record.row,
       code: record.values.employee_no,
       name: record.values.name,
-      email: record.values.email,
+      email: record.values.email.toLowerCase(),
       departmentId: department.id,
       departmentCode: department.code,
       jobTitle: record.values.job_title || null,

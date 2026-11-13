@@ -38,6 +38,7 @@ describe("monthly recap", () => {
       ...base,
       levelChanges: [
         change("new", "2026-10-01T00:00:00+09:00", null, 2),
+        change("removed", "2026-10-01T12:00:00+09:00", 2, null),
         { ...change("backfill", "2026-10-02T00:00:00+09:00", 1, 2), source: "BACKFILL" },
         { ...change("csv", "2026-10-03T00:00:00+09:00", 1, 2), source: "CSV_IMPORT" }
       ],
@@ -73,6 +74,21 @@ describe("monthly recap", () => {
     expect(recap.roleProgress).toMatchObject({ startPercentage: 0, endPercentage: 100, achieved: true });
   });
 
+  it("restores a removed skill before the removal and excludes it afterward", () => {
+    const recap = buildMonthlyRecap({
+      ...base,
+      currentSkills: [],
+      levelChanges: [change("removed", "2026-10-15T00:00:00+09:00", 3, null)],
+      targetRole: { name: "フロントエンド", requirements: [{ skillId: "next", skillName: "Next.js", requiredLevel: 3, isRequired: true, anyOfGroup: null }] }
+    });
+    expect(recap.levelUpCount).toBe(0);
+    expect(recap.roleProgress).toMatchObject({
+      startPercentage: 100,
+      endPercentage: 0,
+      achieved: false
+    });
+  });
+
   it("limits viewable months and decides whether to show the celebration", () => {
     expect(getViewableRecapMonths("2026-09-01T00:00:00+09:00", new Date("2026-11-06T00:00:00+09:00"))).toEqual(["2026-09", "2026-10"]);
     expect(shouldShowMonthlyRecap({ memberCreatedAt: "2026-09-01T00:00:00+09:00", now: new Date("2026-11-01T00:00:00+09:00"), lastRecapSeenMonth: null, hasEvents: true })).toBe(true);
@@ -89,7 +105,7 @@ describe("monthly recap", () => {
   });
 });
 
-function change(id: string, changedAt: string, fromLevel: number | null, toLevel: number) {
+function change(id: string, changedAt: string, fromLevel: number | null, toLevel: number | null) {
   return { id, skillId: "next", skillName: "Next.js", fromLevel, toLevel, source: "ASSESSMENT_APPROVED", changedAt, reactionCount: 0, commentCount: 0 };
 }
 function assessment(status: "APPROVED" | "CORRECTED" | "REJECTED" | "PENDING") { return { skillId: "next", skillName: "Next.js", status, createdAt: "2026-10-10T00:00:00+09:00" }; }
