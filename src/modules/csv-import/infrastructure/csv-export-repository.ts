@@ -47,6 +47,10 @@ export async function loadCsvExportRows<T extends CsvExportTarget>(
           category: { select: { name: true } },
           description: true,
           isActive: true,
+          levelGuides: {
+            select: { level: true, description: true },
+            orderBy: { level: "asc" },
+          },
         },
         orderBy: { code: "asc" },
       }) as Promise<CsvExportRows[T]>;

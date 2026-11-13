@@ -80,6 +80,50 @@ test("管理者が空コードのスキルCSVを登録できる", async ({ brows
   }
 });
 
+test("管理者がレベルの目安つきスキルCSVを登録できる", async ({ browser }) => {
+  const data = createE2eTestData();
+  const department = await data.createDepartment("目安CSV管理部署");
+  const account = await data.createMember({
+    label: "目安CSV管理者",
+    departmentId: department.id,
+    role: "ADMIN",
+  });
+  const admin = await openLoggedInContext(browser, account.credential);
+  const suffix = Date.now();
+  const skillName = `E2E目安スキル-${suffix}`;
+  const categoryName = `E2E目安カテゴリ-${suffix}`;
+  try {
+    await admin.page.goto("/csv");
+    await admin.page
+      .getByRole("button", { name: "スキル", exact: true })
+      .click();
+    await admin.page.getByLabel("スキルのCSVファイル").setInputFiles({
+      name: "skills-with-level-guides.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from(
+        `skill_code,skill_name,category_name,description,is_active,level_guide_1,level_guide_2,level_guide_3,level_guide_4,level_guide_5\r\n,${skillName},${categoryName},E2E,true,Lv1の目安,,Lv3の目安,,\r\n`,
+      ),
+    });
+    await admin.page.getByRole("button", { name: "1件を登録" }).click();
+    await expect(
+      admin.page.getByRole("heading", { name: "登録しました" }),
+    ).toBeVisible();
+    await data.trackCreated({
+      skillNames: [skillName],
+      categoryNames: [categoryName],
+    });
+    await admin.page.goto("/skills");
+    await admin.page.getByLabel(`${skillName}を編集`).click();
+    const editDialog = admin.page.getByRole("dialog");
+    await expect(editDialog.getByLabel("Lv1", { exact: true })).toHaveValue("Lv1の目安");
+    await expect(editDialog.getByLabel("Lv3", { exact: true })).toHaveValue("Lv3の目安");
+    await expect(editDialog.getByLabel("Lv2", { exact: true })).toHaveValue("");
+  } finally {
+    await admin.context.close();
+    await data.cleanup();
+  }
+});
+
 test("検証エラーがあるCSVは登録できない", async ({ browser }) => {
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
   try {

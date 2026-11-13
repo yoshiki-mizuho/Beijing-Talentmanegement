@@ -8,6 +8,7 @@ import {
   AUDIT_ACTION,
   AUDIT_TARGET_TYPE,
 } from "@/modules/audit/domain/audit-action";
+import { diffForAudit } from "@/modules/audit/domain/audit-diff";
 import { recordAuditLog } from "@/modules/audit/infrastructure/audit-repository";
 import { prisma } from "@/server/db/prisma";
 import {
@@ -102,6 +103,10 @@ export async function loadSkillImportState(): Promise<{
         category: { select: { name: true } },
         description: true,
         isActive: true,
+        levelGuides: {
+          select: { level: true, description: true },
+          orderBy: { level: "asc" },
+        },
       },
     }),
     prisma.skillCategory.findMany({ select: { id: true, name: true } }),
@@ -634,25 +639,73 @@ async function applySkills(
     if (movedCategory) {
       nextSkillOrders.set(categoryId, (nextSkillOrders.get(categoryId) ?? 0) + 1);
     }
+    const skillChanges = Object.fromEntries(
+      Object.entries(change.changes).filter(
+        ([field]) => !field.startsWith("levelGuide"),
+      ),
+    );
     const saved =
       change.kind === "new"
         ? await tx.skill.create({ data })
-        : await tx.skill.update({ where: { id: change.id }, data });
-    await recordAuditLog(tx, {
-      actorMemberId,
-      action:
-        change.kind === "new"
-          ? AUDIT_ACTION.SKILL_CREATE
-          : AUDIT_ACTION.SKILL_UPDATE,
-      targetType: AUDIT_TARGET_TYPE.SKILL,
-      targetId: saved.id,
-      csvImportJobId: jobId,
-      before:
-        change.kind === "update" ? beforeFromChanges(change.changes) : null,
-      after: change.kind === "new" ? data : afterFromChanges(change.changes),
-      changedFields:
-        change.kind === "update" ? Object.keys(change.changes) : undefined,
-    });
+        : Object.keys(skillChanges).length > 0
+          ? await tx.skill.update({ where: { id: change.id }, data })
+          : await tx.skill.findUniqueOrThrow({ where: { id: change.id } });
+    if (change.kind === "new" || Object.keys(skillChanges).length > 0) {
+      await recordAuditLog(tx, {
+        actorMemberId,
+        action:
+          change.kind === "new"
+            ? AUDIT_ACTION.SKILL_CREATE
+            : AUDIT_ACTION.SKILL_UPDATE,
+        targetType: AUDIT_TARGET_TYPE.SKILL,
+        targetId: saved.id,
+        csvImportJobId: jobId,
+        before:
+          change.kind === "update" ? beforeFromChanges(skillChanges) : null,
+        after: change.kind === "new" ? data : afterFromChanges(skillChanges),
+        changedFields:
+          change.kind === "update" ? Object.keys(skillChanges) : undefined,
+      });
+    }
+    if (change.levelGuides !== null) {
+      const beforeGuides = await tx.skillLevelGuide.findMany({
+        where: { skillId: saved.id },
+        select: { level: true, description: true },
+        orderBy: { level: "asc" },
+      });
+      for (const guide of change.levelGuides) {
+        if (guide.description === "") {
+          await tx.skillLevelGuide.deleteMany({
+            where: { skillId: saved.id, level: guide.level },
+          });
+        } else {
+          await tx.skillLevelGuide.upsert({
+            where: { skillId_level: { skillId: saved.id, level: guide.level } },
+            create: { skillId: saved.id, ...guide },
+            update: { description: guide.description },
+          });
+        }
+      }
+      const before = Object.fromEntries(
+        beforeGuides.map((guide) => [guide.level, guide.description]),
+      );
+      const after = Object.fromEntries(
+        change.levelGuides
+          .filter((guide) => guide.description !== "")
+          .map((guide) => [guide.level, guide.description]),
+      );
+      const guideDiff = diffForAudit(before, after);
+      if (guideDiff) {
+        await recordAuditLog(tx, {
+          actorMemberId,
+          action: AUDIT_ACTION.SKILL_LEVEL_GUIDES_UPDATE,
+          targetType: AUDIT_TARGET_TYPE.SKILL,
+          targetId: saved.id,
+          csvImportJobId: jobId,
+          ...guideDiff,
+        });
+      }
+    }
   }
 }
 

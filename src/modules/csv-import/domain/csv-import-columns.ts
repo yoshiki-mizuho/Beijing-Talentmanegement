@@ -27,8 +27,32 @@ export function isCsvImportTarget(value: string): value is CsvImportTarget {
 
 export function mapCsvRecords(target: CsvImportTarget, csv: ParsedCsv) {
   const expected = [...csvExportDefinitions[target].columns];
+  const skillLevelGuideColumns = expected.filter((column) =>
+    column.startsWith("level_guide_"),
+  );
+  const includedSkillLevelGuideColumns = skillLevelGuideColumns.filter((column) =>
+    csv.headers.includes(column),
+  );
+  const skillLevelGuidesIncluded =
+    target === "skills" &&
+    includedSkillLevelGuideColumns.length === skillLevelGuideColumns.length;
+  const required =
+    target === "skills"
+      ? expected.filter((column) => !skillLevelGuideColumns.includes(column))
+      : expected;
   const errors: CsvImportError[] = [];
-  for (const column of expected) {
+  if (
+    target === "skills" &&
+    includedSkillLevelGuideColumns.length > 0 &&
+    !skillLevelGuidesIncluded
+  ) {
+    errors.push({
+      row: 1,
+      column: "level_guide_1",
+      message: "レベルの目安の列は5つそろえてください",
+    });
+  }
+  for (const column of required) {
     if (!csv.headers.includes(column)) {
       errors.push({ row: 1, column, message: `列 ${column} がありません` });
     }
@@ -44,7 +68,7 @@ export function mapCsvRecords(target: CsvImportTarget, csv: ParsedCsv) {
     }
   }
   if (errors.length > 0) {
-    return { records: [] as CsvRecord[], errors };
+    return { records: [] as CsvRecord[], errors, skillLevelGuidesIncluded };
   }
   const records = csv.rows.map((row) => ({
     row: row.line,
@@ -52,7 +76,7 @@ export function mapCsvRecords(target: CsvImportTarget, csv: ParsedCsv) {
       csv.headers.map((header, index) => [header, row.values[index] ?? ""]),
     ),
   }));
-  return { records, errors };
+  return { records, errors, skillLevelGuidesIncluded };
 }
 
 export function parseActive(record: CsvRecord, errors: CsvImportError[]) {

@@ -40,6 +40,11 @@ export const csvExportDefinitions = {
       "category_name",
       "description",
       "is_active",
+      "level_guide_1",
+      "level_guide_2",
+      "level_guide_3",
+      "level_guide_4",
+      "level_guide_5",
     ],
   },
   "member-skills": {
@@ -96,6 +101,7 @@ export type CsvExportRows = {
     category: { name: string };
     description: string | null;
     isActive: boolean;
+    levelGuides: Array<{ level: number; description: string }>;
   }>;
   "member-skills": Array<{
     member: { employeeNo: string };
@@ -151,6 +157,10 @@ export function toCsvExportRows<T extends CsvExportTarget>(
         row.category.name,
         row.description ?? "",
         row.isActive,
+        ...[1, 2, 3, 4, 5].map(
+          (level) =>
+            row.levelGuides.find((guide) => guide.level === level)?.description ?? "",
+        ),
       ]);
     case "member-skills":
       return (rows as CsvExportRows["member-skills"]).map((row) => [
