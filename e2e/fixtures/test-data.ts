@@ -126,6 +126,7 @@ export function createE2eTestData() {
       const value = unique(label);
       const role = await prisma.role.create({
         data: {
+          code: `ROLE-E2E-${crypto.randomUUID()}`,
           name: value,
           roleRequirements: { create: requirements.map((item) => ({ ...item, isRequired: true })) },
         },

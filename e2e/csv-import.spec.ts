@@ -179,7 +179,7 @@ test("管理者がメンバーCSVでログインユーザー付きのメンバ�
     await admin.page.getByLabel("メンバーのCSVファイル").setInputFiles({
       name: "members.csv",
       mimeType: "text/csv",
-      buffer: Buffer.from(`employee_no,name,email,department_code,job_title,status,manager_employee_no,target_role_name\r\n${employeeNo},E2Eメンバー,${email},DEV,Engineer,active,,\r\n`),
+      buffer: Buffer.from(`employee_no,name,email,department_code,job_title,status,manager_employee_no,target_role_code\r\n${employeeNo},E2Eメンバー,${email},DEV,Engineer,active,,\r\n`),
     });
     await admin.page.getByRole("button", { name: "1件を登録" }).click();
     await expect(admin.page.getByRole("heading", { name: "登録しました" })).toBeVisible();
@@ -200,7 +200,7 @@ test("管理者がメンバースキルCSVでレベルを更新し監査ログ�
   const suffix = Date.now();
   const employeeNo = `E2EMS${suffix}`;
   const email = `e2e-member-skill-${suffix}@example.com`;
-  const memberCsv = (status: "active" | "inactive") => `employee_no,name,email,department_code,job_title,status,manager_employee_no,target_role_name\r\n${employeeNo},E2E評価メンバー,${email},DEV,Engineer,${status},,\r\n`;
+  const memberCsv = (status: "active" | "inactive") => `employee_no,name,email,department_code,job_title,status,manager_employee_no,target_role_code\r\n${employeeNo},E2E評価メンバー,${email},DEV,Engineer,${status},,\r\n`;
   const csv = (level: number) => `employee_no,skill_code,level,years_of_experience,last_assessed_at\r\n${employeeNo},DEMO-SKILL-016,${level},6,2026-10-17\r\n`;
   try {
     await importByApi(admin.page, "members", memberCsv("active"));
@@ -231,10 +231,11 @@ test("管理者がロールCSVで要件を更新・削除・追加できる", as
     { skillId: first.skill.id, requiredLevel: 2 },
     { skillId: removed.skill.id, requiredLevel: 2 },
   ]);
+  const renamedRole = `${role.name}-変更後`;
   const content = [
-    "role_name,description,is_active,skill_code,required_level,is_required,any_of_group",
-    `${role.name},,true,${first.skill.code},4,true,`,
-    `${role.name},,true,${added.skill.code},3,true,`,
+    "role_code,role_name,description,is_active,skill_code,required_level,is_required,any_of_group",
+    `${role.code},${renamedRole},,true,${first.skill.code},4,true,`,
+    `${role.code},${renamedRole},,true,${added.skill.code},3,true,`,
     "",
   ].join("\r\n");
   try {
@@ -248,9 +249,10 @@ test("管理者がロールCSVで要件を更新・削除・追加できる", as
     await expect(admin.page.getByText("更新").first()).toBeVisible();
     await expect(admin.page.getByText("削除").first()).toBeVisible();
     await expect(admin.page.getByText("新規").first()).toBeVisible();
-    await admin.page.getByRole("button", { name: "3件を登録" }).click();
+    await admin.page.getByRole("button", { name: "4件を登録" }).click();
     await expect(admin.page.getByRole("heading", { name: "登録しました" })).toBeVisible();
     await admin.page.goto(`/roles?role=${encodeURIComponent(role.id)}`);
+    await expect(admin.page.getByRole("heading", { name: renamedRole })).toBeVisible();
     await expect(admin.page.getByRole("row", { name: new RegExp(`${first.skill.name}.*Lv4`) })).toBeVisible();
     await expect(admin.page.getByRole("row", { name: new RegExp(`${added.skill.name}.*Lv3`) })).toBeVisible();
     await expect(admin.page.getByText(removed.skill.name)).toHaveCount(0);

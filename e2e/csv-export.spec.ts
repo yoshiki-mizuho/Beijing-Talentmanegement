@@ -31,7 +31,7 @@ test("管理者が5種類のCSVを出力して監査ログを確認できる", a
     const active = await admin.page.request.get("/api/csv/export/members");
     expect(active.status()).toBe(200);
     expect((await active.text()).split("\r\n")[0]).toBe(
-      '\uFEFF"employee_no","name","email","department_code","job_title","status","manager_employee_no","target_role_name"',
+      '\uFEFF"employee_no","name","email","department_code","job_title","status","manager_employee_no","target_role_code"',
     );
     const all = await admin.page.request.get(
       "/api/csv/export/members?scope=all",
@@ -40,7 +40,7 @@ test("管理者が5種類のCSVを出力して監査ログを確認できる", a
     const roles = await admin.page.request.get("/api/csv/export/roles");
     expect(roles.status()).toBe(200);
     expect((await roles.text()).split("\r\n")[0]).toBe(
-      '\uFEFF"role_name","description","is_active","skill_code","required_level","is_required","any_of_group"',
+      '\uFEFF"role_code","role_name","description","is_active","skill_code","required_level","is_required","any_of_group"',
     );
     await admin.page.goto("/audit-logs?period=today&target=csv");
     await expect(

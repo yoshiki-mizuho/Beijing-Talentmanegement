@@ -3,7 +3,7 @@ import { validateMemberImport, type MemberImportState } from "./member-import";
 
 const state: MemberImportState = {
   departments: [{ id: "d1", code: "DEV" }],
-  roles: [{ id: "r1", name: "リード", isActive: true }],
+  roles: [{ id: "r1", code: "ROLE-0001", name: "リード", isActive: true }],
   members: [
     {
       id: "m1",
@@ -34,7 +34,7 @@ function record(row: number, values: Partial<Record<string, string>> = {}) {
       job_title: "",
       status: "active",
       manager_employee_no: "",
-      target_role_name: "",
+      target_role_code: "",
       ...values,
     },
   };
@@ -51,6 +51,17 @@ describe("validateMemberImport", () => {
     });
   });
 
+  it("target_role_codeで有効な目標ロールを設定する", () => {
+    const result = validateMemberImport([
+      record(2, { target_role_code: "ROLE-0001" }),
+    ], state);
+    expect(result.errors).toEqual([]);
+    expect(result.changes[0]).toMatchObject({
+      targetRoleId: "r1",
+      targetRoleName: "リード",
+    });
+  });
+
   it("メール、部署、status、上司、ロールを検証する", () => {
     const result = validateMemberImport(
       [
@@ -59,7 +70,7 @@ describe("validateMemberImport", () => {
           department_code: "NONE",
           status: "x",
           manager_employee_no: "E002",
-          target_role_name: "無効",
+          target_role_code: "ROLE-9999",
         }),
       ],
       state,
@@ -70,7 +81,7 @@ describe("validateMemberImport", () => {
         "department_code",
         "status",
         "manager_employee_no",
-        "target_role_name",
+        "target_role_code",
       ]),
     );
   });

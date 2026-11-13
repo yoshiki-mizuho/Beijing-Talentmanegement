@@ -15,6 +15,7 @@ import {
 } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
+import { generateNextRoleCodeFromExistingCodes } from "../src/modules/roles/domain/role-code";
 import { assertDemoSeedAllowed, readDemoSeedPasswords } from "./seed-config";
 import {
   buildSkillAssessmentRequestNotificationBody,
@@ -282,16 +283,25 @@ async function main() {
       });
     }
 
+    const roleCodes = (await tx.role.findMany({ select: { code: true } }))
+      .map((role) => role.code);
     for (const role of demoRoles) {
-      await tx.role.upsert({
+      const existingRole = await tx.role.findUnique({
         where: { name: role.name },
-        update: {},
-        create: {
-          name: role.name,
-          description: role.description,
-          isActive: true
-        }
+        select: { id: true }
       });
+      if (!existingRole) {
+        const code = generateNextRoleCodeFromExistingCodes(roleCodes);
+        await tx.role.create({
+          data: {
+            code,
+            name: role.name,
+            description: role.description,
+            isActive: true
+          }
+        });
+        roleCodes.push(code);
+      }
     }
 
     const departmentCodes = [

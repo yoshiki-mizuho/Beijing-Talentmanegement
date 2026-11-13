@@ -84,6 +84,7 @@ erDiagram
 
   Skill {
     string id
+    string code
     string name
     string categoryId
     string description
@@ -128,6 +129,7 @@ erDiagram
 
   Role {
     string id
+    string code
     string name
     string description
     boolean isActive
@@ -166,12 +168,12 @@ erDiagram
 | `Department` | 部署、部門、チームなどの所属単位 | `code` は一意。無効化しても過去メンバーとの関連は保持する |
 | `Member` | スキル管理対象者 | `employeeNo` と `email` は一意。在籍状態を持つ |
 | `SkillCategory` | スキルの分類 | 表示順を持つ |
-| `Skill` | 管理対象スキル | 同一カテゴリ内で名称重複を避け、カテゴリ内の表示順を持つ |
+| `Skill` | 管理対象スキル | コードは自動採番し、作成後は変更しない。CSVの照合に使う。名前、カテゴリ、大分類は後から変更できる。同一カテゴリ内で名称重複を避け、カテゴリ内の表示順を持つ |
 | `SkillLevel` | 1から5のレベル定義 | 初期値は固定マスタとして扱う |
 | `MemberSkill` | 承認済みのメンバーとスキルの紐付け | `memberId` と `skillId` の組み合わせは一意。manager承認後の値を保持する |
 | `SkillSelfAssessment` | メンバー自身が申告したスキル更新依頼 | `pending`、`approved`、`corrected`、`rejected` の状態を持つ |
 | `Notification` | ユーザーへの業務通知 | 承認依頼、承認結果、差し戻しを通知する |
-| `Role` | 職務、期待役割、キャリアロール | 無効化しても過去判定の参照は可能にする |
+| `Role` | 職務、期待役割、キャリアロール | コードは自動採番し、作成後は変更しない。CSVの照合に使う。名前は後から変更できる。無効化しても過去判定の参照は可能にする |
 | `RoleRequirement` | ロール達成に必要なスキル条件 | `roleId` と `skillId` の組み合わせは一意。`anyOfGroup` が同じ必須要件は「いずれか1つ」を満たせば1つの達成単位として扱い、`null` は単独要件とする |
 | `AuditLog` | 重要操作の履歴 | 業務データから直接更新しない |
 | `CsvImportJob` | CSV importの実行単位 | プレビュー、検証、登録結果の追跡に使う |

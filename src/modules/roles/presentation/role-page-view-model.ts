@@ -4,6 +4,7 @@ import { evaluateMemberForRole } from "@/modules/roles/application/role-service"
 
 type RoleSource = {
   id: string;
+  code: string;
   name: string;
   description: string | null;
   isActive: boolean;
@@ -86,6 +87,7 @@ export function buildRolePageViewModel(input: {
 
       return {
         id: role.id,
+        code: role.code,
         name: role.name,
         description: role.description,
         isActive: role.isActive,

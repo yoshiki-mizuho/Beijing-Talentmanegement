@@ -1,19 +1,57 @@
 import type { RoleInput, RoleRequirementInput } from "@/modules/roles/domain/role-schema";
+import { generateNextRoleCodeFromExistingCodes } from "@/modules/roles/domain/role-code";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/server/db/prisma";
 import { AUDIT_ACTION, AUDIT_TARGET_TYPE } from "@/modules/audit/domain/audit-action";
 import { diffForAudit } from "@/modules/audit/domain/audit-diff";
 import { recordAuditLog } from "@/modules/audit/infrastructure/audit-repository";
+import { UserFacingError } from "@/shared/lib/user-facing-error";
+
+const ROLE_CODE_PREFIX = "ROLE-";
 
 function roleAuditFields(role: {
+  code: string;
   name: string;
   description: string | null;
   isActive: boolean;
 }) {
   return {
+    code: role.code,
     name: role.name,
     description: role.description,
     isActive: role.isActive
   };
+}
+
+async function generateNextRoleCode(client: Prisma.TransactionClient) {
+  const roles = await client.role.findMany({
+    where: { code: { startsWith: ROLE_CODE_PREFIX } },
+    select: { code: true }
+  });
+  return generateNextRoleCodeFromExistingCodes(roles.map((role) => role.code));
+}
+
+function isRoleCodeConflict(error: unknown) {
+  if (!error || typeof error !== "object" || !("code" in error)) return false;
+  if ((error as { code?: unknown }).code !== "P2002" || !("meta" in error)) return false;
+  const target = (error as { meta?: { target?: unknown } }).meta?.target;
+  const targetText = Array.isArray(target) ? target.join(",") : String(target ?? "");
+  return targetText.toLowerCase().includes("code");
+}
+
+async function createRoleWithRetry<T>(
+  operation: (tx: Prisma.TransactionClient, code: string) => Promise<T>
+) {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      return await prisma.$transaction(async (tx) =>
+        operation(tx, await generateNextRoleCode(tx))
+      );
+    } catch (error) {
+      if (!isRoleCodeConflict(error)) throw error;
+    }
+  }
+  throw new UserFacingError("ロールコードを採番できませんでした。もう一度お試しください。");
 }
 
 export async function listRoles() {
@@ -39,8 +77,8 @@ export async function listRoles() {
 }
 
 export async function createRole(input: RoleInput, actorMemberId: string | null) {
-  return prisma.$transaction(async (tx) => {
-    const role = await tx.role.create({ data: input });
+  return createRoleWithRetry(async (tx, code) => {
+    const role = await tx.role.create({ data: { ...input, code } });
     await recordAuditLog(tx, {
       actorMemberId,
       action: AUDIT_ACTION.ROLE_CREATE,
@@ -57,8 +95,8 @@ export async function createRoleWithRequirements(
   requirements: { skillId: string; requiredLevel: number; anyOfGroup?: number | null }[],
   actorMemberId: string | null
 ) {
-  return prisma.$transaction(async (tx) => {
-    const role = await tx.role.create({ data: input });
+  return createRoleWithRetry(async (tx, code) => {
+    const role = await tx.role.create({ data: { ...input, code } });
     if (requirements.length > 0) {
       await tx.roleRequirement.createMany({
         data: requirements.map((requirement) => ({

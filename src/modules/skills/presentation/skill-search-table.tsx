@@ -625,7 +625,6 @@ function SkillSearchTableInner({
               onSuccess={handleEditSuccess}
             >
               <input type="hidden" name="id" value={editingSkill.id} />
-              <input type="hidden" name="code" value={editingSkill.code} />
               <div>
                 <p className="text-sm font-medium text-[var(--foreground)]">
                   スキルコード

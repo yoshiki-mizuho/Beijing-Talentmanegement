@@ -1,5 +1,6 @@
 import {
   createSkillInputSchema,
+  updateSkillInputSchema,
   commonSkillLevelGuidesInputSchema,
   reorderSkillsInputSchema,
   reorderSkillCategoryGroupsInputSchema,
@@ -7,7 +8,6 @@ import {
   bulkAssignSkillCategoryGroupInputSchema,
   skillCategoryGroupInputSchema,
   skillCategoryInputSchema,
-  skillInputSchema,
   skillLevelGuidesInputSchema
 } from "@/modules/skills/domain/skill-schema";
 import {
@@ -129,7 +129,7 @@ export function createSkillWithLevelGuides(
 }
 
 export function updateSkill(id: string, input: unknown, actorMemberId: string | null) {
-  return skillRepository.updateSkill(id, skillInputSchema.parse(input), actorMemberId);
+  return skillRepository.updateSkill(id, updateSkillInputSchema.parse(input), actorMemberId);
 }
 
 export function updateSkillWithLevelGuides(
@@ -140,7 +140,7 @@ export function updateSkillWithLevelGuides(
 ) {
   return skillRepository.updateSkillWithLevelGuides(
     id,
-    skillInputSchema.parse(input),
+    updateSkillInputSchema.parse(input),
     skillLevelGuidesInputSchema.parse(levelGuides),
     actorMemberId
   );

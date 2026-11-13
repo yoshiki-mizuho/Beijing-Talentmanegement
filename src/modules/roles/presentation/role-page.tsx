@@ -463,6 +463,16 @@ function RoleFormDialog({
           {mode === "edit" && role ? (
             <input type="hidden" name="id" value={role.id} />
           ) : null}
+          {mode === "edit" && role ? (
+            <div>
+              <p className="text-sm font-medium text-[var(--foreground)]">
+                ロールコード
+              </p>
+              <p className="mt-1 text-sm text-[var(--foreground)]">
+                {role.code}
+              </p>
+            </div>
+          ) : null}
           <FormField
             id={`${mode}-role-name`}
             label="ロール名"

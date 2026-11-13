@@ -1,9 +1,11 @@
+import { generateNextRoleCodeFromExistingCodes } from "@/modules/roles/domain/role-code";
 import type { CsvImportError, CsvRecord } from "./csv-import-columns";
 import { parseActive, requireValue } from "./csv-import-columns";
 
 export type RoleImportState = {
   roles: Array<{
     id: string;
+    code: string;
     name: string;
     description: string | null;
     isActive: boolean;
@@ -26,6 +28,7 @@ export type RoleImportChange = {
   roleId?: string;
   skillId?: string;
   code: string;
+  roleCode: string;
   name: string;
   roleName: string;
   description?: string | null;
@@ -49,8 +52,10 @@ type PreparedRequirement = {
 export function validateRoleImport(records: CsvRecord[], state: RoleImportState) {
   const errors: CsvImportError[] = [];
   const skills = new Map(state.skills.map((skill) => [skill.code, skill]));
-  const roles = new Map(state.roles.map((role) => [role.name, role]));
+  const rolesByCode = new Map(state.roles.map((role) => [role.code, role]));
+  const rolesByName = new Map(state.roles.map((role) => [role.name, role]));
   const grouped = new Map<string, CsvRecord[]>();
+  const assignedRoleCodes: string[] = [];
 
   for (const record of records) {
     requireValue(record, "role_name", errors);
@@ -61,6 +66,17 @@ export function validateRoleImport(records: CsvRecord[], state: RoleImportState)
     }
     if (record.values.description.length > 1000) {
       add(errors, record, "description", "description は1000文字以内にしてください");
+    }
+    if (
+      record.values.role_code &&
+      !rolesByCode.has(record.values.role_code)
+    ) {
+      add(
+        errors,
+        record,
+        "role_code",
+        `ロールコード ${record.values.role_code} が見つかりません。新しいロールはコードを空にしてください`,
+      );
     }
     const requirementValues = [
       record.values.skill_code,
@@ -95,17 +111,25 @@ export function validateRoleImport(records: CsvRecord[], state: RoleImportState)
         add(errors, record, "any_of_group", "any_of_group は1以上の整数にしてください");
       }
     }
-    const rows = grouped.get(record.values.role_name) ?? [];
+    const groupKey = record.values.role_code
+      ? `code:${record.values.role_code}`
+      : `name:${record.values.role_name}`;
+    const rows = grouped.get(groupKey) ?? [];
     rows.push(record);
-    grouped.set(record.values.role_name, rows);
+    grouped.set(groupKey, rows);
   }
 
   const changes: RoleImportChange[] = [];
-  for (const [roleName, roleRecords] of grouped) {
+  for (const roleRecords of grouped.values()) {
     const first = roleRecords[0];
+    const roleCode = first.values.role_code;
+    const roleName = first.values.role_name;
     const description = first.values.description || null;
     const isActive = first.values.is_active.toLowerCase() === "true";
     for (const record of roleRecords.slice(1)) {
+      if (record.values.role_name !== first.values.role_name) {
+        add(errors, record, "role_name", "同じロールの role_name が行によって異なります");
+      }
       if (record.values.description !== first.values.description) {
         add(errors, record, "description", "同じロールの description が行によって異なります");
       }
@@ -167,9 +191,29 @@ export function validateRoleImport(records: CsvRecord[], state: RoleImportState)
       continue;
     }
 
-    const current = roles.get(roleName);
+    const current = roleCode ? rolesByCode.get(roleCode) : undefined;
+    const nameConflict = rolesByName.get(roleName);
+    if (!current && nameConflict) {
+      add(
+        errors,
+        first,
+        "role_name",
+        "同じ名前のロールがあります。更新するときは role_code を指定してください",
+      );
+      continue;
+    }
+    if (current && nameConflict && nameConflict.id !== current.id) {
+      add(errors, first, "role_name", "同じ名前のロールがあります");
+      continue;
+    }
+    const resolvedRoleCode = current?.code ?? generateNextRoleCodeFromExistingCodes([
+      ...state.roles.map((role) => role.code),
+      ...assignedRoleCodes,
+    ]);
+    if (!current) assignedRoleCodes.push(resolvedRoleCode);
     const roleDiff: RoleImportChange["changes"] = {};
     if (current) {
+      addDiff(roleDiff, "name", current.name, roleName);
       addDiff(roleDiff, "description", current.description, description);
       addDiff(roleDiff, "isActive", current.isActive, isActive);
     }
@@ -178,7 +222,8 @@ export function validateRoleImport(records: CsvRecord[], state: RoleImportState)
       kind: !current ? "new" : Object.keys(roleDiff).length ? "update" : "unchanged",
       entity: "role",
       id: current?.id,
-      code: roleName,
+      code: resolvedRoleCode,
+      roleCode: resolvedRoleCode,
       name: roleName,
       roleName,
       description,
@@ -206,6 +251,7 @@ export function validateRoleImport(records: CsvRecord[], state: RoleImportState)
         roleId: current?.id,
         skillId: requirement.skillId,
         code: `${roleName} / ${requirement.skillCode}`,
+        roleCode: resolvedRoleCode,
         name: `${roleName} / ${requirement.skillName}`,
         roleName,
         requiredLevel: requirement.requiredLevel,
@@ -224,6 +270,7 @@ export function validateRoleImport(records: CsvRecord[], state: RoleImportState)
         roleId: current?.id,
         skillId: existing.skillId,
         code: `${roleName} / ${skill?.code ?? existing.skillId}`,
+        roleCode: resolvedRoleCode,
         name: `${roleName} / ${skill?.name ?? existing.skillId}`,
         roleName,
         requiredLevel: existing.requiredLevel,

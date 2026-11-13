@@ -85,7 +85,7 @@ test.describe("UI check", () => {
       name: "members.csv",
       mimeType: "text/csv",
       buffer: Buffer.from(
-        "employee_no,name,email,department_code,job_title,status,manager_employee_no,target_role_name\r\nTM0001,Admin User,admin@example.com,DEV,UI確認役職,active,,\r\nUI-ERROR,エラー,bad,UNKNOWN,,active,,\r\n",
+        "employee_no,name,email,department_code,job_title,status,manager_employee_no,target_role_code\r\nTM0001,Admin User,admin@example.com,DEV,UI確認役職,active,,\r\nUI-ERROR,エラー,bad,UNKNOWN,,active,,\r\n",
       ),
     });
     await page.getByText("エラー").first().waitFor();
