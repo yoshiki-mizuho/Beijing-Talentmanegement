@@ -14,6 +14,8 @@ import type { getMonthlyRecap } from "@/modules/growth/application/monthly-recap
 import { EmptyState } from "@/shared/ui/empty-state";
 import { MemberAvatar } from "@/shared/ui/member-avatar";
 import { PageHeader } from "@/shared/ui/page-header";
+import type { TeamGoalCardData } from "@/modules/team-goals/application/team-goal-service";
+import { MemberTeamGoalCard } from "@/modules/team-goals/presentation/team-goal-card";
 
 // 成長カレンダーと同じ段に並べるので、高さが揃うよう新しい順に5件までにする
 const TIMELINE_LIMIT = 5;
@@ -22,7 +24,8 @@ export function MemberDashboard({
   viewModel,
   levelUpFeed,
   skillReminders,
-  monthlyRecap
+  monthlyRecap,
+  teamGoal
 }: {
   viewModel: MemberDashboardViewModel;
   levelUpFeed: SerializableFeedItem[];
@@ -32,13 +35,17 @@ export function MemberDashboard({
     staleSkills: Array<{ id: string; name: string; level: number; monthsAgo: number }>;
   };
   monthlyRecap: NonNullable<Awaited<ReturnType<typeof getMonthlyRecap>>>["recap"] | null;
+  teamGoal: TeamGoalCardData | null;
 }) {
   if (viewModel.onboardingState !== "regular") {
     return (
-      <FirstDashboard
-        viewModel={viewModel}
-        levelUpFeed={levelUpFeed}
-      />
+      <div className="space-y-5">
+        <FirstDashboard
+          viewModel={viewModel}
+          levelUpFeed={levelUpFeed}
+        />
+        {teamGoal ? <MemberTeamGoalCard goal={teamGoal} /> : null}
+      </div>
     );
   }
 
@@ -114,6 +121,8 @@ export function MemberDashboard({
           <GrowthRadarChart values={viewModel.radar} />
         </DashboardCard>
       </div>
+
+      {teamGoal ? <MemberTeamGoalCard goal={teamGoal} /> : null}
 
       {skillReminders.newSkills.length > 0 || skillReminders.staleSkills.length > 0 ? (
         <div className="grid gap-5 lg:grid-cols-2">

@@ -485,7 +485,8 @@ export async function listSkills(input?: SkillSearchInput) {
           selfAssessments: true,
           skillLevelChanges: true,
           cheers: true,
-          roleRequirements: true
+          roleRequirements: true,
+          teamGoals: true
         }
       }
     },
@@ -499,7 +500,8 @@ export async function listSkills(input?: SkillSearchInput) {
       selfAssessments: skill._count.selfAssessments,
       skillLevelChanges: skill._count.skillLevelChanges,
       cheers: skill._count.cheers,
-      roleRequirements: skill._count.roleRequirements
+      roleRequirements: skill._count.roleRequirements,
+      teamGoals: skill._count.teamGoals
     })
   }));
 }
@@ -508,16 +510,17 @@ async function countSkillUsage(
   client: Prisma.TransactionClient,
   skillId: string
 ): Promise<SkillUsage> {
-  const [memberSkills, selfAssessments, skillLevelChanges, cheers, roleRequirements] =
+  const [memberSkills, selfAssessments, skillLevelChanges, cheers, roleRequirements, teamGoals] =
     await Promise.all([
       client.memberSkill.count({ where: { skillId } }),
       client.skillSelfAssessment.count({ where: { skillId } }),
       client.skillLevelChange.count({ where: { skillId } }),
       client.cheer.count({ where: { targetSkillId: skillId } }),
-      client.roleRequirement.count({ where: { skillId } })
+      client.roleRequirement.count({ where: { skillId } }),
+      client.teamGoal.count({ where: { skillId } })
     ]);
 
-  return { memberSkills, selfAssessments, skillLevelChanges, cheers, roleRequirements };
+  return { memberSkills, selfAssessments, skillLevelChanges, cheers, roleRequirements, teamGoals };
 }
 
 async function generateNextSkillCode(client: Prisma.TransactionClient) {

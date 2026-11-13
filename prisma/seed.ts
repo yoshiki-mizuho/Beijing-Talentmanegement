@@ -10,7 +10,8 @@ import {
   NotificationType,
   SkillPrerequisiteSource,
   SkillLevelChangeSource,
-  SkillSelfAssessmentStatus
+  SkillSelfAssessmentStatus,
+  TeamGoalKind
 } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
@@ -690,6 +691,25 @@ async function main() {
           });
         }
       }
+    }
+
+    const demoManager = await tx.member.findUnique({
+      where: { email: "manager@example.com" },
+      select: { id: true, teamGoals: { select: { id: true }, take: 1 } }
+    });
+    if (demoManager && demoManager.teamGoals.length === 0) {
+      const now = new Date();
+      const tokyo = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+      await tx.teamGoal.create({
+        data: {
+          managerId: demoManager.id,
+          kind: TeamGoalKind.LEVEL_UP_COUNT,
+          targetCount: 6,
+          note: "チームで一歩ずつ成長を重ねよう",
+          startMonth: `${tokyo.getUTCFullYear()}-${String(tokyo.getUTCMonth() + 1).padStart(2, "0")}`,
+          months: 3
+        }
+      });
     }
   }, { timeout: 60_000 });
 }

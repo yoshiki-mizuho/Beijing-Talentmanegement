@@ -12,6 +12,7 @@ import { TeamDashboard } from "@/modules/dashboard/presentation/team-dashboard";
 import { buildTeamDashboardViewModel } from "@/modules/dashboard/presentation/team-dashboard-view-model";
 import { getDepartmentLevelUpFeed } from "@/modules/growth/application/growth-service";
 import { getMonthlyRecap } from "@/modules/growth/application/monthly-recap-service";
+import { getManagerTeamGoal, getMemberTeamGoal } from "@/modules/team-goals/application/team-goal-service";
 import { getCurrentSession } from "@/server/auth/session";
 
 export const dynamic = "force-dynamic";
@@ -61,11 +62,12 @@ export default async function DashboardPage({
   const personal =
     Boolean(session?.user.memberId) && (!management || view === "personal");
   if (session?.user.memberId && personal) {
-    const [data, feed, skillReminders, monthlyRecap] = await Promise.all([
+    const [data, feed, skillReminders, monthlyRecap, teamGoal] = await Promise.all([
       getMemberDashboard(session.user.memberId),
       getDepartmentLevelUpFeed(session.user.memberId, 5),
       getMemberSkillReminders(session.user.memberId),
-      getMonthlyRecap(session.user.memberId)
+      getMonthlyRecap(session.user.memberId),
+      getMemberTeamGoal(session.user.memberId)
     ]);
     const model = buildMemberDashboardViewModel(data);
     if (!model) redirect("/login");
@@ -76,6 +78,7 @@ export default async function DashboardPage({
           viewModel={model}
           skillReminders={skillReminders}
           monthlyRecap={monthlyRecap?.months.length ? monthlyRecap.recap : null}
+          teamGoal={teamGoal}
           levelUpFeed={feed.map((item) => ({
             ...item,
             avatarUpdatedAt: item.avatarUpdatedAt?.toISOString() ?? null,
@@ -90,13 +93,16 @@ export default async function DashboardPage({
     );
   }
   if (session?.user.memberId && management && view !== "organization") {
-    const team = await getTeamDashboard(session.user.memberId, month);
+    const [team, teamGoal] = await Promise.all([
+      getTeamDashboard(session.user.memberId, month),
+      getManagerTeamGoal(session.user.memberId)
+    ]);
     if (!team) redirect("/login");
     if (view === "team" || team.members.length > 0)
       return (
         <div className="space-y-4">
           <DashboardViewSwitch current="team" />
-          <TeamDashboard viewModel={buildTeamDashboardViewModel(team)} />
+          <TeamDashboard viewModel={buildTeamDashboardViewModel(team)} teamGoal={teamGoal} />
         </div>
       );
   }

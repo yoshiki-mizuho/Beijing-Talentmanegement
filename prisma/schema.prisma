@@ -87,6 +87,12 @@ enum AiUsageStatus {
   FALLBACK
 }
 
+enum TeamGoalKind {
+  LEVEL_UP_COUNT
+  LEVEL_UP_MEMBERS
+  SKILL_REACH
+}
+
 model User {
   id                     String    @id @default(cuid())
   name                   String?
@@ -195,6 +201,7 @@ model Member {
   generatedGrowthHints  GrowthHint[]          @relation("GrowthHintGeneratedBy")
   aiUsageLogs           AiUsageLog[]          @relation("AiUsageActor")
   createdSkillPrerequisites SkillPrerequisite[] @relation("SkillPrerequisiteCreatedBy")
+  teamGoals             TeamGoal[]             @relation("TeamGoalManager")
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
 
@@ -243,11 +250,31 @@ model Skill {
   levelGuides       SkillLevelGuide[]
   prerequisites     SkillPrerequisite[]   @relation("SkillPrerequisites")
   requiredBy        SkillPrerequisite[]   @relation("PrerequisiteSkill")
+  teamGoals         TeamGoal[]
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
 
   @@unique([categoryId, name])
   @@index([categoryId])
+}
+
+model TeamGoal {
+  id          String       @id @default(cuid())
+  managerId   String
+  manager     Member       @relation("TeamGoalManager", fields: [managerId], references: [id], onDelete: Cascade)
+  kind        TeamGoalKind
+  skillId     String?
+  skill       Skill?       @relation(fields: [skillId], references: [id], onDelete: Restrict)
+  targetLevel Int?
+  targetCount Int
+  note        String?
+  startMonth  String
+  months      Int
+  achievedAt  DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([managerId, createdAt])
 }
 
 model SkillPrerequisite {

@@ -46,6 +46,7 @@ const transactionClient = {
   skillLevelChange: { count: mocks.levelChangeCount },
   cheer: { count: mocks.cheerCount },
   roleRequirement: { count: mocks.requirementCount },
+  teamGoal: { count: mocks.requirementCount },
   skillPrerequisite: { count: mocks.prerequisiteCount },
   skill: {
     create: mocks.skillCreate,
