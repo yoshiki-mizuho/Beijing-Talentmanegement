@@ -2,18 +2,25 @@ import type { AuthRole, TeamGoal } from "@prisma/client";
 
 import {
   formatTeamGoalPeriod,
+  formatTeamGoalCelebrationAriaLabel,
+  formatTeamGoalCelebrationResult,
   formatTeamGoalText,
   getPreviousTeamGoalPeriod,
   getRemainingDays,
   getTeamGoalPeriod,
   getTokyoMonth,
   isDateInTeamGoalPeriod,
+  selectTeamGoalCelebration,
   teamGoalInputSchema,
   teamGoalUnit
 } from "@/modules/team-goals/domain/team-goal";
 import {
   countGoalProgress,
+  createTeamGoalAcknowledgement,
   findActiveSkill,
+  findTeamGoalAcknowledgementTarget,
+  findTeamGoalCelebrationCandidates,
+  findTeamGoalCelebrationContext,
   findLatestGoals,
   findMemberManagerId,
   findManagerWithReports,
@@ -38,6 +45,38 @@ export async function getManagerTeamGoal(managerId: string, now = new Date()) {
 export async function getMemberTeamGoal(memberId: string, now = new Date()) {
   const member = await findMemberManagerId(memberId);
   return member?.managerId ? resolveCurrentGoal(member.managerId, now) : null;
+}
+
+export async function getTeamGoalCelebration(memberId: string, now = new Date()) {
+  const context = await findTeamGoalCelebrationContext(memberId);
+  if (!context) return null;
+  const managerIds = [context.id];
+  if (context.status === "ACTIVE" && context.managerId) managerIds.push(context.managerId);
+  const candidates = await findTeamGoalCelebrationCandidates(
+    managerIds,
+    context.teamGoalAcknowledgements.map((item) => item.teamGoalId)
+  );
+  const goal = selectTeamGoalCelebration(candidates, managerIds, now);
+  if (!goal) return null;
+  const unit = teamGoalUnit(goal.kind);
+  return {
+    id: goal.id,
+    heading: formatTeamGoalPeriod(goal.startMonth, goal.months),
+    result: formatTeamGoalCelebrationResult({
+      ...goal,
+      skillName: goal.skill?.name ?? null
+    }),
+    ariaLabel: formatTeamGoalCelebrationAriaLabel(goal.targetCount, unit)
+  };
+}
+
+export async function acknowledgeTeamGoalCelebration(teamGoalId: string, memberId: string) {
+  const goal = await findTeamGoalAcknowledgementTarget(teamGoalId, memberId);
+  const isTarget = goal && (
+    goal.managerId === memberId || goal.manager.reports.length > 0
+  );
+  if (!goal?.achievedAt || !isTarget) return;
+  await createTeamGoalAcknowledgement(goal.id, memberId);
 }
 
 export async function upsertTeamGoal(input: unknown, actor: {
@@ -133,3 +172,4 @@ async function getPreviousResults(managerId: string, now: Date) {
 
 export type ManagerTeamGoalData = NonNullable<Awaited<ReturnType<typeof getManagerTeamGoal>>>;
 export type TeamGoalCardData = NonNullable<Awaited<ReturnType<typeof getMemberTeamGoal>>>;
+export type TeamGoalCelebrationData = NonNullable<Awaited<ReturnType<typeof getTeamGoalCelebration>>>;

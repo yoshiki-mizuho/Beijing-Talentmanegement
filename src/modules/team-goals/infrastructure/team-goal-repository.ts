@@ -22,6 +22,58 @@ export function findMemberManagerId(memberId: string) {
   });
 }
 
+export function findTeamGoalCelebrationContext(memberId: string) {
+  return prisma.member.findUnique({
+    where: { id: memberId },
+    select: {
+      id: true,
+      managerId: true,
+      status: true,
+      teamGoalAcknowledgements: { select: { teamGoalId: true } }
+    }
+  });
+}
+
+export function findTeamGoalCelebrationCandidates(
+  managerIds: string[],
+  acknowledgedGoalIds: string[]
+) {
+  return prisma.teamGoal.findMany({
+    where: {
+      managerId: { in: managerIds },
+      achievedAt: { not: null },
+      id: { notIn: acknowledgedGoalIds }
+    },
+    include: { skill: { select: { name: true } } }
+  });
+}
+
+export function findTeamGoalAcknowledgementTarget(teamGoalId: string, memberId: string) {
+  return prisma.teamGoal.findUnique({
+    where: { id: teamGoalId },
+    select: {
+      id: true,
+      managerId: true,
+      achievedAt: true,
+      manager: {
+        select: {
+          reports: {
+            where: { id: memberId, status: MemberStatus.ACTIVE },
+            select: { id: true }
+          }
+        }
+      }
+    }
+  });
+}
+
+export function createTeamGoalAcknowledgement(teamGoalId: string, memberId: string) {
+  return prisma.teamGoalAcknowledgement.createMany({
+    data: [{ teamGoalId, memberId }],
+    skipDuplicates: true
+  });
+}
+
 export function findLatestGoals(managerId: string) {
   return prisma.teamGoal.findMany({
     where: { managerId },

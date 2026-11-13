@@ -2,7 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 
-import { upsertTeamGoal } from "@/modules/team-goals/application/team-goal-service";
+import {
+  acknowledgeTeamGoalCelebration,
+  upsertTeamGoal
+} from "@/modules/team-goals/application/team-goal-service";
 import { requireRoles } from "@/server/auth/authorization";
 import { runAction, type ActionResult } from "@/shared/lib/action-result";
 
@@ -23,6 +26,16 @@ export async function saveTeamGoalAction(formData: FormData): Promise<ActionResu
     });
     revalidatePath("/dashboard");
   }, "チーム目標を保存しました。");
+}
+
+export async function acknowledgeTeamGoalCelebrationAction(teamGoalId: string) {
+  try {
+    const session = await requireRoles(["ADMIN", "MANAGER", "MEMBER"]);
+    if (!session.user.memberId) return;
+    await acknowledgeTeamGoalCelebration(teamGoalId, session.user.memberId);
+  } catch {
+    // 確認記録に失敗した場合は、次にダッシュボードを開いたときにもう一度表示する。
+  }
 }
 
 function stringOrUndefined(value: FormDataEntryValue | null) {

@@ -202,6 +202,7 @@ model Member {
   aiUsageLogs           AiUsageLog[]          @relation("AiUsageActor")
   createdSkillPrerequisites SkillPrerequisite[] @relation("SkillPrerequisiteCreatedBy")
   teamGoals             TeamGoal[]             @relation("TeamGoalManager")
+  teamGoalAcknowledgements TeamGoalAcknowledgement[]
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
 
@@ -271,10 +272,22 @@ model TeamGoal {
   startMonth  String
   months      Int
   achievedAt  DateTime?
+  acknowledgements TeamGoalAcknowledgement[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
   @@index([managerId, createdAt])
+}
+
+model TeamGoalAcknowledgement {
+  id         String   @id @default(cuid())
+  teamGoalId String
+  teamGoal   TeamGoal @relation(fields: [teamGoalId], references: [id], onDelete: Cascade)
+  memberId   String
+  member     Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([teamGoalId, memberId])
 }
 
 model SkillPrerequisite {

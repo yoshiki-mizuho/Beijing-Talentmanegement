@@ -14,8 +14,12 @@ import type { getMonthlyRecap } from "@/modules/growth/application/monthly-recap
 import { EmptyState } from "@/shared/ui/empty-state";
 import { MemberAvatar } from "@/shared/ui/member-avatar";
 import { PageHeader } from "@/shared/ui/page-header";
-import type { TeamGoalCardData } from "@/modules/team-goals/application/team-goal-service";
+import type {
+  TeamGoalCardData,
+  TeamGoalCelebrationData
+} from "@/modules/team-goals/application/team-goal-service";
 import { MemberTeamGoalCard } from "@/modules/team-goals/presentation/team-goal-card";
+import { TeamGoalCelebrationDialog } from "@/modules/team-goals/presentation/team-goal-celebration-dialog";
 
 // 成長カレンダーと同じ段に並べるので、高さが揃うよう新しい順に5件までにする
 const TIMELINE_LIMIT = 5;
@@ -25,7 +29,8 @@ export function MemberDashboard({
   levelUpFeed,
   skillReminders,
   monthlyRecap,
-  teamGoal
+  teamGoal,
+  teamGoalCelebration
 }: {
   viewModel: MemberDashboardViewModel;
   levelUpFeed: SerializableFeedItem[];
@@ -36,10 +41,12 @@ export function MemberDashboard({
   };
   monthlyRecap: NonNullable<Awaited<ReturnType<typeof getMonthlyRecap>>>["recap"] | null;
   teamGoal: TeamGoalCardData | null;
+  teamGoalCelebration: TeamGoalCelebrationData | null;
 }) {
   if (viewModel.onboardingState !== "regular") {
     return (
       <div className="space-y-5">
+        <TeamGoalCelebrationDialog celebration={teamGoalCelebration} />
         <FirstDashboard
           viewModel={viewModel}
           levelUpFeed={levelUpFeed}
@@ -51,6 +58,7 @@ export function MemberDashboard({
 
   return (
     <div className="space-y-5">
+      <TeamGoalCelebrationDialog celebration={teamGoalCelebration} />
       <PageHeader
         title={`おかえりなさい、${viewModel.memberName}さん`}
         description={viewModel.encouragement}
