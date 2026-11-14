@@ -153,6 +153,7 @@ export function targetGroup(type: string): AuditTargetGroup | null {
     type === "MemberSkill" ||
     type === "MemberProjectHistory" ||
     type === "MemberCertification" ||
+    type === "ProposalSheetDraft" ||
     type === "Department"
   )
     return "member";

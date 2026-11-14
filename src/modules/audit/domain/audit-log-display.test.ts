@@ -53,6 +53,20 @@ describe("audit log display", () => {
       metadata: null,
     })).toEqual({ prefix: "資格 ", target: "基本情報技術者", suffix: " を削除" });
   });
+  it("提案用シートの操作を日本語で表示する", () => {
+    expect(buildActionDescription({
+      action: "proposal_sheet.generate",
+      targetType: "ProposalSheetDraft",
+      targetName: "山田 花子",
+      before: null,
+      after: null,
+      metadata: { memberId: "member-1" },
+    })).toEqual({
+      prefix: "",
+      target: "山田 花子",
+      suffix: " の提案用シートを生成",
+    });
+  });
   it("差分と伏せた項目を行にする", () => {
     const rows = buildDiffRows(
       { level: 3 },

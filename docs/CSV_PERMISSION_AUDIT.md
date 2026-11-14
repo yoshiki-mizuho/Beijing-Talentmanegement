@@ -306,6 +306,7 @@ flowchart TD
 | 応援、リアクション、コメント | admin、manager、member | 公開範囲と対象範囲をサービスで判定。レベルアップへのリアクションとコメントは、admin、本人の上司、同じ部署の在籍中の人。 |
 | 大分類、前提スキルの関係の更新 | admin | なし。 |
 | 育成のヒントの取得、作成 | admin、manager | manager は担当範囲。 |
+| 提案用スキルシートの取得、生成、保存 | admin、manager | manager は担当範囲。本人であっても member は不可。 |
 
 ## 経歴・資格
 
@@ -314,3 +315,5 @@ flowchart TD
 | 経歴・資格・シート基本情報の閲覧と更新 | 可 | 可 | 可 | 不可 |
 
 監査操作は `member_career.create`、`member_career.update`、`member_career.delete`、`member_certification.create`、`member_certification.delete`、`member.skill_sheet_basics.update` を記録する。経歴・資格の CSV 取り込み・出力はない。
+
+提案用スキルシートは `proposal_sheet.generate` と `proposal_sheet.update` を対象種別 `ProposalSheetDraft` で記録し、監査画面ではメンバーのグループに分類する。

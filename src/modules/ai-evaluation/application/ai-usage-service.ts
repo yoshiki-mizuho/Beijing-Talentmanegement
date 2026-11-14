@@ -48,10 +48,7 @@ export async function getAiUsageSummary(monthValue?: string, now = new Date()) {
     days,
     recent: recentRows.map((row) => ({
       ...row,
-      featureName:
-        row.feature === "skill_prerequisite_suggestion"
-          ? "前提スキルの候補"
-          : "育成のヒント",
+      featureName: getAiFeatureName(row.feature),
       actorName: row.actorMemberId
         ? (names.get(row.actorMemberId) ?? "不明")
         : "システム",
@@ -61,4 +58,10 @@ export async function getAiUsageSummary(monthValue?: string, now = new Date()) {
       reason: translateAiErrorCode(row.errorCode),
     })),
   };
+}
+
+export function getAiFeatureName(feature: string) {
+  if (feature === "skill_prerequisite_suggestion") return "前提スキルの候補";
+  if (feature === "proposal_sheet") return "提案用スキルシート";
+  return "育成のヒント";
 }
