@@ -37,6 +37,18 @@ const labels: Record<string, string> = {
   skillId: "スキル",
   comment: "コメント",
   role: "権限",
+  title: "案件名",
+  startMonth: "開始年月",
+  endMonth: "終了年月",
+  industry: "業種",
+  summary: "概要",
+  teamSize: "規模",
+  businessArea: "業務領域",
+  phases: "担当工程",
+  technologies: "技術",
+  acquiredMonth: "取得年月",
+  itCareerStartMonth: "ITの仕事を始めた年月",
+  skillSheetNote: "ひとこと",
 };
 for (let level = 1; level <= 5; level += 1)
   labels[`level${level}`] = `レベルの目安 Lv${level}`;
@@ -269,6 +281,23 @@ export function buildActionDescription(
       suffix: action.endsWith(".create") ? " を作成" : " を変更",
     };
   }
+  if (action.startsWith("member_career.")) {
+    return {
+      prefix: "",
+      target: String(input.before?.title ?? input.after?.title ?? "案件の経歴"),
+      suffix: ` を${actionSuffix(action)}`,
+    };
+  }
+  if (action.startsWith("member_certification.")) {
+    return {
+      prefix: "資格 ",
+      target: String(input.before?.name ?? input.after?.name ?? "（削除済み）"),
+      suffix: ` を${actionSuffix(action)}`,
+    };
+  }
+  if (action === "member.skill_sheet_basics.update") {
+    return { prefix: "", target: targetName, suffix: " のシート基本情報を更新" };
+  }
   if (action === "csv.export") {
     return {
       prefix: "",
@@ -440,6 +469,10 @@ export function resolveAuditTargetName(input: {
       return `${input.names.members?.[input.memberId] ?? deleted} の ${
         input.names.skills?.[input.skillId] ?? deleted
       }`;
+    case "MemberProjectHistory":
+      return String(input.before?.title ?? input.after?.title ?? deleted);
+    case "MemberCertification":
+      return String(input.before?.name ?? input.after?.name ?? deleted);
     default:
       return deleted;
   }

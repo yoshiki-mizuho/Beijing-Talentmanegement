@@ -35,6 +35,24 @@ describe("audit log display", () => {
     expect(buildActionDescription(input).suffix).toBe(" の権限を変更");
     expect(buildAuditSummary(input)).toBe("メンバー → マネージャー");
   });
+  it("経歴と資格の操作を日本語で表示する", () => {
+    expect(buildActionDescription({
+      action: "member_career.create",
+      targetType: "MemberProjectHistory",
+      targetName: "案件",
+      before: null,
+      after: { title: "基幹システム刷新" },
+      metadata: null,
+    })).toEqual({ prefix: "", target: "基幹システム刷新", suffix: " を作成" });
+    expect(buildActionDescription({
+      action: "member_certification.delete",
+      targetType: "MemberCertification",
+      targetName: "資格",
+      before: { name: "基本情報技術者" },
+      after: null,
+      metadata: null,
+    })).toEqual({ prefix: "資格 ", target: "基本情報技術者", suffix: " を削除" });
+  });
   it("差分と伏せた項目を行にする", () => {
     const rows = buildDiffRows(
       { level: 3 },

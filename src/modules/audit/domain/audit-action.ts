@@ -43,6 +43,12 @@ export const AUDIT_ACTION = {
   DEPARTMENT_UPDATE: "department.update",
   TEAM_GOAL_CREATE: "team_goal.create",
   TEAM_GOAL_UPDATE: "team_goal.update",
+  MEMBER_CAREER_CREATE: "member_career.create",
+  MEMBER_CAREER_UPDATE: "member_career.update",
+  MEMBER_CAREER_DELETE: "member_career.delete",
+  MEMBER_CERTIFICATION_CREATE: "member_certification.create",
+  MEMBER_CERTIFICATION_DELETE: "member_certification.delete",
+  MEMBER_SKILL_SHEET_BASICS_UPDATE: "member.skill_sheet_basics.update",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTION)[keyof typeof AUDIT_ACTION];
@@ -60,6 +66,8 @@ export const AUDIT_TARGET_TYPE = {
   CSV: "Csv",
   DEPARTMENT: "Department",
   TEAM_GOAL: "TeamGoal",
+  MEMBER_PROJECT_HISTORY: "MemberProjectHistory",
+  MEMBER_CERTIFICATION: "MemberCertification",
 } as const;
 
 export type AuditTargetType =

@@ -306,3 +306,11 @@ flowchart TD
 | 応援、リアクション、コメント | admin、manager、member | 公開範囲と対象範囲をサービスで判定。レベルアップへのリアクションとコメントは、admin、本人の上司、同じ部署の在籍中の人。 |
 | 大分類、前提スキルの関係の更新 | admin | なし。 |
 | 育成のヒントの取得、作成 | admin、manager | manager は担当範囲。 |
+
+## 経歴・資格
+
+| 対象 | MEMBER本人 | 担当範囲のMANAGER | ADMIN | その他 |
+| --- | --- | --- | --- | --- |
+| 経歴・資格・シート基本情報の閲覧と更新 | 可 | 可 | 可 | 不可 |
+
+監査操作は `member_career.create`、`member_career.update`、`member_career.delete`、`member_certification.create`、`member_certification.delete`、`member.skill_sheet_basics.update` を記録する。経歴・資格の CSV 取り込み・出力はない。
