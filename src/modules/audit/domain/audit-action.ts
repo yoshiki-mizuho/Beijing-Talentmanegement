@@ -49,6 +49,8 @@ export const AUDIT_ACTION = {
   MEMBER_CERTIFICATION_CREATE: "member_certification.create",
   MEMBER_CERTIFICATION_DELETE: "member_certification.delete",
   MEMBER_SKILL_SHEET_BASICS_UPDATE: "member.skill_sheet_basics.update",
+  PROPOSAL_SHEET_GENERATE: "proposal_sheet.generate",
+  PROPOSAL_SHEET_UPDATE: "proposal_sheet.update",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTION)[keyof typeof AUDIT_ACTION];
@@ -68,6 +70,7 @@ export const AUDIT_TARGET_TYPE = {
   TEAM_GOAL: "TeamGoal",
   MEMBER_PROJECT_HISTORY: "MemberProjectHistory",
   MEMBER_CERTIFICATION: "MemberCertification",
+  PROPOSAL_SHEET_DRAFT: "ProposalSheetDraft",
 } as const;
 
 export type AuditTargetType =

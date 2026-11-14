@@ -58,6 +58,7 @@ describe("buildAuditLogWhere", () => {
         "Department",
         "MemberProjectHistory",
         "MemberCertification",
+        "ProposalSheetDraft",
       ],
     });
   });

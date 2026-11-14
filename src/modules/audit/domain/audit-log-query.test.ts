@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { classifyAuditAction, parseAuditLogQuery } from "./audit-log-query";
+import {
+  classifyAuditAction,
+  parseAuditLogQuery,
+  targetGroup,
+} from "./audit-log-query";
 
 describe("parseAuditLogQuery", () => {
   const now = new Date("2026-10-16T03:00:00Z");
@@ -41,7 +45,15 @@ describe("classifyAuditAction", () => {
     ["skill_assessment.correct", "correct"],
     ["member_career.create", "create"],
     ["member.skill_sheet_basics.update", "update"],
+    ["proposal_sheet.generate", "update"],
+    ["proposal_sheet.update", "update"],
   ])("%s を %s に分類する", (action, expected) =>
     expect(classifyAuditAction(action)).toBe(expected),
   );
+});
+
+describe("targetGroup", () => {
+  it("提案用シートをメンバーに分類する", () => {
+    expect(targetGroup("ProposalSheetDraft")).toBe("member");
+  });
 });

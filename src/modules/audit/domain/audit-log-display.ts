@@ -49,6 +49,13 @@ const labels: Record<string, string> = {
   acquiredMonth: "取得年月",
   itCareerStartMonth: "ITの仕事を始めた年月",
   skillSheetNote: "ひとこと",
+  displayName: "表示名",
+  customerRequest: "顧客の要望",
+  projectHistoryIds: "載せる経歴",
+  excludedSkillIds: "載せないスキル",
+  selfPr: "自己 PR",
+  strengths: "得意分野",
+  projectDescriptions: "経歴の説明文",
 };
 for (let level = 1; level <= 5; level += 1)
   labels[`level${level}`] = `レベルの目安 Lv${level}`;
@@ -298,6 +305,13 @@ export function buildActionDescription(
   if (action === "member.skill_sheet_basics.update") {
     return { prefix: "", target: targetName, suffix: " のシート基本情報を更新" };
   }
+  if (action === "proposal_sheet.generate" || action === "proposal_sheet.update") {
+    return {
+      prefix: "",
+      target: targetName,
+      suffix: action.endsWith(".generate") ? " の提案用シートを生成" : " の提案用シートを更新",
+    };
+  }
   if (action === "csv.export") {
     return {
       prefix: "",
@@ -473,6 +487,8 @@ export function resolveAuditTargetName(input: {
       return String(input.before?.title ?? input.after?.title ?? deleted);
     case "MemberCertification":
       return String(input.before?.name ?? input.after?.name ?? deleted);
+    case "ProposalSheetDraft":
+      return `${input.names.members?.[input.memberId] ?? deleted}`;
     default:
       return deleted;
   }

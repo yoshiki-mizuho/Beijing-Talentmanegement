@@ -33,6 +33,10 @@ export async function getCareerForActor(actor: CareerActor, targetMemberId: stri
   return repository.getMemberCareer(targetMemberId);
 }
 
+export function getCareerForProposalSheet(targetMemberId: string) {
+  return repository.getMemberCareer(targetMemberId);
+}
+
 async function authorize(actor: CareerActor, targetMemberId: string) {
   if (!(await canActorAccessCareer(actor, targetMemberId))) {
     throw new AuthorizationError("Forbidden.", 403);
