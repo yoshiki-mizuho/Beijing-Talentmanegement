@@ -137,6 +137,9 @@ test.describe("UI check", () => {
     await page.getByRole("link", { name: "プロフィールを見る", exact: true }).click();
     await page.waitForURL("**/people/**");
     await capture(page, "MANAGER", "subordinate-profile");
+    await page.getByRole("link", { name: "経歴・資格", exact: true }).click();
+    await page.waitForURL(/tab=career/);
+    await capture(page, "MANAGER", "subordinate-career");
     await page.goto("/skill-approvals");
     await capture(page, "MANAGER", "skill-approvals");
   });
@@ -191,6 +194,12 @@ test.describe("UI check", () => {
       .getByRole("button", { name: "削除する" })
       .click();
     await page.getByText("アイコン画像を削除しました。").waitFor();
+    // 経歴・資格のタブと、経歴の入力欄を開いた状態を撮る（保存はしない）
+    await page.getByRole("link", { name: "経歴・資格", exact: true }).click();
+    await page.waitForURL(/tab=career/);
+    await capture(page, "MEMBER", "career");
+    await page.getByRole("button", { name: "経歴を追加" }).click();
+    await capture(page, "MEMBER", "career-form");
     await page.goto("/explore");
     await page
       .getByRole("link", { name: /デモメンバー01/ })

@@ -39,6 +39,8 @@ describe("classifyAuditAction", () => {
     ["role.requirement.remove", "delete"],
     ["skill.level_guides.update", "update"],
     ["skill_assessment.correct", "correct"],
+    ["member_career.create", "create"],
+    ["member.skill_sheet_basics.update", "update"],
   ])("%s を %s に分類する", (action, expected) =>
     expect(classifyAuditAction(action)).toBe(expected),
   );

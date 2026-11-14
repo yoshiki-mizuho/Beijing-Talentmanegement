@@ -51,7 +51,14 @@ describe("buildAuditLogWhere", () => {
       query({ targets: ["member", "assessment"] }),
     );
     expect(where.targetType).toEqual({
-      in: ["Member", "MemberSkill", "SkillSelfAssessment", "Department"],
+      in: [
+        "Member",
+        "MemberSkill",
+        "SkillSelfAssessment",
+        "Department",
+        "MemberProjectHistory",
+        "MemberCertification",
+      ],
     });
   });
 
@@ -74,6 +81,8 @@ describe("buildAuditLogWhere", () => {
         "skill_category_group.delete",
         "role.delete",
         "role.requirement.remove",
+        "member_career.delete",
+        "member_certification.delete",
       ],
     });
   });
