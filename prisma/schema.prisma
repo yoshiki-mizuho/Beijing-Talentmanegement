@@ -214,6 +214,7 @@ model Member {
   certifications        MemberCertification[]
   proposalSheetDraft    ProposalSheetDraft?   @relation("ProposalSheetDraftMember")
   updatedProposalSheets ProposalSheetDraft[]   @relation("ProposalSheetDraftUpdatedBy")
+  updatedSkillSheetTemplates SkillSheetTemplate[] @relation("SkillSheetTemplateUpdatedBy")
   itCareerStartMonth    String?
   skillSheetNote        String?
   createdAt             DateTime              @default(now())
@@ -639,6 +640,22 @@ model ProposalSheetDraft {
   updatedBy           Member?                  @relation("ProposalSheetDraftUpdatedBy", fields: [updatedById], references: [id])
   createdAt           DateTime                 @default(now())
   updatedAt           DateTime                 @updatedAt
+
+  @@index([updatedById])
+}
+
+model SkillSheetTemplate {
+  id          String   @id @default(cuid())
+  name        String   @unique @db.VarChar(50)
+  fileName    String   @db.VarChar(200)
+  content     Bytes
+  sizeBytes   Int
+  useCount    Int      @default(0)
+  lastUsedAt  DateTime?
+  updatedById String?
+  updatedBy   Member?  @relation("SkillSheetTemplateUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([updatedById])
 }

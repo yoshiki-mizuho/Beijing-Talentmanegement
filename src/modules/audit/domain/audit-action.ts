@@ -51,6 +51,10 @@ export const AUDIT_ACTION = {
   MEMBER_SKILL_SHEET_BASICS_UPDATE: "member.skill_sheet_basics.update",
   PROPOSAL_SHEET_GENERATE: "proposal_sheet.generate",
   PROPOSAL_SHEET_UPDATE: "proposal_sheet.update",
+  PROPOSAL_SHEET_EXPORT: "proposal_sheet.export",
+  SKILL_SHEET_TEMPLATE_CREATE: "skill_sheet_template.create",
+  SKILL_SHEET_TEMPLATE_UPDATE: "skill_sheet_template.update",
+  SKILL_SHEET_TEMPLATE_DELETE: "skill_sheet_template.delete",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTION)[keyof typeof AUDIT_ACTION];
@@ -71,6 +75,7 @@ export const AUDIT_TARGET_TYPE = {
   MEMBER_PROJECT_HISTORY: "MemberProjectHistory",
   MEMBER_CERTIFICATION: "MemberCertification",
   PROPOSAL_SHEET_DRAFT: "ProposalSheetDraft",
+  SKILL_SHEET_TEMPLATE: "SkillSheetTemplate",
 } as const;
 
 export type AuditTargetType =

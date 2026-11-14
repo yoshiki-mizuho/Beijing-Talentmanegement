@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { FileText, Sparkles } from "lucide-react";
+import { Download, FileText, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { formatCareerMonth } from "@/modules/career/domain/career-display";
 import { Button } from "@/shared/ui/button";
@@ -20,7 +20,13 @@ const SKILL_PREVIEW_COUNT = 10;
 const inputClass =
   "w-full rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-sm font-normal";
 
-export function ProposalSheetEditor({ data }: { data: Data }) {
+export function ProposalSheetEditor({
+  data,
+  templates
+}: {
+  data: Data;
+  templates: Array<{ id: string; name: string }>;
+}) {
   const initial = data.draft;
   const [displayName, setDisplayName] = useState(
     initial?.displayName ?? data.initialDisplayName
@@ -40,6 +46,7 @@ export function ProposalSheetEditor({ data }: { data: Data }) {
   );
   const [showAllSkills, setShowAllSkills] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [templateId, setTemplateId] = useState("standard");
   const [pending, startTransition] = useTransition();
   const includedSkills = data.skills.filter((skill) => !excludedSkills.has(skill.id));
   const includedProjects = data.projects.filter((project) => selectedProjects.has(project.id));
@@ -81,6 +88,29 @@ export function ProposalSheetEditor({ data }: { data: Data }) {
       });
       if (result.status === "success") toast.success(result.message);
       else toast.error(result.message);
+    });
+  }
+
+  function exportExcel() {
+    startTransition(async () => {
+      const result = await saveProposalSheetAction({
+        memberId: data.member.id,
+        displayName,
+        customerRequest,
+        projectHistoryIds: [...selectedProjects],
+        excludedSkillIds: [...excludedSkills],
+        selfPr,
+        strengths,
+        projectDescriptions: descriptions
+      });
+      if (result.status === "error") {
+        toast.error(result.message);
+        return;
+      }
+      toast.success(result.message);
+      const download = document.createElement("a");
+      download.href = `/api/proposal-sheets/${encodeURIComponent(data.member.id)}/export?template=${encodeURIComponent(templateId)}`;
+      download.click();
     });
   }
 
@@ -221,7 +251,27 @@ export function ProposalSheetEditor({ data }: { data: Data }) {
                       </p>
                     ) : null}
                   </div>
-                  <div className="text-right text-xs text-[var(--muted-foreground)]">
+                  <div className="flex flex-wrap items-end justify-end gap-2">
+                    <label className="grid gap-1 text-left text-xs font-semibold">
+                      ひな形
+                      <select
+                        className="min-h-11 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-sm"
+                        value={templateId}
+                        onChange={(event) => setTemplateId(event.target.value)}
+                      >
+                        <option value="standard">TalentHub 標準</option>
+                        {templates.map((template) => (
+                          <option key={template.id} value={template.id}>
+                            {template.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <Button type="button" disabled={pending} onClick={exportExcel}>
+                      <Download className="h-4 w-4" aria-hidden="true" />
+                      Excel で出力
+                    </Button>
+                    <div className="w-full text-right text-xs text-[var(--muted-foreground)]">
                     <p>
                       {sourceLabel(draft.source)}
                       {draft.generatedAt ? `・${formatDate(draft.generatedAt)}` : ""}
@@ -231,6 +281,7 @@ export function ProposalSheetEditor({ data }: { data: Data }) {
                         元の情報が更新されています
                       </span>
                     ) : null}
+                    </div>
                   </div>
                 </div>
                 <label className="grid gap-2 text-sm font-semibold">

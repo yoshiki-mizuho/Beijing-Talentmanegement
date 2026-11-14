@@ -47,6 +47,9 @@ describe("classifyAuditAction", () => {
     ["member.skill_sheet_basics.update", "update"],
     ["proposal_sheet.generate", "update"],
     ["proposal_sheet.update", "update"],
+    ["proposal_sheet.export", "update"],
+    ["skill_sheet_template.create", "create"],
+    ["skill_sheet_template.delete", "delete"],
   ])("%s を %s に分類する", (action, expected) =>
     expect(classifyAuditAction(action)).toBe(expected),
   );
@@ -55,5 +58,8 @@ describe("classifyAuditAction", () => {
 describe("targetGroup", () => {
   it("提案用シートをメンバーに分類する", () => {
     expect(targetGroup("ProposalSheetDraft")).toBe("member");
+  });
+  it("ひな形をスキルに分類する", () => {
+    expect(targetGroup("SkillSheetTemplate")).toBe("skill");
   });
 });

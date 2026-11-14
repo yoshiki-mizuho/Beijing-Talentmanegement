@@ -157,7 +157,7 @@ export function targetGroup(type: string): AuditTargetGroup | null {
     type === "Department"
   )
     return "member";
-  if (type === "Skill" || type === "SkillCategory") return "skill";
+  if (type === "Skill" || type === "SkillCategory" || type === "SkillSheetTemplate") return "skill";
   if (type === "Role") return "role";
   if (type === "SkillSelfAssessment") return "assessment";
   if (type === "Csv" || type === "AuditLog") return "csv";

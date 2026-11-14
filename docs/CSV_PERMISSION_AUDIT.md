@@ -317,3 +317,11 @@ flowchart TD
 監査操作は `member_career.create`、`member_career.update`、`member_career.delete`、`member_certification.create`、`member_certification.delete`、`member.skill_sheet_basics.update` を記録する。経歴・資格の CSV 取り込み・出力はない。
 
 提案用スキルシートは `proposal_sheet.generate` と `proposal_sheet.update` を対象種別 `ProposalSheetDraft` で記録し、監査画面ではメンバーのグループに分類する。
+## Excel ひな形と提案用スキルシート出力
+
+| 操作 | ADMIN | MANAGER | MEMBER | 監査の操作名 |
+| --- | --- | --- | --- | --- |
+| ひな形の登録・名前変更・差し替え・削除・ダウンロード | 可 | 不可 | 不可 | `skill_sheet_template.create` / `skill_sheet_template.update` / `skill_sheet_template.delete` |
+| 提案用スキルシートの Excel 出力 | 可 | 担当範囲のみ可 | 不可 | `proposal_sheet.export` |
+
+ひな形の監査対象は `SkillSheetTemplate`、出力の監査対象は `ProposalSheetDraft` とします。ファイルの内容は監査ログへ保存しません。
