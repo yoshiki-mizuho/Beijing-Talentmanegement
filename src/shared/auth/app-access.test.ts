@@ -70,6 +70,12 @@ describe("application route access", () => {
     expect(canAccessAppPath("MANAGER", "/roles")).toBe(true);
   });
 
+  it("提案用スキルシートはADMINとMANAGERがアクセスでき、MEMBERはアクセスできない", () => {
+    expect(canAccessAppPath("ADMIN", "/proposal-sheets/member-id")).toBe(true);
+    expect(canAccessAppPath("MANAGER", "/proposal-sheets/member-id")).toBe(true);
+    expect(canAccessAppPath("MEMBER", "/proposal-sheets/member-id")).toBe(false);
+  });
+
   it("AIの利用状況はADMINだけがアクセスできる", () => {
     expect(canAccessAppPath("ADMIN", "/ai-usage")).toBe(true);
     expect(canAccessAppPath("MANAGER", "/ai-usage")).toBe(false);

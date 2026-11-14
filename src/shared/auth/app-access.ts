@@ -72,7 +72,8 @@ const nonNavigationRoutes: readonly Pick<AppNavigationItem, "href" | "allowedRol
   { href: "/people", allowedRoles: allRoles },
   { href: "/notifications", allowedRoles: allRoles },
   { href: "/my/recap", allowedRoles: allRoles },
-  { href: "/level-ups", allowedRoles: allRoles }
+  { href: "/level-ups", allowedRoles: allRoles },
+  { href: "/proposal-sheets", allowedRoles: managementRoles }
 ];
 const appRouteRules: readonly Pick<AppNavigationItem, "href" | "allowedRoles">[] = [
   ...appNavigationGroups.flatMap((group) => group.items),

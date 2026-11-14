@@ -48,3 +48,25 @@ test("ADMINが提案用シートを作成して保存でき、本人は開けな
     await data.cleanup();
   }
 });
+
+test("担当のMANAGERは部下の提案用シートを開ける", async ({ page }) => {
+  const data = createE2eTestData();
+  const department = await data.createDepartment("提案用シート上司部署");
+  const manager = await data.createMember({
+    label: "提案上司",
+    departmentId: department.id,
+    role: "MANAGER"
+  });
+  const member = await data.createMember({
+    label: "提案部下",
+    departmentId: department.id,
+    managerId: manager.member.id
+  });
+  try {
+    await login(page, manager.credential);
+    await page.goto(`/proposal-sheets/${member.member.id}`);
+    await expect(page.getByRole("heading", { name: "提案用スキルシート", level: 1 })).toBeVisible();
+  } finally {
+    await data.cleanup();
+  }
+});
