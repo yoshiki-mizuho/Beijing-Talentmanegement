@@ -93,9 +93,10 @@ test.describe("UI check", () => {
     await page.goto("/csv?tab=export");
     await capture(page, "ADMIN", "csv-export");
     await page.goto("/roles");
-    await page.getByRole("button", { name: /の編集を開く$/ }).first().click();
+    await page.getByRole("button", { name: "編集", exact: true }).first().click();
     await capture(page, "ADMIN", "role-detail");
-    await page.getByRole("heading", { name: "達成状況" }).scrollIntoViewIfNeeded();
+    await page.keyboard.press("Escape");
+    await page.getByText(/このロールを達成している人/).first().scrollIntoViewIfNeeded();
     await page.screenshot({ path: "test-results/ui-check/ADMIN-role-achievement.png" });
   });
   test("MANAGER", async ({ page }) => {
@@ -185,6 +186,10 @@ test.describe("UI check", () => {
     await page.getByText("アイコン画像を変更しました。").waitFor();
     await capture(page, "MEMBER", "skill-profile-avatar");
     await page.getByRole("button", { name: "画像を削除" }).click();
+    await page
+      .getByRole("dialog", { name: "アイコン画像を削除しますか" })
+      .getByRole("button", { name: "削除する" })
+      .click();
     await page.getByText("アイコン画像を削除しました。").waitFor();
     await page.goto("/explore");
     await page
