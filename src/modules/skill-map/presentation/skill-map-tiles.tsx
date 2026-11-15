@@ -1,18 +1,49 @@
 "use client";
+import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { MemberAvatar } from "@/shared/ui/member-avatar";
+import { QueryProvider } from "@/shared/ui/query-provider";
 import type { buildSkillMap } from "@/modules/skill-map/domain/skill-map-matrix";
 
-type Skill = ReturnType<typeof buildSkillMap>[number];
+type Skill = Omit<ReturnType<typeof buildSkillMap>[number], "holders" | "changes">;
+type SkillHolder = {
+  id: string;
+  name: string;
+  jobTitle: string | null;
+  avatarUpdatedAt: string | null;
+  level: number;
+};
 const colors = ["#CCFBF1", "#99F6E4", "#2DD4BF", "#0D9488", "#115E59"];
 export function SkillMapTiles({
   skills,
   categories,
+  departmentId,
 }: {
   skills: Skill[];
   categories: { id: string; name: string }[];
+  departmentId: string | null;
+}) {
+  return (
+    <QueryProvider>
+      <SkillMapTilesInner
+        skills={skills}
+        categories={categories}
+        departmentId={departmentId}
+      />
+    </QueryProvider>
+  );
+}
+
+function SkillMapTilesInner({
+  skills,
+  categories,
+  departmentId,
+}: {
+  skills: Skill[];
+  categories: { id: string; name: string }[];
+  departmentId: string | null;
 }) {
   const [query, setQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -150,7 +181,7 @@ export function SkillMapTiles({
           })}
         </section>
         {selected ? (
-          <SkillDetail skill={selected} />
+          <SkillDetail skill={selected} departmentId={departmentId} />
         ) : (
           <aside className="rounded-2xl border border-[var(--border)] bg-white p-5">
             表示できるスキルがありません
@@ -160,10 +191,15 @@ export function SkillMapTiles({
     </>
   );
 }
-function SkillDetail({ skill }: { skill: Skill }) {
+function SkillDetail({ skill, departmentId }: { skill: Skill; departmentId: string | null }) {
   const [all, setAll] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const holders = skill.holders
+  const holdersQuery = useQuery({
+    queryKey: ["skill-map-holders", skill.id, departmentId],
+    queryFn: ({ signal }) => fetchSkillHolders(skill.id, departmentId, signal),
+    refetchOnWindowFocus: false
+  });
+  const holders = (holdersQuery.data ?? [])
     .filter((item) => all || item.level >= 4)
     .sort((a, b) => b.level - a.level);
   const shown = expanded ? holders : holders.slice(0, 10);
@@ -235,6 +271,9 @@ function SkillDetail({ skill }: { skill: Skill }) {
         </button>
       </div>
       <div className="mt-2">
+        {holdersQuery.isPending ? (
+          <p aria-live="polite">読み込み中...</p>
+        ) : null}
         {shown.map((person) => (
           <Link
             key={person.id}
@@ -268,6 +307,22 @@ function SkillDetail({ skill }: { skill: Skill }) {
       </div>
     </aside>
   );
+}
+
+async function fetchSkillHolders(
+  skillId: string,
+  departmentId: string | null,
+  signal: AbortSignal
+) {
+  const params = new URLSearchParams();
+  if (departmentId) params.set("department", departmentId);
+  const query = params.toString();
+  const response = await fetch(
+    `/api/skill-map/skills/${encodeURIComponent(skillId)}/holders${query ? `?${query}` : ""}`,
+    { signal }
+  );
+  if (!response.ok) throw new Error("Failed to fetch skill holders.");
+  return (await response.json()) as SkillHolder[];
 }
 // 面の大きさは、表示範囲で最も保有者が多いスキルとの比で3段階にする（人数の絶対値では組織の規模で差が出ないため）
 export function getTileSpan(holderCount: number, maxHolderCount: number) {

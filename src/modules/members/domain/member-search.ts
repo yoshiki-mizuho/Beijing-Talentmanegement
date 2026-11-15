@@ -12,7 +12,9 @@ export const memberSearchSchema = z.object({
   skillId: z.string().trim().optional(),
   minLevel: optionalSkillLevelQuerySchema,
   roleId: z.string().trim().optional(),
-  status: z.enum(MemberStatus).optional()
+  status: z.enum(MemberStatus).optional(),
+  targetRole: z.enum(["unset", "achieved", "in_progress"]).optional(),
+  page: z.coerce.number().int().min(1).optional()
 });
 
 export type MemberSearchInput = z.infer<typeof memberSearchSchema>;

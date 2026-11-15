@@ -132,7 +132,21 @@ export async function listMembers(input?: MemberSearchInput, memberIds?: string[
       users: { select: { role: true } },
       department: true,
       manager: { select: { id: true, name: true } },
-      targetRole: { select: { id: true, name: true, isActive: true } },
+      targetRole: {
+        select: {
+          id: true,
+          name: true,
+          isActive: true,
+          roleRequirements: {
+            select: {
+              skillId: true,
+              requiredLevel: true,
+              isRequired: true,
+              anyOfGroup: true
+            }
+          }
+        }
+      },
       growthHint: { select: { generatedAt: true } },
       roleAchievements: { select: { roleId: true, achievedAt: true } },
       selfAssessments: {
@@ -168,6 +182,11 @@ export async function listMembers(input?: MemberSearchInput, memberIds?: string[
   return members.filter((member) =>
     member.roleAchievements.some((achievement) => achievement.roleId === input.roleId)
   );
+}
+
+export async function getMemberById(memberId: string) {
+  const members = await listMembers(undefined, [memberId]);
+  return members.find((member) => member.id === memberId) ?? null;
 }
 
 export function getGrowthHintMemberContext(memberId: string, since: Date) {
