@@ -1,4 +1,5 @@
 import type { AuthRole } from "@prisma/client";
+import { cache } from "react";
 
 import { badgeDefinitions } from "@/modules/growth/domain/badge-art";
 import { calculateBadgeAchievements, getTokyoMonthKey } from "@/modules/growth/domain/growth-insights";
@@ -21,7 +22,11 @@ import { getMemberScope, memberIsInScope } from "@/modules/members/application/m
 import { AuthorizationError } from "@/server/auth/authorization";
 import { listMemberRoleAchievements } from "@/modules/roles/application/role-achievement-service";
 
-export async function getMonthlyRecap(memberId: string, requestedMonth?: string, now: Date = new Date()) {
+const getMonthlyRecapCached = cache(async function getMonthlyRecapCached(
+  memberId: string,
+  requestedMonth: string | undefined,
+  now: Date
+) {
   const [data, recapAssessments, badgeData, roleAchievements] = await Promise.all([
     getMemberGrowthData(memberId),
     listMonthlyRecapAssessments(memberId),
@@ -129,9 +134,18 @@ export async function getMonthlyRecap(memberId: string, requestedMonth?: string,
     months,
     recap
   };
+});
+
+export function getMonthlyRecap(
+  memberId: string,
+  requestedMonth?: string,
+  now: Date = new Date()
+) {
+  return getMonthlyRecapCached(memberId, requestedMonth, now);
 }
 
 export async function getMonthlyRecapCelebration(memberId: string, now: Date = new Date()) {
+  // 毎画面のレイアウトから呼ばれるため、重い成長データではなく必要な2項目だけを読む
   const member = await prisma.member.findUnique({
     where: { id: memberId },
     select: { createdAt: true, lastRecapSeenMonth: true }

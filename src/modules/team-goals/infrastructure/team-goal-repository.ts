@@ -129,6 +129,17 @@ export async function countGoalProgress(goal: TeamGoal, start: Date, end: Date) 
     : new Set(increases.map((change) => change.memberId)).size;
 }
 
+export function listGoalProgressChanges(managerId: string, start: Date, end: Date) {
+  return prisma.skillLevelChange.findMany({
+    where: {
+      member: { managerId, status: MemberStatus.ACTIVE },
+      changedAt: { gte: start, lt: end },
+      source: { notIn: [...nonGrowthLevelChangeSources] }
+    },
+    select: { memberId: true, fromLevel: true, toLevel: true, changedAt: true }
+  });
+}
+
 export function markGoalAchieved(id: string, achievedAt: Date) {
   return prisma.teamGoal.updateMany({
     where: { id, achievedAt: null },

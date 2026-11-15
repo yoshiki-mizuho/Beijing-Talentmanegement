@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import type { Route } from "next";
 
 import { getDashboardSummary } from "@/modules/dashboard/application/dashboard-service";
-import { getMemberDashboard, getMemberSkillReminders } from "@/modules/dashboard/application/member-dashboard-service";
+import { getMemberDashboard } from "@/modules/dashboard/application/member-dashboard-service";
 import { getTeamDashboard } from "@/modules/dashboard/application/team-dashboard-service";
 import { OrganizationDashboard } from "@/modules/dashboard/presentation/organization-dashboard";
 import { MemberDashboard } from "@/modules/dashboard/presentation/member-dashboard";
@@ -30,17 +30,17 @@ import { getCurrentSession } from "@/server/auth/session";
 export const dynamic = "force-dynamic";
 type DashboardView = "personal" | "team" | "organization";
 
-async function getDashboardTeamGoalCelebration(memberId: string) {
+async function getDashboardTeamGoalCelebration(memberId: string, now: Date = new Date()) {
   const [levelUps, roleAchievement, cheers, monthlyRecap] = await Promise.all([
     getLevelUpCelebrations(memberId),
     getRoleAchievementCelebration(memberId),
     getCheerCelebrations(memberId),
-    getMonthlyRecapCelebration(memberId)
+    getMonthlyRecapCelebration(memberId, now)
   ]);
   if (levelUps.length > 0 || roleAchievement || cheers.length > 0 || monthlyRecap) {
     return null;
   }
-  return getTeamGoalCelebration(memberId);
+  return getTeamGoalCelebration(memberId, now);
 }
 
 function DashboardViewSwitch({ current }: { current: DashboardView }) {
@@ -87,14 +87,14 @@ export default async function DashboardPage({
   const personal =
     Boolean(session?.user.memberId) && (!management || view === "personal");
   if (session?.user.memberId && personal) {
-    const [data, feed, skillReminders, monthlyRecap, teamGoal] = await Promise.all([
+    const now = new Date();
+    const [data, feed, monthlyRecap, teamGoal] = await Promise.all([
       getMemberDashboard(session.user.memberId),
       getDepartmentLevelUpFeed(session.user.memberId, 5),
-      getMemberSkillReminders(session.user.memberId),
-      getMonthlyRecap(session.user.memberId),
-      getMemberTeamGoal(session.user.memberId)
+      getMonthlyRecap(session.user.memberId, undefined, now),
+      getMemberTeamGoal(session.user.memberId, now)
     ]);
-    const teamGoalCelebration = await getDashboardTeamGoalCelebration(session.user.memberId);
+    const teamGoalCelebration = await getDashboardTeamGoalCelebration(session.user.memberId, now);
     const model = buildMemberDashboardViewModel(data);
     if (!model) redirect("/login");
     return (
@@ -102,7 +102,7 @@ export default async function DashboardPage({
         {management ? <DashboardViewSwitch current="personal" /> : null}
         <MemberDashboard
           viewModel={model}
-          skillReminders={skillReminders}
+          skillReminders={data.skillReminders}
           monthlyRecap={monthlyRecap?.months.length ? monthlyRecap.recap : null}
           teamGoal={teamGoal}
           teamGoalCelebration={teamGoalCelebration}
