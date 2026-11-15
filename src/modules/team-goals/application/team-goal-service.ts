@@ -24,6 +24,7 @@ import {
   findLatestGoals,
   findMemberManagerId,
   findManagerWithReports,
+  listGoalProgressChanges,
   listActiveSkills,
   markGoalAchieved,
   saveTeamGoal
@@ -161,13 +162,39 @@ async function resolveGoal(goal: TeamGoal & {
 
 async function getPreviousResults(managerId: string, now: Date) {
   const startMonth = getTokyoMonth(now);
-  return Object.fromEntries(await Promise.all([1, 3, 6, 12].flatMap((months) =>
-    (["LEVEL_UP_COUNT", "LEVEL_UP_MEMBERS"] as const).map(async (kind) => {
-      const period = getPreviousTeamGoalPeriod(startMonth, months);
-      const goal = { managerId, kind, skillId: null, targetLevel: null } as TeamGoal;
-      return [`${months}:${kind}`, await countGoalProgress(goal, period.start, period.end)];
-    })
-  )));
+  const periods = [1, 3, 6, 12].map((months) => ({
+    months,
+    ...getPreviousTeamGoalPeriod(startMonth, months)
+  }));
+  const changes = await listGoalProgressChanges(
+    managerId,
+    periods[periods.length - 1].start,
+    periods[0].end
+  );
+  return buildPreviousGoalResults(periods, changes);
+}
+
+export function buildPreviousGoalResults(
+  periods: ReadonlyArray<{ months: number; start: Date; end: Date }>,
+  changes: ReadonlyArray<{
+    memberId: string;
+    fromLevel: number | null;
+    toLevel: number | null;
+    changedAt: Date;
+  }>
+) {
+  return Object.fromEntries(periods.flatMap((period) => {
+    const increases = changes.filter((change) =>
+      change.changedAt >= period.start &&
+      change.changedAt < period.end &&
+      change.toLevel !== null &&
+      (change.fromLevel === null || change.toLevel > change.fromLevel)
+    );
+    return [
+      [`${period.months}:LEVEL_UP_COUNT`, increases.length],
+      [`${period.months}:LEVEL_UP_MEMBERS`, new Set(increases.map((change) => change.memberId)).size]
+    ];
+  }));
 }
 
 export type ManagerTeamGoalData = NonNullable<Awaited<ReturnType<typeof getManagerTeamGoal>>>;
