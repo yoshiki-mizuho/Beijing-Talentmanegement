@@ -3,10 +3,13 @@ import {
   NotificationStatus,
   NotificationType
 } from "@prisma/client";
+import { cache } from "react";
 
 import { prisma } from "@/server/db/prisma";
 
-export async function getMemberGrowthData(memberId: string) {
+export const getMemberGrowthData = cache(async function getMemberGrowthData(
+  memberId: string
+) {
   const [member, roles, categories, assessments, levelChanges, mentoredCheers, receivedCheers, mentorCandidates, levelDefinitions] =
     await Promise.all([
       prisma.member.findUnique({
@@ -174,7 +177,7 @@ export async function getMemberGrowthData(memberId: string) {
     mentorCandidates,
     levelDefinitions
   };
-}
+});
 
 export type MemberGrowthData = Awaited<ReturnType<typeof getMemberGrowthData>>;
 
@@ -189,6 +192,42 @@ export function listMonthlyRecapAssessments(memberId: string) {
     },
     orderBy: { createdAt: "asc" }
   });
+}
+
+export async function hasMonthlyRecapVoices(
+  memberId: string,
+  levelChangeIds: string[],
+  start: Date,
+  end: Date
+) {
+  const dateRange = { gte: start, lt: end };
+  const [cheer, reaction, comment] = await Promise.all([
+    prisma.cheer.findFirst({
+      where: {
+        toMemberId: memberId,
+        fromMemberId: { not: memberId },
+        createdAt: dateRange
+      },
+      select: { id: true }
+    }),
+    prisma.levelUpReaction.findFirst({
+      where: {
+        memberId: { not: memberId },
+        createdAt: dateRange,
+        levelChangeId: { in: levelChangeIds }
+      },
+      select: { id: true }
+    }),
+    prisma.levelUpComment.findFirst({
+      where: {
+        authorMemberId: { not: memberId },
+        createdAt: dateRange,
+        levelChangeId: { in: levelChangeIds }
+      },
+      select: { id: true }
+    })
+  ]);
+  return Boolean(cheer || reaction || comment);
 }
 
 export function listUnreadLevelUpNotifications(memberId: string) {
@@ -253,6 +292,22 @@ export function listUnreadLevelUpNotifications(memberId: string) {
   });
 }
 
+export function hasUnreadLevelUpNotifications(memberId: string) {
+  return prisma.notification.findFirst({
+    where: {
+      recipientMemberId: memberId,
+      status: NotificationStatus.UNREAD,
+      type: {
+        in: [
+          NotificationType.SKILL_ASSESSMENT_APPROVED,
+          NotificationType.SKILL_ASSESSMENT_CORRECTED
+        ]
+      }
+    },
+    select: { id: true }
+  });
+}
+
 export type UnreadLevelUpNotification = Awaited<
   ReturnType<typeof listUnreadLevelUpNotifications>
 >[number];
@@ -279,6 +334,18 @@ export function listUnreadCheerNotifications(memberId: string) {
     },
     orderBy: { createdAt: "asc" },
     take: 10
+  });
+}
+
+export function hasUnreadCheerNotifications(memberId: string) {
+  return prisma.notification.findFirst({
+    where: {
+      recipientMemberId: memberId,
+      status: NotificationStatus.UNREAD,
+      type: NotificationType.CHEER_RECEIVED,
+      cheerId: { not: null }
+    },
+    select: { id: true }
   });
 }
 

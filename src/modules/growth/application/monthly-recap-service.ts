@@ -6,11 +6,13 @@ import { isGrowthLevelChange } from "@/modules/growth/domain/level-change-source
 import {
   buildMonthlyRecap,
   getViewableRecapMonths,
+  monthlyRecapHasEvents,
   shiftMonth,
   shouldShowMonthlyRecap
 } from "@/modules/growth/domain/monthly-recap";
 import {
   getMemberGrowthData,
+  hasMonthlyRecapVoices,
   listMonthlyRecapAssessments
 } from "@/modules/growth/infrastructure/member-growth-repository";
 import { getBadgeCalculationData } from "@/modules/growth/infrastructure/badge-calculation-repository";
@@ -34,7 +36,8 @@ export async function getMonthlyRecap(memberId: string, requestedMonth?: string,
     : latestCompletedMonth;
   const achievements = calculateBadgeAchievements({
     ...badgeData,
-    targetAchievements: roleAchievements
+    targetAchievements: roleAchievements,
+    now
   });
   const badgeNameById = new Map(badgeDefinitions.map((badge) => [badge.id, badge.name]));
   const voices = [
@@ -139,6 +142,8 @@ export async function getMonthlyRecapCelebration(memberId: string, now: Date = n
     lastRecapSeenMonth: member.lastRecapSeenMonth,
     hasEvents: true
   })) return null;
+  const month = shiftMonth(getTokyoMonthKey(now), -1);
+  if (!await hasMonthlyRecapEvents(memberId, month, now)) return null;
   const result = await getMonthlyRecap(memberId, undefined, now);
   if (!result || !shouldShowMonthlyRecap({
     memberCreatedAt: result.member.createdAt,
@@ -147,6 +152,47 @@ export async function getMonthlyRecapCelebration(memberId: string, now: Date = n
     hasEvents: result.recap.hasEvents
   })) return null;
   return result.recap;
+}
+
+export async function hasMonthlyRecapEvents(
+  memberId: string,
+  month: string,
+  now: Date = new Date()
+) {
+  const [badgeData, roleAchievements] = await Promise.all([
+    getBadgeCalculationData(memberId),
+    listMemberRoleAchievements(memberId)
+  ]);
+  const growthLevelChanges = badgeData.levelChanges.filter((change) =>
+    isGrowthLevelChange(change.source) &&
+    change.toLevel !== null &&
+    (change.fromLevel === null || change.toLevel > change.fromLevel)
+  );
+  const monthStart = new Date(`${month}-01T00:00:00+09:00`);
+  const monthEnd = new Date(`${shiftMonth(month, 1)}-01T00:00:00+09:00`);
+  const hasVoices = await hasMonthlyRecapVoices(
+    memberId,
+    growthLevelChanges.map((change) => change.id),
+    monthStart,
+    monthEnd
+  );
+  const levelUpCount = growthLevelChanges.filter(
+    (change) => getTokyoMonthKey(change.changedAt) === month
+  ).length;
+  const assessmentCount = badgeData.assessments.filter(
+    (assessment) => getTokyoMonthKey(assessment.createdAt) === month
+  ).length;
+  const badgeCount = calculateBadgeAchievements({
+    ...badgeData,
+    targetAchievements: roleAchievements,
+    now
+  }).filter((badge) => badge.earnedAt && getTokyoMonthKey(badge.earnedAt) === month).length;
+  return monthlyRecapHasEvents({
+    levelUpCount,
+    assessmentCount,
+    voiceCount: hasVoices ? 1 : 0,
+    badgeCount
+  });
 }
 
 export async function getManagedMemberMonthlyRecap(

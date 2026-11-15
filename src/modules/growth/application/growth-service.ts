@@ -14,6 +14,8 @@ import * as growthRepository from "@/modules/growth/infrastructure/growth-reposi
 import { getBadgeCalculationData, listFirstMoverLevelChangeIds } from "@/modules/growth/infrastructure/badge-calculation-repository";
 import {
   getMemberGrowthData as fetchMemberGrowthData,
+  hasUnreadCheerNotifications,
+  hasUnreadLevelUpNotifications,
   listUnreadCheerNotifications,
   listUnreadLevelUpNotifications
 } from "@/modules/growth/infrastructure/member-growth-repository";
@@ -160,6 +162,7 @@ export function listSkillMentorCandidates(skillIds: string[]) {
 }
 
 export async function getLevelUpCelebrations(memberId: string) {
+  if (!await hasUnreadLevelUpNotifications(memberId)) return [];
   const notifications = await listUnreadLevelUpNotifications(memberId);
   if (notifications.length === 0) return [];
   const [growthData, badgeData, roleAchievements] = await Promise.all([
@@ -259,13 +262,14 @@ export type LevelUpCelebration = Awaited<
 >[number];
 
 export async function getRoleAchievementCelebration(memberId: string) {
-  const [record, growthData, roleAchievements] = await Promise.all([
-    getPendingRoleAchievementCelebration(memberId),
+  const record = await getPendingRoleAchievementCelebration(memberId);
+  if (!record) return null;
+  const [growthData, roleAchievements] = await Promise.all([
     fetchMemberGrowthData(memberId),
     listMemberRoleAchievements(memberId)
   ]);
   const member = growthData.member;
-  if (!record || !member) return null;
+  if (!member) return null;
   const requirements = Array.isArray(record.requirements)
     ? record.requirements.flatMap((value) => {
         if (!value || typeof value !== "object" || Array.isArray(value)) return [];
@@ -341,6 +345,7 @@ export type RoleAchievementCelebration = NonNullable<Awaited<
 >>;
 
 export async function getCheerCelebrations(memberId: string) {
+  if (!await hasUnreadCheerNotifications(memberId)) return [];
   const notifications = await listUnreadCheerNotifications(memberId);
   return notifications.flatMap(toCheerCelebration);
 }

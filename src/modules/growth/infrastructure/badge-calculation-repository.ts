@@ -1,8 +1,11 @@
 import { LevelUpReactionType } from "@prisma/client";
+import { cache } from "react";
 
 import { prisma } from "@/server/db/prisma";
 
-export async function getBadgeCalculationData(memberId: string) {
+export const getBadgeCalculationData = cache(async function getBadgeCalculationData(
+  memberId: string
+) {
   const [member, assessments, levelChanges, prerequisites, sentCheers, sentReactions, mentoredCheers] =
     await Promise.all([
       prisma.member.findUnique({
@@ -97,7 +100,7 @@ export async function getBadgeCalculationData(memberId: string) {
     firstMoverLevelChangeIds,
     prerequisites
   };
-}
+});
 
 export async function listFirstMoverLevelChangeIds(input: {
   levelChangeIds?: ReadonlyArray<string>;
