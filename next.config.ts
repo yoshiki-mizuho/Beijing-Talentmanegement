@@ -6,6 +6,13 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // next dev が AGENTS.md に英語の注意書きを書き足さないようにする（同じ内容を日本語で AGENTS.md に書いている）
   agentRules: false,
+  experimental: {
+    serverActions: {
+      // スキルシートのひな形（1MB まで）を Server Action で受け取るため、既定の 1MB から広げる。
+      // ファイルの大きさはアプリ側でも 1MB までに制限している
+      bodySizeLimit: "2mb"
+    }
+  },
   async headers() {
     const headers = [
       { key: "X-Content-Type-Options", value: "nosniff" },

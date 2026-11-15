@@ -84,6 +84,7 @@ describe("buildAuditLogWhere", () => {
         "role.requirement.remove",
         "member_career.delete",
         "member_certification.delete",
+        "skill_sheet_template.delete",
       ],
     });
   });

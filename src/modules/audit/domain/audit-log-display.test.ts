@@ -67,6 +67,24 @@ describe("audit log display", () => {
       suffix: " の提案用シートを生成",
     });
   });
+  it("ひな形とExcel出力の操作を日本語で表示する", () => {
+    expect(buildActionDescription({
+      action: "skill_sheet_template.create",
+      targetType: "SkillSheetTemplate",
+      targetName: "顧客A",
+      before: null,
+      after: { name: "顧客A" },
+      metadata: null,
+    })).toEqual({ prefix: "ひな形 ", target: "顧客A", suffix: " を作成" });
+    expect(buildActionDescription({
+      action: "proposal_sheet.export",
+      targetType: "ProposalSheetDraft",
+      targetName: "山田 花子",
+      before: null,
+      after: null,
+      metadata: { templateId: "standard" },
+    }).suffix).toBe(" の提案用シートを Excel で出力");
+  });
   it("差分と伏せた項目を行にする", () => {
     const rows = buildDiffRows(
       { level: 3 },

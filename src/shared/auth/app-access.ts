@@ -14,7 +14,8 @@ type NavigationIcon =
   | "approvals"
   | "csv"
   | "auditLogs"
-  | "aiUsage";
+  | "aiUsage"
+  | "skillSheetTemplates";
 
 export type AppNavigationItem = {
   href: string;
@@ -60,6 +61,7 @@ export const appNavigationGroups: readonly AppNavigationGroup[] = [
     label: "管理者の機能",
     items: [
       { href: "/skills", label: "スキル管理", icon: "skills", allowedRoles: adminOnly },
+      { href: "/skill-sheet-templates", label: "スキルシートのひな形", icon: "skillSheetTemplates", allowedRoles: adminOnly },
       { href: "/csv", label: "CSV", icon: "csv", allowedRoles: adminOnly },
       { href: "/audit-logs", label: "監査ログ", icon: "auditLogs", allowedRoles: adminOnly },
       { href: "/ai-usage", label: "AI の利用状況", icon: "aiUsage", allowedRoles: adminOnly }

@@ -131,6 +131,9 @@ export async function deleteE2eData(
       { csvImportJobId: { in: csvImportJobIds } },
     ] } }));
     await record("csvImportJobs", tx.csvImportJob.deleteMany({ where: { id: { in: csvImportJobIds } } }));
+    await record("skillSheetTemplates", tx.skillSheetTemplate.deleteMany({
+      where: { name: { startsWith: "E2E" }, updatedById: { in: memberIds } },
+    }));
     await tx.member.updateMany({ where: { managerId: { in: memberIds } }, data: { managerId: null } });
     await tx.member.updateMany({ where: { targetRoleId: { in: roleIds } }, data: { targetRoleId: null } });
     await tx.department.updateMany({ where: { parentDepartmentId: { in: departmentIds } }, data: { parentDepartmentId: null } });

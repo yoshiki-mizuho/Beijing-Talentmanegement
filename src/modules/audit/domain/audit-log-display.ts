@@ -312,6 +312,16 @@ export function buildActionDescription(
       suffix: action.endsWith(".generate") ? " の提案用シートを生成" : " の提案用シートを更新",
     };
   }
+  if (action === "proposal_sheet.export") {
+    return { prefix: "", target: targetName, suffix: " の提案用シートを Excel で出力" };
+  }
+  if (action.startsWith("skill_sheet_template.")) {
+    return {
+      prefix: "ひな形 ",
+      target: String(input.before?.name ?? input.after?.name ?? "（削除済み）"),
+      suffix: ` を${actionSuffix(action)}`,
+    };
+  }
   if (action === "csv.export") {
     return {
       prefix: "",
@@ -489,6 +499,8 @@ export function resolveAuditTargetName(input: {
       return String(input.before?.name ?? input.after?.name ?? deleted);
     case "ProposalSheetDraft":
       return `${input.names.members?.[input.memberId] ?? deleted}`;
+    case "SkillSheetTemplate":
+      return savedName;
     default:
       return deleted;
   }

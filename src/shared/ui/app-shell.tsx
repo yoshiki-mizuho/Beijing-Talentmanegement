@@ -53,6 +53,7 @@ const navigationIcons = {
   csv: FileSpreadsheet,
   auditLogs: ShieldCheck,
   aiUsage: Bot,
+  skillSheetTemplates: FileSpreadsheet,
   explore: Compass
 } satisfies Record<AppNavigationItem["icon"], LucideIcon>;
 

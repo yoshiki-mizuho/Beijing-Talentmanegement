@@ -18,6 +18,7 @@ const expectedNavigation = {
     "/members",
     "/skill-map",
     "/skills",
+    "/skill-sheet-templates",
     "/csv",
     "/audit-logs",
     "/ai-usage"
@@ -80,6 +81,12 @@ describe("application route access", () => {
     expect(canAccessAppPath("ADMIN", "/ai-usage")).toBe(true);
     expect(canAccessAppPath("MANAGER", "/ai-usage")).toBe(false);
     expect(canAccessAppPath("MEMBER", "/ai-usage")).toBe(false);
+  });
+
+  it("スキルシートのひな形はADMINだけがアクセスできる", () => {
+    expect(canAccessAppPath("ADMIN", "/skill-sheet-templates")).toBe(true);
+    expect(canAccessAppPath("MANAGER", "/skill-sheet-templates")).toBe(false);
+    expect(canAccessAppPath("MEMBER", "/skill-sheet-templates")).toBe(false);
   });
 
   it("MEMBERはメンバー向け画面へアクセスでき、管理画面へアクセスできない", () => {

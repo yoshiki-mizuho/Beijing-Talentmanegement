@@ -29,6 +29,9 @@ TalentHub のセキュリティ対策と、意図して対象外にしたリス�
 - CSV の出力と取り込みで、数式として解釈される先頭の文字（`=`・`+`・`-`・`@`）を無害にする。
 - アイコン画像は 200KB まで、PNG・JPEG・WebP だけを、ファイルの中身（先頭のバイト）で確かめる。
 - 生の SQL は Prisma のタグ付きテンプレートだけで書き、値はバインドする。
+- Excel ひな形の登録は ADMIN だけに許可する。1MB 以下の `.xlsx` に限定し、ZIP の先頭、マクロの有無、`exceljs` で読み取れることをサーバーで点検する。差し込む値は数式ではなく文字列として設定する。ひな形を Server Action で受け取るため、`next.config.ts` の `serverActions.bodySizeLimit` を 2MB に広げている（ファイルの大きさはアプリ側で 1MB までに制限する）。
+
+Excel の読み書きには `exceljs` 4.4.0 を使用する。間接依存の `uuid` は `package.json` の overrides で固定する。
 
 ### AI
 
