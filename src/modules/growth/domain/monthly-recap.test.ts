@@ -5,6 +5,7 @@ import {
   buildRecapNoteDraft,
   getPastMonthlyEncouragement,
   getViewableRecapMonths,
+  monthlyRecapHasEvents,
   shouldShowMonthlyRecap
 } from "./monthly-recap";
 
@@ -20,6 +21,23 @@ const base = {
   badges: [],
   targetRole: null
 } as const;
+
+describe("monthlyRecapHasEvents", () => {
+  it("まとめと同じ4種類の件数で出来事の有無を判定する", () => {
+    expect(monthlyRecapHasEvents({
+      levelUpCount: 0,
+      assessmentCount: 0,
+      voiceCount: 0,
+      badgeCount: 0
+    })).toBe(false);
+    expect(monthlyRecapHasEvents({
+      levelUpCount: 0,
+      assessmentCount: 0,
+      voiceCount: 0,
+      badgeCount: 1
+    })).toBe(true);
+  });
+});
 
 describe("monthly recap", () => {
   it("uses Tokyo month boundaries", () => {

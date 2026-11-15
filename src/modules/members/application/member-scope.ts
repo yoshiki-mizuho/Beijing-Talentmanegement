@@ -1,4 +1,5 @@
 import type { AuthRole, MemberStatus } from "@prisma/client";
+import { cache } from "react";
 
 import * as memberScopeRepository from "@/modules/members/infrastructure/member-scope-repository";
 import { collectDescendantIds } from "@/modules/members/domain/department-hierarchy";
@@ -66,7 +67,7 @@ function buildScope(
   };
 }
 
-export async function getMemberScope(
+export const getMemberScope = cache(async function getMemberScope(
   role: AuthRole,
   memberId: string,
   requestedDepartmentId?: string
@@ -76,7 +77,7 @@ export async function getMemberScope(
     requestedDepartmentId,
     ...(await memberScopeRepository.getMemberScopeSource(memberId))
   });
-}
+});
 
 export function memberIsInScope(scope: MemberScope, memberId: string) {
   return scope.memberIds.includes(memberId);

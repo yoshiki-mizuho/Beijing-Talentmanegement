@@ -87,7 +87,12 @@ export function buildMonthlyRecap(input: MonthlyRecapInput) {
   const roleProgress = input.targetRole
     ? buildRoleProgress(input.targetRole, input.currentSkills, input.levelChanges, input.month)
     : null;
-  const hasEvents = selectedLevelUps.length + assessments.length + voices.length + badges.length > 0;
+  const hasEvents = monthlyRecapHasEvents({
+    levelUpCount: selectedLevelUps.length,
+    assessmentCount: assessments.length,
+    voiceCount: voices.length,
+    badgeCount: badges.length
+  });
 
   return {
     month: input.month,
@@ -122,6 +127,15 @@ export function buildMonthlyRecap(input: MonthlyRecapInput) {
       : null,
     rejectedAssessments: assessments.filter((assessment) => assessment.status === "REJECTED")
   };
+}
+
+export function monthlyRecapHasEvents(input: {
+  levelUpCount: number;
+  assessmentCount: number;
+  voiceCount: number;
+  badgeCount: number;
+}) {
+  return input.levelUpCount + input.assessmentCount + input.voiceCount + input.badgeCount > 0;
 }
 
 function buildRoleProgress(
