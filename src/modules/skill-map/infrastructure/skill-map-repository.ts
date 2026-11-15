@@ -41,3 +41,25 @@ export async function getSkillMapData(memberIds: string[], since: Date) {
     changes: skill.skillLevelChanges,
   }));
 }
+
+export function getSkillHolders(skillId: string, memberIds: string[]) {
+  return prisma.memberSkill.findMany({
+    where: {
+      skillId,
+      memberId: { in: memberIds },
+      member: { status: "ACTIVE" }
+    },
+    select: {
+      level: true,
+      member: {
+        select: {
+          id: true,
+          name: true,
+          jobTitle: true,
+          avatarUpdatedAt: true
+        }
+      }
+    },
+    orderBy: [{ level: "desc" }, { member: { employeeNo: "asc" } }]
+  });
+}

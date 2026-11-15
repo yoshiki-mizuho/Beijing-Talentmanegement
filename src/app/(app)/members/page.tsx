@@ -1,7 +1,7 @@
 import {
   listDepartments,
   listManagerCandidates,
-  listMembers
+  listMemberPage
 } from "@/modules/members/application/member-service";
 import { MemberSearchTable } from "@/modules/members/presentation/member-search-table";
 import { listSkills } from "@/modules/skills/application/skill-service";
@@ -11,6 +11,7 @@ import { managerOrAdmin, requirePageRoles } from "@/server/auth/authorization";
 import { getMemberScope } from "@/modules/members/application/member-scope";
 import { parseTargetRoleFilter } from "@/modules/members/presentation/target-role-filter";
 import { parseMemberListSearchParams } from "@/modules/members/domain/member-search";
+import { buildMemberSearchParams } from "@/modules/members/presentation/member-search-filters";
 
 export const dynamic = "force-dynamic";
 
@@ -25,54 +26,24 @@ export default async function MembersPage({
   const canDeactivateMembers = session.user.role === "ADMIN";
   const canEditGrowthSettings = session.user.role === "ADMIN";
   const scope = await getMemberScope(session.user.role, session.user.memberId);
-  const [members, departments, skills, roles, managerCandidates] = await Promise.all([
-    listMembers(undefined, scope.memberIds),
+  const initialMemberParams = Object.fromEntries(
+    buildMemberSearchParams(initialUrlState.filters)
+  );
+  const [memberData, departments, skills, roles, managerCandidates] = await Promise.all([
+    listMemberPage(
+      {
+        ...initialMemberParams,
+        targetRole: initialUrlState.targetRole || undefined,
+        page: initialUrlState.page
+      },
+      scope.memberIds
+    ),
     listDepartments(),
     listSkills(),
     listRoles(),
     listManagerCandidates()
   ]);
   const activeSkills = skills.filter((skill) => skill.isActive);
-  const memberRows = members.map((member) => ({
-    id: member.id,
-    employeeNo: member.employeeNo,
-    name: member.name,
-    avatarUpdatedAt: member.avatarUpdatedAt?.toISOString() ?? null,
-    email: member.email,
-    profile: member.profile,
-    status: member.status,
-    jobTitle: member.jobTitle,
-    departmentId: member.departmentId,
-    department: {
-      id: member.department.id,
-      name: member.department.name
-    },
-    managerId: member.managerId,
-    manager: member.manager,
-    targetRoleId: member.targetRoleId,
-    targetRole: member.targetRole,
-    growthHint: member.growthHint
-      ? { generatedAt: member.growthHint.generatedAt.toISOString() }
-      : null,
-    role: member.users[0]?.role ?? null,
-    pendingAssessments: member.selfAssessments,
-    roleAchievements: member.roleAchievements.map((achievement) => ({
-      roleId: achievement.roleId,
-      achievedAt: achievement.achievedAt.toISOString()
-    })),
-    memberSkills: member.memberSkills.map((memberSkill) => ({
-      id: memberSkill.id,
-      skillId: memberSkill.skillId,
-      level: memberSkill.level,
-      skill: {
-        id: memberSkill.skill.id,
-        name: memberSkill.skill.name,
-        category: {
-          name: memberSkill.skill.category.name
-        }
-      }
-    }))
-  }));
   const skillOptions = activeSkills.map((skill) => ({
     id: skill.id,
     name: skill.name,
@@ -102,7 +73,7 @@ export default async function MembersPage({
       <Card>
         <CardContent className="pt-5">
           <MemberSearchTable
-            initialMembers={memberRows}
+            initialData={memberData}
             departments={departments}
             skills={skillOptions}
             roles={roleOptions}

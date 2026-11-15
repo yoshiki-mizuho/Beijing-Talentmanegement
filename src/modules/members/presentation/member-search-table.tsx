@@ -1,6 +1,6 @@
 "use client";
 
-import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { FilterX, Search, UsersRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -18,12 +18,13 @@ import {
 import {
   buildMemberSearchParams,
   emptyMemberSearchFilters,
-  MEMBER_PAGE_SIZE,
   type MemberSearchFilters
 } from "@/modules/members/presentation/member-search-filters";
 import type {
   DepartmentOption,
   ManagerOption,
+  MemberListData,
+  MemberListItem,
   MemberRow,
   RoleOption,
   SkillOption,
@@ -32,7 +33,6 @@ import type {
 import { MemberAvatar } from "@/shared/ui/member-avatar";
 import {
   evaluateMemberTargetRole,
-  matchesTargetRoleFilter,
   type TargetRoleFilter
 } from "@/modules/members/presentation/target-role-filter";
 import { cn } from "@/shared/lib/utils";
@@ -47,7 +47,7 @@ import { Tooltip } from "@/shared/ui/tooltip";
 import { useDismissibleDetails } from "@/shared/ui/use-dismissible-details";
 
 type Props = {
-  initialMembers: MemberRow[];
+  initialData: MemberListData;
   departments: DepartmentOption[];
   skills: SkillOption[];
   roles: RoleOption[];
@@ -73,7 +73,7 @@ export function MemberSearchTable(props: Props) {
 }
 
 function MemberSearchTableInner({
-  initialMembers,
+  initialData,
   departments,
   skills,
   roles,
@@ -89,7 +89,6 @@ function MemberSearchTableInner({
   initialMemberId,
   initialTargetRoleFilter
 }: Props) {
-  const queryClient = useQueryClient();
   const router = useRouter();
   const [filters, setFilters] = useState<MemberSearchFilters>(initialFilters);
   const [debouncedKeyword, setDebouncedKeyword] = useState(filters.q);
@@ -118,17 +117,9 @@ function MemberSearchTableInner({
     setSelectedMemberId(null);
     replaceUrl({ ...latestState.current, selectedMemberId: null });
   }, [replaceUrl, router]);
-  const activeInitialMembers = useMemo(
-    () => initialMembers.filter((member) => member.status === "ACTIVE"),
-    [initialMembers]
-  );
-
   useEffect(() => {
     latestState.current = { filters, targetRoleFilter, page, selectedMemberId };
   }, [filters, page, selectedMemberId, targetRoleFilter]);
-  useEffect(() => {
-    queryClient.setQueryData(["members", "status=ACTIVE"], activeInitialMembers);
-  }, [activeInitialMembers, queryClient]);
   useEffect(() => {
     const id = window.setTimeout(() => {
       const q = latestState.current.filters.q.trim();
@@ -164,31 +155,62 @@ function MemberSearchTableInner({
     [debouncedKeyword, filters]
   );
   const searchParams = useMemo(
-    () => buildMemberSearchParams(appliedFilters).toString(),
-    [appliedFilters]
+    () => {
+      const params = buildMemberSearchParams(appliedFilters);
+      if (targetRoleFilter) params.set("targetRole", targetRoleFilter);
+      params.set("page", String(page));
+      return params.toString();
+    },
+    [appliedFilters, page, targetRoleFilter]
   );
+  const initialSearchParams = useMemo(() => {
+    const params = buildMemberSearchParams(initialFilters);
+    if (initialTargetRoleFilter) params.set("targetRole", initialTargetRoleFilter);
+    params.set("page", String(initialPage));
+    return params.toString();
+  }, [initialFilters, initialPage, initialTargetRoleFilter]);
   const query = useQuery({
     queryKey: ["members", searchParams],
     queryFn: ({ signal }) => fetchMembers(searchParams, signal),
-    initialData: searchParams === "status=ACTIVE" ? activeInitialMembers : undefined,
+    initialData: searchParams === initialSearchParams ? initialData : undefined,
     placeholderData: keepPreviousData,
     refetchOnWindowFocus: false
   });
-  const members = useMemo(
-    () =>
-      (query.data ?? []).filter((member) =>
-        matchesTargetRoleFilter(member, roles, targetRoleFilter)
-      ),
-    [query.data, roles, targetRoleFilter]
-  );
-  const pageCount = Math.max(1, Math.ceil(members.length / MEMBER_PAGE_SIZE));
-  const currentPage = Math.min(Math.max(page, 1), pageCount);
-  const pageMembers = members.slice(
-    (currentPage - 1) * MEMBER_PAGE_SIZE,
-    currentPage * MEMBER_PAGE_SIZE
-  );
-  const selectedMember = members.find((member) => member.id === selectedMemberId) ?? null;
-  const refreshMembers = useCallback(() => void query.refetch(), [query]);
+  const members = useMemo(() => query.data?.items ?? [], [query.data]);
+  const total = query.data?.total ?? 0;
+  const currentPage = query.data?.page ?? page;
+  const clearSelectedMember = useCallback(() => {
+    openedMemberFromList.current = false;
+    setSelectedMemberId(null);
+    replaceUrl({ ...latestState.current, selectedMemberId: null });
+  }, [replaceUrl]);
+  const detailQuery = useQuery({
+    queryKey: ["member", selectedMemberId],
+    queryFn: async ({ signal }) => {
+      try {
+        return await fetchMember(selectedMemberId as string, signal);
+      } catch (error) {
+        // 存在しない・範囲外のメンバーの ID は、エラーにせず URL から外す
+        if (!signal.aborted) clearSelectedMember();
+        throw error;
+      }
+    },
+    enabled: Boolean(selectedMemberId),
+    retry: false,
+    refetchOnWindowFocus: false
+  });
+  const refreshMembers = useCallback(async () => {
+    const memberId = latestState.current.selectedMemberId;
+    const [list] = await Promise.all([query.refetch(), detailQuery.refetch()]);
+    // 一覧から開いたメンバーが、更新（無効化など）で今の条件の一覧から外れたら、詳細を閉じる
+    if (
+      memberId &&
+      openedMemberFromList.current &&
+      !list.data?.items.some((member) => member.id === memberId)
+    ) {
+      clearSelectedMember();
+    }
+  }, [clearSelectedMember, detailQuery, query]);
   const updateFilters = (next: MemberSearchFilters) => {
     setFilters(next);
     setPage(1);
@@ -214,12 +236,6 @@ function MemberSearchTableInner({
       ([key, value]) => value !== emptyMemberSearchFilters[key as keyof MemberSearchFilters]
     ) || targetRoleFilter !== "" || page !== 1;
 
-  useEffect(() => {
-    if (!selectedMemberId || query.isFetching || query.isPending) return;
-    if (members.some((member) => member.id === selectedMemberId)) return;
-    replaceUrl({ ...latestState.current, selectedMemberId: null });
-  }, [members, query.isFetching, query.isPending, replaceUrl, selectedMemberId]);
-
   const openMemberDetail = (memberId: string) => {
     openedMemberFromList.current = true;
     setSelectedMemberId(memberId);
@@ -238,7 +254,7 @@ function MemberSearchTableInner({
         <h1 className="text-2xl font-semibold">
           メンバー一覧{" "}
           <span className="text-base font-medium text-[var(--muted-foreground)]">
-            {scopeName}・{members.length}名
+            {scopeName}・{total}名
           </span>
         </h1>
         {canCreateMembers ? (
@@ -389,7 +405,7 @@ function MemberSearchTableInner({
         </Button>
       </div>
       <p className="text-sm font-semibold" aria-live="polite">
-        {query.isFetching ? "検索中..." : `${members.length}名`}
+        {query.isFetching ? "検索中..." : `${total}名`}
       </p>
       {query.isError ? (
         <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">
@@ -428,7 +444,7 @@ function MemberSearchTableInner({
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border)]">
-              {pageMembers.map((member) => (
+              {members.map((member) => (
                 <tr
                   key={member.id}
                   className="cursor-pointer hover:bg-[var(--surface-subtle)]"
@@ -494,18 +510,21 @@ function MemberSearchTableInner({
       ) : null}
       {members.length > 0 ? (
         <Pagination
-          total={members.length}
+          total={total}
           page={currentPage}
-          pageSize={MEMBER_PAGE_SIZE}
+          pageSize={query.data?.pageSize ?? 20}
           onPage={(nextPage) => {
             setPage(nextPage);
             replaceUrl({ ...latestState.current, page: nextPage });
           }}
         />
       ) : null}
-      {selectedMember ? (
+      {selectedMemberId && detailQuery.isPending ? (
+        <p aria-live="polite">読み込み中...</p>
+      ) : null}
+      {detailQuery.data ? (
         <MemberDetailModal
-          member={selectedMember}
+          member={detailQuery.data}
           departments={departments}
           skills={skills}
           managerCandidates={managerCandidates}
@@ -573,7 +592,7 @@ function statusDot(status: string) {
       : "bg-slate-400";
 }
 
-function MemberSkillsCell({ member }: { member: MemberRow }) {
+function MemberSkillsCell({ member }: { member: MemberListItem }) {
   const { visibleSkills, hiddenSkills } = summarizeMemberSkills(member.memberSkills);
   if (!visibleSkills.length) return <span className="text-[var(--muted-foreground)]">未設定</span>;
   const summary = hiddenSkills.map((item) => `${item.skill.name} Lv.${item.level}`).join(" / ");
@@ -594,7 +613,7 @@ function MemberSkillsCell({ member }: { member: MemberRow }) {
     </div>
   );
 }
-function TargetRoleCell({ member, roles }: { member: MemberRow; roles: RoleOption[] }) {
+function TargetRoleCell({ member, roles }: { member: MemberListItem; roles: RoleOption[] }) {
   const role = roles.find((item) => item.id === member.targetRoleId);
   if (!member.targetRole || !role)
     return <span className="text-[var(--muted-foreground)]">未設定</span>;
@@ -623,5 +642,11 @@ function TargetRoleCell({ member, roles }: { member: MemberRow; roles: RoleOptio
 async function fetchMembers(searchParams: string, signal: AbortSignal) {
   const response = await fetch(`/api/members?${searchParams}`, { signal });
   if (!response.ok) throw new Error("Failed to fetch members.");
-  return (await response.json()) as MemberRow[];
+  return (await response.json()) as MemberListData;
+}
+
+async function fetchMember(memberId: string, signal: AbortSignal) {
+  const response = await fetch(`/api/members/${encodeURIComponent(memberId)}`, { signal });
+  if (!response.ok) throw new Error("Failed to fetch member.");
+  return (await response.json()) as MemberRow;
 }

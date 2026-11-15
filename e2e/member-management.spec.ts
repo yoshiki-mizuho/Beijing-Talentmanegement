@@ -144,8 +144,9 @@ test("マネージャーの一覧と更新APIは自組織の範囲に制限さ�
   const manager = await openLoggedInContext(browser, managerAccount.credential);
   try {
     const response = await admin.page.request.get(`/api/members?q=${outside.member.employeeNo}`);
-    const outsideMembers = (await response.json()) as { id: string }[];
-    expect(outsideMembers).toHaveLength(1);
+    const outsideMembers = (await response.json()) as { items: { id: string }[]; total: number };
+    expect(outsideMembers.items).toHaveLength(1);
+    expect(outsideMembers.total).toBe(1);
 
     await manager.page.goto("/members");
     await manager.page.getByLabel("キーワード").fill(outside.member.employeeNo);
@@ -187,12 +188,15 @@ test("マネージャーの一覧と更新APIは自組織の範囲に制限さ�
     await expect(manager.page.getByText("メンバーのスキルを設定しました。").first()).toBeVisible();
 
     const inScopeResponse = await manager.page.request.get("/api/members");
-    const inScopeMembers = (await inScopeResponse.json()) as { id: string }[];
+    const inScopeMembers = (await inScopeResponse.json()) as { items: { id: string }[] };
     const forbiddenInScope = await manager.page.request.patch(
-      `/api/members/${inScopeMembers[0].id}`,
+      `/api/members/${inScopeMembers.items[0].id}`,
       { data: {} },
     );
     expect(forbiddenInScope.status()).toBe(403);
+
+    const outsideDetail = await manager.page.request.get(`/api/members/${outside.member.id}`);
+    expect(outsideDetail.status()).toBe(403);
 
     const forbidden = await manager.page.request.patch(
       `/api/members/${outside.member.id}`,

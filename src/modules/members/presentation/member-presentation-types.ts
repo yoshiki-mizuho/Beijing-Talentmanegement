@@ -38,6 +38,20 @@ export type MemberRow = {
   }[];
 };
 
+export type MemberListItem = Omit<
+  MemberRow,
+  "email" | "profile" | "managerId" | "manager" | "pendingAssessments"
+> & {
+  pendingAssessmentCount: number;
+};
+
+export type MemberListData = {
+  items: MemberListItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
 export type ManagerOption = {
   id: string;
   employeeNo: string;

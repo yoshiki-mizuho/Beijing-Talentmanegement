@@ -41,7 +41,11 @@ export default async function SkillMapPage({
           ))}
         </nav>
       ) : null}
-      <SkillMapTiles skills={skills} categories={categories} />
+      <SkillMapTiles
+        skills={skills}
+        categories={categories}
+        departmentId={scope.departmentId}
+      />
     </div>
   );
 }

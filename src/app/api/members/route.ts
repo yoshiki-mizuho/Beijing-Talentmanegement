@@ -3,7 +3,7 @@ import { ZodError } from "zod";
 
 import {
   createMember,
-  listMembers
+  listMemberPage
 } from "@/modules/members/application/member-service";
 import { MemberUserLinkError } from "@/modules/members/domain/member-user-policy";
 import { adminOnly, authorizeApi, managerOrAdmin } from "@/server/auth/authorization";
@@ -21,17 +21,11 @@ export async function GET(request: NextRequest) {
       auth.session.user.role,
       auth.session.user.memberId
     );
-    const members = await listMembers(
+    const members = await listMemberPage(
       Object.fromEntries(request.nextUrl.searchParams),
       scope.memberIds
     );
-    return NextResponse.json(
-      members.map((member) => ({
-        ...member,
-        pendingAssessments: member.selfAssessments,
-        role: member.users[0]?.role ?? null
-      }))
-    );
+    return NextResponse.json(members);
   } catch (error) {
     if (error instanceof ZodError) {
       return NextResponse.json({ error: "Invalid member search query" }, { status: 400 });

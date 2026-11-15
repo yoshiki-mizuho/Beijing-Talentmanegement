@@ -1,7 +1,10 @@
 import type { AuthRole } from "@prisma/client";
 import { getMemberScope } from "@/modules/members/application/member-scope";
 import { buildSkillMap } from "@/modules/skill-map/domain/skill-map-matrix";
-import { getSkillMapData } from "@/modules/skill-map/infrastructure/skill-map-repository";
+import {
+  getSkillHolders,
+  getSkillMapData
+} from "@/modules/skill-map/infrastructure/skill-map-repository";
 
 export async function getSkillMapPageData(role: AuthRole, memberId: string, departmentId?: string) {
   const scope = await getMemberScope(role, memberId, departmentId);
@@ -11,14 +14,31 @@ export async function getSkillMapPageData(role: AuthRole, memberId: string, depa
   return {
     scope,
     skills: skills.map((skill) => ({
-      ...skill,
-      holders: skill.holders.map((holder) => ({
-        ...holder,
-        avatarUpdatedAt: holder.avatarUpdatedAt
-          ? new Date(holder.avatarUpdatedAt).toISOString()
-          : null
-      }))
+      id: skill.id,
+      name: skill.name,
+      category: skill.category,
+      holderCount: skill.holderCount,
+      averageLevel: skill.averageLevel,
+      rank: skill.rank,
+      totalRanked: skill.totalRanked,
+      strength: skill.strength,
+      growthCount: skill.growthCount,
+      levelCounts: skill.levelCounts
     })),
     categories
   };
+}
+
+export async function listSkillHolders(
+  role: AuthRole,
+  memberId: string,
+  skillId: string,
+  departmentId?: string
+) {
+  const scope = await getMemberScope(role, memberId, departmentId);
+  return (await getSkillHolders(skillId, scope.memberIds)).map((item) => ({
+    ...item.member,
+    level: item.level,
+    avatarUpdatedAt: item.member.avatarUpdatedAt?.toISOString() ?? null
+  }));
 }
