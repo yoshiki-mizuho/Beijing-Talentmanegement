@@ -80,4 +80,22 @@ describe("buildOrganizationDashboard", () => {
       targetCount: 2,
     });
   });
+  it("読む期間より古い変更を除いても全体集計が変わらない", () => {
+    const input = {
+      members,
+      now: new Date("2026-10-12T00:00:00Z"),
+      levelChanges: [],
+      pendingAssessments: [],
+    };
+    const oldChange = {
+      memberId: "m1",
+      changedAt: new Date("2020-01-01T00:00:00Z"),
+      source: "APPROVAL",
+      fromLevel: 1,
+      toLevel: 2,
+    };
+    expect(
+      buildOrganizationDashboard({ ...input, levelChanges: [oldChange] }),
+    ).toEqual(buildOrganizationDashboard(input));
+  });
 });

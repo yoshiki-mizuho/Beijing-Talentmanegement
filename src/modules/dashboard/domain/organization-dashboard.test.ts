@@ -4,7 +4,10 @@ import {
   comparisonDepartmentIds,
   completedMonths,
   cumulativeCategories,
+  dashboardMemberDepartmentIds,
+  dashboardVisibleDepartmentIds,
   momentumFor,
+  organizationDashboardChangesSince,
   perPersonLevelUps,
   restoreSkillsAt,
   selectDepartmentId,
@@ -17,6 +20,35 @@ describe("organization dashboard", () => {
       ...Array(10).fill({}),
       { label: "10月" },
     ]));
+  it.each([
+    [new Date(2026, 0, 1), new Date(2025, 0, 1)],
+    [new Date(2026, 11, 31), new Date(2025, 11, 1)],
+    [new Date(2024, 1, 29), new Date(2023, 1, 1)],
+  ])("読む期間を12か月推移の先頭月の月初にする", (now, expected) => {
+    expect(organizationDashboardChangesSince(now)).toEqual(expected);
+  });
+  it("MANAGERが閲覧・比較に使う部署のメンバー範囲を返す", () => {
+    const departments = [
+      { id: "root", name: "本部", parentDepartmentId: null },
+      { id: "dev", name: "開発", parentDepartmentId: "root" },
+      { id: "dev-child", name: "開発一課", parentDepartmentId: "dev" },
+      { id: "sales", name: "営業", parentDepartmentId: "root" },
+      { id: "sales-child", name: "営業一課", parentDepartmentId: "sales" },
+      { id: "other", name: "別本部", parentDepartmentId: null },
+    ];
+    const visibleIds = dashboardVisibleDepartmentIds(
+      "MANAGER",
+      departments,
+      "dev",
+    );
+    expect(visibleIds).toEqual(["dev", "dev-child", "sales"]);
+    expect(dashboardMemberDepartmentIds(departments, visibleIds)).toEqual([
+      "dev",
+      "dev-child",
+      "sales",
+      "sales-child",
+    ]);
+  });
   it("勢いの境界と0件を判定する", () => {
     expect(momentumFor(11, 10).momentum).toBe("accelerating");
     expect(momentumFor(9, 10).momentum).toBe("slowing");
@@ -114,5 +146,30 @@ describe("organization dashboard", () => {
     });
     expect(metrics.averageProgress).toBe(75);
     expect(metrics.achievedCount).toBe(1);
+  });
+  it("読む期間より古い変更を除いても部署指標が変わらない", () => {
+    const now = new Date(2026, 10, 3);
+    const oldChange = {
+      memberId: "m",
+      skillId: "s",
+      changedAt: new Date(2020, 0, 1),
+      source: "DIRECT_EDIT",
+      fromLevel: 1,
+      toLevel: 2,
+      categoryName: "言語",
+    };
+    const input = {
+      members: [{
+        id: "m",
+        departmentId: "d",
+        targetRole: null,
+        memberSkills: [{ skillId: "s", level: 2 }],
+      }],
+      changes: [],
+      now,
+    };
+    expect(buildDepartmentMetrics({ ...input, changes: [oldChange] })).toEqual(
+      buildDepartmentMetrics(input),
+    );
   });
 });

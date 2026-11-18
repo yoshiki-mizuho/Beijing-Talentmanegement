@@ -2,6 +2,7 @@ import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement
 import { isGrowthLevelChange } from "@/modules/growth/domain/level-change-source";
 import {
   collectDescendantIds,
+  collectManagerVisibleDepartmentIds,
   type DepartmentHierarchyItem,
 } from "@/modules/members/domain/department-hierarchy";
 
@@ -43,6 +44,43 @@ export function completedMonths(now: Date, count = 12) {
       label: `${date.getMonth() + 1}月`,
     };
   });
+}
+
+export function organizationDashboardChangesSince(now: Date) {
+  return completedMonths(now)[0].date;
+}
+
+export function dashboardVisibleDepartmentIds(
+  role: "ADMIN" | "MANAGER" | "MEMBER",
+  departments: DepartmentHierarchyItem[],
+  ownDepartmentId: string,
+) {
+  return role === "ADMIN"
+    ? departments.map((department) => department.id)
+    : collectManagerVisibleDepartmentIds(departments, ownDepartmentId);
+}
+
+export function dashboardMemberDepartmentIds(
+  departments: DepartmentHierarchyItem[],
+  visibleDepartmentIds: string[],
+) {
+  return [
+    ...new Set(
+      visibleDepartmentIds.flatMap((id) => collectDescendantIds(departments, id)),
+    ),
+  ];
+}
+
+export function groupLevelChangesByMember(
+  changes: OrganizationLevelChange[],
+) {
+  const result = new Map<string, OrganizationLevelChange[]>();
+  for (const change of changes) {
+    const memberChanges = result.get(change.memberId) ?? [];
+    memberChanges.push(change);
+    result.set(change.memberId, memberChanges);
+  }
+  return result;
 }
 
 export function momentumFor(recent: number, previous: number) {
@@ -93,14 +131,14 @@ export function comparisonDepartmentIds(
 
 export function restoreSkillsAt(
   member: OrganizationDashboardMember,
-  changes: OrganizationLevelChange[],
+  memberChanges: OrganizationLevelChange[],
   at: Date,
 ) {
   const levels = new Map(
     member.memberSkills.map((item) => [item.skillId, item.level]),
   );
-  changes
-    .filter((item) => item.memberId === member.id && item.changedAt > at)
+  memberChanges
+    .filter((item) => item.changedAt > at)
     .sort((a, b) => b.changedAt.getTime() - a.changedAt.getTime())
     .forEach((item) =>
       item.fromLevel === null
@@ -146,6 +184,7 @@ export function cumulativeCategories(
 export function buildDepartmentMetrics(input: {
   members: OrganizationDashboardMember[];
   changes: OrganizationLevelChange[];
+  changesByMember?: Map<string, OrganizationLevelChange[]>;
   now: Date;
 }) {
   const months = completedMonths(input.now);
@@ -181,6 +220,8 @@ export function buildDepartmentMetrics(input: {
     input.now.getDate(),
   );
   const targetMembers = input.members.filter((member) => member.targetRole);
+  const changesByMember =
+    input.changesByMember ?? groupLevelChangesByMember(input.changes);
   const evaluation = (
     member: OrganizationDashboardMember,
     skills: { skillId: string; level: number }[],
@@ -206,7 +247,11 @@ export function buildDepartmentMetrics(input: {
               evaluation(
                 member,
                 at
-                  ? restoreSkillsAt(member, input.changes, at)
+                  ? restoreSkillsAt(
+                      member,
+                      changesByMember.get(member.id) ?? [],
+                      at,
+                    )
                   : member.memberSkills,
               ).achievementRate,
             0,
