@@ -79,13 +79,28 @@ export function buildOrganizationDashboard(input: {
     }
   }
   const staleBoundary = new Date(input.now.getTime() - 7 * 86400000);
+  const membersByDepartment = new Map<string, OrganizationMember[]>();
+  for (const member of input.members) {
+    const members = membersByDepartment.get(member.department.id) ?? [];
+    members.push(member);
+    membersByDepartment.set(member.department.id, members);
+  }
+  const changesByMember = new Map<string, typeof changes>();
+  for (const change of changes) {
+    const memberChanges = changesByMember.get(change.memberId) ?? [];
+    memberChanges.push(change);
+    changesByMember.set(change.memberId, memberChanges);
+  }
+  const pendingByMember = new Map<string, typeof input.pendingAssessments>();
+  for (const assessment of input.pendingAssessments) {
+    const assessments = pendingByMember.get(assessment.memberId) ?? [];
+    assessments.push(assessment);
+    pendingByMember.set(assessment.memberId, assessments);
+  }
   const departmentSummaries = [
-    ...new Set(input.members.map((member) => member.department.id)),
+    ...membersByDepartment.keys(),
   ].map((id) => {
-    const members = input.members.filter(
-      (member) => member.department.id === id,
-    );
-    const ids = new Set(members.map((member) => member.id));
+    const members = membersByDepartment.get(id) ?? [];
     const departmentTargets = members.filter((member) => member.targetRole);
     return {
       id,
@@ -98,14 +113,26 @@ export function buildOrganizationDashboard(input: {
               100,
           )
         : 0,
-      levelUps: changes.filter(
-        (item) => ids.has(item.memberId) && item.changedAt >= months[5].date,
-      ).length,
-      pending: input.pendingAssessments.filter((item) => ids.has(item.memberId))
-        .length,
-      stalePending: input.pendingAssessments.filter(
-        (item) => ids.has(item.memberId) && item.createdAt <= staleBoundary,
-      ).length,
+      levelUps: members.reduce(
+        (count, member) =>
+          count +
+          (changesByMember.get(member.id) ?? []).filter(
+            (item) => item.changedAt >= months[5].date,
+          ).length,
+        0,
+      ),
+      pending: members.reduce(
+        (count, member) => count + (pendingByMember.get(member.id) ?? []).length,
+        0,
+      ),
+      stalePending: members.reduce(
+        (count, member) =>
+          count +
+          (pendingByMember.get(member.id) ?? []).filter(
+            (item) => item.createdAt <= staleBoundary,
+          ).length,
+        0,
+      ),
     };
   });
   const roleSummaries = [

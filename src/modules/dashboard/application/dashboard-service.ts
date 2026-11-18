@@ -2,16 +2,22 @@ import type { AuthRole } from "@prisma/client";
 import {
   buildDepartmentTree,
   collectDescendantIds,
-  collectManagerVisibleDepartmentIds,
 } from "@/modules/members/domain/department-hierarchy";
 import {
   buildDepartmentMetrics,
   comparisonDepartmentIds,
+  dashboardMemberDepartmentIds,
+  dashboardVisibleDepartmentIds,
   departmentMemberIds,
+  groupLevelChangesByMember,
+  organizationDashboardChangesSince,
   selectDepartmentId,
 } from "@/modules/dashboard/domain/organization-dashboard";
 import { buildOrganizationDashboard } from "@/modules/dashboard/domain/dashboard-summary";
-import { getOrganizationDashboardSource } from "@/modules/dashboard/infrastructure/dashboard-repository";
+import {
+  getOrganizationDashboardScope,
+  getOrganizationDashboardSource,
+} from "@/modules/dashboard/infrastructure/dashboard-repository";
 import { listRoleAchievements } from "@/modules/roles/application/role-achievement-service";
 
 export async function getDashboardSummary(
@@ -19,49 +25,59 @@ export async function getDashboardSummary(
   memberId: string,
   departmentId?: string,
 ) {
-  const source = await getOrganizationDashboardSource(memberId);
+  const now = new Date();
+  const scope = await getOrganizationDashboardScope(memberId);
+  const tree = buildDepartmentTree(scope.departments);
+  const visibleIds = dashboardVisibleDepartmentIds(
+    role,
+    scope.departments,
+    scope.viewer.departmentId,
+  );
+  const source = await getOrganizationDashboardSource({
+    departmentIds:
+      role === "ADMIN"
+        ? undefined
+        : dashboardMemberDepartmentIds(scope.departments, visibleIds),
+    changesSince: organizationDashboardChangesSince(now),
+  });
   const roleAchievements = await listRoleAchievements({
     memberIds: source.members.map((member) => member.id)
   });
+  const achievementsByMember = new Map<string, typeof roleAchievements>();
+  for (const achievement of roleAchievements) {
+    const achievements = achievementsByMember.get(achievement.memberId) ?? [];
+    achievements.push(achievement);
+    achievementsByMember.set(achievement.memberId, achievements);
+  }
   const sourceMembers = source.members.map((member) => ({
     ...member,
-    roleAchievements: roleAchievements.filter(
-      (achievement) => achievement.memberId === member.id
-    )
+    roleAchievements: achievementsByMember.get(member.id) ?? [],
   }));
-  const tree = buildDepartmentTree(source.departments);
-  const visibleIds =
-    role === "ADMIN"
-      ? tree.map((item) => item.id)
-      : collectManagerVisibleDepartmentIds(
-          source.departments,
-          source.viewer.departmentId,
-        );
+  const changesByMember = groupLevelChangesByMember(source.changes);
   const roots = tree.filter((item) => item.depth === 0);
   const fallback =
     role === "ADMIN"
       ? roots.length === 1
         ? roots[0].id
         : null
-      : source.viewer.departmentId;
+      : scope.viewer.departmentId;
   const selectedId = selectDepartmentId(departmentId, visibleIds, fallback);
   const selectedDepartment = selectedId
     ? tree.find((item) => item.id === selectedId)
     : null;
   const memberIds = new Set(
-    departmentMemberIds(source.departments, sourceMembers, selectedId),
+    departmentMemberIds(scope.departments, sourceMembers, selectedId),
   );
   const members = sourceMembers.filter((member) => memberIds.has(member.id));
   const changes = source.changes.filter((change) =>
     memberIds.has(change.memberId),
   );
-  const now = new Date();
   const comparisonIds = selectedId
-    ? comparisonDepartmentIds(source.departments, selectedId, visibleIds)
+    ? comparisonDepartmentIds(scope.departments, selectedId, visibleIds)
     : roots.map((item) => item.id);
   const comparisons = comparisonIds.map((id) => {
     const ids = new Set(
-      departmentMemberIds(source.departments, sourceMembers, id),
+      departmentMemberIds(scope.departments, sourceMembers, id),
     );
     const comparisonMembers = sourceMembers.filter((member) =>
       ids.has(member.id),
@@ -71,7 +87,10 @@ export async function getDashboardSummary(
       name: tree.find((item) => item.id === id)?.name ?? "",
       ...buildDepartmentMetrics({
         members: comparisonMembers,
-        changes: source.changes.filter((change) => ids.has(change.memberId)),
+        changes: comparisonMembers.flatMap(
+          (member) => changesByMember.get(member.id) ?? [],
+        ),
+        changesByMember,
         now,
       }),
     };
@@ -88,12 +107,15 @@ export async function getDashboardSummary(
     pendingAssessments: [],
     now,
   });
+  const directCounts = new Map(
+    scope.memberCounts.map((item) => [item.departmentId, item._count._all]),
+  );
   const counts = new Map(
     tree.map((item) => {
-      const ids = new Set(collectDescendantIds(source.departments, item.id));
+      const ids = collectDescendantIds(scope.departments, item.id);
       return [
         item.id,
-        sourceMembers.filter((member) => ids.has(member.departmentId)).length,
+        ids.reduce((sum, id) => sum + (directCounts.get(id) ?? 0), 0),
       ];
     }),
   );
@@ -109,13 +131,13 @@ export async function getDashboardSummary(
       ...item,
       visible: visibleIds.includes(item.id),
       memberCount: counts.get(item.id) ?? 0,
-      own: item.id === source.viewer.departmentId,
+      own: item.id === scope.viewer.departmentId,
     })),
-    metrics: buildDepartmentMetrics({ members, changes, now }),
+    metrics: buildDepartmentMetrics({ members, changes, changesByMember, now }),
     comparisons,
     comparisonMode:
       selectedId &&
-      source.departments.some(
+      scope.departments.some(
         (item) =>
           item.parentDepartmentId === selectedId &&
           visibleIds.includes(item.id),
