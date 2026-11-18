@@ -70,11 +70,14 @@
 | R7 | 振り返りとわくわく感 | 完了 | [`R7_COMPLETION_REVIEW.md`](archive/R7_COMPLETION_REVIEW.md) |
 | S | セキュリティ強化 | 完了 | [`S_COMPLETION_REVIEW.md`](archive/S_COMPLETION_REVIEW.md) |
 | C | リポジトリの整理 | 完了 | [`C_COMPLETION_REVIEW.md`](archive/C_COMPLETION_REVIEW.md) |
+| E | 変更に耐える設計（キーの自動採番、ロール達成の記録、履歴の整理） | 完了 | - |
+| F | 顧客提案用スキルシート（経歴・資格、AI の下書き、Excel のひな形と出力） | 完了 | - |
+| G | 性能改善 | 完了（G-4 の速さの測り直しが残り） | [`PERFORMANCE.md`](PERFORMANCE.md) |
 | Phase 7 | 本番化・運用準備 | 未着手 | - |
 
 ## 今後の順番
 
-1. Phase 7の本番化・運用準備へ進む。
+1. 社内サーバ（Hub シリーズの基盤）に、ひな形 `hub-template` の形に合わせて載せる。計画は利用者と相談中（Phase 7 の本番化をこの形に置き換える）。
 2. AIの「迷ったときの相談」は、社内で使えるAIの窓口が決まった時点で差し込む。
 
 ## Phase 7: 本番化・運用準備
