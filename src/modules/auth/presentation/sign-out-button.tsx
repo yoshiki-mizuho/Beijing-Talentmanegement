@@ -1,18 +1,32 @@
 "use client";
 
 import { LogOut } from "lucide-react";
-import { signOut } from "next-auth/react";
 
 import { Button } from "@/shared/ui/button";
 
 export function SignOutButton({ className }: { className?: string }) {
+  async function signOut() {
+    const csrfToken = document.cookie
+      .split("; ")
+      .find((cookie) => cookie.startsWith("csrf_token="))
+      ?.slice("csrf_token=".length);
+    try {
+      await fetch("/api/v1/auth/logout", {
+        method: "POST",
+        headers: csrfToken ? { "X-CSRF-Token": decodeURIComponent(csrfToken) } : {}
+      });
+    } finally {
+      window.location.assign(new URL("/login", window.location.origin));
+    }
+  }
+
   return (
     <Button
       type="button"
       variant="ghost"
       size="small"
       className={className ?? "px-2 sm:px-3"}
-      onClick={() => signOut({ callbackUrl: "/login" })}
+      onClick={() => void signOut()}
       aria-label="ログアウト"
       title="ログアウト"
     >

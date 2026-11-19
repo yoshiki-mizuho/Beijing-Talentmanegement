@@ -16,8 +16,6 @@ import { Button } from "@/shared/ui/button";
 import { Dialog } from "@/shared/ui/dialog";
 import { FormField, SelectField } from "@/shared/ui/form-field";
 import { SubmitButton } from "@/shared/ui/submit-button";
-import type { ActionResult } from "@/shared/lib/action-result";
-import { InitialPasswordNotice } from "@/modules/members/presentation/initial-password-notice";
 
 const memberStatuses = ["ACTIVE", "LEAVE", "INACTIVE"] as const;
 
@@ -34,15 +32,8 @@ export function MemberCreateDialog({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [created, setCreated] = useState<{
-    name: string;
-    email: string;
-    initialPassword: string | null;
-  } | null>(null);
-
   function close() {
     setOpen(false);
-    setCreated(null);
   }
 
   return (
@@ -54,32 +45,15 @@ export function MemberCreateDialog({
       <Dialog
         open={open}
         onClose={close}
-        title={created ? `${created.name}さんを登録しました` : "メンバーを追加"}
-        description={created ? undefined : "登録すると、初回ログイン用のパスワードが表示されます。"}
-        className={created ? "max-w-lg" : "max-w-3xl"}
+        title="メンバーを追加"
+        description="基盤の利用者 ID は、TalentHub を利用する人だけ入力してください。"
+        className="max-w-3xl"
       >
-        {created ? (
-          <div className="space-y-4">
-            {created.initialPassword ? (
-              <InitialPasswordNotice
-                email={created.email}
-                initialPassword={created.initialPassword}
-              />
-            ) : (
-              <p className="text-sm">
-                同じメールアドレスの利用者がいたため、その利用者に紐付けました。パスワードは今のままです。
-              </p>
-            )}
-            <div className="flex justify-end">
-              <Button type="button" onClick={close}>閉じる</Button>
-            </div>
-          </div>
-        ) : (<>
         <ActionForm
           action={createMemberAction}
           className="grid gap-4 md:grid-cols-2"
-          onSuccess={(result: ActionResult) => {
-            setCreated(result.data as typeof created);
+          onSuccess={() => {
+            close();
             router.refresh();
           }}
         >
@@ -101,6 +75,12 @@ export function MemberCreateDialog({
             name="email"
             type="email"
             required
+          />
+          <FormField
+            id="create-member-platform-user-id"
+            label="基盤の利用者 ID"
+            name="platformUserId"
+            placeholder="UUID（未登録なら空欄）"
           />
           <SelectField
             id="create-member-department"
@@ -168,7 +148,6 @@ export function MemberCreateDialog({
             </SubmitButton>
           </div>
         </ActionForm>
-        </>)}
       </Dialog>
     </>
   );

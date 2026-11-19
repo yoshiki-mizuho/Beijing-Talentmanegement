@@ -7,9 +7,6 @@ import {
   SkillLevelChangeSource,
   SkillSelfAssessmentStatus,
 } from "@prisma/client";
-import bcrypt from "bcryptjs";
-
-import { generateInitialPassword } from "@/modules/auth/domain/initial-password";
 import { AUDIT_ACTION, AUDIT_TARGET_TYPE } from "@/modules/audit/domain/audit-action";
 import { diffForAudit } from "@/modules/audit/domain/audit-diff";
 import { recordAuditLog, recordAuditLogs } from "@/modules/audit/infrastructure/audit-repository";
@@ -24,7 +21,7 @@ import type { MemberSearchInput } from "@/modules/members/domain/member-search";
 import { canReviewSkillAssessment } from "@/modules/members/domain/skill-assessment-policy";
 import { shouldRecordSkillLevelChange } from "@/modules/members/domain/skill-level-change-policy";
 import { assertUserCanLinkToMember } from "@/modules/members/domain/member-user-policy";
-import { getActiveReportError, getMemberRoleChangeError } from "@/modules/members/domain/member-role-policy";
+import { getActiveReportError } from "@/modules/members/domain/member-role-policy";
 import type {
   SkillAssessmentApprovalBatchInput,
   SkillAssessmentBatchInput,
@@ -35,10 +32,6 @@ import { recordRoleAchievements } from "@/modules/roles/application/role-achieve
 import { collectDescendantIds } from "@/modules/members/domain/department-hierarchy";
 import { prisma } from "@/server/db/prisma";
 import { UserFacingError } from "@/shared/lib/user-facing-error";
-
-export async function hashInitialPassword(password = generateInitialPassword()) {
-  return bcrypt.hash(password, 12);
-}
 
 function memberAuditFields(member: {
   employeeNo: string;
@@ -129,7 +122,7 @@ export async function listMembers(input?: MemberSearchInput, memberIds?: string[
       ]
     },
     include: {
-      users: { select: { role: true } },
+      users: { select: { role: true, platformUserId: true } },
       department: true,
       manager: { select: { id: true, name: true } },
       targetRole: {
@@ -252,23 +245,15 @@ export async function updateMemberRole(
     if (!user) {
       throw new UserFacingError("ログイン用のユーザーがありません");
     }
-    const activeAdminCount = await tx.user.count({
-      where: {
-        role: AuthRole.ADMIN,
-        member: { status: "ACTIVE" }
-      }
-    });
-    const error = getMemberRoleChangeError({
-      actorMemberId,
-      targetMemberId: memberId,
-      currentRole: user.role,
-      nextRole,
-      activeAdminCount,
-      targetIsActive: member.status === "ACTIVE",
-      reportCount: member._count.reports
-    });
-    if (error) {
-      throw new UserFacingError(error);
+    if (nextRole !== AuthRole.MEMBER && nextRole !== AuthRole.MANAGER) {
+      throw new UserFacingError("権限はメンバーまたはマネージャーから選んでください");
+    }
+    if (actorMemberId === memberId) {
+      throw new UserFacingError("自分の権限は変更できません");
+    }
+    if (nextRole === AuthRole.MEMBER) {
+      const error = getActiveReportError(member._count.reports, "変更できません");
+      if (error) throw new UserFacingError(error);
     }
     if (user.role === nextRole) {
       return member;
@@ -292,7 +277,7 @@ export async function updateMemberRole(
 
 export async function createMember(input: MemberInput, actorMemberId: string | null) {
   return prisma.$transaction(async (tx) => {
-    const { member, initialPassword } = await createMemberWithUser(tx, input);
+    const member = await createMemberWithUser(tx, input);
     await recordAuditLog(tx, {
       actorMemberId,
       action: AUDIT_ACTION.MEMBER_CREATE,
@@ -300,10 +285,7 @@ export async function createMember(input: MemberInput, actorMemberId: string | n
       targetId: member.id,
       after: memberAuditFields(member)
     });
-    return {
-      member,
-      initialPassword
-    };
+    return member;
   });
 }
 
@@ -314,80 +296,24 @@ export async function createMemberWithUser(
     managerId?: string | null;
     targetRoleId?: string | null;
   },
-  // CSV の一括登録では、時間のかかるハッシュの計算をトランザクションの外で1回だけ行い、ここに渡す
-  initialPasswordHash?: string
 ) {
-  const createInitialCredential = async () => {
-    if (initialPasswordHash) {
-      return { passwordHash: initialPasswordHash, initialPassword: null };
-    }
-    const initialPassword = generateInitialPassword();
-    return {
-      passwordHash: await hashInitialPassword(initialPassword),
-      initialPassword
-    };
-  };
-  const member = await tx.member.create({ data: input });
-  const existingUser = await tx.user.findUnique({
-    where: { email: input.email },
-    select: {
-      id: true,
-      memberId: true
-    }
-  });
-
-  if (existingUser) {
-    assertUserCanLinkToMember(existingUser.memberId, member.id);
-
-    await tx.user.update({
-      where: { id: existingUser.id },
-      data: {
-        name: input.name,
-        memberId: member.id
-      }
+  const { platformUserId, ...memberInput } = input;
+  const member = await tx.member.create({ data: memberInput });
+  if (platformUserId) {
+    const existingUser = await tx.user.findUnique({
+      where: { platformUserId },
+      select: { id: true, memberId: true }
     });
-    return { member, initialPassword: null };
+    if (existingUser) {
+      assertUserCanLinkToMember(existingUser.memberId, member.id);
+      await tx.user.update({ where: { id: existingUser.id }, data: { memberId: member.id } });
+    } else {
+      await tx.user.create({
+        data: { platformUserId, role: AuthRole.MEMBER, memberId: member.id }
+      });
+    }
   }
-
-  const credential = await createInitialCredential();
-  await tx.user.create({
-    data: {
-      email: input.email,
-      name: input.name,
-      passwordHash: credential.passwordHash,
-      passwordChangeRequired: true,
-      role: AuthRole.MEMBER,
-      memberId: member.id
-    }
-  });
-
-  return { member, initialPassword: credential.initialPassword };
-}
-
-export async function issueInitialPassword(
-  memberId: string,
-  actorMemberId: string
-) {
-  const initialPassword = generateInitialPassword();
-  const passwordHash = await hashInitialPassword(initialPassword);
-
-  await prisma.$transaction(async (tx) => {
-    const updated = await tx.user.updateMany({
-      where: { memberId },
-      data: { passwordHash, passwordChangeRequired: true }
-    });
-    if (updated.count === 0) {
-      throw new UserFacingError("このメンバーにはログイン用の利用者がありません。");
-    }
-    await recordAuditLog(tx, {
-      actorMemberId,
-      action: AUDIT_ACTION.MEMBER_PASSWORD_ISSUE,
-      targetType: AUDIT_TARGET_TYPE.MEMBER,
-      targetId: memberId
-    });
-  });
-
-  return initialPassword;
+  return member;
 }
 
 export async function updateMember(
@@ -397,13 +323,13 @@ export async function updateMember(
 ) {
   return prisma.$transaction(async (tx) => {
     const before = await tx.member.findUniqueOrThrow({ where: { id } });
-    const email = input.email.toLowerCase();
-    const conflictingUser = await tx.user.findFirst({
-      where: { email, memberId: { not: id } },
+    const platformUserId = input.platformUserId || null;
+    const conflictingUser = platformUserId ? await tx.user.findFirst({
+      where: { platformUserId, memberId: { not: id } },
       select: { id: true }
-    });
+    }) : null;
     if (conflictingUser) {
-      throw new UserFacingError("このメールアドレスは使われています");
+      throw new UserFacingError("この基盤の利用者 ID は使われています");
     }
     if (before.status === "ACTIVE" && input.status !== "ACTIVE") {
       const reportCount = await tx.member.count({
@@ -414,12 +340,24 @@ export async function updateMember(
     }
     const member = await tx.member.update({
       where: { id },
-      data: { ...input, email }
+      data: {
+        employeeNo: input.employeeNo,
+        name: input.name,
+        email: input.email.toLowerCase(),
+        departmentId: input.departmentId,
+        jobTitle: input.jobTitle,
+        profile: input.profile,
+        status: input.status
+      }
     });
-    await tx.user.updateMany({
-      where: { memberId: id },
-      data: { email }
-    });
+    const linkedUser = await tx.user.findFirst({ where: { memberId: id }, select: { id: true } });
+    if (!platformUserId && linkedUser) {
+      await tx.user.update({ where: { id: linkedUser.id }, data: { platformUserId: null } });
+    } else if (platformUserId && linkedUser) {
+      await tx.user.update({ where: { id: linkedUser.id }, data: { platformUserId } });
+    } else if (platformUserId) {
+      await tx.user.create({ data: { platformUserId, memberId: id, role: AuthRole.MEMBER } });
+    }
     const diff = diffForAudit(
       { ...memberAuditFields(before), profile: before.profile },
       { ...memberAuditFields(member), profile: member.profile },

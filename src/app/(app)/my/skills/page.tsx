@@ -51,7 +51,7 @@ export default async function MySkillsPage({
   const activeTab = query.tab === "history" ? "history" : "apply";
 
   if (!session?.user.memberId) {
-    redirect("/login");
+    redirect("/unregistered");
   }
 
   const [context, skills, levels, popularSkills, categoryGroups] = await Promise.all([

@@ -11,10 +11,6 @@ import {
 import { diffForAudit } from "@/modules/audit/domain/audit-diff";
 import { recordAuditLog } from "@/modules/audit/infrastructure/audit-repository";
 import { prisma } from "@/server/db/prisma";
-import {
-  createMemberWithUser,
-  hashInitialPassword,
-} from "@/modules/members/infrastructure/member-repository";
 import type {
   DepartmentChange,
   DepartmentState,
@@ -123,7 +119,7 @@ export async function loadSkillImportState(): Promise<{
 }
 
 export async function loadMemberImportState(): Promise<MemberImportState> {
-  const [members, departments, roles, users] = await Promise.all([
+  const [members, departments, roles] = await Promise.all([
     prisma.member.findMany({
       select: {
         id: true,
@@ -143,7 +139,6 @@ export async function loadMemberImportState(): Promise<MemberImportState> {
     }),
     prisma.department.findMany({ select: { id: true, code: true } }),
     prisma.role.findMany({ select: { id: true, code: true, name: true, isActive: true } }),
-    prisma.user.findMany({ select: { email: true, memberId: true } }),
   ]);
   return {
     members: members.map((member) => ({
@@ -156,8 +151,7 @@ export async function loadMemberImportState(): Promise<MemberImportState> {
       ),
     })),
     departments,
-    roles,
-    users,
+    roles
   };
 }
 
@@ -236,11 +230,6 @@ type ApplyInput = {
 };
 
 export async function applyCsvImport(input: ApplyInput) {
-  const initialPasswordHash = input.memberChanges?.some(
-    (change) => change.kind === "new",
-  )
-    ? await hashInitialPassword()
-    : undefined;
   try {
     return await prisma.$transaction(
       async (tx) => {
@@ -291,7 +280,6 @@ export async function applyCsvImport(input: ApplyInput) {
             input.memberChanges,
             input.actorMemberId,
             job.id,
-            initialPasswordHash,
           );
         if (input.memberSkillChanges)
           await applyMemberSkills(
@@ -431,7 +419,6 @@ async function applyMembers(
   changes: MemberChange[],
   actorMemberId: string,
   jobId: string,
-  initialPasswordHash: string | undefined,
 ) {
   for (const change of changes.filter((item) => item.kind !== "unchanged")) {
     const data = {
@@ -446,14 +433,8 @@ async function applyMembers(
     };
     const saved =
       change.kind === "new"
-        ? (await createMemberWithUser(tx, data, initialPasswordHash)).member
+        ? await tx.member.create({ data })
         : await tx.member.update({ where: { id: change.id }, data });
-    if (change.kind === "update") {
-      await tx.user.updateMany({
-        where: { memberId: change.id },
-        data: { email: change.email }
-      });
-    }
     await recordAuditLog(tx, {
       actorMemberId,
       action:

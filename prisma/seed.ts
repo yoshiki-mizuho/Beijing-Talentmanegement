@@ -13,10 +13,9 @@ import {
   SkillSelfAssessmentStatus,
   TeamGoalKind
 } from "@prisma/client";
-import bcrypt from "bcryptjs";
 
 import { generateNextRoleCodeFromExistingCodes } from "../src/modules/roles/domain/role-code";
-import { assertDemoSeedAllowed, readDemoSeedPasswords } from "./seed-config";
+import { assertDemoSeedAllowed } from "./seed-config";
 import {
   buildSkillAssessmentRequestNotificationBody,
   demoDepartments,
@@ -90,13 +89,6 @@ function requireId(
 }
 
 async function main() {
-  const demoPasswords = readDemoSeedPasswords();
-  const passwordHashes = {
-    ADMIN: await bcrypt.hash(demoPasswords.admin, 12),
-    MANAGER: await bcrypt.hash(demoPasswords.manager, 12),
-    MEMBER: await bcrypt.hash(demoPasswords.member, 12)
-  } satisfies Record<AuthRole, string>;
-
   await prisma.$transaction(async (tx) => {
     for (const level of skillLevels) {
       await tx.skillLevel.upsert({
@@ -125,21 +117,24 @@ async function main() {
         name: "Admin User",
         email: "admin@example.com",
         jobTitle: "System Admin",
-        role: AuthRole.ADMIN
+        role: AuthRole.ADMIN,
+        platformUserId: "22222222-2222-4222-8222-222222222222"
       },
       {
         employeeNo: "TM0002",
         name: "Manager User",
         email: "manager@example.com",
         jobTitle: "Engineering Manager",
-        role: AuthRole.MANAGER
+        role: AuthRole.MANAGER,
+        platformUserId: "22222222-2222-4222-8222-000000000004"
       },
       {
         employeeNo: "TM0003",
         name: "Member User",
         email: "member@example.com",
         jobTitle: "Engineer",
-        role: AuthRole.MEMBER
+        role: AuthRole.MEMBER,
+        platformUserId: "22222222-2222-4222-8222-000000000005"
       }
     ];
 
@@ -164,7 +159,7 @@ async function main() {
       });
 
       const existingUser = await tx.user.findUnique({
-        where: { email: memberInput.email },
+        where: { memberId: member.id },
         select: { id: true }
       });
 
@@ -172,7 +167,7 @@ async function main() {
         await tx.user.update({
           where: { id: existingUser.id },
           data: {
-            name: memberInput.name,
+            platformUserId: memberInput.platformUserId,
             role: memberInput.role,
             memberId: member.id
           }
@@ -182,9 +177,7 @@ async function main() {
 
       await tx.user.create({
         data: {
-          email: memberInput.email,
-          name: memberInput.name,
-          passwordHash: passwordHashes[memberInput.role],
+          platformUserId: memberInput.platformUserId,
           role: memberInput.role,
           memberId: member.id
         }

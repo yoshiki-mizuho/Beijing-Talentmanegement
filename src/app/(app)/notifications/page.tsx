@@ -29,7 +29,7 @@ export default async function NotificationsPage({
   const session = await getCurrentSession();
 
   if (!session?.user.memberId) {
-    redirect("/login");
+    redirect("/unregistered");
   }
 
   const params = await searchParams;

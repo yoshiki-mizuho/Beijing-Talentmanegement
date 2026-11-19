@@ -34,15 +34,9 @@ import { buildSetupProgress } from "@/shared/ui/setup-progress";
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const session = await getCurrentSession();
 
-  if (!session) {
-    redirect("/login");
-  }
+  if (!session) redirect("/unregistered");
 
   const requestPath = (await headers()).get("x-pathname") ?? "";
-
-  if (session.user.passwordChangeRequired && requestPath !== "/account/password") {
-    redirect("/account/password" as Route);
-  }
 
   if (!canAccessAppPath(session.user.role, requestPath)) {
     redirect(getUnauthorizedRedirectPath() as Route);
@@ -81,18 +75,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     session.user.memberId
       ? countMemberSkills(session.user.memberId)
       : Promise.resolve(0),
-    session.user.memberId && !session.user.passwordChangeRequired
-      ? getLevelUpCelebrations(session.user.memberId)
-      : Promise.resolve([]),
-    session.user.memberId && !session.user.passwordChangeRequired
-      ? getRoleAchievementCelebration(session.user.memberId)
-      : Promise.resolve(null),
-    session.user.memberId && !session.user.passwordChangeRequired
-      ? getCheerCelebrations(session.user.memberId)
-      : Promise.resolve([]),
-    session.user.memberId && !session.user.passwordChangeRequired
-      ? getMonthlyRecapCelebration(session.user.memberId)
-      : Promise.resolve(null),
+    getLevelUpCelebrations(session.user.memberId),
+    getRoleAchievementCelebration(session.user.memberId),
+    getCheerCelebrations(session.user.memberId),
+    getMonthlyRecapCelebration(session.user.memberId),
     session.user.memberId
       ? getMyAvatarUpdatedAt(session.user.memberId)
       : Promise.resolve(null),
@@ -120,7 +106,6 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       latestUnreadNotifications={latestUnreadNotifications}
       pendingApprovalCount={pendingApprovalCount}
       setupProgress={setupProgress}
-      passwordChangeRequired={session.user.passwordChangeRequired}
     >
       {children}
       <LevelUpCelebrationDialog

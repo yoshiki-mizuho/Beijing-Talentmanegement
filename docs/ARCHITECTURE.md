@@ -22,7 +22,7 @@
 | `skill-map` | メンバーとスキルのマトリクス表示、スキル分布の可視化 |
 | `dashboard` | 統計、アクションアイテム、集計カード、全体サマリー |
 | `csv-import` | CSV import/export、プレビュー、検証、差分確認、一括登録 |
-| `auth` | 認証、セッション、ユーザー、権限ロール |
+| `auth` | 基盤の認証ヘッダの受け取り、ユーザーとの結び付け、権限ロール |
 | `audit` | 監査ログ、操作履歴、変更差分、import履歴 |
 | `notifications` | スキル申告、承認依頼、承認結果、差し戻し通知 |
 | `ai-evaluation` | AI評価、評価結果キャッシュ、再評価、利用ログ、フォールバック |
@@ -92,7 +92,7 @@ scripts/          検証とデータ掃除のスクリプト
 - `src/modules/<module>/infrastructure` はPrisma repository、外部API、永続化の実装詳細を置く。
 - `src/modules/<module>/presentation` は該当モジュール専用のフォーム、Server Actions、Route Handlers、画面補助部品を置く。
 - `src/shared` は複数モジュールで利用する汎用UI、純粋なユーティリティ、横断DTOに限定する。
-- `src/server` はPrisma Client、NextAuthの設定、セキュリティの検査など、アプリ全体で1つだけ持つサーバー基盤を置く。
+- `src/server` はPrisma Client、`X-Auth-*` から身元を解決する境界、セキュリティの検査など、アプリ全体で1つだけ持つサーバー基盤を置く。
 - Prisma schemaは `prisma/schema.prisma` の1ファイルで持ち、肥大化した場合に分割方針を再検討する。
 
 ## 依存方向

@@ -19,7 +19,6 @@ export type MemberImportState = {
   }>;
   departments: Array<{ id: string; code: string }>;
   roles: Array<{ id: string; code: string; name: string; isActive: boolean }>;
-  users: Array<{ email: string; memberId: string | null }>;
 };
 
 export type MemberChange = {
@@ -93,16 +92,12 @@ export function validateMemberImport(
         `メールアドレス ${email} がCSV内で重複しています`,
       );
     if (email) emailRows.set(email, record.row);
-    const current = existingByNo.get(employeeNo);
-    const conflictingUser = state.users.find(
-      (user) => user.email.toLowerCase() === email && user.memberId !== current?.id,
-    );
     const conflictingMember = state.members.find(
       (member) =>
         member.email.toLowerCase() === email &&
         member.employeeNo !== employeeNo,
     );
-    if (conflictingUser || conflictingMember)
+    if (conflictingMember)
       addError(
         errors,
         record,

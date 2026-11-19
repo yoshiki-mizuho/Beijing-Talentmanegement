@@ -1,4 +1,5 @@
 import { unstable_rethrow } from "next/navigation";
+import { headers } from "next/headers";
 import { ZodError, type ZodIssue } from "zod";
 
 import { AuthorizationError } from "@/server/auth/authorization";
@@ -47,7 +48,13 @@ export async function runAction<T>(
       };
     }
 
-    console.error("Server Action failed", error);
+    let requestId: string | null = null;
+    try {
+      requestId = (await headers()).get("x-auth-request-id");
+    } catch {
+      // リクエスト外で実行される単体テストなどでは requestId を付けない
+    }
+    console.error("Server Action failed", { requestId, error });
     return { status: "error", message: genericErrorMessage };
   }
 }

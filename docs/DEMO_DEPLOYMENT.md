@@ -109,6 +109,7 @@ TalentHub は Hub シリーズの基盤に載せ替える（`docs/ROADMAP.md` �
 1. H-2 を merge する前に、載せ替え前の `main` のコミットにタグ `demo-final` を付けて push する（Claude が行う）。
 2. Vercel Project の Git 連携を止め、以降の `main` が Vercel にデプロイされないようにする（利用者が行う）。今の Production Deployment はそのまま残す。
 3. Neon の DB はそのまま残す。`DEMO_DB_TASK` の手動パイプラインは、凍結の後は流さない。
+   H-2a で `DEMO_DB_TASK` とデモ DB 用ジョブは CI から削除した。
 4. デモを作り直す必要が出たときは、タグ `demo-final` から行う。
 
 ## Production smoke test

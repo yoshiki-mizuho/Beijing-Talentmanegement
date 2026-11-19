@@ -18,7 +18,7 @@
 
 `CREATEDB` は、Prismaのmigration差分確認でshadow databaseを作るために必要。
 
-3. `.env.example` を `.env` にコピーする。`.env` の `DEMO_ADMIN_PASSWORD`、`DEMO_MANAGER_PASSWORD`、`DEMO_MEMBER_PASSWORD` にローカル専用の値（12文字以上、相互に異なる）を設定しておくと、seedが自動で読み込むため、次の手順の環境変数の設定を省略できる。`.env` はGit管理外であり、コミットしない。
+3. `.env.example` を `.env` にコピーする。`.env` はGit管理外であり、コミットしない。
 
 AIを通信なしで確認する場合は、`.env`の`AI_API_BASE_URL`を`fake`にする。
 
@@ -32,21 +32,17 @@ OpenAI互換APIを使う場合は、`AI_API_BASE_URL`、`AI_API_KEY`、`AI_MODEL
 
 APIキーはサーバー専用であり、`NEXT_PUBLIC_`を付けない。
 
-4. 依存関係をインストールし、migrationとseedを実行する。seedのパスワードはローカル専用の値を指定し、コミットしない。
+4. 依存関係をインストールし、migrationとseedを実行する。
 
 seedは`localhost`、`127.0.0.1`、`postgres`への接続ではそのまま実行でき、その他の接続先では`ALLOW_DEMO_SEED=true`の明示が必要になる。
 
 ```powershell
 npm.cmd ci
 npm.cmd exec -- prisma migrate deploy
-$env:DEMO_ADMIN_PASSWORD = "<12文字以上のローカル用の値>"
-$env:DEMO_MANAGER_PASSWORD = "<別の値>"
-$env:DEMO_MEMBER_PASSWORD = "<別の値>"
 npm.cmd run db:seed
-Remove-Item Env:DEMO_ADMIN_PASSWORD, Env:DEMO_MANAGER_PASSWORD, Env:DEMO_MEMBER_PASSWORD
 ```
 
-5. `npm.cmd run dev` で起動し、`http://localhost:3000/login` から `admin@example.com`、`manager@example.com`、`member@example.com` でログインする。
+5. 画面は基盤の入口（hub-devkit）を通して開く。seed の利用者は、管理者 `22222222-2222-4222-8222-222222222222`、マネージャー `22222222-2222-4222-8222-000000000004`、メンバー `22222222-2222-4222-8222-000000000005`（テナント `11111111-1111-4111-8111-111111111111`）。
 
 ## 検証コマンド
 
@@ -66,15 +62,11 @@ npm.cmd run verify
 npx playwright install chromium
 ```
 
-E2Eテストは本番ビルドを起動して実行する。事前にDBへseedを投入し、ビルド後にseedで指定した3ロールのパスワードを環境変数へ設定する。
+E2Eテストは本番ビルドを起動し、基盤の入口を通さず `X-Auth-*` ヘッダを付けて直接実行する。
 
 ```powershell
 npm.cmd run build
-$env:DEMO_ADMIN_PASSWORD = "<seedで指定した管理者パスワード>"
-$env:DEMO_MANAGER_PASSWORD = "<seedで指定したマネージャーパスワード>"
-$env:DEMO_MEMBER_PASSWORD = "<seedで指定したメンバーパスワード>"
 npm.cmd run test:e2e
-Remove-Item Env:DEMO_ADMIN_PASSWORD, Env:DEMO_MANAGER_PASSWORD, Env:DEMO_MEMBER_PASSWORD
 ```
 
 E2Eテストはスキル申告と承認を行い、ローカルDBのデータを変更する。共有DBでは実行せず、使い捨て可能なローカルDBを使用する。
@@ -92,7 +84,7 @@ npm.cmd run db:cleanup-e2e -- --yes
 
 ## 画面確認
 
-`.env` の `DEMO_ADMIN_PASSWORD`、`DEMO_MANAGER_PASSWORD`、`DEMO_MEMBER_PASSWORD` を使い、`npm.cmd run ui:check` で3ロールの主要画面を撮影する。`$env:UI_CHECK_ONLY = "MANAGER"` のように指定すると対象ロールを絞れる。撮影の台本は `e2e/ui-check/screens.spec.ts`。スクリーンショットは `test-results/ui-check/` に保存され、Git管理には含まれない。
+`npm.cmd run ui:check` は E2E と同じ `X-Auth-*` ヘッダで3ロールの主要画面を撮影する。`$env:UI_CHECK_ONLY = "MANAGER"` のように指定すると対象ロールを絞れる。撮影の台本は `e2e/ui-check/screens.spec.ts`。スクリーンショットは `test-results/ui-check/` に保存され、Git管理には含まれない。
 
 ## DBを作り直す
 
@@ -100,7 +92,7 @@ DBの状態が壊れた場合は、`npm.cmd exec -- prisma migrate reset` で作
 
 ## hub-devkit で動かす
 
-Hub の基盤への載せ替え（`docs/HUB_PLATFORM.md`）の後は、ログインを基盤の入口が行うため、手元では hub-devkit（開発用の入口と偽の基盤）を通して確かめる。**ログインを基盤に替える H-2 の後から使う**（それまでは上の手順のまま）。手順の全体はスキル `hub-local-check` と `contract/guide.md` の §9。
+ログインは基盤の入口が行うため、手元では hub-devkit（開発用の入口と偽の基盤）を通して確かめる。手順の全体はスキル `hub-local-check` と `contract/guide.md` の §9。
 
 ### Docker を使う場合
 

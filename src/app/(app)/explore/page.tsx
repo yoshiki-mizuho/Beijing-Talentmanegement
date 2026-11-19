@@ -4,7 +4,7 @@ import { getExploreData } from "@/modules/explore/application/explore-service";
 import { PeopleSearch } from "@/modules/explore/presentation/people-search";
 import { RecommendedPeople } from "@/modules/explore/presentation/recommended-people";
 import { TrendingSkills } from "@/modules/explore/presentation/trending-skills";
-import { requirePasswordReadyMember } from "@/server/auth/authorization";
+import { requireAuthenticatedMember } from "@/server/auth/authorization";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +13,7 @@ export default async function ExplorePage({
 }: {
   searchParams: Promise<{ skill?: string; level?: string }>;
 }) {
-  const session = await requirePasswordReadyMember();
+  const session = await requireAuthenticatedMember();
   const query = await searchParams;
   const level = Math.min(5, Math.max(1, Number(query.level) || 1));
   const data = await getExploreData(

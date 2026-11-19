@@ -1,8 +1,7 @@
 workflow:
-  # MR の検証と、Web から明示的に起動したデモ DB の作業だけでパイプラインを作る。
+  # MR の検証と Hub の配布作業でパイプラインを作る。
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-    - if: '$CI_PIPELINE_SOURCE == "web" && $CI_COMMIT_BRANCH == "main" && $DEMO_DB_TASK'
     - if: '$HUB_DEPLOY_ENABLED == "true" && ($CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "production")'
     - if: '$CI_PIPELINE_SOURCE == "web" && $HUB_BUILD_CHECK == "true"'
     - when: never
@@ -13,7 +12,6 @@ stages:
   - verify
   - e2e
   - security
-  - demo_db
   - build
   - deploy
 
@@ -33,13 +31,7 @@ variables:
   # 検証のジョブを動かすランナーのタグ。社内ランナーが不安定なときは、プロジェクトの CI/CD 変数で
   # RUNNER_TAG=saas-linux-small-amd64 を設定すると GitLab.com の共有ランナーで動く（クレジットを消費する）。
   RUNNER_TAG: on-premises-runner
-  # デモ DB の作業（DEMO_DB_TASK）を動かすランナーのタグ。社内ネットワークは Neon への通信（5432番）が
-  # 遮断されるため、初期値は GitLab.com の共有ランナー。社内ランナーで動かすときは on-premises-runner を渡す。
-  DEMO_DB_RUNNER_TAG: saas-linux-small-amd64
   DATABASE_URL: "postgresql://talent:talent_password@postgres:5432/talentmanagement?schema=public"
-  AUTH_SECRET: "ci-replace-with-a-long-random-secret"
-  AUTH_URL: "http://localhost:3000"
-  AUTH_TRUST_HOST: "true"
   NEXT_TELEMETRY_DISABLED: "1"
   # Chromium もランナーのディスクに置き、毎回ダウンロードしない。
   PLAYWRIGHT_BROWSERS_PATH: /cache/talenthub/ms-playwright
@@ -93,9 +85,6 @@ e2e:
       when: manual
       allow_failure: true
   variables:
-    DEMO_ADMIN_PASSWORD: "ci-admin-password-47"
-    DEMO_MANAGER_PASSWORD: "ci-manager-password-58"
-    DEMO_MEMBER_PASSWORD: "ci-member-password-69"
     AI_API_BASE_URL: fake
   script:
     - npx playwright install --with-deps chromium
@@ -157,55 +146,6 @@ secret_detection:
         echo "秘密情報の可能性がある箇所が見つかりました。ジョブの成果物 gl-secret-detection-report.json を確認してください。"
         exit 1
       fi
-
-demo_db_migrate:
-  stage: demo_db
-  tags: [$DEMO_DB_RUNNER_TAG]
-  # DB の作業は途中で止めない。
-  interruptible: false
-  resource_group: demo_db
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "web" && $CI_COMMIT_BRANCH == "main" && $DEMO_DB_TASK =~ /^(migrate|migrate_and_seed)$/'
-  script:
-    - |
-      if [ -z "${NEON_DIRECT_URL:-}" ]; then
-        echo "NEON_DIRECT_URL is not set."
-        exit 1
-      fi
-    - export DATABASE_URL="${NEON_DIRECT_URL}?sslmode=require&connect_timeout=30"
-    - npm exec prisma migrate status || true
-    - npm exec prisma migrate deploy
-
-demo_db_seed:
-  stage: demo_db
-  tags: [$DEMO_DB_RUNNER_TAG]
-  interruptible: false
-  resource_group: demo_db
-  needs: [demo_db_migrate]
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "web" && $CI_COMMIT_BRANCH == "main" && $DEMO_DB_TASK == "migrate_and_seed"'
-  script:
-    - |
-      if [ -z "${NEON_DIRECT_URL:-}" ]; then
-        echo "NEON_DIRECT_URL is not set."
-        exit 1
-      fi
-      if [ -z "${DEMO_ADMIN_PASSWORD:-}" ]; then
-        echo "DEMO_ADMIN_PASSWORD is not set."
-        exit 1
-      fi
-      if [ -z "${DEMO_MANAGER_PASSWORD:-}" ]; then
-        echo "DEMO_MANAGER_PASSWORD is not set."
-        exit 1
-      fi
-      if [ -z "${DEMO_MEMBER_PASSWORD:-}" ]; then
-        echo "DEMO_MEMBER_PASSWORD is not set."
-        exit 1
-      fi
-    - export DATABASE_URL="${NEON_DIRECT_URL}?sslmode=require&connect_timeout=30"
-    - export ALLOW_DEMO_SEED=true
-    - npm run prisma:generate
-    - npm run db:seed
 
 build:web:
   extends: .hub_build_image

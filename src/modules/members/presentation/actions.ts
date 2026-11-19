@@ -9,7 +9,6 @@ import {
   createSkillAssessments,
   createMember,
   deactivateMember,
-  issueInitialPassword,
   removeMemberSkill,
   reviewSkillAssessment,
   setMemberSkillLevel,
@@ -24,7 +23,7 @@ import {
   AuthorizationError,
   adminOnly,
   managerOrAdmin,
-  requirePasswordReadyMember,
+  requireAuthenticatedMember,
   requireRoles
 } from "@/server/auth/authorization";
 import { runAction, runActionWithData, type ActionResult } from "@/shared/lib/action-result";
@@ -38,6 +37,7 @@ function parseMemberForm(formData: FormData) {
     departmentId: getString(formData, "departmentId"),
     jobTitle: getOptionalString(formData, "jobTitle"),
     profile: getOptionalString(formData, "profile"),
+    platformUserId: getOptionalString(formData, "platformUserId") ?? "",
     status: getString(formData, "status") as MemberStatus
   };
 }
@@ -45,8 +45,7 @@ function parseMemberForm(formData: FormData) {
 export async function createMemberAction(formData: FormData): Promise<ActionResult> {
   return runActionWithData(async () => {
     const session = await requireRoles(adminOnly);
-    const result = await createMember(parseMemberForm(formData), session.user.memberId);
-    const member = result.member;
+    const member = await createMember(parseMemberForm(formData), session.user.memberId);
 
     if (session.user.role === "ADMIN") {
       await updateMemberManager({
@@ -59,25 +58,8 @@ export async function createMemberAction(formData: FormData): Promise<ActionResu
       }, session.user.memberId);
     }
     revalidatePath("/members");
-    return {
-      name: member.name,
-      email: member.email,
-      initialPassword: result.initialPassword
-    };
+    return { name: member.name, email: member.email };
   }, "メンバーを登録しました。");
-}
-
-export async function issueInitialPasswordAction(formData: FormData): Promise<ActionResult> {
-  return runActionWithData(async () => {
-    const session = await requireRoles(adminOnly);
-    const memberId = getString(formData, "memberId");
-    if (memberId === session.user.memberId) {
-      throw new AuthorizationError("自分自身のパスワードは発行できません。", 403);
-    }
-    const initialPassword = await issueInitialPassword(memberId, session.user.memberId);
-    revalidatePath("/members");
-    return { initialPassword };
-  }, "初回ログイン用のパスワードを発行しました。");
 }
 
 export async function updateMemberRoleAction(
@@ -143,7 +125,7 @@ export async function removeMemberSkillAction(formData: FormData): Promise<Actio
 
 export async function createSkillAssessmentAction(formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    const session = await requirePasswordReadyMember();
+    const session = await requireAuthenticatedMember();
     await createSkillAssessment({
       memberId: session.user.memberId,
       skillId: getString(formData, "skillId"),
@@ -160,7 +142,7 @@ export async function createSkillAssessmentAction(formData: FormData): Promise<A
 
 export async function createSkillAssessmentsAction(formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    const session = await requirePasswordReadyMember();
+    const session = await requireAuthenticatedMember();
     const assessments = JSON.parse(getString(formData, "assessments")) as unknown;
     const created = await createSkillAssessments({
       memberId: session.user.memberId,
@@ -242,7 +224,7 @@ export async function updateMemberTargetRoleAction(
   formData: FormData
 ): Promise<ActionResult> {
   return runAction(async () => {
-    const session = await requirePasswordReadyMember();
+    const session = await requireAuthenticatedMember();
     const memberId = getString(formData, "memberId");
     if (
       !canUpdateMemberTargetRole(
