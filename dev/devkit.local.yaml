@@ -1,0 +1,13 @@
+# Docker を使わずに起動する hub-devkit の設定。
+hub:
+  name: talenthub
+  pathPrefix: talent
+
+routes:
+  - path: /talent
+    upstream: http://localhost:3000
+  - path: /api/talent/v1
+    upstream: http://localhost:3000
+  - path: /talent/health
+    upstream: http://localhost:3000
+    public: true

@@ -44,4 +44,4 @@
 ## 現在の状態
 
 - Phase0〜Phase6と、使い勝手の改善R4・R5、スキルシートと承認の改善R6、振り返りとわくわく感R7、セキュリティ強化S、リポジトリの整理C、変更に耐える設計E、顧客提案用スキルシートF、性能改善Gは完了済み。性能で守ることは `docs/PERFORMANCE.md` を確認する。デモ環境の運用手順は `docs/DEMO_DEPLOYMENT.md` を確認する。
-- 次の対象は、社内サーバ（Hub シリーズの基盤）に `hub-template` の形で載せること（Phase 7 を置き換える。計画は相談中）。E2Eは専用のデータを作って消す（`docs/LOCAL_DEVELOPMENT.md`）。セキュリティの対策と受け入れたリスクは `docs/SECURITY.md` を確認する。
+- 次の対象は、社内サーバ（Hub シリーズの基盤）に `hub-template` の形で載せること（フェーズ H。Phase 7 を置き換える。段と決定事項は `docs/ROADMAP.md`、構成と配布は `docs/HUB_PLATFORM.md`）。E2Eは専用のデータを作って消す（`docs/LOCAL_DEVELOPMENT.md`）。セキュリティの対策と受け入れたリスクは `docs/SECURITY.md` を確認する。

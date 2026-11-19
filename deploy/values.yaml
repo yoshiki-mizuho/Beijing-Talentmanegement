@@ -1,0 +1,24 @@
+# TalentHub の環境共通設定。
+# H-2 で経路を付け替えるまではクラスタへ配らない。
+
+env:
+  LOG_LEVEL: info
+
+services:
+  talenthub-web:
+    image: registry.gitlab.com/chosen-ryoiki-group/beijing/talentmanagement/web
+    port: 8080
+    db: true
+    health:
+      path: /talent/health
+
+migrate:
+  image: registry.gitlab.com/chosen-ryoiki-group/beijing/talentmanagement/migrate
+  db: talenthub-web
+  command: ["./node_modules/.bin/prisma", "migrate", "deploy"]
+
+# 定期実行は H-5 で追加する。
+# cronJobs:
+#   talenthub-job:
+#     schedule: "0 18 * * *"
+#     image: registry.gitlab.com/chosen-ryoiki-group/beijing/talentmanagement/web

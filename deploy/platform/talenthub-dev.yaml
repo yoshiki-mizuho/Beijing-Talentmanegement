@@ -1,0 +1,21 @@
+# このリポジトリでは使わない。H-7 で基盤リポジトリの deploy/applications/hubs/ に出す MR へ写す。
+name: talenthub
+env: dev
+repoURL: https://gitlab.com/chosen-ryoiki-group/beijing/talentmanagement.git
+targetRevision: main
+valuesPath: deploy
+autoSync: "true"
+namespaceValues:
+  routing:
+    pathPrefix: talent
+    routes:
+      - path: /talent
+        service: talenthub-web
+        port: 8080
+      - path: /api/talent/v1
+        service: talenthub-web
+        port: 8080
+      - path: /talent/health
+        service: talenthub-web
+        port: 8080
+        public: true
