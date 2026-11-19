@@ -1,0 +1,183 @@
+/* Hub シリーズの画面の見た目の決まり（CSS の変数）。
+   値は Reporthub の画面のコードから取った実際の値。どこから取ったかは sources.md。
+   使い方と決まりは README.md / layout.md / components.md。
+   このファイルは基盤の持ち物。Hub の側で書き換えない（値を変えたいときは基盤のリポジトリに issue）。
+   例外: 主の色（--hub-color-primary-50〜950 と --hub-color-text-on-primary）だけは、製品ごとに上書きしてよい（README.md）。 */
+:root {
+  /* ---- 色: 画面の地と面 ---- */
+  --hub-color-bg: oklch(0.972 0.003 250);          /* 画面の地 */
+  --hub-color-surface: #ffffff;                    /* ヘッダ、ナビ、カード、入力欄 */
+  --hub-color-surface-subtle: oklch(98.5% 0.002 247.839);  /* 表の見出し、無効の入力欄、メニューのホバー */
+  --hub-color-surface-muted: oklch(96.7% 0.003 264.542);   /* 文字だけのボタンのホバー、アイコンの台 */
+  --hub-color-overlay: rgb(0 0 0 / 0.4);           /* ダイアログの後ろ */
+
+  /* ---- 色: 枠（ヘッダとナビ）の文字と線 ---- */
+  --hub-color-ink: oklch(0.25 0.02 255);           /* 製品の名前 */
+  --hub-color-ink-2: oklch(0.48 0.018 255);        /* ナビとヘッダのアイコン */
+  --hub-color-ink-3: oklch(0.66 0.014 255);        /* 補助 */
+  --hub-color-line: oklch(0.92 0.006 250);         /* ヘッダとナビの区切り */
+  --hub-color-line-2: oklch(0.88 0.008 250);       /* 選ぶ丸ボタン（ピル）の枠 */
+  --hub-color-frame-hover: oklch(0.95 0.006 250);  /* ヘッダとナビの項目のホバー */
+
+  /* ---- 色: 本体の文字 ---- */
+  --hub-color-text-heading: oklch(21% 0.034 264.665);    /* 見出し、強い文字 */
+  --hub-color-text-strong: oklch(27.8% 0.033 256.848);   /* 表の中の名前など */
+  --hub-color-text: oklch(37.3% 0.034 259.733);          /* 本文、ラベル */
+  --hub-color-text-sub: oklch(44.6% 0.03 256.802);       /* 説明文、表の値 */
+  --hub-color-text-muted: oklch(55.1% 0.027 264.364);    /* 補足、表の見出し */
+  --hub-color-text-placeholder: oklch(70.7% 0.022 261.325); /* 入力例、無効の文字 */
+  --hub-color-text-on-primary: #ffffff;
+
+  /* ---- 色: 本体の線 ---- */
+  --hub-color-border: oklch(92.8% 0.006 264.531);        /* カード、表、メニューの枠 */
+  --hub-color-border-strong: oklch(87.2% 0.01 258.338);  /* 入力欄、副ボタンの枠 */
+  --hub-color-border-subtle: oklch(96.7% 0.003 264.542); /* 行の区切り */
+  --hub-color-skeleton: oklch(92.8% 0.006 264.531);      /* 読み込み中の帯 */
+
+  /* ---- 色: 主の色（Reporthub の青。製品ごとに上書きしてよい。README.md「主の色」）---- */
+  --hub-color-primary-50: oklch(0.965 0.018 270);
+  --hub-color-primary-100: oklch(0.93 0.04 270);
+  --hub-color-primary-200: oklch(0.87 0.072 270);
+  --hub-color-primary-300: oklch(0.78 0.112 270);
+  --hub-color-primary-400: oklch(0.675 0.152 270);
+  --hub-color-primary-500: oklch(0.6 0.172 270);
+  --hub-color-primary-600: oklch(0.544 0.172 270);  /* = #4f63d2。主ボタン、リンク */
+  --hub-color-primary-700: oklch(0.47 0.168 270);
+  --hub-color-primary-800: oklch(0.41 0.15 270);
+  --hub-color-primary-900: oklch(0.37 0.12 270);
+  --hub-color-primary-950: oklch(0.26 0.085 270);
+
+  /* ---- 色: 役割 ---- */
+  --hub-color-primary: var(--hub-color-primary-600);
+  --hub-color-primary-hover: var(--hub-color-primary-700);
+  --hub-color-primary-disabled: var(--hub-color-primary-300);
+  --hub-color-link: var(--hub-color-primary-600);
+  --hub-color-focus: var(--hub-color-primary-500);          /* フォーカスの輪 */
+  --hub-color-selected-bg: var(--hub-color-primary-50);     /* 選択中の地 */
+  --hub-color-selected-text: var(--hub-color-primary-700);  /* 選択中の文字 */
+
+  /* ---- 色: 成功・注意・危険・情報・中立 ---- */
+  --hub-color-success-bg: oklch(97.9% 0.021 166.113);
+  --hub-color-success-border: oklch(90.5% 0.093 164.15);
+  --hub-color-success: oklch(59.6% 0.145 163.225);        /* 成功の印・増えた数字（白との比 3.7。白い文字の地には使わない） */
+  --hub-color-success-text: oklch(50.8% 0.118 165.612);    /* 成功のバッジの文字、成功のトースト（白との比 5.4） */
+  --hub-color-warning-bg: oklch(98.7% 0.022 95.277);
+  --hub-color-warning-border: oklch(92.4% 0.12 95.746);
+  --hub-color-warning-text: oklch(55.5% 0.163 48.998);
+  --hub-color-danger-bg: oklch(96.9% 0.015 12.422);
+  --hub-color-danger-border: oklch(89.2% 0.058 10.001);
+  --hub-color-danger-border-strong: oklch(81% 0.117 11.638); /* 無効の危険ボタン（白との比 1.9。枠や文字には使わない） */
+  --hub-color-danger: oklch(58.6% 0.253 17.585);          /* 危険ボタン、誤りの文、誤りのある入力欄の枠（白との比 4.5） */
+  --hub-color-danger-hover: oklch(51.4% 0.222 16.935);
+  --hub-color-danger-text: oklch(51.4% 0.222 16.935);      /* 危険のバッジの文字、失敗のトースト（白との比 6.1） */
+  --hub-color-required: oklch(64.5% 0.246 16.439);        /* 必須の印「*」 */
+  --hub-color-info-bg: var(--hub-color-primary-50);
+  --hub-color-info-text: var(--hub-color-primary-700);
+  --hub-color-neutral-bg: oklch(96.8% 0.007 247.896);
+  --hub-color-neutral-text: oklch(55.4% 0.046 257.417);
+  --hub-color-badge-dot: oklch(63.7% 0.237 25.331);       /* 未読の点、件数の丸 */
+  --hub-color-toast-bg: oklch(21% 0.034 264.665);         /* お知らせのトースト */
+
+  /* ---- 文字 ---- */
+  --hub-font-sans: "Inter", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
+  --hub-text-2xl: 1.5rem;      --hub-leading-2xl: 2rem;     /* ページの題 */
+  --hub-text-xl: 1.25rem;      --hub-leading-xl: 1.75rem;   /* 節の題 */
+  --hub-text-lg: 1.125rem;     --hub-leading-lg: 1.75rem;   /* 製品の名前、小さな題 */
+  --hub-text-base: 1rem;       --hub-leading-base: 1.5rem;  /* ダイアログの題 */
+  --hub-text-sm: 0.875rem;     --hub-leading-sm: 1.25rem;   /* 本文、入力、ボタン */
+  --hub-text-xs: 0.75rem;      --hub-leading-xs: 1rem;      /* ラベル、補足、バッジ */
+  --hub-text-2xs: 11px;                                     /* 小さな補足、下のナビのラベル */
+  --hub-weight-normal: 400;
+  --hub-weight-medium: 500;
+  --hub-weight-semibold: 600;
+  --hub-weight-bold: 700;
+  --hub-tracking-tight: -0.025em;  /* 題 */
+  --hub-tracking-wide: 0.025em;    /* 表の見出し */
+
+  /* ---- 余白（4px きざみ）---- */
+  --hub-space-0-5: 0.125rem;  /* 2px */
+  --hub-space-1: 0.25rem;     /* 4px */
+  --hub-space-1-5: 0.375rem;  /* 6px */
+  --hub-space-2: 0.5rem;      /* 8px */
+  --hub-space-2-5: 0.625rem;  /* 10px */
+  --hub-space-3: 0.75rem;     /* 12px */
+  --hub-space-4: 1rem;        /* 16px */
+  --hub-space-5: 1.25rem;     /* 20px */
+  --hub-space-6: 1.5rem;      /* 24px */
+  --hub-space-8: 2rem;        /* 32px */
+  --hub-space-12: 3rem;       /* 48px */
+
+  /* ---- 角の丸み ---- */
+  --hub-radius-sm: 0.25rem;   /* 4px。状態のバッジ */
+  --hub-radius-md: 0.375rem;  /* 6px。小さいボタン、入力欄、メニュー */
+  --hub-radius-lg: 0.5rem;    /* 8px。ボタン、選ぶ欄、トースト、製品の印 */
+  --hub-radius-xl: 0.75rem;   /* 12px。カード、表の囲み、空の状態 */
+  --hub-radius-2xl: 1rem;     /* 16px。ダイアログ */
+  --hub-radius-full: 9999px;  /* 丸、ピル */
+  --hub-radius-header-action: 9px;  /* ヘッダの主ボタン */
+  --hub-radius-nav-item: 13px;      /* 左のナビの項目 */
+
+  /* ---- 影 ---- */
+  --hub-shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);       /* カード、ボタン、入力欄 */
+  --hub-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);    /* カードのホバー */
+  --hub-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);  /* メニュー、トースト */
+  --hub-shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1); /* ダイアログ */
+
+  /* ---- 枠: ヘッダ ---- */
+  --hub-header-height: 60px;         /* 固定。デスクトップ版の殻の設定と同じ値（layout.md §6） */
+  --hub-header-padding-x: 1rem;      /* 幅 640px 以上は --hub-header-padding-x-wide */
+  --hub-header-padding-x-wide: 1.5rem;
+  --hub-header-gap: 1rem;            /* 左・中・右のかたまりの間 */
+  --hub-header-item-gap: 0.75rem;    /* 右のかたまりの中 */
+  --hub-header-mark-size: 26px;      /* 製品の印（角の丸い四角）*/
+  --hub-header-mark-text: 13px;
+  --hub-header-action-height: 38px;  /* ヘッダの主ボタン */
+  --hub-header-icon-button: 2.25rem; /* 36px。通知などの丸いボタン */
+  --hub-header-avatar: 2rem;         /* 32px。本人のメニューの丸 */
+  --hub-header-search-max: 24rem;    /* 384px。中央の検索の最大幅 */
+  --hub-menu-width: 11rem;           /* 176px。本人のメニュー */
+
+  /* ---- 枠: 左のナビ ---- */
+  --hub-nav-width: 3.5rem;           /* 56px */
+  --hub-nav-padding-y: 1rem;
+  --hub-nav-padding-x: 0.5rem;
+  --hub-nav-gap: 0.25rem;
+  --hub-nav-item-size: 2.5rem;       /* 40px 四方 */
+  --hub-nav-dot-size: 0.5rem;        /* 8px。未読の点 */
+  --hub-icon-size: 1.25rem;          /* 20px。線の太さは --hub-icon-stroke */
+  --hub-icon-size-sm: 1rem;          /* 16px。ボタンの中 */
+  --hub-icon-stroke: 1.5;
+
+  /* ---- 枠: 下のナビ（幅 1024px 未満）---- */
+  --hub-bottom-nav-height: 3.5rem;   /* 56px */
+  --hub-bottom-nav-clearance: 4rem;  /* 本体の下に空ける余白 */
+
+  /* ---- 枠: 本体 ---- */
+  --hub-content-padding-x: 1rem;     /* 幅 640px 以上は --hub-content-padding-x-wide */
+  --hub-content-padding-x-wide: 1.5rem;
+  --hub-content-padding-y: 1.5rem;
+  --hub-content-max-reading: 48rem;  /* 768px。一覧、詳細、マイページ */
+  --hub-content-max-form: 56rem;     /* 896px。プロフィール、手順の画面 */
+  --hub-content-max-wide: 72rem;     /* 1152px。管理の画面 */
+  --hub-content-max-full: 80rem;     /* 1280px。ダッシュボード */
+
+  /* ---- 画面の幅の区切り（@media には変数を使えないので、数字を写して使う）---- */
+  --hub-breakpoint-sm: 40rem;        /* 640px */
+  --hub-breakpoint-md: 48rem;        /* 768px */
+  --hub-breakpoint-lg: 64rem;        /* 1024px。これ以上で左のナビ、未満で下のナビ */
+
+  /* ---- 重なりの順 ---- */
+  --hub-z-sticky: 10;
+  --hub-z-bottom-nav: 20;
+  --hub-z-header: 30;
+  --hub-z-dropdown: 40;
+  --hub-z-modal: 50;
+  --hub-z-toast: 60;
+
+  /* ---- 動き ---- */
+  --hub-duration: 150ms;
+  --hub-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --hub-skeleton-duration: 2s;       /* 読み込み中の帯の明滅 1 回 */
+  --hub-skeleton-ease: cubic-bezier(0.4, 0, 0.6, 1);
+  --hub-spinner-duration: 1s;        /* 読み込み中の輪の 1 回転 */
+}

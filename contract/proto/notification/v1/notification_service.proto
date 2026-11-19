@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package notification.v1;
+
+option go_package = "ksk.reporthub/backend/proto/gen/go/notification/v1;notificationv1";
+
+// ---------------------------------------------------------------
+// NotificationService: notification-service が Hub シリーズの製品に開ける
+// gRPC インターフェース（Hub 向け専用ポート :9193。読み取り専用ではない最初の口）。
+//
+// 呼び出し元:
+//   - Hub シリーズの製品のサーバ（別チームが開発する）。
+//     通信の規則（Hub の namespace からのみ到達）で呼び出し元を絞る。
+//     呼び出し元を確かめる仕組み（#1208）を入れるときに、ここも対象にする。
+//
+// テナント:
+//   - 対象テナントは metadata `x-tenant-id`（UUID。入口で受け取った値）で決まる。
+//     Request メッセージにテナント識別子は含めない。
+// ---------------------------------------------------------------
+service NotificationService {
+  // SendNotification は、テナントの利用者へ通知を送る。
+  //
+  // 宛先の利用者が当該テナント（x-tenant-id）に属することを基盤側で確かめ、
+  // 属さない user_id は rejected_user_ids に落として送らない。
+  //
+  // エラー（gRPC status code）:
+  //   - NotFound:          x-tenant-id metadata が無い
+  //   - InvalidArgument:   product / title が空、user_ids が空 or 上限超過、
+  //                        link_path が / 始まりでない・製品の接頭辞配下でない・
+  //                        対応表に無い製品、title / body が長さ上限超過、
+  //                        kind / category / priority / actor_user_id / ref_id の形が不正
+  //   - PermissionDenied:  その製品が当該テナントで無効
+  //   - ResourceExhausted: 単位時間あたりの送信回数の上限を超えた
+  rpc SendNotification(SendNotificationRequest) returns (SendNotificationResponse);
+}
+
+message SendNotificationRequest {
+  // product は製品 id（例 "talenthub"）。呼び出し側が渡す。
+  string product = 1;
+  // user_ids は宛先 user_id（UUID 文字列）。1 件以上・上限件数まで。
+  repeated string user_ids = 2;
+  // title は通知の題（Hub が渡す文字列をそのまま表示する。基盤は翻訳しない）。
+  string title = 3;
+  // body は通知の本文（同上。notifications.message に入る）。
+  string body = 4;
+  // link_path は遷移先。/ 始まりの相対パスで、その製品の接頭辞配下のみ受け付ける。
+  // scheme / "//" / ".." / 制御文字 / バックスラッシュを含むものは弾く。
+  string link_path = 5;
+  // idempotency_key は冪等鍵。同じ（テナント・製品・利用者・鍵）の通知は 1 つだけ作る。
+  // 空のときは冪等保証なし（毎回新規）。同一依頼の再送では同じ値を渡すこと。
+  string idempotency_key = 6;
+  // kind は製品が決める通知の種類（任意）。空か、大文字の英字で始まり
+  // 大文字の英字・数字・"_" の 64 字まで。画面の印・出し分けに使う。
+  string kind = 7;
+  // category は未読の数を分ける分類（任意。形は kind と同じ）。空は分けない。
+  string category = 8;
+  // priority は "LOW" / "NORMAL" / "HIGH"（任意。空は "NORMAL"）。
+  string priority = 9;
+  // actor_user_id は送った人の user_id（任意。UUID 文字列）。
+  // 基盤が名前とアイコンを付けて返す。
+  string actor_user_id = 10;
+  // ref_id は関連するものの id（任意。UUID 文字列）。
+  // 「これに関する通知を既読にする」に使う。
+  string ref_id = 11;
+}
+
+message SendNotificationResponse {
+  // accepted_user_ids は実際に通知を作成した宛先（冪等でスキップした重複は含めない）。
+  repeated string accepted_user_ids = 1;
+  // rejected_user_ids は当該テナントに属さない等で除いた宛先。
+  repeated string rejected_user_ids = 2;
+}

@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>見た目の決まりの見本</title>
+<!-- 読み込むのは tokens.css だけ。下の CSS は、layout.md と components.md の決まりを素の CSS で書いたもの。
+     書体のファイルは入っていない（Inter と Noto Sans JP が無い PC では、PC の書体で出る）。 -->
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* ---- 土台 ---- */
+*, *::before, *::after { box-sizing: border-box; }
+html { line-height: 1.5; -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--hub-color-bg); color: var(--hub-color-ink); font-family: var(--hub-font-sans); }
+h1, h2, p { margin: 0; }
+a { color: inherit; text-decoration: none; }
+button, input, select { font: inherit; color: inherit; margin: 0; }
+button { background: none; border: 0; padding: 0; }
+button:not(:disabled) { cursor: pointer; }
+svg.icon { width: var(--hub-icon-size); height: var(--hub-icon-size); fill: none; stroke: currentColor; stroke-width: var(--hub-icon-stroke); stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---- 枠 ---- */
+.hub-shell { display: flex; flex-direction: column; height: 100dvh; background: var(--hub-color-bg); }
+.hub-shell-row { display: flex; flex: 1; overflow: hidden; }
+.hub-main { flex: 1; overflow-y: auto; padding-bottom: var(--hub-bottom-nav-clearance); }
+
+/* ---- ヘッダ ---- */
+.hub-header { position: sticky; top: 0; z-index: var(--hub-z-header); display: flex; flex-shrink: 0; align-items: center; gap: var(--hub-header-gap); height: var(--hub-header-height); padding: 0 var(--hub-header-padding-x); background: var(--hub-color-surface); border-bottom: 1px solid var(--hub-color-line); }
+.hub-header-product { display: flex; flex-shrink: 0; align-items: center; gap: var(--hub-space-2); font-size: var(--hub-text-lg); line-height: var(--hub-leading-lg); font-weight: var(--hub-weight-bold); letter-spacing: var(--hub-tracking-tight); color: var(--hub-color-ink); }
+.hub-header-mark { display: grid; place-items: center; width: var(--hub-header-mark-size); height: var(--hub-header-mark-size); border-radius: var(--hub-radius-lg); background: linear-gradient(to bottom right, var(--hub-color-primary-600), var(--hub-color-primary-700)); color: var(--hub-color-text-on-primary); font-size: var(--hub-header-mark-text); letter-spacing: 0; }
+.hub-header-center { display: none; flex: 1; justify-content: center; }
+.hub-header-center > div { position: relative; width: 100%; max-width: var(--hub-header-search-max); }
+.hub-header-right { display: flex; align-items: center; gap: var(--hub-header-item-gap); margin-left: auto; }
+.hub-header-action { display: none; align-items: center; gap: var(--hub-space-1-5); height: var(--hub-header-action-height); padding: 0 var(--hub-space-4); border-radius: var(--hub-radius-header-action); background: var(--hub-color-primary); color: var(--hub-color-text-on-primary); font-size: var(--hub-text-sm); font-weight: var(--hub-weight-semibold); box-shadow: var(--hub-shadow-sm); }
+.hub-header-action:hover { background: var(--hub-color-primary-hover); }
+.hub-header-action svg.icon { width: var(--hub-icon-size-sm); height: var(--hub-icon-size-sm); }
+.hub-header-icon-button { position: relative; padding: var(--hub-space-1); border-radius: var(--hub-radius-md); color: var(--hub-color-text-muted); }
+.hub-header-icon-button > span:first-child { display: inline-flex; align-items: center; justify-content: center; width: var(--hub-header-icon-button); height: var(--hub-header-icon-button); }
+.hub-header-icon-button:hover { background: var(--hub-color-frame-hover); }
+.hub-count { position: absolute; right: var(--hub-space-2); top: var(--hub-space-2); display: flex; align-items: center; justify-content: center; height: 0.875rem; min-width: 0.875rem; padding: 0 var(--hub-space-1); border-radius: var(--hub-radius-full); background: var(--hub-color-badge-dot); color: #fff; font-size: 9px; font-weight: var(--hub-weight-bold); }
+.hub-avatar { display: flex; flex-shrink: 0; align-items: center; justify-content: center; width: var(--hub-header-avatar); height: var(--hub-header-avatar); border-radius: var(--hub-radius-full); background: var(--hub-color-primary); color: var(--hub-color-text-on-primary); font-size: var(--hub-text-sm); font-weight: var(--hub-weight-bold); }
+.hub-header-search { width: 100%; padding: var(--hub-space-1-5) var(--hub-space-4) var(--hub-space-1-5) var(--hub-space-2-5); padding-left: 2.5rem; border: 1px solid var(--hub-color-border); border-radius: var(--hub-radius-lg); background: var(--hub-color-surface-subtle); color: var(--hub-color-text-heading); font-size: var(--hub-text-sm); line-height: var(--hub-leading-sm); }
+.hub-header-search::placeholder { color: var(--hub-color-text-placeholder); opacity: 1; }
+.hub-header-search:focus { outline: none; border-color: var(--hub-color-focus); background: var(--hub-color-surface); box-shadow: 0 0 0 1px var(--hub-color-focus); }
+.hub-header-center svg.icon { position: absolute; left: var(--hub-space-3); top: 50%; width: var(--hub-icon-size-sm); height: var(--hub-icon-size-sm); transform: translateY(-50%); color: var(--hub-color-text-placeholder); pointer-events: none; }
+
+/* ---- 左のナビ ---- */
+.hub-nav { display: none; flex-shrink: 0; flex-direction: column; align-items: center; gap: var(--hub-nav-gap); width: var(--hub-nav-width); padding: var(--hub-nav-padding-y) var(--hub-nav-padding-x); background: var(--hub-color-surface); border-right: 1px solid var(--hub-color-line); }
+.hub-nav-item { position: relative; display: flex; align-items: center; justify-content: center; width: var(--hub-nav-item-size); height: var(--hub-nav-item-size); border-radius: var(--hub-radius-nav-item); color: var(--hub-color-ink-2); transition: all var(--hub-duration) var(--hub-ease); }
+.hub-nav-item:hover { background: var(--hub-color-frame-hover); }
+.hub-nav-item[aria-current="page"] { background: var(--hub-color-selected-bg); color: var(--hub-color-selected-text); }
+.hub-nav-dot { position: absolute; right: var(--hub-space-1-5); top: var(--hub-space-1-5); width: var(--hub-nav-dot-size); height: var(--hub-nav-dot-size); border-radius: var(--hub-radius-full); background: var(--hub-color-badge-dot); box-shadow: 0 0 0 2px var(--hub-color-surface); }
+
+/* ---- 下のナビ（幅 1024px 未満）---- */
+.hub-bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: var(--hub-z-bottom-nav); display: grid; grid-template-columns: repeat(4, 1fr); background: var(--hub-color-surface); border-top: 1px solid var(--hub-color-border); }
+.hub-bottom-nav a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--hub-space-0-5); height: var(--hub-bottom-nav-height); font-size: var(--hub-text-2xs); color: var(--hub-color-text-muted); }
+.hub-bottom-nav a[aria-current="page"] { color: var(--hub-color-selected-text); }
+
+/* ---- 本体 ---- */
+.hub-content { width: 100%; max-width: var(--hub-content-max-wide); margin: 0 auto; padding: var(--hub-content-padding-y) var(--hub-content-padding-x); }
+.hub-page-header { display: flex; flex-direction: column; gap: var(--hub-space-3); margin-bottom: var(--hub-space-6); }
+.hub-page-title { font-size: var(--hub-text-2xl); line-height: var(--hub-leading-2xl); font-weight: var(--hub-weight-bold); letter-spacing: var(--hub-tracking-tight); color: var(--hub-color-text-heading); }
+.hub-page-description { margin-top: var(--hub-space-1); font-size: var(--hub-text-sm); line-height: var(--hub-leading-sm); color: var(--hub-color-text-muted); }
+.hub-section-title { margin-bottom: var(--hub-space-3); font-size: var(--hub-text-sm); line-height: var(--hub-leading-sm); font-weight: var(--hub-weight-semibold); color: var(--hub-color-text-heading); }
+.stack { display: flex; flex-direction: column; gap: var(--hub-space-6); }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--hub-space-2); }
+.grid { display: grid; gap: var(--hub-space-4); grid-template-columns: 1fr; }
+
+/* ---- ボタン ---- */
+.hub-button { display: inline-flex; align-items: center; justify-content: center; gap: var(--hub-space-1-5); height: 2.5rem; padding: 0 var(--hub-space-4); border-radius: var(--hub-radius-lg); font-size: var(--hub-text-sm); line-height: var(--hub-leading-sm); font-weight: var(--hub-weight-medium); transition: all var(--hub-duration) var(--hub-ease); }
+.hub-button--sm { height: 2rem; padding: 0 var(--hub-space-3); border-radius: var(--hub-radius-md); font-size: var(--hub-text-xs); line-height: var(--hub-leading-xs); }
+.hub-button--lg { height: 2.75rem; padding: 0 var(--hub-space-5); }
+.hub-button--primary { background: var(--hub-color-primary); color: var(--hub-color-text-on-primary); box-shadow: var(--hub-shadow-sm); }
+.hub-button--primary:hover { background: var(--hub-color-primary-hover); }
+.hub-button--primary:disabled { background: var(--hub-color-primary-disabled); }
+.hub-button--secondary { border: 1px solid var(--hub-color-border-strong); background: var(--hub-color-surface); color: var(--hub-color-text); box-shadow: var(--hub-shadow-sm); }
+.hub-button--secondary:hover { background: var(--hub-color-surface-subtle); }
+.hub-button--secondary:disabled { color: var(--hub-color-text-placeholder); }
+.hub-button--ghost { color: var(--hub-color-text-sub); }
+.hub-button--ghost:hover { background: var(--hub-color-surface-muted); }
+.hub-button--danger { background: var(--hub-color-danger); color: #fff; box-shadow: var(--hub-shadow-sm); }
+.hub-button--danger:hover { background: var(--hub-color-danger-hover); }
+.hub-button--danger:disabled { background: var(--hub-color-danger-border-strong); }
+.hub-button:focus-visible, .hub-nav-item:focus-visible, .hub-header-icon-button:focus-visible { outline: 2px solid var(--hub-color-focus); outline-offset: 2px; }
+.hub-spinner { display: inline-block; width: 0.75rem; height: 0.75rem; border: 2px solid currentColor; border-right-color: transparent; border-radius: var(--hub-radius-full); animation: hub-spin var(--hub-spinner-duration) linear infinite; }
+
+/* ---- カード ---- */
+.hub-card { padding: var(--hub-space-5); border: 1px solid var(--hub-color-border); border-radius: var(--hub-radius-xl); background: var(--hub-color-surface); box-shadow: var(--hub-shadow-sm); }
+.hub-stat { padding: var(--hub-space-4); }
+.hub-stat-label { font-size: var(--hub-text-xs); line-height: var(--hub-leading-xs); font-weight: var(--hub-weight-medium); color: var(--hub-color-text-muted); }
+.hub-stat-value { font-size: var(--hub-text-2xl); line-height: var(--hub-leading-2xl); font-weight: var(--hub-weight-bold); color: var(--hub-color-text-heading); }
+.hub-stat-hint { margin-top: var(--hub-space-1); font-size: var(--hub-text-xs); line-height: var(--hub-leading-xs); color: var(--hub-color-text-muted); }
+
+/* ---- 入力欄 ---- */
+.hub-field { display: block; }
+.hub-field-label { font-size: var(--hub-text-xs); line-height: var(--hub-leading-xs); font-weight: var(--hub-weight-medium); color: var(--hub-color-text); }
+.hub-field-required { margin-left: var(--hub-space-0-5); color: var(--hub-color-required); }
+.hub-input { display: block; width: 100%; margin-top: var(--hub-space-1); padding: var(--hub-space-2) var(--hub-space-3); border: 1px solid var(--hub-color-border-strong); border-radius: var(--hub-radius-md); background: var(--hub-color-surface); color: var(--hub-color-text-heading); font-size: var(--hub-text-sm); line-height: var(--hub-leading-sm); box-shadow: var(--hub-shadow-sm); }
+.hub-input::placeholder { color: var(--hub-color-text-placeholder); opacity: 1; }
+.hub-input:focus { outline: none; border-color: var(--hub-color-focus); box-shadow: var(--hub-shadow-sm), 0 0 0 1px var(--hub-color-focus); }
+.hub-input:disabled { background: var(--hub-color-surface-subtle); }
+.hub-input[aria-invalid="true"] { border-color: var(--hub-color-danger); }
+.hub-field-error { margin-top: var(--hub-space-1); font-size: var(--hub-text-2xs); color: var(--hub-color-danger); }
+.hub-field-hint { margin-top: var(--hub-space-0-5); font-size: var(--hub-text-2xs); color: var(--hub-color-text-muted); }
+
+/* ---- バッジ ---- */
+.hub-badge { display: inline-flex; align-items: center; padding: var(--hub-space-0-5) var(--hub-space-2); border-radius: var(--hub-radius-sm); font-size: var(--hub-text-xs); line-height: var(--hub-leading-xs); font-weight: var(--hub-weight-medium); }
+.hub-badge--success { background: var(--hub-color-success-bg); color: var(--hub-color-success-text); }
+.hub-badge--warning { background: var(--hub-color-warning-bg); color: var(--hub-color-warning-text); }
+.hub-badge--danger { background: var(--hub-color-danger-bg); color: var(--hub-color-danger-text); }
+.hub-badge--info { background: var(--hub-color-info-bg); color: var(--hub-color-info-text); }
+.hub-badge--neutral { background: var(--hub-color-neutral-bg); color: var(--hub-color-neutral-text); }
+
+/* ---- 表 ---- */
+.hub-table-wrap { overflow: hidden; border: 1px solid var(--hub-color-border); border-radius: var(--hub-radius-xl); background: var(--hub-color-surface); box-shadow: var(--hub-shadow-sm); }
+.hub-table { width: 100%; border-collapse: collapse; font-size: var(--hub-text-sm); line-height: var(--hub-leading-sm); }
+.hub-table thead { background: var(--hub-color-surface-subtle); font-size: var(--hub-text-xs); line-height: var(--hub-leading-xs); letter-spacing: var(--hub-tracking-wide); text-transform: uppercase; color: var(--hub-color-text-muted); }
+.hub-table th { padding: var(--hub-space-2) var(--hub-space-4); text-align: left; font-weight: var(--hub-weight-medium); }
+.hub-table td { padding: var(--hub-space-3) var(--hub-space-4); color: var(--hub-color-text-sub); }
+.hub-table thead tr { border-bottom: 1px solid var(--hub-color-border); }
+.hub-table tbody tr + tr { border-top: 1px solid var(--hub-color-border-subtle); }
+.hub-table td.name { font-weight: var(--hub-weight-medium); color: var(--hub-color-text-heading); }
+
+/* ---- 空の状態・読み込み中・知らせ ---- */
+.hub-empty { padding: var(--hub-space-12) 0; border: 1px dashed var(--hub-color-border); border-radius: var(--hub-radius-xl); background: var(--hub-color-surface); text-align: center; font-size: var(--hub-text-sm); line-height: var(--hub-leading-sm); color: var(--hub-color-text-muted); }
+.hub-empty-title { margin-bottom: var(--hub-space-1); font-weight: var(--hub-weight-semibold); color: var(--hub-color-text); }
+.hub-skeleton { height: 1rem; border-radius: var(--hub-radius-md); background: var(--hub-color-skeleton); animation: hub-pulse var(--hub-skeleton-duration) var(--hub-skeleton-ease) infinite; }
+.hub-banner { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--hub-space-3); padding: var(--hub-space-2) var(--hub-space-3); border: 1px solid var(--hub-color-danger-border); border-radius: var(--hub-radius-md); background: var(--hub-color-danger-bg); color: var(--hub-color-danger-text); font-size: var(--hub-text-xs); line-height: var(--hub-leading-xs); }
+.hub-banner--warning { border-color: var(--hub-color-warning-border); background: var(--hub-color-warning-bg); color: var(--hub-color-warning-text); }
+.hub-toasts { position: fixed; right: var(--hub-space-6); bottom: var(--hub-space-6); z-index: var(--hub-z-toast); display: flex; flex-direction: column; gap: var(--hub-space-2); pointer-events: none; }
+.hub-toast { display: flex; align-items: center; gap: var(--hub-space-3); max-width: min(360px, calc(100vw - 3rem)); padding: var(--hub-space-2) var(--hub-space-4); border-radius: var(--hub-radius-lg); background: var(--hub-color-toast-bg); color: #fff; font-size: var(--hub-text-sm); line-height: var(--hub-leading-sm); box-shadow: var(--hub-shadow-lg); pointer-events: auto; }
+.hub-toast--success { background: var(--hub-color-success-text); }
+.hub-toast--error { background: var(--hub-color-danger-text); }
+
+@keyframes hub-pulse { 50% { opacity: 0.5; } }
+@keyframes hub-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .hub-skeleton, .hub-spinner { animation: none; } }
+
+/* ---- 画面の幅（数字は tokens.css の --hub-breakpoint-* と同じ）---- */
+@media (min-width: 40rem) {   /* sm */
+  .hub-header { padding: 0 var(--hub-header-padding-x-wide); }
+  .hub-content { padding-left: var(--hub-content-padding-x-wide); padding-right: var(--hub-content-padding-x-wide); }
+  .hub-page-header { flex-direction: row; align-items: flex-start; justify-content: space-between; }
+  .grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (min-width: 48rem) {   /* md */
+  .hub-header-center { display: flex; }
+  .hub-header-right { margin-left: 0; }
+}
+@media (min-width: 64rem) {   /* lg */
+  .hub-nav { display: flex; }
+  .hub-header-action { display: inline-flex; }
+  .hub-bottom-nav { display: none; }
+  .hub-main { padding-bottom: 0; }
+}
+</style>
+</head>
+<body>
+<div class="hub-shell">
+
+  <!-- ヘッダ。左 = 製品の名前（どの製品でも同じ場所）。中央と右の手前 = 製品ごと。右端 = 本人のメニュー（どの製品でも同じ）。
+       class hub-header は、デスクトップ版の殻がヘッダを見つける目印でもある（layout.md §6） -->
+  <header class="hub-header">
+    <a class="hub-header-product" href="#"><span class="hub-header-mark">S</span>SampleHub</a>
+    <div class="hub-header-center"><div>
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+      <input class="hub-header-search" type="search" placeholder="検索" aria-label="検索">
+    </div></div>
+    <div class="hub-header-right">
+      <a class="hub-header-action" href="#">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>
+        <span>新しく作る</span>
+      </a>
+      <button type="button" class="hub-header-icon-button" aria-label="通知">
+        <span><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/></svg></span>
+        <span class="hub-count">3</span>
+      </button>
+      <button type="button" aria-label="本人のメニュー" style="border-radius: var(--hub-radius-full)"><span class="hub-avatar">山</span></button>
+    </div>
+  </header>
+
+  <div class="hub-shell-row">
+    <!-- 左のナビ。項目は製品ごと。見た目は共通 -->
+    <nav class="hub-nav" aria-label="メニュー">
+      <a class="hub-nav-item" href="#" aria-current="page" aria-label="ホーム" title="ホーム"><svg class="icon" viewBox="0 0 24 24"><path d="M2.25 12l8.954-8.955a1.126 1.126 0 011.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg></a>
+      <a class="hub-nav-item" href="#" aria-label="集計" title="集計"><svg class="icon" viewBox="0 0 24 24"><path d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg></a>
+      <a class="hub-nav-item" href="#" aria-label="メンバー" title="メンバー"><svg class="icon" viewBox="0 0 24 24"><path d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg><span class="hub-nav-dot" aria-label="新着あり"></span></a>
+      <a class="hub-nav-item" href="#" aria-label="管理" title="管理"><svg class="icon" viewBox="0 0 24 24"><path d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z"/></svg></a>
+    </nav>
+
+    <main class="hub-main">
+      <div class="hub-content">
+        <div class="hub-page-header">
+          <div>
+            <h1 class="hub-page-title">メンバー</h1>
+            <p class="hub-page-description">ページの題、説明、右に主な操作。</p>
+          </div>
+          <div class="row">
+            <button type="button" class="hub-button hub-button--secondary">書き出す</button>
+            <button type="button" class="hub-button hub-button--primary">追加する</button>
+          </div>
+        </div>
+
+        <div class="stack">
+          <div class="grid">
+            <div class="hub-card hub-stat"><p class="hub-stat-label">登録</p><p class="hub-stat-value">128</p><p class="hub-stat-hint">先月より 4 人多い</p></div>
+            <div class="hub-card hub-stat"><p class="hub-stat-label">確認待ち</p><p class="hub-stat-value">7</p><p class="hub-stat-hint">期限は今週</p></div>
+            <div class="hub-card hub-stat"><p class="hub-stat-label">読み込み中の表示</p><div class="hub-skeleton" style="margin-top: var(--hub-space-3); width: 8rem"></div><div class="hub-skeleton" style="margin-top: var(--hub-space-2); height: 0.75rem"></div></div>
+          </div>
+
+          <div class="hub-table-wrap">
+            <table class="hub-table">
+              <thead><tr><th>名前</th><th>所属</th><th>状態</th><th>更新</th></tr></thead>
+              <tbody>
+                <tr><td class="name">山田 太郎</td><td>営業 1 課</td><td><span class="hub-badge hub-badge--success">有効</span></td><td>11/12</td></tr>
+                <tr><td class="name">佐藤 花子</td><td>開発 2 課</td><td><span class="hub-badge hub-badge--warning">確認待ち</span></td><td>11/10</td></tr>
+                <tr><td class="name">鈴木 一郎</td><td>総務課</td><td><span class="hub-badge hub-badge--danger">期限切れ</span></td><td>10/30</td></tr>
+                <tr><td class="name">高橋 次郎</td><td>営業 2 課</td><td><span class="hub-badge hub-badge--info">新規</span> <span class="hub-badge hub-badge--neutral">休止</span></td><td>10/28</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="hub-card">
+            <h2 class="hub-section-title">入力欄とボタン</h2>
+            <div class="grid">
+              <label class="hub-field"><span class="hub-field-label">名前<span class="hub-field-required">*</span></span><input class="hub-input" type="text" value="山田 太郎"></label>
+              <label class="hub-field"><span class="hub-field-label">メール</span><input class="hub-input" type="text" placeholder="name@example.com"><p class="hub-field-hint">入力の例を薄い字で出す。</p></label>
+              <label class="hub-field"><span class="hub-field-label">社員番号</span><input class="hub-input" type="text" value="12-34" aria-invalid="true"><p class="hub-field-error">数字だけで入力してください。</p></label>
+            </div>
+            <div class="row" style="margin-top: var(--hub-space-5)">
+              <button type="button" class="hub-button hub-button--primary">保存する</button>
+              <button type="button" class="hub-button hub-button--secondary">キャンセル</button>
+              <button type="button" class="hub-button hub-button--ghost">詳しく</button>
+              <button type="button" class="hub-button hub-button--danger">削除する</button>
+              <button type="button" class="hub-button hub-button--primary" disabled><span class="hub-spinner" aria-hidden="true"></span>保存中</button>
+              <button type="button" class="hub-button hub-button--sm hub-button--secondary">小</button>
+              <button type="button" class="hub-button hub-button--lg hub-button--primary">大</button>
+            </div>
+          </div>
+
+          <div class="hub-banner" role="alert"><div><p style="font-weight: var(--hub-weight-semibold); margin-bottom: var(--hub-space-0-5)">保存できませんでした</p><p>時間をおいて、もう一度お試しください。</p></div></div>
+
+          <div class="hub-empty" role="status"><p class="hub-empty-title">まだ何もありません</p><p>追加すると、ここに並びます。</p></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- 下のナビ（幅 1024px 未満のときだけ出る） -->
+  <nav class="hub-bottom-nav" aria-label="メニュー">
+    <a href="#" aria-current="page"><svg class="icon" viewBox="0 0 24 24"><path d="M2.25 12l8.954-8.955a1.126 1.126 0 011.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg><span>ホーム</span></a>
+    <a href="#"><svg class="icon" viewBox="0 0 24 24"><path d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg><span>集計</span></a>
+    <a href="#"><svg class="icon" viewBox="0 0 24 24"><path d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/></svg><span>通知</span></a>
+    <a href="#"><svg class="icon" viewBox="0 0 24 24"><path d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg><span>マイページ</span></a>
+  </nav>
+
+  <div class="hub-toasts"><div class="hub-toast hub-toast--success" role="status">保存しました</div></div>
+</div>
+</body>
+</html>

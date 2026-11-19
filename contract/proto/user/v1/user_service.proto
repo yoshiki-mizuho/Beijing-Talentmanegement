@@ -1,0 +1,791 @@
+syntax = "proto3";
+
+package user.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "ksk.reporthub/backend/proto/gen/go/user/v1;userv1";
+
+// ---------------------------------------------------------------
+// UserService: user-org-service が提供する gRPC インターフェース
+//
+// user-org-service の統合により、ユーザー・組織・ACL 判定を一本化している。
+// 旧 org-service 相当の RPC（CheckNodeLeaderAuth / GetLeaderScopeNodeIDs）も
+// このサービスに統合し、proto パッケージ名 user.v1 を維持する。
+//
+// 呼び出し元:
+//   - report-service: ACL 判定（GetSuperiorIDs, CheckNodeLeaderAuth,
+//                    GetLeaderScopeNodeIDs, GetSubtreeNodeIDs）
+//   - notification-service: 通知送信先情報取得（GetUser）
+// ---------------------------------------------------------------
+service UserService {
+  // ユーザー情報取得
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+
+  // ユーザー情報のバッチ取得（issue #643）
+  //
+  // 呼び出し元:
+  //   - report-service:
+  //       - enrichReactorNames（リアクション集計のユーザー名解決）
+  //       - enrichSearchAuthors（日報検索結果の投稿者名解決）
+  //       - resolveCommentUserMeta（コメント投稿者メタ解決）
+  //   - notification-service:
+  //       - enrichActors（通知 actor の displayName / avatarURL 解決）
+  //
+  // 上限 200 件、超過時は InvalidArgument を返す。
+  // 順序は保証しない（呼び出し側で必要なら ID をキーにマップ化すること）。
+  // 不存在 ID はレスポンスから単に欠落する（エラーにはしない）。
+  rpc GetUsers(GetUsersRequest) returns (GetUsersResponse);
+
+  // ユーザーの上長 ID リスト取得
+  // 組織ツリーを走査してユーザーの全上位ノードリーダー ID を返す
+  // 戻り値は Redis キャッシュ済み（TTL: 5分、events.org.leader.changed で無効化）
+  rpc GetSuperiorIDs(GetSuperiorIDsRequest) returns (GetSuperiorIDsResponse);
+
+  // シェアに由来する 4 RPC（GetShareTargetIDs / GetViewableUserIDs / GetUserAudience /
+  // GetUserShareCount）は、シェアの report-service 移管（epic #1215 / #1223）に伴い削除した。
+  // 日報の閲覧可否・メンションの候補・バトンの宛先は report-service が自 DB のシェアから引き
+  // （上長は本サービスの GetSuperiorIDs）、シェア件数は report.v1 GetUserShareCount /
+  // GetTenantShareStats が返す。
+
+  // ノードリーダー権限確認（バトン申請時に使用）
+  // user_id が target_node_id のリーダー（または上位ノードのリーダー）であるかを確認する
+  rpc CheckNodeLeaderAuth(CheckNodeLeaderAuthRequest) returns (CheckNodeLeaderAuthResponse);
+
+  // ユーザーのリーダースコープ（配下ノード ID リスト）取得
+  // バトン承認時に scope_node_ids を決定するために使用
+  rpc GetLeaderScopeNodeIDs(GetLeaderScopeNodeIDsRequest) returns (GetLeaderScopeNodeIDsResponse);
+
+  // 組織ノードのサブツリーノード ID リスト取得
+  // ホームフィードで親ノード絞り込み時に配下ノードまで含めるために使用（FR-RPT-012）
+  rpc GetSubtreeNodeIDs(GetSubtreeNodeIDsRequest) returns (GetSubtreeNodeIDsResponse);
+
+  // デイリーコンディション機能（#822 / B1 §17）向けの直属上長解決 2 RPC。
+  // GetDirectLeaderNodeIDs=コンディション可視性マスク（B1 §17.5。viewer の直属リーダーノード集合。サブツリー非展開）。
+  // GetDirectLeaderIDs=streak アラートの通知先（B1 §17.7。author の直属上長 user_id 群。祖先非走査・NodeVisibilityPolicy 非適用）。
+  rpc GetDirectLeaderNodeIDs(GetDirectLeaderNodeIDsRequest) returns (GetDirectLeaderNodeIDsResponse);
+  rpc GetDirectLeaderIDs(GetDirectLeaderIDsRequest) returns (GetDirectLeaderIDsResponse);
+
+  // テンプレート解決の 4 RPC（GetTemplateWithFields / GetTemplatesWithFields /
+  // GetCurrentTemplates / GetTemplateForNode）は、テンプレートドメインの
+  // report-service 移管（epic #1215 / #1218）に伴い削除した。移管後は
+  // report.v1.ReportService.GetTemplateWithFields と report-service 内部解決を使う。
+
+  // 初代 ADMIN 招待トークン発行 (#134)
+  // tenant-service が SystemCreateTenant 後に呼び出し、PENDING_INITIALIZATION
+  // 状態の初代 ADMIN ユーザー + AdminInitToken を冪等に作成して raw token を返す。
+  rpc IssueInitialAdminToken(IssueInitialAdminTokenRequest) returns (IssueInitialAdminTokenResponse);
+
+  // 初代 ADMIN 招待トークン再発行 (#134)
+  // tenant-service の regenerate-admin-token API 経由で呼び出される。
+  // 既存有効トークンを失効させて新規トークンを発行する。
+  rpc RegenerateInitialAdminToken(RegenerateInitialAdminTokenRequest) returns (RegenerateInitialAdminTokenResponse);
+
+  // 自テナントのユーザー / 組織の統計（AdminDashboard 用）を返す。
+  //
+  // 呼び出し元: integration-service の AdminDashboard 集計
+  // total_users / node_count と node 別の参加状況（member_count / active_user_count / post_rate）を返す。
+  // 月次シェア件数は report.v1 GetTenantShareStats（epic #1215 / #1223）。
+  // テナントコンテキストはメタデータ（x-tenant-slug）で伝搬するため Request には含めない。
+  rpc GetTenantUserOrgStats(GetTenantUserOrgStatsRequest) returns (GetTenantUserOrgStatsResponse);
+
+  // 指定ノード配下のメンバー一覧（TeamDashboard 用）を返す。
+  //
+  // 呼び出し元: integration-service の GrpcTeamStatsRepository（epic #353 / P3 で接続予定）
+  // 契約は #354（P1）で確定済み。本体実装は #353 P2-2 で OrgGRPCServer 経由の
+  // OrgNodeService として行う。
+  // テナントコンテキストはメタデータ（x-tenant-slug）で伝搬する。
+  //
+  // #427 / #429 で recursive モード追加。recursive=true 時は配下サブツリー全 ACTIVE
+  // メンバーを返し、上限は 5000 件、超過時は InvalidArgument を返す。
+  rpc GetNodeMembers(GetNodeMembersRequest) returns (GetNodeMembersResponse);
+
+  // 複数ノード ID 一括のメンバー解決（issue #606）。
+  //
+  // 呼び出し元: integration-service の GrpcOrgStatsRepository.breakdownByChildren。
+  // /api/v1/dashboard/org の breakdown=children|grandchildren 経路で子ノードごとに
+  // GetNodeMembersRecursive を直列で叩く N+1 を 1 RPC に集約する。
+  //
+  // 契約:
+  //   - node_ids 上限 100（超過時 InvalidArgument）。
+  //   - 各ノードのメンバー上限 5000（GetNodeMembers と同等。超過時 InvalidArgument）。
+  //   - recursive=true で各 node_id を root とするサブツリー配下の全 ACTIVE メンバー、
+  //     false で直接所属メンバー（GetNodeMembers と同一定義）。
+  //   - レスポンス entries の順序は入力 node_ids の順序と一致する。
+  //   - 不存在ノード / メンバー 0 件のノードも空 members の entry として残す（欠損させない）。
+  //   - ACL は呼び出し側責務（GetNodeMembers と同方針）。
+  rpc GetNodeMembersBatch(GetNodeMembersBatchRequest) returns (GetNodeMembersBatchResponse);
+
+  // 指定ユーザーが指定ノードのメンバー / リーダーかを返す（TeamDashboard アクセス制御用）。
+  //
+  // 呼び出し元: integration-service の JWTAccessChecker（epic #353 / P4 で接続予定）
+  // 契約は #354（P1）で確定済み。本体実装は #353 P2-2 で OrgGRPCServer 経由の
+  // OrgNodeService として行う。
+  // テナントコンテキストはメタデータ（x-tenant-slug）で伝搬する。
+  rpc GetNodeMembership(GetNodeMembershipRequest) returns (GetNodeMembershipResponse);
+
+  // session-resolver からのみ呼ばれる内部 RPC（epic #338 / #342 / #744）。
+  // user_id + メタデータ x-tenant-id で ACTIVE ユーザーを読み直し、新しい access_token を mint して返す。
+  // #744 で refresh_token を全廃し、sid セッションベースの mint へ単純化した。
+  // テナントコンテキストはメタデータ（x-tenant-id / x-tenant-slug）で伝搬する。
+  rpc RefreshAccessToken(RefreshAccessTokenRequest) returns (RefreshAccessTokenResponse);
+
+  // 指定ノードの basic info（id / name / level_name / level_number / parent_id）を返す
+  // （epic #427 / #430 で追加）。
+  //
+  // 呼び出し元: integration-service の GrpcOrgStatsRepository
+  //              （/api/v1/dashboard/org の起点ノード情報取得 / breakdown × level_number 検証）
+  // テナントコンテキストはメタデータ（x-tenant-slug）で伝搬する。
+  // ノードが存在しない場合は NotFound を返す。
+  // is_active=false でも返す（呼び出し側で整合性検証するため）。
+  // ACL は呼び出し側責務（現行 OrgGRPCServer の方針継承）。
+  rpc GetOrgNode(GetOrgNodeRequest) returns (GetOrgNodeResponse);
+
+  // 指定ノードの直接子ノード一覧（parent_id = nodeID AND is_active=true）を返す
+  // （epic #427 / #430 で追加）。
+  //
+  // 呼び出し元: integration-service の GrpcOrgStatsRepository
+  //              （/api/v1/dashboard/org の breakdown=children / grandchildren 経路）
+  // テナントコンテキストはメタデータ（x-tenant-slug）で伝搬する。
+  // ソート: level_number ASC, name ASC。空配列許容（NotFound 化しない）。
+  // ACL は呼び出し側責務。再帰しない（直接子のみ）。
+  rpc ListChildOrgNodes(ListChildOrgNodesRequest) returns (ListChildOrgNodesResponse);
+
+  // 指定ノードと同じ level_number の全ノード（自ノード含む）と、各ノード配下（再帰）の
+  // ACTIVE メンバーを返す（反応ダッシュボード v2 チーム比較用。epic #879 / #882）。
+  // 呼び出し元: integration-service（report-service GetNodeReactionStats の comparison_nodes に転送）。
+  // テナントコンテキストはメタデータ（x-tenant-slug）で伝搬する。
+  // ソート: nodes は name ASC。指定ノードが存在しない（is_active=true で見つからない）場合は NotFound。
+  rpc ListSameLevelOrgNodes(ListSameLevelOrgNodesRequest) returns (ListSameLevelOrgNodesResponse);
+
+  // 指定ノードを root とする組織サブツリー（ACTIVE ノードのみ）を深さ順で返す。
+  // 各ノードは直属 ACTIVE メンバーと organization_node_leaders のリーダー user_id を持つ（相関図用。epic #1124 / #1126）。
+  // 呼び出し元: integration-service の DashboardConnections（相関図 REST）。
+  // テナントコンテキストはメタデータ（x-tenant-slug）で伝搬する。ACL は呼び出し側責務。
+  // ソート: level_number ASC（root 先頭）、同じ深さは name ASC。root が存在しない場合は NotFound。
+  rpc GetOrgSubtree(GetOrgSubtreeRequest) returns (GetOrgSubtreeResponse);
+
+  // 複数ユーザーを一括解決し、所属ノードと「root と同じ level_number の先祖ノード（所属ノード自身を含む）」を
+  // グループとして返す（相関図用。epic #1124 / #1126）。
+  // 呼び出し元: integration-service の DashboardConnections（相関図 REST）。
+  // テナントコンテキストはメタデータ（x-tenant-slug）で伝搬する。ACL は呼び出し側責務。
+  // user_ids は 1000 件まで。該当しないグループ / 所属なしは該当フィールドを unset で返す。
+  rpc ResolveUserGroups(ResolveUserGroupsRequest) returns (ResolveUserGroupsResponse);
+
+  // 指定ノードの祖先ノード群（自ノードは含まない）を近い順（depth ASC）で返す内部 RPC（#1218）。
+  // 呼び出し元: report-service のテンプレート解決（移管後の GetCurrentTemplates / GetTemplateForNode の
+  //              デフォルト解決・scope_node_name 付与）。Reporthub 内部専用で Hub 許可リストには載せない。
+  // テナントコンテキストはメタデータ（x-tenant-slug / x-tenant-id）で伝搬する。ACL は呼び出し側責務。
+  rpc GetOrgNodeAncestors(GetOrgNodeAncestorsRequest) returns (GetOrgNodeAncestorsResponse);
+
+  // 所属ノードから上位へたどった最初の本人以外のリーダー群（施策 DIRECT_LEADER の承認者）を返す
+  // 内部 RPC（#1225）。呼び出し元: repet-service（レペットの施策申請の承認者解決）。
+  // Reporthub 内部専用で Hub 許可リストには載せない。テナントは metadata（x-tenant-slug / x-tenant-id）。
+  rpc GetNearestLeaderIDs(GetNearestLeaderIDsRequest) returns (GetNearestLeaderIDsResponse);
+
+  // テナント内の ACTIVE な全ユーザーの id を返す内部 RPC（#1225。課の順位 / 対戦候補 / お気に入りの母集団）。
+  // 呼び出し元: repet-service。Hub 許可リスト外。
+  rpc ListActiveUserIDs(ListActiveUserIDsRequest) returns (ListActiveUserIDsResponse);
+
+  // テナント内の ACTIVE な ADMIN の id を返す内部 RPC（#1225。施策 ApproverRule=ADMIN の承認依頼通知の宛先）。
+  // 呼び出し元: repet-service。Hub 許可リスト外。
+  rpc ListActiveAdminUserIDs(ListActiveAdminUserIDsRequest) returns (ListActiveAdminUserIDsResponse);
+
+  // テナント内の「削除されていない（退職していない）」全ユーザーの id を返す内部 RPC（#1225。
+  // 「みんなのレペット」一覧の母集団。status は問わず deleted_at IS NULL のみで絞る。
+  // 無効化（INACTIVE）だが未退職のユーザーも含む点が ListActiveUserIDs と異なる）。
+  // 呼び出し元: repet-service。Hub 許可リスト外。
+  rpc ListNonDeletedUserIDs(ListNonDeletedUserIDsRequest) returns (ListNonDeletedUserIDsResponse);
+
+  // 順位のグループ単位に使う階層（organization_levels.level_number）の表示名を返す内部 RPC（#1225。
+  // 設定画面の表示 / 月末バッチの件名・本文）。該当する有効な階層が無ければ name は空文字
+  // （呼び出し側が「グループ」等の既定表示に置き換える）。呼び出し元: repet-service。Hub 許可リスト外。
+  rpc GetOrgLevelName(GetOrgLevelNameRequest) returns (GetOrgLevelNameResponse);
+
+  // シェアのおすすめ（report-service）が viewer の同一ノード / 兄弟ノードの候補を 1 回で取得する
+  // 内部 RPC（#1223）。候補は各ノード subtree のリーダー user_id（元 user-org-service の
+  // suggest_share_targets.collectOrgCandidates と同じ組織クエリ＝GetOrgNode / GetNodeMemberIDs
+  // 〔subtree leaders〕/ ListChildOrgNodes をサーバ側でそのまま再利用する）。
+  // 呼び出し元: report-service。Reporthub 内部専用で Hub 許可リストには載せない。
+  // テナントは metadata（x-tenant-slug / x-tenant-id）で伝搬する。
+  rpc GetShareSuggestionOrgCandidates(GetShareSuggestionOrgCandidatesRequest) returns (GetShareSuggestionOrgCandidatesResponse);
+
+  // Reporthub の組織ツリー（report-service）が『組織の決まりだけの可視ツリー』を 1 回で取得する
+  // 内部 RPC（#1223 の 2 層化）。viewer の可視集合（所属 / 祖先 / リーダー配下 / node-visibility 範囲）に、
+  // 呼び出し側が渡した extra_user_ids（Reporthub ではシェア元 user_id）の所属ノード・本人を足した
+  // 平坦な部署リスト + メンバーリストを返す。木のネスト・アバター URL 組み立て・未読 / AI バッジは
+  // 呼び出し側（report-service）の責務。基盤はシェアを知らない（extra_user_ids が汎用の可視追加口）。
+  // 人数分・ノード数分呼ばせないため 1 RPC で deps + members をまとめて返す。
+  // テナントは metadata（x-tenant-slug / x-tenant-id）で伝搬する。
+  // 呼び出し元: report-service。Reporthub 内部専用で Hub 許可リストには載せない。
+  rpc GetVisibleOrgTree(GetVisibleOrgTreeRequest) returns (GetVisibleOrgTreeResponse);
+}
+
+// ---------------------------------------------------------------
+// GetUser
+// ---------------------------------------------------------------
+message GetUserRequest {
+  string user_id = 1;
+}
+
+message GetUserResponse {
+  UserInfo user = 1;
+}
+
+// ---------------------------------------------------------------
+// GetUsers (issue #643)
+//
+// 複数ユーザー ID の一括解決。詳細は上の rpc コメントを参照。
+// ---------------------------------------------------------------
+message GetUsersRequest {
+  // 対象ユーザー ID 群（UUID 文字列）。上限 200。
+  repeated string user_ids = 1;
+  // 閲覧者のユーザー ID（UUID 文字列）。ai_profile_type の可視性判定に使っていたが、
+  // AI プロファイルが report-service に移った（#1222）ため今は使わない（渡しても無視する）。
+  // Hub 向けの契約に載っているため項目は残す。
+  string viewer_user_id = 2;
+}
+
+message GetUsersResponse {
+  // 順序保証なし。不存在 ID は欠落する。
+  repeated UserInfo users = 1;
+}
+
+// ---------------------------------------------------------------
+// GetSuperiorIDs
+// ---------------------------------------------------------------
+message GetSuperiorIDsRequest {
+  string user_id = 1;
+}
+
+message GetSuperiorIDsResponse {
+  repeated string superior_ids = 1;
+}
+
+// ---------------------------------------------------------------
+// 共通メッセージ型
+// ---------------------------------------------------------------
+
+message UserInfo {
+  string id                   = 1;
+  string name                 = 2;
+  string email                = 3;
+  // MEMBER / ADMIN
+  string role                 = 4;
+  // ACTIVE / INACTIVE
+  string status               = 5;
+  // 所属組織ノード ID（organization_nodes.id）
+  optional string organization_node_id = 6;
+
+  reserved 7;
+  reserved "default_visibility";
+
+  // アバター配信エンドポイント URL（#554 / #501 と連動）。
+  // `/api/v1/users/{id}/avatar?v=<etag-hex>` 形式の文字列を載せる。
+  // アバター未登録のユーザーや user-org-service 側で URL が組み立てられない場合は不在
+  // （unset = optional の未設定。空文字での明示はしない）。
+  optional string avatar_url = 8;
+
+  // 主所属ノード（users.organization_node_id）の表示名（#710）。
+  // ノード未所属 / 名前解決失敗時は unset。GetUsers でのみ詰める（GetUser は不変）。
+  optional string node_name = 9;
+  // 主所属ノードの直接リーダーか（#710、FindUserIDsByNodeIDs 基準）。
+  // GetUsers でのみ詰める。
+  optional bool is_node_leader = 10;
+  // AI プロファイルタイプバッジ（#710）。AI プロファイルが report-service に移った（#1222）ため
+  // 常に unset（値は入れない）。Hub 向けの契約に載っているため項目は残す（reserved にもしない）。
+  // バッジは report-service の REST（/api/v1/users/ai-profile-badges）が返す。
+  optional UserAIProfileType ai_profile_type = 11;
+  // UI 表示用のアバターカラー（avatarColor.ts と一致する名前付き色文字列、#710）。
+  // 既存行は NULL（空文字）のことがあり、その場合はフロントのフォールバックに委ねる。
+  optional string avatar_color = 12;
+  // ユーザー作成日時（users.created_at）。在籍日数（tenure）算出に使う（issue #1222）。
+  // 相棒AI の週次バッチ（report-service）が GetUsers 一括呼びで取得する。
+  // 解決失敗時は unset（tenure 不明として既存フォールバックに委ねる）。
+  optional google.protobuf.Timestamp created_at = 13;
+}
+
+// UserAIProfileType は UserInfo.ai_profile_type 用の AI プロファイルタイプバッジ（#710）。
+message UserAIProfileType {
+  string code = 1;
+  string name = 2;
+}
+
+// ---------------------------------------------------------------
+// CheckNodeLeaderAuth
+// ---------------------------------------------------------------
+message CheckNodeLeaderAuthRequest {
+  string user_id         = 1;
+  // 対象メンバーの所属ノード ID
+  string target_node_id  = 2;
+  // true: 同一ノードを除外（上位ノードのリーダーのみを上長と見なす場合）
+  bool   strict_ancestor = 3;
+}
+
+message CheckNodeLeaderAuthResponse {
+  // ノードリーダー権限を持つか
+  bool authorized = 1;
+  // テナント ADMIN か（ADMIN はノードリーダー判定を兼ねる）
+  bool is_admin   = 2;
+}
+
+// ---------------------------------------------------------------
+// GetLeaderScopeNodeIDs
+// ---------------------------------------------------------------
+message GetLeaderScopeNodeIDsRequest {
+  string user_id = 1;
+}
+
+message GetLeaderScopeNodeIDsResponse {
+  // ユーザーがリーダーを務めるノードの配下（自ノード含む）の全ノード ID
+  repeated string node_ids = 1;
+}
+
+// ---------------------------------------------------------------
+// GetSubtreeNodeIDs
+// ---------------------------------------------------------------
+message GetSubtreeNodeIDsRequest {
+  // サブツリーのルートとなるノード ID
+  string root_node_id = 1;
+}
+
+message GetSubtreeNodeIDsResponse {
+  // root_node_id 自身を含むサブツリー全ノード ID
+  repeated string node_ids = 1;
+}
+
+// ---------------------------------------------------------------
+// GetDirectLeaderNodeIDs / GetDirectLeaderIDs（#822 コンディション機能・B1 §17 / B3 §10.5c）
+// ---------------------------------------------------------------
+message GetDirectLeaderNodeIDsRequest { string user_id = 1; }
+message GetDirectLeaderNodeIDsResponse {
+  // user_id が直接リーダーに割当たっているノード集合（サブツリー非展開）
+  repeated string node_ids = 1;
+}
+
+message GetDirectLeaderIDsRequest { string user_id = 1; }
+message GetDirectLeaderIDsResponse {
+  // user_id の所属ノードの直接リーダー user_id 群（祖先非走査・policy 非適用）
+  repeated string user_ids = 1;
+}
+
+// テンプレート解決の 4 RPC とそのメッセージ（TemplateWithFields / TemplateField /
+// TemplateScope 等）は、テンプレートドメインの report-service 移管（epic #1215 / #1218）
+// に伴い削除した。移管後は report.v1 側で定義する。
+
+// ---------------------------------------------------------------
+// IssueInitialAdminToken / RegenerateInitialAdminToken (#134)
+// ---------------------------------------------------------------
+message IssueInitialAdminTokenRequest {
+  // テナント slug。x-tenant-slug メタデータが付与されないシステム呼び出しのため
+  // ペイロードでも明示する。
+  string tenant_slug = 1;
+  string admin_email = 2;
+  string admin_name  = 3;
+}
+
+message IssueInitialAdminTokenResponse {
+  string email      = 1;
+  // raw_token は発行時のみ返却。永続化されるのは SHA-256 ハッシュのみ。
+  string raw_token  = 2;
+  // RFC3339 形式の有効期限。
+  string expires_at = 3;
+}
+
+message RegenerateInitialAdminTokenRequest {
+  string tenant_slug = 1;
+  string admin_email = 2;
+}
+
+message RegenerateInitialAdminTokenResponse {
+  string email      = 1;
+  string raw_token  = 2;
+  string expires_at = 3;
+}
+
+// ---------------------------------------------------------------
+// GetTenantUserOrgStats
+//
+// テナントコンテキストはメタデータ（x-tenant-slug）で伝搬するため
+// Request には含めない。
+// ---------------------------------------------------------------
+message GetTenantUserOrgStatsRequest {
+  // 月次シェア件数の集計窓（months / base_year / base_month）は、シェアの report-service 移管
+  // （epic #1215 / #1223）で report.v1 GetTenantShareStats へ移った。本 RPC はもう使わない。
+  reserved 1, 2, 3;
+  reserved "months", "base_year", "base_month";
+}
+
+message GetTenantUserOrgStatsResponse {
+  // 自テナントの全ユーザー数
+  int32 total_users                                 = 1;
+  // 自テナントのノード数
+  int32 node_count                                  = 2;
+  // 月次シェア件数は report.v1 GetTenantShareStats が返す（epic #1215 / #1223）。
+  reserved 3;
+  reserved "monthly_share_count";
+  // ノード別の参加状況
+  repeated TenantNodeParticipation node_participation  = 4;
+}
+
+message TenantNodeParticipation {
+  string node_id           = 1;
+  string node_name         = 2;
+  int32  member_count      = 3;
+  int32  active_user_count = 4;
+  // 0.0〜1.0
+  double post_rate         = 5;
+}
+
+// ---------------------------------------------------------------
+// GetNodeMembers
+//
+// テナントコンテキストはメタデータ（x-tenant-slug）で伝搬するため
+// Request にはテナント情報を含めない。
+//
+// 呼び出し元: integration-service の GrpcTeamStatsRepository（epic #353 / P3 で接続予定）
+// ---------------------------------------------------------------
+message GetNodeMembersRequest {
+  // 対象ノード ID（UUID 文字列）
+  string node_id = 1;
+  // 再帰モードフラグ（epic #427 / #429）。
+  //   false（既定 / 後方互換）: 指定ノードに直接所属する ACTIVE メンバーのみを返す（現行仕様、#356）。
+  //   true                    : 指定ノードを root とするサブツリー（既存 FindSubtreeNodes と同じ走査）配下の全 ACTIVE メンバーを返す。
+  //                             /api/v1/dashboard/org の breakdown=children|grandchildren 用。
+  // 上限 5000 件（超過時 InvalidArgument）。
+  bool recursive = 2;
+}
+
+message GetNodeMembersResponse {
+  repeated NodeMember members = 1;
+}
+
+message NodeMember {
+  string user_id      = 1;
+  string display_name = 2;
+  // UI 表示用のアバターカラー（CSS カラー文字列など）
+  string avatar_color = 3;
+  // アバター配信エンドポイント URL（GET /api/v1/users/{id}/avatar?v=<etag-hex>）。
+  // 未登録は unset（optional 未設定。空文字での明示はしない）。
+  optional string avatar_url = 4;
+}
+
+// ---------------------------------------------------------------
+// GetNodeMembersBatch (issue #606)
+//
+// 複数ノード ID のメンバー一括解決。詳細は上の rpc コメントを参照。
+// ---------------------------------------------------------------
+message GetNodeMembersBatchRequest {
+  // 対象ノード ID 群（UUID 文字列）。上限 100。順序は維持される。
+  repeated string node_ids = 1;
+  // 再帰モード。GetNodeMembersRequest.recursive と同一定義。
+  bool recursive = 2;
+}
+
+message GetNodeMembersBatchResponse {
+  // entries の順序はリクエストの node_ids と一致する。
+  repeated NodeMembersEntry entries = 1;
+}
+
+message NodeMembersEntry {
+  string node_id = 1;
+  repeated NodeMember members = 2;
+}
+
+// ---------------------------------------------------------------
+// GetNodeMembership
+//
+// テナントコンテキストはメタデータ（x-tenant-slug）で伝搬するため
+// Request にはテナント情報を含めない。
+//
+// 呼び出し元: integration-service の JWTAccessChecker（epic #353 / P4 で接続予定）
+// ---------------------------------------------------------------
+message GetNodeMembershipRequest {
+  // 判定対象ユーザー ID
+  string user_id = 1;
+  // 判定対象ノード ID
+  string node_id = 2;
+}
+
+message GetNodeMembershipResponse {
+  // 対象ノードのメンバーか
+  bool is_member = 1;
+  // 対象ノード（または上位ノード）のリーダーか
+  bool is_leader = 2;
+}
+
+// ---------------------------------------------------------------
+// RefreshAccessToken (epic #338 / #342 / #744)
+//
+// session-resolver の internal/session/refresh.go が呼び出す内部 RPC。
+// 入力: user_id（SessionEntry.UserID）+ メタデータ x-tenant-id（テナント解決）。
+// 処理: user_id + テナントで ACTIVE ユーザーを読み直し、新しい access_token を mint する。
+// 出力: 新 access_token（JWT）+ 有効期限。
+// #744 で refresh_token を全廃。失敗時（テナント未解決・ユーザ不在 / INACTIVE 等）は
+// codes.Unauthenticated を返す。
+// ---------------------------------------------------------------
+message RefreshAccessTokenRequest {
+  // セッション所有者のユーザ ID（UUID 文字列）。
+  string user_id = 1;
+  reserved 2;
+  reserved "refresh_token";
+}
+
+message RefreshAccessTokenResponse {
+  // 新規発行された access_token（JWT）。
+  string access_token = 1;
+  // access_token の有効期限（Unix epoch seconds）。
+  int64  access_exp   = 2;
+}
+
+// ---------------------------------------------------------------
+// GetOrgNode / ListChildOrgNodes (epic #427 / #430)
+//
+// /api/v1/dashboard/org サポート用。テナントコンテキストはメタデータ
+// （x-tenant-slug）で伝搬する。
+// ---------------------------------------------------------------
+
+message GetOrgNodeRequest {
+  // 対象ノード ID（UUID 文字列）
+  string node_id = 1;
+}
+
+message GetOrgNodeResponse {
+  OrgNodeInfo node = 1;
+}
+
+message OrgNodeInfo {
+  string id           = 1;
+  string name         = 2;
+  // organization_levels.name（"課" / "部" / "本部" 等）
+  string level_name   = 3;
+  // organization_levels.level_number（1..5 想定。値が大きいほど末端寄り）
+  int32  level_number = 4;
+  // 親ノード ID（root ノードは空文字）
+  string parent_id    = 5;
+}
+
+message ListChildOrgNodesRequest {
+  // 親ノード ID（UUID 文字列）
+  string parent_node_id = 1;
+}
+
+message ListChildOrgNodesResponse {
+  // ソート: level_number ASC, name ASC
+  repeated OrgNodeInfo nodes = 1;
+}
+
+// ---------------------------------------------------------------
+// GetOrgNodeAncestors (#1218)
+//
+// 指定ノードの祖先ノード群（自ノードは含まない）を近い順（depth ASC）で返す内部 RPC。
+// report-service のテンプレート解決から呼ばれる。テナントコンテキストはメタデータで伝搬する。
+// ---------------------------------------------------------------
+
+message GetOrgNodeAncestorsRequest {
+  // 対象ノード ID（UUID 文字列）
+  string node_id = 1;
+}
+
+message GetOrgNodeAncestorsResponse {
+  // 近い順（depth ASC）。自ノードは含まない。
+  repeated OrgNodeInfo ancestors = 1;
+}
+
+// ---------------------------------------------------------------
+// ListSameLevelOrgNodes (epic #879 / #882, feat:dashboard-v2)
+//
+// 反応ダッシュボード v2 チーム比較用。テナントコンテキストはメタデータ
+// （x-tenant-slug）で伝搬する。
+// ---------------------------------------------------------------
+
+message ListSameLevelOrgNodesRequest {
+  // 起点ノード ID（UUID 文字列）。このノードの level_number を基準に同階層ノードを集める。
+  string node_id = 1;
+}
+
+message ListSameLevelOrgNodesResponse {
+  // 起点ノードの階層レベル番号（organization_levels.level_number）
+  int32 level_number = 1;
+  // 起点ノードの階層レベル名（organization_levels.name。"課" 等）
+  string level_name = 2;
+  // 同 level_number の全ノード（自ノード含む）。name ASC。
+  repeated SameLevelOrgNode nodes = 3;
+}
+
+message SameLevelOrgNode {
+  string node_id = 1;
+  string name = 2;
+  // 起点ノード自身なら true、他は false
+  bool is_self = 3;
+  // 配下（再帰サブツリー）の ACTIVE メンバー user_id（UUID 文字列）。0 件なら空配列。
+  repeated string member_user_ids = 4;
+  // member_user_ids の件数（len と一致）
+  int32 member_count = 5;
+}
+
+// ---------------------------------------------------------------
+// GetOrgSubtree / ResolveUserGroups (epic #1124 / #1126, feat:connections)
+//
+// 相関図（ダッシュボード）用。呼び出し元は integration-service の DashboardConnections。
+// テナントコンテキストはメタデータ（x-tenant-slug）で伝搬する。ACL は呼び出し側責務。
+// ---------------------------------------------------------------
+
+message GetOrgSubtreeRequest {
+  // サブツリーの root ノード ID（UUID 文字列）
+  string root_node_id = 1;
+}
+
+message GetOrgSubtreeResponse {
+  // 深さ順（root 先頭）、同じ深さは name ASC
+  repeated OrgSubtreeNode nodes = 1;
+}
+
+message OrgSubtreeNode {
+  string id           = 1;
+  string name         = 2;
+  // 親ノード ID。root は空文字
+  string parent_id    = 3;
+  int32  level_number = 4;
+  string level_name   = 5;
+  // 直属 ACTIVE メンバーのみ（再帰しない）
+  repeated NodeMember members = 6;
+  // organization_node_leaders のリーダー user_id（UUID 文字列）
+  repeated string leader_user_ids = 7;
+}
+
+message ResolveUserGroupsRequest {
+  // 解決対象ユーザー ID 群（UUID 文字列）。上限 1000。
+  repeated string user_ids = 1;
+  // グループとみなす階層レベル番号（organization_levels.level_number）
+  int32 level_number = 2;
+}
+
+message ResolveUserGroupsResponse {
+  repeated UserGroup users = 1;
+}
+
+message UserGroup {
+  string user_id              = 1;
+  string display_name         = 2;
+  // アバター配信エンドポイント URL。未登録は unset。
+  optional string avatar_url  = 3;
+  // 所属ノード ID。所属なしは unset。
+  optional string node_id     = 4;
+  // 所属ノード名。所属なしは unset。
+  optional string node_name   = 5;
+  // root と同じ level_number の先祖ノード ID（所属ノード自身を含む）。無ければ unset。
+  optional string group_node_id = 6;
+  // group_node_id のノード名。無ければ unset。
+  optional string group_name    = 7;
+}
+
+// ---------------------------------------------------------------
+// GetNearestLeaderIDs / ListActiveUserIDs / ListActiveAdminUserIDs（#1225 内部 RPC）
+// ---------------------------------------------------------------
+message GetNearestLeaderIDsRequest { string user_id = 1; }
+message GetNearestLeaderIDsResponse {
+  // 所属ノードから上位へたどった最初の本人以外のリーダー群の user_id。
+  repeated string user_ids = 1;
+}
+
+message ListActiveUserIDsRequest {}
+message ListActiveUserIDsResponse {
+  // テナント内の ACTIVE な全ユーザーの id。
+  repeated string user_ids = 1;
+}
+
+message ListActiveAdminUserIDsRequest {}
+message ListActiveAdminUserIDsResponse {
+  // テナント内の ACTIVE な ADMIN の id。
+  repeated string user_ids = 1;
+}
+
+message ListNonDeletedUserIDsRequest {}
+message ListNonDeletedUserIDsResponse {
+  // テナント内の削除されていない（deleted_at IS NULL）全ユーザーの id（status は問わない）。
+  repeated string user_ids = 1;
+}
+
+message GetOrgLevelNameRequest {
+  // organization_levels.level_number（順位のグループ単位。テナント設定 repet_team_level_number）。
+  int32 level_number = 1;
+}
+message GetOrgLevelNameResponse {
+  // 当該 level_number の有効な階層の名前。該当が無ければ空文字。
+  string name = 1;
+}
+
+// ---------------------------------------------------------------
+// GetShareSuggestionOrgCandidates (#1223)
+//
+// report-service のシェアのおすすめ用。viewer の所属ノード（同一ノード）と
+// その兄弟ノード（親が同じ直接子ノード − 自ノード）のメンバー候補を 1 RPC で返す。
+// メンバーは各ノード subtree のリーダー user_id（元 collectOrgCandidates の GetNodeMemberIDs
+// と同一定義）。viewer 自身が含まれ得るため、除外は呼び出し側で行う。
+// テナントコンテキストはメタデータ（x-tenant-slug / x-tenant-id）で伝搬する。
+// ---------------------------------------------------------------
+message GetShareSuggestionOrgCandidatesRequest {
+  // 候補を集める起点ユーザー（閲覧者）ID（UUID 文字列）。
+  string viewer_user_id = 1;
+}
+
+message GetShareSuggestionOrgCandidatesResponse {
+  // viewer の所属ノード名（未所属 / ノード解決不可時は空文字 + same_node_member_ids 空）。
+  string same_node_name = 1;
+  // viewer の所属ノード subtree のリーダー user_id（viewer 自身を含み得る）。
+  repeated string same_node_member_ids = 2;
+  // 兄弟ノード（viewer の親ノードの直接子 − viewer ノード）ごとのメンバー候補。
+  repeated ShareSuggestionSiblingNode siblings = 3;
+}
+
+message ShareSuggestionSiblingNode {
+  // 兄弟ノード名（ラベル表示用）。
+  string node_name = 1;
+  // 当該兄弟ノード subtree のリーダー user_id。
+  repeated string member_ids = 2;
+}
+
+// ---------------------------------------------------------------
+// GetVisibleOrgTree (issue #1223 = 組織ツリーの 2 層化)
+//
+// 基盤は組織の決まりだけで可視集合を返し、Reporthub 用の「シェア元も可視」は
+// report-service が extra_user_ids 経由で足す。テナントは metadata で伝搬する。
+// ---------------------------------------------------------------
+message GetVisibleOrgTreeRequest {
+  // 閲覧者ユーザー ID（UUID 文字列）。
+  string viewer_user_id = 1;
+  // 追加で可視にするユーザー ID 群（UUID 文字列）。Reporthub ではシェア元 user_id。
+  // 空なら組織の決まりだけの可視集合になる。
+  repeated string extra_user_ids = 2;
+  // 閲覧者のロール（"ADMIN" のとき全組織を返す。それ以外は viewer ベースの可視集合）。
+  string viewer_role = 3;
+}
+
+message GetVisibleOrgTreeResponse {
+  // 可視な部署ノード（平坦。親子関係は parent_id で表現。木組みは呼び出し側）。
+  repeated VisibleDepartment departments = 1;
+  // 可視なメンバー（平坦。所属ノードは node_id）。
+  repeated VisibleNodeMember members = 2;
+}
+
+message VisibleDepartment {
+  string node_id = 1;
+  string name = 2;
+  string level_name = 3;
+  // 親ノード ID（UUID 文字列）。ルートは空文字。
+  string parent_id = 4;
+}
+
+message VisibleNodeMember {
+  // 所属ノード ID（UUID 文字列）。
+  string node_id = 1;
+  string user_id = 2;
+  string display_name = 3;
+  string role = 4;
+  // UI 表示用のアバターカラー（未登録は空文字）。
+  string avatar_color = 5;
+  // アバター配信の etag（未登録は空文字）。アプリ側で BuildAvatarURL する。
+  string avatar_etag = 6;
+  bool is_node_leader = 7;
+}

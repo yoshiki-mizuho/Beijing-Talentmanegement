@@ -1,0 +1,308 @@
+syntax = "proto3";
+
+package tenant.v1;
+
+option go_package = "ksk.reporthub/backend/proto/gen/go/tenant/v1;tenantv1";
+
+// ---------------------------------------------------------------
+// TenantService: tenant-service が提供する gRPC インターフェース
+//
+// Phase 1 (#106) では最小 API のみを定義する。
+//
+// 呼び出し元:
+//   - user-org-service / report-service / notification-service / integration-service:
+//       テナント解決ミドルウェア（ResolveTenantBySlug / GetTenant）
+//   - SYSTEM_ADMIN UI 経由のテナント管理操作（List / Create / Update / Suspend）
+//
+// 設計書 06-tenant-service.md §3.3 では `GetTenantBySlug` と表記しているが、
+// 本実装では「テナントスキーマ解決」というユースケースを明示するため
+// `ResolveTenantBySlug` という命名を採用する（後続 issue で設計書も追従）。
+//
+// テナントコンテキストは metadata (x-tenant-slug) で伝搬するため、
+// 各 Request メッセージにテナント識別子は含めない（GetTenant / ResolveTenantBySlug /
+// SuspendTenant のように対象テナントを指定する RPC は除く）。
+// ---------------------------------------------------------------
+service TenantService {
+  // slug からテナント情報を解決（テナント解決ミドルウェアが使用）
+  rpc ResolveTenantBySlug(ResolveTenantBySlugRequest) returns (ResolveTenantBySlugResponse);
+
+  // tenant_id からテナント情報を取得
+  rpc GetTenant(GetTenantRequest) returns (GetTenantResponse);
+
+  // テナント一覧（SYSTEM_ADMIN UI 用）
+  rpc ListTenants(ListTenantsRequest) returns (ListTenantsResponse);
+
+  // ACTIVE 状態の全テナント一覧（バッチ処理用、#200）
+  rpc ListActiveTenants(ListActiveTenantsRequest) returns (ListActiveTenantsResponse);
+
+  // SystemAdmin の JWT 検証（#200）
+  rpc VerifySystemAdmin(VerifySystemAdminRequest) returns (VerifySystemAdminResponse);
+
+  // テナント作成（プロビジョニング Saga 起動）
+  rpc CreateTenant(CreateTenantRequest) returns (CreateTenantResponse);
+
+  // テナント属性の部分更新
+  rpc UpdateTenant(UpdateTenantRequest) returns (UpdateTenantResponse);
+
+  // テナント論理削除（SUSPENDED へ遷移）
+  rpc SuspendTenant(SuspendTenantRequest) returns (SuspendTenantResponse);
+
+  // 初代 ADMIN 招待 raw token から対象テナントを解決（#135）
+  // user-org-service の `/api/v1/auth/initialize` 系 API が、tenant slug を
+  // 持たない状態で raw token から tenant を一意に逆引きするための内部 RPC。
+  rpc ResolveTenantByAdminInvitationToken(ResolveTenantByAdminInvitationTokenRequest)
+      returns (ResolveTenantByAdminInvitationTokenResponse);
+
+  // SYSTEM_ADMIN の access_token を mint する内部 RPC（#343, epic #338 / #744）。
+  // session-resolver からのみ呼ばれ、Cookie/HTTP は経由しない。
+  // mint: user_id で ACTIVE な SystemAdmin を引き、新しい JWT を発行する。
+  // #744 で refresh_token_hash を全廃。Redis SessionEntry の存在で『生きている』ことを
+  // 保証し、強制ログアウトは session-resolver 側で DEL session:sysadmin:{sid} を発行することで反映される。
+  rpc RefreshSystemAdminAccessToken(RefreshSystemAdminAccessTokenRequest)
+      returns (RefreshSystemAdminAccessTokenResponse);
+
+  // テナントで使える Hub シリーズの製品一覧（#1220。ヘッダの製品切り替えメニュー用）。
+  // reporthub（Reporthub 本体）が常に先頭、続いて tenants.settings.enabled_products の
+  // うち製品カタログ（env KNOWN_HUB_PRODUCTS）にあるものをカタログの順で返す。
+  rpc ListAvailableProducts(ListAvailableProductsRequest)
+      returns (ListAvailableProductsResponse);
+}
+
+// ---------------------------------------------------------------
+// 共通メッセージ型
+// ---------------------------------------------------------------
+
+// テナント情報
+//
+// settings_json は jsonb の文字列表現（例: `{"timezone":"Asia/Tokyo"}`）。
+// epic #159 / #197 (Phase 5-1) でテナント横断のマスタ属性のみを保持する形に確立。
+// service-specific キー（baton_* / share_* / default_visibility /
+// min_visibility_level_number）は各サービスの tenant_settings テーブルへ完全移管済み。
+// OpenAPI 側は `additionalProperties: true` のオブジェクトで表現するが、
+// gRPC では型不定の map を proto3 で素直に表現できないため string 化する。
+// 呼び出し側で json.Unmarshal して扱うこと。
+message TenantInfo {
+  string id            = 1;
+  string slug          = 2;
+  string name          = 3;
+  // FREE / STANDARD / PREMIUM / ENTERPRISE
+  string plan          = 4;
+  // CREATING / ACTIVE / SUSPENDED / DELETED / FAILED
+  string status        = 5;
+  int32  max_users     = 6;
+  // JSON 文字列。空オブジェクトの場合は "{}"
+  string settings_json = 7;
+  // RFC3339 形式
+  string created_at    = 8;
+  // RFC3339 形式
+  string updated_at    = 9;
+  // RFC3339 形式。未削除の場合は空文字列
+  string deleted_at    = 10;
+}
+
+// ---------------------------------------------------------------
+// ResolveTenantBySlug
+// ---------------------------------------------------------------
+message ResolveTenantBySlugRequest {
+  string slug = 1;
+}
+
+message ResolveTenantBySlugResponse {
+  TenantInfo tenant = 1;
+}
+
+// ---------------------------------------------------------------
+// GetTenant
+// ---------------------------------------------------------------
+message GetTenantRequest {
+  string tenant_id = 1;
+}
+
+message GetTenantResponse {
+  TenantInfo tenant = 1;
+}
+
+// ---------------------------------------------------------------
+// ListTenants
+// ---------------------------------------------------------------
+message ListTenantsRequest {
+  // 0-origin ページ番号
+  int32  page   = 1;
+  // 1〜100
+  int32  size   = 2;
+  // 空文字列ならフィルタしない
+  string status = 3;
+  // name / slug の部分一致検索（空文字列ならフィルタしない）
+  string q      = 4;
+}
+
+message ListTenantsResponse {
+  repeated TenantInfo content        = 1;
+  int32              page           = 2;
+  int32              size           = 3;
+  int64              total_elements = 4;
+  int32              total_pages    = 5;
+  bool               has_next       = 6;
+}
+
+// ---------------------------------------------------------------
+// ListActiveTenants (#200)
+//
+// status=ACTIVE かつ未削除のテナントを全件返す（ページングなし、バッチ処理用）。
+// ---------------------------------------------------------------
+message ListActiveTenantsRequest {}
+
+message ListActiveTenantsResponse {
+  repeated TenantInfo tenants = 1;
+}
+
+// ---------------------------------------------------------------
+// VerifySystemAdmin (#200)
+//
+// SYSTEM_ADMIN 用 JWT (is_system_admin=true) を検証し、対応する
+// SystemAdmin が ACTIVE であることを確認する。検証失敗時は valid=false を返す。
+// ---------------------------------------------------------------
+message VerifySystemAdminRequest {
+  string access_token = 1;
+}
+
+message VerifySystemAdminResponse {
+  bool   valid    = 1;
+  string admin_id = 2;
+  string email    = 3;
+}
+
+// ---------------------------------------------------------------
+// CreateTenant
+// ---------------------------------------------------------------
+message CreateTenantRequest {
+  string slug      = 1;
+  string name      = 2;
+  // FREE / STANDARD / PREMIUM / ENTERPRISE
+  string plan      = 3;
+  int32  max_users = 4;
+  // JSON 文字列。空オブジェクトの場合は "{}"。
+  //
+  // epic #159 / #197 (Phase 5-1) 完了: テナント横断のマスタ属性のみを受け付ける
+  // （例: `{"timezone":"Asia/Tokyo"}`）。service-specific キーは各サービスの
+  // tenant_settings テーブルへ完全移管済みであり、ここでは保持されない。
+  string settings_json = 5;
+}
+
+message CreateTenantResponse {
+  TenantInfo tenant = 1;
+}
+
+// ---------------------------------------------------------------
+// UpdateTenant
+//
+// 部分更新（optional スカラー型を使用し、未指定フィールドは更新しない）
+// ---------------------------------------------------------------
+message UpdateTenantRequest {
+  string          tenant_id     = 1;
+  optional string name          = 2;
+  // FREE / STANDARD / PREMIUM / ENTERPRISE
+  optional string plan          = 3;
+  optional int32  max_users     = 4;
+  // JSON 文字列。空オブジェクト("{}")を渡すと settings を空に上書き。
+  //
+  // epic #159 / #197 (Phase 5-1) 完了: テナント横断のマスタ属性のみを受け付ける
+  // （例: `{"timezone":"Asia/Tokyo"}`）。service-specific キーは各サービスの
+  // tenant_settings テーブルへ完全移管済みであり、ここでは保持されない。
+  optional string settings_json = 5;
+}
+
+message UpdateTenantResponse {
+  TenantInfo tenant = 1;
+}
+
+// ---------------------------------------------------------------
+// SuspendTenant
+// ---------------------------------------------------------------
+message SuspendTenantRequest {
+  string tenant_id = 1;
+  // 凍結理由（任意）
+  string reason    = 2;
+}
+
+message SuspendTenantResponse {
+  TenantInfo tenant = 1;
+}
+
+// ---------------------------------------------------------------
+// ResolveTenantByAdminInvitationToken (#135)
+//
+// raw token は応答に含めない（呼び出し元が保持しているため）。
+// invitation は token_expires_at / admin_email / invitation_url 等を返却し、
+// user-org-service 側で email との突き合わせと UI 表示に利用する。
+// ---------------------------------------------------------------
+message ResolveTenantByAdminInvitationTokenRequest {
+  // 招待リンクに含まれる raw token（URL クエリ ?token=... の値）。
+  string raw_token = 1;
+}
+
+message AdminInvitationInfo {
+  // 招待 URL（raw token を含むため呼び出し側でのみ使用すること）
+  string invitation_url   = 1;
+  // RFC3339 形式
+  string token_expires_at = 2;
+  // RFC3339 形式
+  string issued_at        = 3;
+  // RFC3339 形式。未再発行の場合は空文字列
+  string regenerated_at   = 4;
+  // 招待対象の管理者メールアドレス
+  string admin_email      = 5;
+  // 招待対象の管理者表示名
+  string admin_name       = 6;
+}
+
+message ResolveTenantByAdminInvitationTokenResponse {
+  TenantInfo          tenant     = 1;
+  AdminInvitationInfo invitation = 2;
+}
+
+// ---------------------------------------------------------------
+// RefreshSystemAdminAccessToken (#343)
+//
+// session-resolver からのみ呼ばれる。Cookie / HTTP は経由しない。
+// ---------------------------------------------------------------
+message RefreshSystemAdminAccessTokenRequest {
+  // SYSTEM_ADMIN の UUID 文字列
+  string user_id            = 1;
+  // #744 で refresh_token_hash を全廃。user_id で ACTIVE な SystemAdmin を引き mint する。
+  reserved 2;
+  reserved "refresh_token_hash";
+}
+
+message RefreshSystemAdminAccessTokenResponse {
+  // 新規 SYSTEM_ADMIN 用 JWT (is_system_admin=true / tenant_id="" / tenant_slug="")
+  string access_token = 1;
+  // Unix epoch seconds
+  int64  access_exp   = 2;
+}
+
+// ---------------------------------------------------------------
+// ListAvailableProducts (#1220)
+//
+// 存在しないテナントは NOT_FOUND、tenant_id が UUID でなければ INVALID_ARGUMENT。
+// ---------------------------------------------------------------
+message ListAvailableProductsRequest {
+  // テナントの UUID 文字列
+  string tenant_id = 1;
+}
+
+// Hub シリーズの製品 1 件。
+message HubProduct {
+  // 製品 id（例: reporthub / taskhub）。入口の X-Hub-Product と同じ識別子
+  string id   = 1;
+  // 表示名（例: Reporthub / TaskHub）
+  string name = 2;
+  // 利用者がその製品へ移るときの入口（同じドメインの `/` 始まりのパス。例: /task）。
+  // 入口の無い製品は空文字列（切り替えメニューに出さない）。Reporthub 本体は "/"
+  string path = 3;
+}
+
+message ListAvailableProductsResponse {
+  // 先頭は常に reporthub
+  repeated HubProduct products = 1;
+}
