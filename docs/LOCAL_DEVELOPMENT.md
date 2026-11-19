@@ -3,7 +3,7 @@
 ## 方針
 
 - 日常の開発、Codexによる実装、テストは、WindowsにネイティブでインストールしたPostgreSQL 17を使う。
-- Docker Desktopは、メモリ8GB級の端末ではLinux VMのメモリ不足でクラッシュしやすいため、日常の開発では必須にしない。`docker-compose.yml` は、余裕のある環境とCIでの検証用に残す。
+- Docker Desktopは、メモリ8GB級の端末ではLinux VMのメモリ不足でクラッシュしやすいため、日常の開発では必須にしない。`docker-compose.yml` は、hub-devkit（開発用の入口と偽の基盤）とともに動かす余裕のある環境向け（下の「hub-devkit で動かす」）。
 - Dockerイメージのビルド確認とKubernetes構成の検証は、GitLab CIで行う。
 - 複数人で確認する場合や、ローカルにPostgreSQLを用意できない端末では、Neonのブランチを個別に作成して使う。複数人で同じDBを共有して開発しない。
 
@@ -97,3 +97,34 @@ npm.cmd run db:cleanup-e2e -- --yes
 ## DBを作り直す
 
 DBの状態が壊れた場合は、`npm.cmd exec -- prisma migrate reset` で作り直してからseedを再実行する。ローカルDBの中身は使い捨てとして扱い、共有したいデータはseedに反映する。
+
+## hub-devkit で動かす
+
+Hub の基盤への載せ替え（`docs/HUB_PLATFORM.md`）の後は、ログインを基盤の入口が行うため、手元では hub-devkit（開発用の入口と偽の基盤）を通して確かめる。**ログインを基盤に替える H-2 の後から使う**（それまでは上の手順のまま）。手順の全体はスキル `hub-local-check` と `contract/guide.md` の §9。
+
+### Docker を使う場合
+
+`scripts/devkit.sh up` で、devkit の取り込み（`.devkit/`、git に入れない）、ビルド、起動まで行う。設定は `dev/devkit.yaml` と `docker-compose.yml`。ブラウザで `http://localhost:8000/talent` を開く。
+
+### Docker を使わない場合（この PC の既定）
+
+基盤の担当の回答（hub-platform#4）にもとづく。
+
+1. Go 1.23 以上を用意する。
+2. 基盤のリポジトリを、契約の版のタグで取り、devkit をビルドする。
+
+   ```bash
+   git clone --depth 1 --branch hub-contract/v0.20.0 https://gitlab.com/chosen-ryoiki-group/hamburg/hub-platform.git ../hub-platform
+   cd ../hub-platform/devkit && go build -o hub-devkit .
+   ```
+
+3. 手元の PostgreSQL と TalentHub（`npm.cmd run dev`、`localhost:3000`）を起動しておく。TalentHub には、偽の基盤の接続先を環境変数で渡す：`PLATFORM_USER_ORG_GRPC_ADDR=localhost:9192`、`PLATFORM_TENANT_GRPC_ADDR=localhost:9195`、`PLATFORM_NOTIFICATION_GRPC_ADDR=localhost:9193`、`PLATFORM_LLM_GRPC_ADDR=localhost:9184`、`HUB_NAME=talenthub`。
+4. devkit を起動する。
+
+   ```bash
+   DEVKIT_HUB_NAME=talenthub DEVKIT_HUB_PATH_PREFIX=talent DEVKIT_CONFIG=dev/devkit.local.yaml ../hub-platform/devkit/hub-devkit
+   ```
+
+5. 入口 `http://localhost:8000/talent` を開き、利用者を選んでログインする。確かめ終わったら devkit と TalentHub を止める（メモリが少ないため）。
+
+devkit は手元の代わり。本物と違う点に頼るコードや、devkit のためだけの分岐をアプリに入れない。

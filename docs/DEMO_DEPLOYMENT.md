@@ -102,6 +102,15 @@ Remove-Item Env:DATABASE_URL, Env:DEMO_ADMIN_PASSWORD, Env:DEMO_MANAGER_PASSWORD
 - `AUTH_SECRET`を更新した場合はVercelを再デプロイし、既存セッションが無効になったことを確認する。
 - 公開停止時はVercel ProjectのGit連携またはProduction Deploymentを停止し、Neon roleのパスワードをrotateする。長期停止時はバックアップ取得後にNeon computeを停止する。
 
+## Hub への載せ替えの前に凍結する
+
+TalentHub は Hub シリーズの基盤に載せ替える（`docs/ROADMAP.md` のフェーズ H）。H-2 でログインを基盤に替えると、`main` は Vercel と Neon では動かなくなるため、デモは載せ替えの前の版で凍結して残す（2026-11-19 利用者と合意）。
+
+1. H-2 を merge する前に、載せ替え前の `main` のコミットにタグ `demo-final` を付けて push する（Claude が行う）。
+2. Vercel Project の Git 連携を止め、以降の `main` が Vercel にデプロイされないようにする（利用者が行う）。今の Production Deployment はそのまま残す。
+3. Neon の DB はそのまま残す。`DEMO_DB_TASK` の手動パイプラインは、凍結の後は流さない。
+4. デモを作り直す必要が出たときは、タグ `demo-final` から行う。
+
 ## Production smoke test
 
 - 3ロールでログインできる。

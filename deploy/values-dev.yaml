@@ -1,0 +1,23 @@
+# TalentHub の dev 設定。tag は CI が書き換える。
+
+services:
+  talenthub-web:
+    tag: "0000000"
+    replicas: 1
+
+migrate:
+  tag: "0000000"
+
+# アプリが使う秘密の値は、talenthub-dev namespace 向けに暗号化する。
+# DB の接続情報は基盤が用意するため、ここには書かない。
+#
+# printf '%s' '<値>' | kubeseal --cert sealed-secrets-cert.pem --raw \
+#   --namespace talenthub-dev --name talenthub-api-token --from-file=/dev/stdin
+#
+# sealedSecrets:
+#   talenthub-api-token:
+#     encryptedData:
+#       token: AgB...
+#
+# secretEnv:
+#   EXTERNAL_API_TOKEN: {secret: talenthub-api-token, key: token}

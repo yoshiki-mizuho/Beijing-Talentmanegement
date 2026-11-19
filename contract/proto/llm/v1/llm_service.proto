@@ -1,0 +1,106 @@
+syntax = "proto3";
+
+package llm.v1;
+
+option go_package = "ksk.reporthub/backend/proto/gen/go/llm/v1;llmv1";
+
+// ---------------------------------------------------------------
+// LLMService: Hub シリーズの製品（別チームが開発する）へ開ける汎用 LLM 口。
+//
+// integration-service の Hub 専用ポート（:9184）で公開する。社内の Ollama を
+// 使って文章 / JSON を生成する。プロンプトは Hub が持ち、基盤は Hub ごとの
+// プロンプトを持たない。Reporthub 用の内部ポート（:9084）にも同じ口を出す
+// （product は reporthub だけ。高優先・時間帯や上限なし・社外のモデルは使えない）。
+//
+// 機密: system_prompt / user_prompt / text（生成結果）を基盤は保存しない・
+//       ログに出さない（受入条件「入力と出力を基盤の側で保存しない・ログに出さない」）。
+//       ログに残すのは製品・テナント・長さ・所要・結果コードだけ。
+//
+// 制約: LLM を動かす機械は 1 台（CPU 推論）。Reporthub の週次バッチと取り合いに
+//       ならないよう、integration-service が順番待ち（同時 1・Reporthub 優先）・
+//       バッチ時間帯ガード・Hub ごと 1 日上限で守る。混雑・時間帯・上限は
+//       ResourceExhausted、LLM 停止は Unavailable、時間切れは DeadlineExceeded を返す。
+//
+// 呼び出し元の確認: このポートには呼び出し元の認証が無い。テナントは metadata
+//       （x-tenant-id は必須。x-tenant-slug は任意で、無ければ tenant-service で引く）、
+//       製品は要求の項目（product）で受ける（通知の口 #1226 と渡し方を揃える）。
+//       セキュリティ境界はテナントの enabled_products（製品が有効なテナントだけ通す）。
+// ---------------------------------------------------------------
+service LLMService {
+  // Generate は system_prompt / user_prompt と出力の形（TEXT / JSON）を受けて
+  // 1 回同期で生成し、生成テキストと使用モデルを返す。
+  // プロンプト・応答は保存しない・ログに出さない。
+  rpc Generate(GenerateRequest) returns (GenerateResponse);
+
+  // ListModels は選べるモデルの一覧と既定のモデルを返す。
+  rpc ListModels(ListModelsRequest) returns (ListModelsResponse);
+}
+
+// OutputFormat は生成結果の形。
+enum OutputFormat {
+  // 未指定は TEXT として扱う。
+  OUTPUT_FORMAT_UNSPECIFIED = 0;
+  // 文章（プレーンテキスト）。
+  OUTPUT_FORMAT_TEXT = 1;
+  // JSON。基盤は読めること（妥当性）だけを確かめ、壊れていれば 1 回だけ作り直す。
+  OUTPUT_FORMAT_JSON = 2;
+}
+
+message GenerateRequest {
+  // システムの指示（任意）。
+  string system_prompt = 1;
+  // 本文（必須）。空なら InvalidArgument。
+  string user_prompt = 2;
+  // 出力の形。未指定は TEXT。
+  OutputFormat output_format = 3;
+  // 使うモデル（空なら既定のモデル）。許可した一覧の外なら InvalidArgument。
+  // model が空のときは必ず社内の既定のモデル（allow_external が true でも社外にはしない）。
+  string model = 4;
+  // JSON 出力時に添える形のヒント（任意・プロンプトへ連結する補助）。
+  string json_schema_hint = 5;
+  // 製品の id（必須。例 "talenthub"）。テナントの enabled_products に含まれる
+  // 製品だけ通す（通知の口 #1226 の product と渡し方を揃える）。
+  string product = 6;
+  // 社外のモデルを使ってよいという明示の同意（既定 false）。
+  // 社外のモデル（ListModels の model_infos で external=true のもの）を model に
+  // 指定するには true が必須。false で社外のモデルを指定したら InvalidArgument。
+  // 社外のモデルには日報の本文・日報から作ったデータを渡してはならない（社内で
+  // 完結させる）。渡してよいのは、それ以外のデータだけ。Hub が外部の LLM を直接
+  // 呼ぶことはできず、社外のモデルを使えるのは、基盤が仲介するこの口だけ。
+  bool allow_external = 7;
+  // 生成のばらつき（任意・0〜2）。無ければモデルの既定。範囲外は InvalidArgument。
+  optional float temperature = 8;
+  // 候補の絞り込み（任意・0〜1）。無ければモデルの既定。範囲外は InvalidArgument。
+  optional float top_p = 9;
+}
+
+message GenerateResponse {
+  // 生成テキスト（TEXT ならそのまま、JSON なら JSON 文字列）。
+  string text = 1;
+  // 実際に使ったモデル名。
+  string model_used = 2;
+}
+
+message ListModelsRequest {
+  // 製品の id（必須。例 "talenthub"）。Generate と同じく製品が有効なテナントだけ通す。
+  string product = 1;
+}
+
+message ListModelsResponse {
+  // 選べるモデル名の一覧。社内のモデルと、その呼び出し元が使える社外のモデルの
+  // 両方の名前を入れる（許可されていない呼び出し元には社外のモデルを出さない）。
+  repeated string models = 1;
+  // 既定のモデル名。必ず社内のモデル。
+  string default_model = 2;
+  // モデルごとの情報（社内か社外か）。models と同じ並び・同じ範囲。
+  repeated ModelInfo model_infos = 3;
+}
+
+// ModelInfo は 1 つのモデルの情報。
+message ModelInfo {
+  // モデル名（models の要素と一致する）。
+  string name = 1;
+  // 社外のモデルなら true。社外のモデルには日報の本文・日報から作ったデータを
+  // 渡してはならない（GenerateRequest.allow_external の注記を参照）。
+  bool external = 2;
+}

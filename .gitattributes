@@ -1,0 +1,5 @@
+# 基盤（hub-platform）から取り込むファイルは、改行を LF のまま保つ（シェルのスクリプトは CRLF だと動かない）
+*.sh text eol=lf
+contract/** text eol=lf
+.claude/skills/hub-*/** text eol=lf
+devkit.version text eol=lf

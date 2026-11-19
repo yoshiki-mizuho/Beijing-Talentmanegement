@@ -3,6 +3,8 @@ workflow:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_PIPELINE_SOURCE == "web" && $CI_COMMIT_BRANCH == "main" && $DEMO_DB_TASK'
+    - if: '$HUB_DEPLOY_ENABLED == "true" && ($CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "production")'
+    - if: '$CI_PIPELINE_SOURCE == "web" && $HUB_BUILD_CHECK == "true"'
     - when: never
 
 # 社内ランナー（日報アプリと共用、スペックは高くない）の負荷を抑えるため、
@@ -12,6 +14,8 @@ stages:
   - e2e
   - security
   - demo_db
+  - build
+  - deploy
 
 default:
   # 社内のランナー（日報アプリと共用）で動かし、GitLab.com のクレジットを消費しない。
@@ -203,6 +207,53 @@ demo_db_seed:
     - npm run prisma:generate
     - npm run db:seed
 
+build:web:
+  extends: .hub_build_image
+  stage: build
+  variables:
+    IMAGE_NAME: web
+    CONTEXT: .
+    DOCKERFILE: Dockerfile
+  rules:
+    - if: '$HUB_DEPLOY_ENABLED == "true" && ($CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "production")'
+    - if: '$CI_PIPELINE_SOURCE == "web" && $HUB_BUILD_CHECK == "true"'
+
+build:migrate:
+  extends: .hub_build_image
+  stage: build
+  variables:
+    IMAGE_NAME: migrate
+    CONTEXT: .
+    DOCKERFILE: Dockerfile.migrate
+  rules:
+    - if: '$HUB_DEPLOY_ENABLED == "true" && ($CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "production")'
+    - if: '$CI_PIPELINE_SOURCE == "web" && $HUB_BUILD_CHECK == "true"'
+
+deploy:dev:
+  extends: .hub_update_tag
+  stage: deploy
+  needs: ["build:web", "build:migrate"]
+  variables:
+    VALUES_FILE: deploy/values-dev.yaml
+    TAG_KEYS: "services.talenthub-web migrate"
+    TARGET_BRANCH: main
+  rules:
+    - if: '$HUB_DEPLOY_ENABLED == "true" && $CI_COMMIT_BRANCH == "main"'
+
+deploy:prod:
+  extends: .hub_update_tag
+  stage: deploy
+  needs: ["build:web", "build:migrate"]
+  variables:
+    VALUES_FILE: deploy/values-prod.yaml
+    TAG_KEYS: "services.talenthub-web migrate"
+    TARGET_BRANCH: production
+  rules:
+    - if: '$HUB_DEPLOY_ENABLED == "true" && $CI_COMMIT_BRANCH == "production"'
+
 include:
   - template: Security/SAST.gitlab-ci.yml
   - template: Security/Secret-Detection.gitlab-ci.yml
+  - project: chosen-ryoiki-group/hamburg/hub-platform
+    ref: main
+    file: /ci/hub/deploy.gitlab-ci.yml

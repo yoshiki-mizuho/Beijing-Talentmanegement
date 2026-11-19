@@ -1,0 +1,13 @@
+# Docker 版 hub-devkit の設定。この Hub の持ち物。
+hub:
+  name: talenthub
+  pathPrefix: talent
+
+routes:
+  - path: /talent
+    upstream: http://talenthub-web:8080
+  - path: /api/talent/v1
+    upstream: http://talenthub-web:8080
+  - path: /talent/health
+    upstream: http://talenthub-web:8080
+    public: true

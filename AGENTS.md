@@ -18,6 +18,7 @@
 - ローカルDB、seed、検証コマンドは `docs/LOCAL_DEVELOPMENT.md` を確認する。
 - 画面のレイアウト、部品、文言、演出を判断する場合は `docs/DESIGN_GUIDELINES.md` を確認する。
 - セキュリティの対策、CI の検査、受け入れたリスクを判断する場合は `docs/SECURITY.md` を確認する。
+- TalentHub は Hub シリーズの基盤に載せ替え中（フェーズ H）。基盤との約束（してはいけないこと、必ずすること）は `contract/hub-platform-for-claude.md`、表・数値・手順は `contract/guide.md` を確認する。`contract/`、`scripts/` の `update-contract.sh`・`hub-contracts.sh`・`devkit.sh`、`.claude/skills/hub-*/` は基盤の持ち物なので書き換えない。
 - Next.js 16 は、学習データの頃の Next.js と API・規約・ファイル構成が変わっている。Next.js の機能を使うコードを書く前に `node_modules/next/dist/docs/` の該当するガイドを確かめ、非推奨の案内に従う。
 
 ## Codex作業ルール
@@ -43,4 +44,4 @@
 ## 現在の状態
 
 - Phase0〜Phase6と、使い勝手の改善R4・R5、スキルシートと承認の改善R6、振り返りとわくわく感R7、セキュリティ強化S、リポジトリの整理C、変更に耐える設計E、顧客提案用スキルシートF、性能改善Gは完了済み。性能で守ることは `docs/PERFORMANCE.md` を確認する。デモ環境の運用手順は `docs/DEMO_DEPLOYMENT.md` を確認する。
-- 次の対象は、社内サーバ（Hub シリーズの基盤）に `hub-template` の形で載せること（Phase 7 を置き換える。計画は相談中）。E2Eは専用のデータを作って消す（`docs/LOCAL_DEVELOPMENT.md`）。セキュリティの対策と受け入れたリスクは `docs/SECURITY.md` を確認する。
+- 次の対象は、社内サーバ（Hub シリーズの基盤）に `hub-template` の形で載せること（フェーズ H。Phase 7 を置き換える。段と決定事項は `docs/ROADMAP.md`、構成と配布は `docs/HUB_PLATFORM.md`）。E2Eは専用のデータを作って消す（`docs/LOCAL_DEVELOPMENT.md`）。セキュリティの対策と受け入れたリスクは `docs/SECURITY.md` を確認する。
