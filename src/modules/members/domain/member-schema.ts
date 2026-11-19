@@ -13,6 +13,7 @@ export const memberInputSchema = z.object({
   departmentId: z.string().min(1),
   jobTitle: z.string().max(120).optional(),
   profile: z.string().max(1000).optional(),
+  platformUserId: z.union([z.uuid(), z.literal("")]).optional(),
   status: z.enum(MemberStatus).default(MemberStatus.ACTIVE)
 });
 

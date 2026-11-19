@@ -3,11 +3,20 @@ import { expect, type Browser, type BrowserContext, type Page } from "@playwrigh
 import { prisma } from "../../src/server/db/prisma";
 import type { DemoCredential } from "./credentials";
 
-const sharedDemoEmails = new Set(["admin@example.com", "manager@example.com", "member@example.com"]);
+const tenantId = "11111111-1111-4111-8111-111111111111";
+const sharedDemoUserIds = new Set(readonlyDemoUserIds());
+
+function readonlyDemoUserIds() {
+  return [
+    "22222222-2222-4222-8222-222222222222",
+    "22222222-2222-4222-8222-000000000004",
+    "22222222-2222-4222-8222-000000000005"
+  ];
+}
 
 // 月初の振り返りの演出が、共用のデモアカウントでほかのテストの操作をふさがないようにする。
 // 演出そのものは e2e/monthly-recap.spec.ts で確かめる。
-async function markPreviousMonthRecapSeen(email: string) {
+async function markPreviousMonthRecapSeen(platformUserId: string) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Tokyo",
     year: "numeric",
@@ -18,7 +27,7 @@ async function markPreviousMonthRecapSeen(email: string) {
   const previous = new Date(Date.UTC(year, month - 2, 1));
   const previousMonth = `${previous.getUTCFullYear()}-${String(previous.getUTCMonth() + 1).padStart(2, "0")}`;
   await prisma.member.updateMany({
-    where: { users: { some: { email } } },
+    where: { users: { some: { platformUserId } } },
     data: { lastRecapSeenMonth: previousMonth }
   });
 }
@@ -26,17 +35,20 @@ async function markPreviousMonthRecapSeen(email: string) {
 export async function login(
   page: Page,
   credential: DemoCredential,
-  // 初回ログインではパスワードを決める画面へ移る
   expectedUrl: RegExp = /\/dashboard(?:\?.*)?$/
 ) {
   // 専用データのアカウントは、テストが用意した振り返りの状態をそのまま使う
-  if (sharedDemoEmails.has(credential.email)) {
-    await markPreviousMonthRecapSeen(credential.email);
+  if (sharedDemoUserIds.has(credential.platformUserId)) {
+    await markPreviousMonthRecapSeen(credential.platformUserId);
   }
-  await page.goto("/login");
-  await page.getByLabel("メールアドレス", { exact: true }).fill(credential.email);
-  await page.getByLabel("パスワード", { exact: true }).fill(credential.password);
-  await page.getByRole("button", { name: "ログイン", exact: true }).click();
+  await page.context().setExtraHTTPHeaders({
+    "X-Auth-Tenant-Id": tenantId,
+    "X-Auth-Tenant-Slug": "local-dev",
+    "X-Auth-User-Id": credential.platformUserId,
+    "X-Auth-User-Role": credential.platformRole,
+    "X-Auth-Request-Id": crypto.randomUUID()
+  });
+  await page.goto("/dashboard");
   await expect(page).toHaveURL(expectedUrl);
 }
 

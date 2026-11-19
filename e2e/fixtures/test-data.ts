@@ -13,7 +13,6 @@ import type {
   SkillLevelChangeSource,
   SkillSelfAssessmentStatus,
 } from "@prisma/client";
-import bcrypt from "bcryptjs";
 
 import { deleteE2eData, type E2eDataIds } from "../cleanup/delete-e2e-data";
 import { prisma } from "../../src/server/db/prisma";
@@ -85,8 +84,7 @@ export function createE2eTestData() {
       const value = unique(input.label);
       // ラベルは日本語のことがあるので、メールアドレスは接頭辞と連番だけで作る（形式チェックを通すため）
       const email = `e2e-${prefix.toLowerCase()}-${sequence}@example.com`;
-      const password = randomBytes(24).toString("base64url");
-      const passwordHash = await bcrypt.hash(password, 12);
+      const platformUserId = crypto.randomUUID();
       const member = await prisma.member.create({
         data: {
           employeeNo: value,
@@ -100,16 +98,19 @@ export function createE2eTestData() {
             ? "2000-01"
             : input.lastRecapSeenMonth,
           users: { create: {
-            name: value,
-            email,
-            role: input.role ?? "MEMBER",
-            passwordHash,
-            passwordChangeRequired: false,
+            role: input.role === "MANAGER" ? "MANAGER" : "MEMBER",
+            platformUserId
           } },
         },
       });
       ids.memberIds.push(member.id);
-      return { member, credential: { email, password } };
+      return {
+        member,
+        credential: {
+          platformUserId,
+          platformRole: input.role === "ADMIN" ? "ADMIN" : "MEMBER"
+        }
+      };
     },
     async createSkill(label: string): Promise<{ category: SkillCategory; skill: Skill }> {
       const categoryValue = unique(`${label}-category`);

@@ -22,7 +22,6 @@ export function isCrossOriginWrite({
 }: CrossOriginWriteInput) {
   const isApiWrite =
     pathname.startsWith("/api/") &&
-    !pathname.startsWith("/api/auth/") &&
     !SAFE_METHODS.has(method.toUpperCase());
 
   if (!isApiWrite || origin === null) {

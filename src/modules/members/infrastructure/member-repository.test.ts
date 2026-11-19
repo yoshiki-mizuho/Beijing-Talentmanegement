@@ -18,7 +18,8 @@ const mocks = vi.hoisted(() => ({
   assessmentCount: vi.fn(),
   userFindMany: vi.fn(),
   userFindFirst: vi.fn(),
-  userUpdateMany: vi.fn(),
+  userUpdate: vi.fn(),
+  userCreate: vi.fn(),
   notificationCreateMany: vi.fn(),
   notificationCreate: vi.fn(),
   notificationUpdateMany: vi.fn(),
@@ -63,7 +64,8 @@ const transactionClient = {
   user: {
     findMany: mocks.userFindMany,
     findFirst: mocks.userFindFirst,
-    updateMany: mocks.userUpdateMany
+    update: mocks.userUpdate,
+    create: mocks.userCreate
   },
   notification: {
     createMany: mocks.notificationCreateMany,
@@ -98,7 +100,8 @@ describe("updateMember audit log", () => {
     mocks.transaction.mockImplementation(async (callback) => callback(transactionClient));
     mocks.memberFindUniqueOrThrow.mockResolvedValue(before);
     mocks.userFindFirst.mockResolvedValue(null);
-    mocks.userUpdateMany.mockResolvedValue({ count: 1 });
+    mocks.userUpdate.mockResolvedValue({});
+    mocks.userCreate.mockResolvedValue({});
     mocks.memberCount.mockResolvedValue(0);
     mocks.auditLogCreate.mockResolvedValue({});
   });
@@ -150,7 +153,8 @@ describe("updateMember audit log", () => {
     expect(mocks.auditLogCreate).not.toHaveBeenCalled();
   });
 
-  it("updates the login email in lowercase with the member email", async () => {
+  it("sets the platform user ID by creating a linked user", async () => {
+    mocks.userFindFirst.mockResolvedValue(null);
     mocks.memberUpdate.mockResolvedValue({
       ...before,
       email: "new@example.com"
@@ -163,20 +167,47 @@ describe("updateMember audit log", () => {
       departmentId: "department-1",
       jobTitle: "Engineer",
       profile: "変更前プロフィール",
-      status: "ACTIVE"
+      status: "ACTIVE",
+      platformUserId: "11111111-1111-4111-8111-111111111111"
     }, "actor-1");
 
     expect(mocks.memberUpdate).toHaveBeenCalledWith({
       where: { id: "member-1" },
       data: expect.objectContaining({ email: "new@example.com" })
     });
-    expect(mocks.userUpdateMany).toHaveBeenCalledWith({
-      where: { memberId: "member-1" },
-      data: { email: "new@example.com" }
+    expect(mocks.userCreate).toHaveBeenCalledWith({
+      data: {
+        platformUserId: "11111111-1111-4111-8111-111111111111",
+        memberId: "member-1",
+        role: "MEMBER"
+      }
     });
   });
 
-  it("rejects an email used by another login user", async () => {
+  it("changes the platform user ID", async () => {
+    mocks.userFindFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: "user-1" });
+    mocks.memberUpdate.mockResolvedValue(before);
+
+    await updateMember("member-1", {
+      employeeNo: "E001",
+      name: "変更前",
+      email: "member@example.com",
+      departmentId: "department-1",
+      jobTitle: "Engineer",
+      profile: "変更前プロフィール",
+      status: "ACTIVE",
+      platformUserId: "22222222-2222-4222-8222-222222222222"
+    }, "actor-1");
+
+    expect(mocks.userUpdate).toHaveBeenCalledWith({
+      where: { id: "user-1" },
+      data: { platformUserId: "22222222-2222-4222-8222-222222222222" }
+    });
+  });
+
+  it("rejects a platform user ID used by another user", async () => {
     mocks.userFindFirst.mockResolvedValue({ id: "user-2" });
 
     await expect(updateMember("member-1", {
@@ -186,9 +217,31 @@ describe("updateMember audit log", () => {
       departmentId: "department-1",
       jobTitle: "Engineer",
       profile: "変更前プロフィール",
-      status: "ACTIVE"
-    }, "actor-1")).rejects.toThrow("このメールアドレスは使われています");
+      status: "ACTIVE",
+      platformUserId: "22222222-2222-4222-8222-222222222222"
+    }, "actor-1")).rejects.toThrow("この基盤の利用者 ID は使われています");
     expect(mocks.memberUpdate).not.toHaveBeenCalled();
+  });
+
+  it("clears the platform user ID without deleting the linked user", async () => {
+    mocks.userFindFirst.mockResolvedValue({ id: "user-1" });
+    mocks.memberUpdate.mockResolvedValue(before);
+
+    await updateMember("member-1", {
+      employeeNo: "E001",
+      name: "変更前",
+      email: "member@example.com",
+      departmentId: "department-1",
+      jobTitle: "Engineer",
+      profile: "変更前プロフィール",
+      status: "ACTIVE",
+      platformUserId: ""
+    }, "actor-1");
+
+    expect(mocks.userUpdate).toHaveBeenCalledWith({
+      where: { id: "user-1" },
+      data: { platformUserId: null }
+    });
   });
 });
 

@@ -45,14 +45,14 @@ describe("isCrossOriginWrite", () => {
     expect(isCrossOriginWrite({ ...defaultInput, origin: "invalid" })).toBe(true);
   });
 
-  it("allows next-auth API requests", () => {
+  it("rejects cross-origin writes under the former auth API path", () => {
     expect(
       isCrossOriginWrite({
         ...defaultInput,
         pathname: "/api/auth/signout",
         origin: "https://attacker.example"
       })
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it("allows the supplied forwarded host", () => {

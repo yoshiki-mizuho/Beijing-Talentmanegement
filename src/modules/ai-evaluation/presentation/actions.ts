@@ -6,10 +6,10 @@ import {
   generateGrowthHint,
   getGrowthHint,
 } from "@/modules/ai-evaluation/application/growth-hint-service";
-import { requirePasswordReadyMember } from "@/server/auth/authorization";
+import { requireAuthenticatedMember } from "@/server/auth/authorization";
 
 export async function getGrowthHintAction(memberId: string) {
-  const session = await requirePasswordReadyMember();
+  const session = await requireAuthenticatedMember();
   return getGrowthHint(memberId, {
     memberId: session.user.memberId,
     role: session.user.role,
@@ -17,7 +17,7 @@ export async function getGrowthHintAction(memberId: string) {
 }
 
 export async function generateGrowthHintAction(memberId: string) {
-  const session = await requirePasswordReadyMember();
+  const session = await requireAuthenticatedMember();
   const result = await generateGrowthHint(memberId, {
     memberId: session.user.memberId,
     role: session.user.role,

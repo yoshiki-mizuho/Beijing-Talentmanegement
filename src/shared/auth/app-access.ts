@@ -70,7 +70,6 @@ export const appNavigationGroups: readonly AppNavigationGroup[] = [
 ] as const;
 
 const nonNavigationRoutes: readonly Pick<AppNavigationItem, "href" | "allowedRoles">[] = [
-  { href: "/account/password", allowedRoles: allRoles },
   { href: "/people", allowedRoles: allRoles },
   { href: "/notifications", allowedRoles: allRoles },
   { href: "/my/recap", allowedRoles: allRoles },

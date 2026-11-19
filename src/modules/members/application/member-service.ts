@@ -147,6 +147,7 @@ function toMemberRow(
       achievedAt: achievement.achievedAt.toISOString()
     })),
     role: member.users[0]?.role ?? null,
+    platformUserId: member.users[0]?.platformUserId ?? null,
     pendingAssessments: member.selfAssessments,
     memberSkills: member.memberSkills.map((memberSkill) => ({
       id: memberSkill.id,
@@ -167,10 +168,6 @@ export function getGrowthHintMemberContext(memberId: string, since: Date) {
 
 export function createMember(input: unknown, actorMemberId: string | null) {
   return memberRepository.createMember(memberInputSchema.parse(input), actorMemberId);
-}
-
-export function issueInitialPassword(memberId: string, actorMemberId: string) {
-  return memberRepository.issueInitialPassword(memberId, actorMemberId);
 }
 
 export function updateMember(id: string, input: unknown, actorMemberId: string | null) {

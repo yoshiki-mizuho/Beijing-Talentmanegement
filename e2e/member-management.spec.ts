@@ -2,15 +2,14 @@ import { expect, test } from "@playwright/test";
 
 import { createE2eTestData } from "./fixtures/test-data";
 import { login, openLoggedInContext } from "./helpers/auth";
-import { readDemoCredentials } from "./helpers/credentials";
 import { dismissExistingLevelUpDialogs } from "./helpers/level-up";
+import { readDemoCredentials } from "./helpers/credentials";
 
 const credentials = readDemoCredentials();
 
 test("管理者がメンバーを登録し、詳細で役職を更新して無効化できる", async ({
   browser,
 }) => {
-  // 登録したメンバーでの初回ログインとパスワードの設定も含むため長めにする
   test.slow();
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
   const data = createE2eTestData();
@@ -18,6 +17,7 @@ test("管理者がメンバーを登録し、詳細で役職を更新して無�
   const employeeNo = `E2E-${uniqueSuffix}`;
   const memberName = `E2Eメンバー-${uniqueSuffix}`;
   const email = `member-${uniqueSuffix}@example.com`;
+  const platformUserId = crypto.randomUUID();
   const updatedJobTitle = `E2E役職-${uniqueSuffix}`;
 
   try {
@@ -33,35 +33,17 @@ test("管理者がメンバーを登録し、詳細で役職を更新して無�
     await createDialog.getByLabel("社員番号").fill(employeeNo);
     await createDialog.getByLabel("氏名").fill(memberName);
     await createDialog.getByLabel("メール").fill(email);
+    await createDialog.getByLabel("基盤の利用者 ID").fill(platformUserId);
     await createDialog
       .getByRole("button", { name: "メンバーを追加", exact: true })
       .click();
-    const resultDialog = admin.page.getByRole("dialog", {
-      name: `${memberName}さんを登録しました`,
-    });
     await data.trackCreated({ memberEmails: [email] });
-    const initialPassword = await resultDialog.locator("p.font-mono").textContent();
-    expect(initialPassword).toMatch(/^[A-HJ-NP-Za-km-z2-9]{4}(?:-[A-HJ-NP-Za-km-z2-9]{4}){2}$/);
-    // 右上の × も「閉じる」なので、下の「閉じる」ボタンを押す
-    await resultDialog.getByRole("button", { name: "閉じる" }).last().click();
 
     const newMember = await openLoggedInContext(browser, {
-      email,
-      password: initialPassword as string,
-    }, /\/account\/password$/);
+      platformUserId,
+      platformRole: "MEMBER"
+    });
     try {
-      await expect(newMember.page.getByLabel("現在のパスワード")).toHaveCount(0);
-      await expect(
-        newMember.page.getByRole("navigation", { name: "メインナビゲーション" }),
-      ).toHaveCount(0);
-      await expect(
-        newMember.page.getByText("スキルを申請", { exact: true }),
-      ).toHaveCount(0);
-      await newMember.page.goto("/dashboard");
-      await expect(newMember.page).toHaveURL(/\/account\/password$/);
-      await newMember.page.getByLabel("新しいパスワード").fill(`Changed-${uniqueSuffix}`);
-      await newMember.page.getByLabel("もう一度入力").fill(`Changed-${uniqueSuffix}`);
-      await newMember.page.getByRole("button", { name: "決めて始める" }).click();
       await expect(newMember.page).toHaveURL(/\/dashboard/);
       await expect(
         newMember.page.locator("#first-steps li").first(),
@@ -102,11 +84,6 @@ test("管理者がメンバーを登録し、詳細で役職を更新して無�
       admin.page.getByText("メンバー情報を更新しました。"),
     ).toBeVisible();
     await expect(detailDialog.getByLabel("役職")).toHaveValue(updatedJobTitle);
-
-    await detailDialog.getByRole("button", { name: "パスワードを発行" }).click();
-    await admin.page.getByRole("dialog", { name: "初回ログイン用のパスワードを発行しますか" })
-      .getByRole("button", { name: "発行する" }).click();
-    await expect(detailDialog.getByLabel("初回ログイン用のパスワード")).toBeVisible();
 
     await detailDialog
       .getByRole("button", { name: "無効化", exact: true })
@@ -349,6 +326,7 @@ test("URLから目標ロール未設定のメンバーに絞り込める", async
 test("チームダッシュボードのKPIから目標ロールで絞り込める", async ({ page }) => {
   await login(page, credentials.MANAGER);
   await page.goto("/dashboard?view=team");
+  await dismissExistingLevelUpDialogs(page);
 
   const unsetLink = page.getByRole("link", { name: /目標ロールの設定/ });
   const achievedLink = page.getByRole("link", { name: /ロール達成者/ });

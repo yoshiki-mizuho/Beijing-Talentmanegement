@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requirePasswordReadyMember } from "@/server/auth/authorization";
+import { requireAuthenticatedMember } from "@/server/auth/authorization";
 import { runActionWithData } from "@/shared/lib/action-result";
 import { generateProposalSheet, saveProposalSheet } from "../application/proposal-sheet-service";
 import type {
@@ -9,13 +9,13 @@ import type {
   ProposalSheetSettingsInput
 } from "../domain/proposal-sheet-schema";
 
-function actor(session: Awaited<ReturnType<typeof requirePasswordReadyMember>>) {
+function actor(session: Awaited<ReturnType<typeof requireAuthenticatedMember>>) {
   return { memberId: session.user.memberId, role: session.user.role };
 }
 
 export async function generateProposalSheetAction(input: ProposalSheetSettingsInput) {
   return runActionWithData(async () => {
-    const session = await requirePasswordReadyMember();
+    const session = await requireAuthenticatedMember();
     const result = await generateProposalSheet(actor(session), input);
     revalidatePath(`/proposal-sheets/${input.memberId}`);
     return result;
@@ -24,7 +24,7 @@ export async function generateProposalSheetAction(input: ProposalSheetSettingsIn
 
 export async function saveProposalSheetAction(input: ProposalSheetEditInput) {
   return runActionWithData(async () => {
-    const session = await requirePasswordReadyMember();
+    const session = await requireAuthenticatedMember();
     await saveProposalSheet(actor(session), input);
     revalidatePath(`/proposal-sheets/${input.memberId}`);
   }, "提案用スキルシートを保存しました。");

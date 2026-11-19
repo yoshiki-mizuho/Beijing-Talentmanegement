@@ -9,16 +9,16 @@ import {
   saveSkillSheetBasics,
   upsertProjectHistory
 } from "../application/career-service";
-import { requirePasswordReadyMember } from "@/server/auth/authorization";
+import { requireAuthenticatedMember } from "@/server/auth/authorization";
 import { runAction, type ActionResult } from "@/shared/lib/action-result";
 
-function actor(session: Awaited<ReturnType<typeof requirePasswordReadyMember>>) {
+function actor(session: Awaited<ReturnType<typeof requireAuthenticatedMember>>) {
   return { memberId: session.user.memberId, role: session.user.role };
 }
 
 export async function saveProjectHistoryAction(formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    const session = await requirePasswordReadyMember();
+    const session = await requireAuthenticatedMember();
     const memberId = String(formData.get("memberId"));
     await upsertProjectHistory(actor(session), memberId, {
       id: optional(formData.get("id")),
@@ -39,7 +39,7 @@ export async function saveProjectHistoryAction(formData: FormData): Promise<Acti
 
 export async function deleteProjectHistoryAction(formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    const session = await requirePasswordReadyMember();
+    const session = await requireAuthenticatedMember();
     const memberId = String(formData.get("memberId"));
     await removeProjectHistory(actor(session), memberId, String(formData.get("id")));
     revalidatePath(`/people/${memberId}`);
@@ -48,7 +48,7 @@ export async function deleteProjectHistoryAction(formData: FormData): Promise<Ac
 
 export async function addCertificationAction(formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    const session = await requirePasswordReadyMember();
+    const session = await requireAuthenticatedMember();
     const memberId = String(formData.get("memberId"));
     await addCertification(actor(session), memberId, {
       name: String(formData.get("name") ?? ""),
@@ -60,7 +60,7 @@ export async function addCertificationAction(formData: FormData): Promise<Action
 
 export async function deleteCertificationAction(formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    const session = await requirePasswordReadyMember();
+    const session = await requireAuthenticatedMember();
     const memberId = String(formData.get("memberId"));
     await removeCertification(actor(session), memberId, String(formData.get("id")));
     revalidatePath(`/people/${memberId}`);
@@ -69,7 +69,7 @@ export async function deleteCertificationAction(formData: FormData): Promise<Act
 
 export async function saveSkillSheetBasicsAction(formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    const session = await requirePasswordReadyMember();
+    const session = await requireAuthenticatedMember();
     const memberId = String(formData.get("memberId"));
     await saveSkillSheetBasics(actor(session), memberId, {
       itCareerStartMonth: optional(formData.get("itCareerStartMonth")),

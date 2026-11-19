@@ -17,7 +17,7 @@ export default async function LevelUpThreadPage({
   params: Promise<{ levelChangeId: string }>;
 }) {
   const session = await getCurrentSession();
-  if (!session?.user.memberId) redirect("/login");
+  if (!session?.user.memberId) redirect("/unregistered");
   const { levelChangeId } = await params;
   const thread = await getLevelUpThread(levelChangeId, {
     memberId: session.user.memberId,

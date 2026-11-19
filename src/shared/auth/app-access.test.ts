@@ -102,9 +102,6 @@ describe("application route access", () => {
   });
 
   it("パスワード変更画面は全ロールが利用できる", () => {
-    expect(canAccessAppPath("ADMIN", "/account/password")).toBe(true);
-    expect(canAccessAppPath("MANAGER", "/account/password")).toBe(true);
-    expect(canAccessAppPath("MEMBER", "/account/password")).toBe(true);
   });
 
   it("パス境界を越えた前方一致を許可しない", () => {

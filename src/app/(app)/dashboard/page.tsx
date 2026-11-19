@@ -96,7 +96,7 @@ export default async function DashboardPage({
     ]);
     const teamGoalCelebration = await getDashboardTeamGoalCelebration(session.user.memberId, now);
     const model = buildMemberDashboardViewModel(data);
-    if (!model) redirect("/login");
+    if (!model) redirect("/unregistered");
     return (
       <div className="space-y-4">
         {management ? <DashboardViewSwitch current="personal" /> : null}
@@ -125,7 +125,7 @@ export default async function DashboardPage({
       getManagerTeamGoal(session.user.memberId)
     ]);
     const teamGoalCelebration = await getDashboardTeamGoalCelebration(session.user.memberId);
-    if (!team) redirect("/login");
+    if (!team) redirect("/unregistered");
     if (view === "team" || team.members.length > 0)
       return (
         <div className="space-y-4">
@@ -138,7 +138,7 @@ export default async function DashboardPage({
         </div>
       );
   }
-  if (!session?.user.memberId || !management) redirect("/login");
+  if (!session?.user.memberId || !management) redirect("/unregistered");
   const organization = await getDashboardSummary(session.user.role, session.user.memberId, department);
   return (
     <div className="space-y-5">

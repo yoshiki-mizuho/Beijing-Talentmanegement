@@ -1,13 +1,12 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, KeyRound } from "lucide-react";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
 
 import {
   deactivateMemberAction,
-  issueInitialPasswordAction,
   removeMemberSkillAction,
   setMemberSkillLevelAction,
   updateMemberAction,
@@ -27,7 +26,6 @@ import type {
   TargetRoleOption,
 } from "@/modules/members/presentation/member-presentation-types";
 import { ActionForm } from "@/shared/ui/action-form";
-import type { ActionResult } from "@/shared/lib/action-result";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import {
@@ -39,13 +37,12 @@ import {
 } from "@/shared/ui/card";
 import { FormField, SelectField, TextareaField } from "@/shared/ui/form-field";
 import { SubmitButton } from "@/shared/ui/submit-button";
-import { InitialPasswordNotice } from "@/modules/members/presentation/initial-password-notice";
 import { Tooltip } from "@/shared/ui/tooltip";
 
 const memberStatuses = ["ACTIVE", "LEAVE", "INACTIVE"] as const;
 const skillLevels = [1, 2, 3, 4, 5] as const;
 const roleLabels = {
-  ADMIN: "管理者",
+  ADMIN: "管理者（基盤）",
   MANAGER: "マネージャー",
   MEMBER: "メンバー",
 } as const;
@@ -384,7 +381,6 @@ export function MemberAccountPanel({
   tabId: string;
 }) {
   const [selectedRole, setSelectedRole] = useState(member.role ?? "MEMBER");
-  const [issuedPassword, setIssuedPassword] = useState<string | null>(null);
 
   return (
     <section
@@ -427,6 +423,13 @@ export function MemberAccountPanel({
               type="email"
               defaultValue={member.email}
               required
+            />
+            <FormField
+              id={`member-platform-user-id-${member.id}`}
+              label="基盤の利用者 ID"
+              name="platformUserId"
+              defaultValue={member.platformUserId ?? ""}
+              placeholder="UUID（未登録なら空欄）"
             />
             <SelectField
               id={`member-department-${member.id}`}
@@ -511,7 +514,9 @@ export function MemberAccountPanel({
             <CardDescription>画面と操作の範囲が変わります。</CardDescription>
           </CardHeader>
           <CardContent>
-            {member.role ? (
+            {member.role === "ADMIN" ? (
+              <p className="text-sm font-semibold">管理者（基盤で決まります）</p>
+            ) : member.role ? (
               <ActionForm
                 key={member.role}
                 action={updateMemberRoleAction}
@@ -536,7 +541,7 @@ export function MemberAccountPanel({
                     )
                   }
                 >
-                  {Object.entries(roleLabels).map(([role, label]) => (
+                  {Object.entries(roleLabels).filter(([role]) => role !== "ADMIN").map(([role, label]) => (
                     <option key={role} value={role}>
                       {label}
                     </option>
@@ -555,47 +560,6 @@ export function MemberAccountPanel({
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>初回ログイン用のパスワード</CardTitle>
-          <CardDescription>
-            発行すると、今のパスワードは使えなくなります。
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {member.id === viewerMemberId ? (
-            <p className="text-sm text-[var(--muted-foreground)]">
-              自分自身には発行できません。
-            </p>
-          ) : issuedPassword ? (
-            <InitialPasswordNotice
-              email={member.email}
-              initialPassword={issuedPassword}
-            />
-          ) : (
-            <ActionForm
-              action={issueInitialPasswordAction}
-              onSuccess={(result: ActionResult) =>
-                setIssuedPassword(
-                  (result.data as { initialPassword: string }).initialPassword,
-                )
-              }
-              confirm={{
-                title: "初回ログイン用のパスワードを発行しますか",
-                description: "今のパスワードは使えなくなります。",
-                confirmLabel: "発行する",
-              }}
-            >
-              <input type="hidden" name="memberId" value={member.id} />
-              <SubmitButton pendingLabel="発行中…">
-                <KeyRound className="h-4 w-4" aria-hidden="true" />
-                パスワードを発行
-              </SubmitButton>
-            </ActionForm>
-          )}
-        </CardContent>
-      </Card>
 
       <Card className="border-[var(--destructive)]">
         <CardHeader>

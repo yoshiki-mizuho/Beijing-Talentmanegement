@@ -4,7 +4,6 @@ import { validateMemberImport, type MemberImportState } from "./member-import";
 const state: MemberImportState = {
   departments: [{ id: "d1", code: "DEV" }],
   roles: [{ id: "r1", code: "ROLE-0001", name: "リード", isActive: true }],
-  users: [{ email: "old@example.com", memberId: "m1" }],
   members: [
     {
       id: "m1",
@@ -111,7 +110,7 @@ describe("validateMemberImport", () => {
     );
   });
 
-  it("メールを小文字化し、ほかの利用者のメールを拒否する", () => {
+  it("メールを小文字化し、ほかのメンバーのメールを拒否する", () => {
     const lowercased = validateMemberImport([
       record(2, { email: "NEW@EXAMPLE.COM" }),
     ], state);
@@ -121,7 +120,15 @@ describe("validateMemberImport", () => {
       [record(2, { email: "LOGIN@EXAMPLE.COM" })],
       {
         ...state,
-        users: [...state.users, { email: "login@example.com", memberId: "m9" }],
+        members: [
+          ...state.members,
+          {
+            ...state.members[0]!,
+            id: "m9",
+            employeeNo: "E009",
+            email: "login@example.com"
+          }
+        ]
       },
     );
     expect(duplicated.errors.some((error) => error.column === "email")).toBe(true);
@@ -142,10 +149,6 @@ describe("validateMemberImport", () => {
           managerEmployeeNo: "E001",
           canManage: false,
         },
-      ],
-      users: [
-        ...state.users,
-        { email: "report@example.com", memberId: "m2" },
       ],
     };
     const rejected = validateMemberImport([

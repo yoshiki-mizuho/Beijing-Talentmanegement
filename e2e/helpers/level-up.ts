@@ -1,10 +1,10 @@
 import { expect, type Page } from "@playwright/test";
 
-// 未確認のレベルアップ・応援演出が残っていると、次のテストの操作をふさぐため閉じておく
+// 未確認のレベルアップ・応援・振り返り・チーム目標の達成の演出が残っていると、次のテストの操作をふさぐため閉じておく
 export async function dismissExistingLevelUpDialogs(page: Page) {
   for (let attempt = 0; attempt < 10; attempt += 1) {
     await page.waitForLoadState("networkidle");
-    const dialog = page.getByRole("dialog").filter({ hasText: /LEVEL UP|CHEER|ROLE COMPLETE|先月の振り返り/ });
+    const dialog = page.getByRole("dialog").filter({ hasText: /LEVEL UP|CHEER|ROLE COMPLETE|先月の振り返り|チーム目標を達成しました/ });
     if ((await dialog.count()) === 0) return;
 
     await dialog.getByRole("button", { name: "ダイアログを閉じる" }).click();

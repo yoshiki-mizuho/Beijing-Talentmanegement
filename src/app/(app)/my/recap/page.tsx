@@ -12,9 +12,9 @@ export default async function RecapPage({
   searchParams: Promise<{ month?: string }>;
 }) {
   const session = await getCurrentSession();
-  if (!session?.user.memberId) redirect("/login");
+  if (!session?.user.memberId) redirect("/unregistered");
   const { month } = await searchParams;
   const result = await getMonthlyRecap(session.user.memberId, month);
-  if (!result) redirect("/login");
+  if (!result) redirect("/unregistered");
   return <MonthlyRecapPage result={result} />;
 }

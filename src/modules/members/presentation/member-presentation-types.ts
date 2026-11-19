@@ -19,6 +19,7 @@ export type MemberRow = {
   growthHint?: { generatedAt: string } | null;
   roleAchievements: { roleId: string; achievedAt: string }[];
   role: "ADMIN" | "MANAGER" | "MEMBER" | null;
+  platformUserId?: string | null;
   pendingAssessments?: {
     skillId: string;
     requestedLevel: number;

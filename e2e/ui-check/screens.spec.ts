@@ -1,6 +1,7 @@
 import { test, type Page } from "@playwright/test";
 import { login } from "../helpers/auth";
 import { readDemoCredentials, type DemoRole } from "../helpers/credentials";
+import { dismissExistingLevelUpDialogs } from "../helpers/level-up";
 
 const selectedRole = process.env.UI_CHECK_ONLY?.toUpperCase();
 const roles: DemoRole[] = ["ADMIN", "MANAGER", "MEMBER"];
@@ -21,19 +22,10 @@ const capture = async (page: Page, role: DemoRole, name: string) => {
 };
 
 test.describe("UI check", () => {
-  test("ログイン", async ({ page }) => {
-    await page.goto("/login");
-    await page.waitForLoadState("networkidle");
-    await page.getByRole("heading", { name: "ログイン", level: 1 }).waitFor();
-    await page.screenshot({
-      path: "test-results/ui-check/login.png",
-      fullPage: true,
-    });
-  });
-
   test("ADMIN", async ({ page }) => {
     test.skip(!enabled("ADMIN"));
     await login(page, credentials.ADMIN);
+    await dismissExistingLevelUpDialogs(page);
     await page.goto("/dashboard");
     await capture(page, "ADMIN", "dashboard");
     await page.goto("/dashboard?view=organization");
@@ -102,6 +94,7 @@ test.describe("UI check", () => {
   test("MANAGER", async ({ page }) => {
     test.skip(!enabled("MANAGER"));
     await login(page, credentials.MANAGER);
+    await dismissExistingLevelUpDialogs(page);
     await page.goto("/dashboard");
     await capture(page, "MANAGER", "dashboard-team");
     await page.goto("/dashboard?view=organization");
@@ -146,6 +139,7 @@ test.describe("UI check", () => {
   test("MEMBER", async ({ page }) => {
     test.skip(!enabled("MEMBER"));
     await login(page, credentials.MEMBER);
+    await dismissExistingLevelUpDialogs(page);
     await page.goto("/dashboard");
     await page.waitForLoadState("networkidle");
     // 未確認のレベルアップ・応援の演出を撮ってから閉じる（閉じると残りもまとめて既読になる）

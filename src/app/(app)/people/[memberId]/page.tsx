@@ -4,7 +4,7 @@ import { SkillHistory } from "@/modules/explore/presentation/skill-history";
 import { SkillProfileHeader } from "@/modules/explore/presentation/skill-profile-header";
 import { ProfileCards } from "@/modules/explore/presentation/profile-cards";
 import { ProfileBadges } from "@/modules/explore/presentation/profile-badges";
-import { requirePasswordReadyMember } from "@/server/auth/authorization";
+import { requireAuthenticatedMember } from "@/server/auth/authorization";
 import { getCareerForActor } from "@/modules/career/application/career-service";
 import { CareerPanel } from "@/modules/career/presentation/career-panel";
 import { ProfileTabs } from "@/modules/career/presentation/profile-tabs";
@@ -18,7 +18,7 @@ export default async function SkillProfilePage({
   params: Promise<{ memberId: string }>;
   searchParams: Promise<{ tab?: string }>;
 }) {
-  const session = await requirePasswordReadyMember();
+  const session = await requireAuthenticatedMember();
   const { memberId } = await params;
   const profile = await getSkillProfile(
     { role: session.user.role, memberId: session.user.memberId },
