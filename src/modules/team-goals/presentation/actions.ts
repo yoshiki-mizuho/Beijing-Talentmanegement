@@ -24,7 +24,7 @@ export async function saveTeamGoalAction(formData: FormData): Promise<ActionResu
       memberId: session.user.memberId,
       role: session.user.role
     });
-    revalidatePath("/dashboard");
+    revalidatePath("/talent/dashboard");
   }, "チーム目標を保存しました。");
 }
 

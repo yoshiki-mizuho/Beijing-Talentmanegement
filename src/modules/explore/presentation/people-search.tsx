@@ -38,7 +38,7 @@ export function PeopleSearch({
           {data.results.map((person) => (
             <li key={person.id}>
               <Link
-                href={`/people/${person.id}` as Route}
+                href={`/talent/people/${person.id}` as Route}
                 className="flex min-h-16 items-center gap-3 px-2 hover:bg-[var(--surface-subtle)]"
               >
                 <MemberAvatar

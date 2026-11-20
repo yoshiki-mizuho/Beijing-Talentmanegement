@@ -2,19 +2,13 @@
 
 import { LogOut } from "lucide-react";
 
+import { apiClient } from "@/shared/lib/api-client";
 import { Button } from "@/shared/ui/button";
 
 export function SignOutButton({ className }: { className?: string }) {
   async function signOut() {
-    const csrfToken = document.cookie
-      .split("; ")
-      .find((cookie) => cookie.startsWith("csrf_token="))
-      ?.slice("csrf_token=".length);
     try {
-      await fetch("/api/v1/auth/logout", {
-        method: "POST",
-        headers: csrfToken ? { "X-CSRF-Token": decodeURIComponent(csrfToken) } : {}
-      });
+      await apiClient("/api/v1/auth/logout", { method: "POST" });
     } finally {
       window.location.assign(new URL("/login", window.location.origin));
     }

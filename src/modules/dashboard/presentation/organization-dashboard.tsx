@@ -24,7 +24,7 @@ export function OrganizationDashboard({ model }: { model: Model }) {
         <nav aria-label="部署の階層" className="min-w-56 space-y-1">
           {model.showCompany ? (
             <Link
-              href="/dashboard?view=organization"
+              href="/talent/dashboard?view=organization"
               aria-current={
                 model.scope.departmentId === null ? "page" : undefined
               }
@@ -44,7 +44,7 @@ export function OrganizationDashboard({ model }: { model: Model }) {
               <Link
                 key={item.id}
                 href={
-                  `/dashboard?view=organization&department=${item.id}` as Route
+                  `/talent/dashboard?view=organization&department=${item.id}` as Route
                 }
                 aria-current={
                   item.id === model.scope.departmentId ? "page" : undefined
@@ -329,7 +329,7 @@ function Comparisons({ model }: { model: Model }) {
             <Link
               key={item.id}
               href={
-                `/dashboard?view=organization&department=${item.id}` as Route
+                `/talent/dashboard?view=organization&department=${item.id}` as Route
               }
               className={`rounded-xl border bg-white p-4 ${item.id === model.scope.departmentId ? "border-2 border-[var(--primary)]" : "border-[var(--border)]"}`}
             >

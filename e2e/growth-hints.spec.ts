@@ -15,7 +15,7 @@ test("MANAGERが育成のヒントを作り1on1メモへ追加できる", async 
   await data.createMemberSkill({ memberId: member.member.id, skillId: skill.id, level: 1, approvedByMemberId: manager.member.id });
   session = await openLoggedInContext(browser, manager.credential);
   const page = session.page;
-  await page.goto("/members");
+  await page.goto("/talent/members");
   await page.getByRole("button", { name: `${member.member.name}の詳細を開く` }).click();
   await page.getByRole("tab", { name: "育成のヒント" }).click();
   await page.getByRole("button", { name: /ヒントを作る|作り直す/ }).click();
@@ -56,11 +56,11 @@ test("MEMBERは育成のヒントを画面とメンバーAPIから利用でき�
   const member = await data.createMember({ label: "育成ヒント権限本人", departmentId: department.id });
   session = await openLoggedInContext(browser, member.credential);
   const page = session.page;
-  await page.goto("/members");
-  await expect(page).toHaveURL(/\/dashboard/);
+  await page.goto("/talent/members");
+  await expect(page).toHaveURL(/\/talent\/dashboard/);
   await expect(page.getByRole("tab", { name: "育成のヒント" })).toHaveCount(0);
 
-  const response = await page.request.get("/api/members");
+  const response = await page.request.get("/api/talent/v1/members");
   expect(response.status()).toBe(403);
   } finally {
     await session?.context.close();

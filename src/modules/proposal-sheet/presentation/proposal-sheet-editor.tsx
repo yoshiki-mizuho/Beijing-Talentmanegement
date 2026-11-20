@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Download, FileText, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { downloadApiFile } from "@/shared/lib/api-client";
 import { formatCareerMonth } from "@/modules/career/domain/career-display";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
@@ -108,9 +109,9 @@ export function ProposalSheetEditor({
         return;
       }
       toast.success(result.message);
-      const download = document.createElement("a");
-      download.href = `/api/proposal-sheets/${encodeURIComponent(data.member.id)}/export?template=${encodeURIComponent(templateId)}`;
-      download.click();
+      await downloadApiFile(
+        `/api/talent/v1/proposal-sheets/${encodeURIComponent(data.member.id)}/export?template=${encodeURIComponent(templateId)}`
+      );
     });
   }
 
@@ -123,7 +124,7 @@ export function ProposalSheetEditor({
     <div className="space-y-5">
       <div>
         <Link
-          href={`/members?memberId=${data.member.id}`}
+          href={`/talent/members?memberId=${data.member.id}`}
           className="text-sm font-semibold text-[var(--primary)]"
         >
           ← {data.member.name}の詳細
@@ -174,7 +175,7 @@ export function ProposalSheetEditor({
                 <EmptyState title="経歴はまだありません">
                   <Link
                     className="text-sm font-semibold text-[var(--primary)]"
-                    href={`/people/${data.member.id}?tab=career`}
+                    href={`/talent/people/${data.member.id}?tab=career`}
                   >
                     経歴・資格を登録する
                   </Link>

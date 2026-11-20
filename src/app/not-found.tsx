@@ -11,7 +11,7 @@ export default function NotFound() {
           URLをご確認いただくか、ダッシュボードから目的の画面へ移動してください。
         </p>
         <Link
-          href="/dashboard"
+          href="/talent/dashboard"
           className="mt-6 inline-flex h-10 items-center justify-center rounded-md bg-[var(--primary)] px-4 text-sm font-semibold text-[var(--primary-foreground)] transition-colors hover:bg-[var(--primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2"
         >
           ダッシュボードへ戻る

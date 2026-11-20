@@ -50,7 +50,7 @@ export function AuditLogList({
   const href = (next: number) => {
     const params = new URLSearchParams(queryString);
     params.set("page", String(next));
-    return `/audit-logs?${params}`;
+    return `/talent/audit-logs?${params}`;
   };
   return (
     <div id="audit-log-list" className="space-y-5 transition-opacity">
@@ -150,15 +150,15 @@ function getTargetHref(item: AuditLogListItem) {
   if (!item.targetExists) return null;
   switch (item.targetType) {
     case "Member":
-      return item.targetId ? `/people/${item.targetId}` : null;
+      return item.targetId ? `/talent/people/${item.targetId}` : null;
     case "MemberSkill":
     case "SkillSelfAssessment":
-      return item.memberId ? `/people/${item.memberId}` : null;
+      return item.memberId ? `/talent/people/${item.memberId}` : null;
     case "Skill":
     case "SkillCategory":
-      return "/skills";
+      return "/talent/skills";
     case "Role":
-      return "/roles";
+      return "/talent/roles";
     default:
       return null;
   }

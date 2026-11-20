@@ -72,7 +72,7 @@ export function MemberDashboard({
               <h2 id="monthly-recap-heading" className="mt-1 font-semibold">{monthlyRecap.hasEvents ? monthlyRecap.encouragement : "先月は記録がありませんでした。今月はひとつ申請してみませんか"}</h2>
               {monthlyRecap.hasEvents ? <p className="mt-2 text-sm text-[var(--muted-foreground)]">レベルアップ {monthlyRecap.levelUpCount}・新しいスキル {monthlyRecap.newSkillCount}・届いた声 {monthlyRecap.voiceCount}</p> : null}
             </div>
-            <Link href={(monthlyRecap.hasEvents ? "/my/recap" : "/my/skills") as Route} className="inline-flex h-10 shrink-0 items-center justify-center rounded-md bg-[var(--primary)] px-4 text-sm font-semibold text-white hover:bg-[var(--primary-hover)]">
+            <Link href={(monthlyRecap.hasEvents ? "/talent/my/recap" : "/talent/my/skills") as Route} className="inline-flex h-10 shrink-0 items-center justify-center rounded-md bg-[var(--primary)] px-4 text-sm font-semibold text-white hover:bg-[var(--primary-hover)]">
               {monthlyRecap.hasEvents ? "振り返りを見る" : "スキルシートを開く"}
             </Link>
           </div>
@@ -89,7 +89,7 @@ export function MemberDashboard({
             {viewModel.approvedSkillCount < 5 ? (
               <li>
                 <Link
-                  href="/my/skills"
+                  href="/talent/my/skills"
                   className="font-medium text-[var(--primary)] hover:underline"
                 >
                   スキルをあと {5 - viewModel.approvedSkillCount}件登録すると、得意なことが伝わりやすくなります
@@ -99,7 +99,7 @@ export function MemberDashboard({
             {viewModel.targetRole === null ? (
               <li>
                 <Link
-                  href="/dashboard#target-role"
+                  href="/talent/dashboard#target-role"
                   className="font-medium text-[var(--primary)] hover:underline"
                 >
                   目標ロールを設定すると、必要なスキルとの差が分かります
@@ -149,7 +149,7 @@ export function MemberDashboard({
                   </span>
                 ))}
               </div>
-              <DashboardLink href="/my/skills?filter=new" />
+              <DashboardLink href="/talent/my/skills?filter=new" />
             </DashboardCard>
           ) : null}
           {skillReminders.staleSkills.length > 0 ? (
@@ -167,7 +167,7 @@ export function MemberDashboard({
                   </li>
                 ))}
               </ul>
-              <DashboardLink href="/my/skills?filter=stale" />
+              <DashboardLink href="/talent/my/skills?filter=stale" />
             </DashboardCard>
           ) : null}
         </div>
@@ -183,7 +183,7 @@ export function MemberDashboard({
                   memberId={cheer.senderId}
                   name={cheer.senderName}
                   avatarUpdatedAt={cheer.senderAvatarUpdatedAt}
-                  href={`/people/${cheer.senderId}` as Route}
+                  href={`/talent/people/${cheer.senderId}` as Route}
                 />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -220,7 +220,7 @@ export function MemberDashboard({
               {viewModel.timeline.slice(0, TIMELINE_LIMIT).map((item) => (
                 <li key={item.id} className="relative py-4 pl-7">
                   <span className="absolute left-0 top-5 h-3 w-3 rounded-full bg-[var(--primary)] ring-4 ring-[var(--primary-subtle)]" aria-hidden="true" />
-                  <Link href={`/level-ups/${item.id}` as Route} className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]">
+                  <Link href={`/talent/level-ups/${item.id}` as Route} className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-sm font-semibold hover:text-[var(--primary)]">
                         {formatShortDate(item.changedAt)} {item.skillName}{" "}
@@ -248,7 +248,7 @@ export function MemberDashboard({
           {viewModel.timeline.length > TIMELINE_LIMIT ? (
             <div className="border-t border-[var(--border)] px-5 py-3 text-right">
               <Link
-                href="/my/skills?tab=history"
+                href="/talent/my/skills?tab=history"
                 className="text-sm font-semibold text-[var(--primary)] hover:underline"
               >
                 すべて見る
@@ -292,7 +292,7 @@ export function MemberDashboard({
                     memberId={mentor.memberId}
                     name={mentor.name}
                     avatarUpdatedAt={mentor.avatarUpdatedAt}
-                    href={`/people/${mentor.memberId}` as Route}
+                    href={`/talent/people/${mentor.memberId}` as Route}
                   />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold">{mentor.name}</p>
@@ -350,7 +350,7 @@ function FirstDashboard({
             }
             action={!hasTargetRole ? (
               <Link
-                href="/dashboard#target-role"
+                href="/talent/dashboard#target-role"
                 className="inline-flex min-h-11 items-center rounded-md bg-[var(--primary)] px-4 text-sm font-semibold text-white"
               >
                 ロールを選ぶ
@@ -365,7 +365,7 @@ function FirstDashboard({
             description="3つほど選ぶと1分ほどで終わります。あとから増やせます。"
             action={!waiting ? (
               <Link
-                href="/my/skills"
+                href="/talent/my/skills"
                 className="inline-flex min-h-11 items-center rounded-md bg-[var(--primary)] px-4 text-sm font-semibold text-white"
               >
                 スキルを選ぶ
@@ -388,7 +388,7 @@ function FirstDashboard({
           <p className="mt-4 text-sm text-[var(--muted-foreground)]">
             待っている間に：
             <Link
-              href="/explore"
+              href="/talent/explore"
               className="font-semibold text-[var(--primary)] hover:underline"
             >
               得意な人を探す

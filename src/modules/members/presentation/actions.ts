@@ -57,7 +57,7 @@ export async function createMemberAction(formData: FormData): Promise<ActionResu
         targetRoleId: getOptionalString(formData, "targetRoleId") ?? null
       }, session.user.memberId);
     }
-    revalidatePath("/members");
+    revalidatePath("/talent/members");
     return { name: member.name, email: member.email };
   }, "メンバーを登録しました。");
 }
@@ -72,8 +72,8 @@ export async function updateMemberRoleAction(
       getString(formData, "role"),
       session.user.memberId
     );
-    revalidatePath("/members");
-    revalidatePath("/", "layout");
+    revalidatePath("/talent/members");
+    revalidatePath("/talent", "layout");
   }, "権限を変更しました。");
 }
 
@@ -82,7 +82,7 @@ export async function updateMemberAction(formData: FormData): Promise<ActionResu
     const session = await requireRoles(adminOnly);
     const memberId = getString(formData, "id");
     await updateMember(memberId, parseMemberForm(formData), session.user.memberId);
-    revalidatePath("/members");
+    revalidatePath("/talent/members");
   }, "メンバー情報を更新しました。");
 }
 
@@ -90,7 +90,7 @@ export async function deactivateMemberAction(formData: FormData): Promise<Action
   return runAction(async () => {
     const session = await requireRoles(adminOnly);
     await deactivateMember(getString(formData, "id"), session.user.memberId);
-    revalidatePath("/members");
+    revalidatePath("/talent/members");
   }, "メンバーを無効化しました。");
 }
 
@@ -106,8 +106,8 @@ export async function setMemberSkillLevelAction(formData: FormData): Promise<Act
       level: getNumber(formData, "level"),
       changedByMemberId: session.user.memberId
     }, session.user.memberId);
-    revalidatePath("/members");
-    revalidatePath("/roles");
+    revalidatePath("/talent/members");
+    revalidatePath("/talent/roles");
   }, "メンバーのスキルを設定しました。");
 }
 
@@ -118,8 +118,8 @@ export async function removeMemberSkillAction(formData: FormData): Promise<Actio
     const scope = await getMemberScope(session.user.role, session.user.memberId);
     if (!memberIsInScope(scope, memberId)) throw new AuthorizationError("このメンバーを操作する権限がありません。", 403);
     await removeMemberSkill(memberId, getString(formData, "skillId"), session.user.memberId);
-    revalidatePath("/members");
-    revalidatePath("/roles");
+    revalidatePath("/talent/members");
+    revalidatePath("/talent/roles");
   }, "メンバーのスキルを削除しました。");
 }
 
@@ -134,9 +134,9 @@ export async function createSkillAssessmentAction(formData: FormData): Promise<A
         ? getNumber(formData, "yearsOfExperience")
         : undefined
     }, session.user.memberId);
-    revalidatePath("/my/skills");
-    revalidatePath("/skill-approvals");
-    revalidatePath("/notifications");
+    revalidatePath("/talent/my/skills");
+    revalidatePath("/talent/skill-approvals");
+    revalidatePath("/talent/notifications");
   }, "スキルを申請しました。マネージャーの承認をお待ちください。");
 }
 
@@ -149,9 +149,9 @@ export async function createSkillAssessmentsAction(formData: FormData): Promise<
       assessments
     }, session.user.memberId);
 
-    revalidatePath("/my/skills");
-    revalidatePath("/skill-approvals");
-    revalidatePath("/notifications");
+    revalidatePath("/talent/my/skills");
+    revalidatePath("/talent/skill-approvals");
+    revalidatePath("/talent/notifications");
     return created.length;
   }, (count) => `${count}件のスキルを申請しました。マネージャーの承認をお待ちください。`);
 }
@@ -170,11 +170,11 @@ export async function reviewSkillAssessmentAction(formData: FormData): Promise<A
         : undefined,
       managerComment: getOptionalString(formData, "managerComment")
     });
-    revalidatePath("/my/skills");
-    revalidatePath("/skill-approvals");
-    revalidatePath("/notifications");
-    revalidatePath("/members");
-    revalidatePath("/roles");
+    revalidatePath("/talent/my/skills");
+    revalidatePath("/talent/skill-approvals");
+    revalidatePath("/talent/notifications");
+    revalidatePath("/talent/members");
+    revalidatePath("/talent/roles");
     return status;
   }, (status) => {
     if (status === "REJECTED") return "スキル申請を差し戻しました。";
@@ -197,11 +197,11 @@ export async function approveSkillAssessmentsAction(
       reviewerRole: session.user.role
     });
 
-    revalidatePath("/my/skills");
-    revalidatePath("/skill-approvals");
-    revalidatePath("/notifications");
-    revalidatePath("/members");
-    revalidatePath("/roles");
+    revalidatePath("/talent/my/skills");
+    revalidatePath("/talent/skill-approvals");
+    revalidatePath("/talent/notifications");
+    revalidatePath("/talent/members");
+    revalidatePath("/talent/roles");
     return approved.length;
   }, (count) => `${count}件の申請を承認しました。`);
 }
@@ -215,8 +215,8 @@ export async function updateMemberManagerAction(
       memberId: getString(formData, "memberId"),
       managerId: getOptionalString(formData, "managerId") ?? null
     }, session.user.memberId);
-    revalidatePath("/members");
-    revalidatePath("/skill-approvals");
+    revalidatePath("/talent/members");
+    revalidatePath("/talent/skill-approvals");
   }, "上司を更新しました。");
 }
 
@@ -239,9 +239,9 @@ export async function updateMemberTargetRoleAction(
       memberId,
       targetRoleId: getOptionalString(formData, "targetRoleId") ?? null
     }, session.user.memberId);
-    revalidatePath("/members");
-    revalidatePath("/dashboard");
-    revalidatePath("/roles");
-    revalidatePath("/", "layout");
+    revalidatePath("/talent/members");
+    revalidatePath("/talent/dashboard");
+    revalidatePath("/talent/roles");
+    revalidatePath("/talent", "layout");
   }, "目標ロールを更新しました。");
 }

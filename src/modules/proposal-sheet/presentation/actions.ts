@@ -17,7 +17,7 @@ export async function generateProposalSheetAction(input: ProposalSheetSettingsIn
   return runActionWithData(async () => {
     const session = await requireAuthenticatedMember();
     const result = await generateProposalSheet(actor(session), input);
-    revalidatePath(`/proposal-sheets/${input.memberId}`);
+    revalidatePath(`/talent/proposal-sheets/${input.memberId}`);
     return result;
   }, (result) => result.message ?? "下書きを作りました。");
 }
@@ -26,6 +26,6 @@ export async function saveProposalSheetAction(input: ProposalSheetEditInput) {
   return runActionWithData(async () => {
     const session = await requireAuthenticatedMember();
     await saveProposalSheet(actor(session), input);
-    revalidatePath(`/proposal-sheets/${input.memberId}`);
+    revalidatePath(`/talent/proposal-sheets/${input.memberId}`);
   }, "提案用スキルシートを保存しました。");
 }

@@ -23,7 +23,7 @@ test("管理者が部署CSVを確認して登録し監査ログを確認でき�
       `department_code,department_name,parent_department_code,is_active\r\n${code},${initialName},,true\r\n`,
     );
     await data.trackCreated({ departmentCodes: [code] });
-    await admin.page.goto("/csv");
+    await admin.page.goto("/talent/csv");
     await admin.page.getByLabel("部署のCSVファイル").setInputFiles({
       name: "departments.csv",
       mimeType: "text/csv",
@@ -56,7 +56,7 @@ test("管理者が空コードのスキルCSVを登録できる", async ({ brows
   const admin = await openLoggedInContext(browser, account.credential);
   const name = `E2Eスキル-${Date.now()}`;
   try {
-    await admin.page.goto("/csv");
+    await admin.page.goto("/talent/csv");
     await admin.page
       .getByRole("button", { name: "スキル", exact: true })
       .click();
@@ -71,7 +71,7 @@ test("管理者が空コードのスキルCSVを登録できる", async ({ brows
     await expect(
       admin.page.getByRole("heading", { name: "登録しました" }),
     ).toBeVisible();
-    await admin.page.goto("/skills");
+    await admin.page.goto("/talent/skills");
     await expect(admin.page.getByText(name)).toBeVisible();
     await data.trackCreated({ skillNames: [name] });
   } finally {
@@ -93,7 +93,7 @@ test("管理者がレベルの目安つきスキルCSVを登録できる", async
   const skillName = `E2E目安スキル-${suffix}`;
   const categoryName = `E2E目安カテゴリ-${suffix}`;
   try {
-    await admin.page.goto("/csv");
+    await admin.page.goto("/talent/csv");
     await admin.page
       .getByRole("button", { name: "スキル", exact: true })
       .click();
@@ -112,7 +112,7 @@ test("管理者がレベルの目安つきスキルCSVを登録できる", async
       skillNames: [skillName],
       categoryNames: [categoryName],
     });
-    await admin.page.goto("/skills");
+    await admin.page.goto("/talent/skills");
     await admin.page.getByLabel(`${skillName}を編集`).click();
     const editDialog = admin.page.getByRole("dialog");
     await expect(editDialog.getByLabel("Lv1", { exact: true })).toHaveValue("Lv1の目安");
@@ -127,7 +127,7 @@ test("管理者がレベルの目安つきスキルCSVを登録できる", async
 test("検証エラーがあるCSVは登録できない", async ({ browser }) => {
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
   try {
-    await admin.page.goto("/csv");
+    await admin.page.goto("/talent/csv");
     await admin.page.getByLabel("部署のCSVファイル").setInputFiles({
       name: "invalid.csv",
       mimeType: "text/csv",
@@ -153,7 +153,7 @@ test("マネージャーはCSV取り込みAPIを利用できない", async ({ br
   const manager = await openLoggedInContext(browser, credentials.MANAGER);
   try {
     const response = await manager.page.request.post(
-      "/api/csv/import/departments/preview",
+      "/api/talent/v1/csv/import/departments/preview",
       {
         data: "department_code,department_name,parent_department_code,is_active\nX,X,,true\n",
         headers: { "content-type": "application/octet-stream" },
@@ -174,7 +174,7 @@ test("管理者がメンバーCSVでログインユーザー付きのメンバ�
   const employeeNo = `E2EM${suffix}`;
   const email = `e2e-member-${suffix}@example.com`;
   try {
-    await admin.page.goto("/csv");
+    await admin.page.goto("/talent/csv");
     await admin.page.getByRole("button", { name: "メンバー", exact: true }).click();
     await admin.page.getByLabel("メンバーのCSVファイル").setInputFiles({
       name: "members.csv",
@@ -183,7 +183,7 @@ test("管理者がメンバーCSVでログインユーザー付きのメンバ�
     });
     await admin.page.getByRole("button", { name: "1件を登録" }).click();
     await expect(admin.page.getByRole("heading", { name: "登録しました" })).toBeVisible();
-    await admin.page.goto("/members");
+    await admin.page.goto("/talent/members");
     await expect(admin.page.getByText(employeeNo)).toBeVisible();
     await data.trackCreated({ memberEmails: [email] });
   } finally {
@@ -206,7 +206,7 @@ test("管理者がメンバースキルCSVでレベルを更新し監査ログ�
     await importByApi(admin.page, "members", memberCsv("active"));
     await data.trackCreated({ memberEmails: [email] });
     await importByApi(admin.page, "member-skills", csv(4));
-    await admin.page.goto("/csv");
+    await admin.page.goto("/talent/csv");
     await admin.page.getByRole("button", { name: "メンバースキル", exact: true }).click();
     await admin.page.getByLabel("メンバースキルのCSVファイル").setInputFiles({ name: "member-skills.csv", mimeType: "text/csv", buffer: Buffer.from(csv(5)) });
     await admin.page.getByRole("button", { name: "1件を登録" }).click();
@@ -239,7 +239,7 @@ test("管理者がロールCSVで要件を更新・削除・追加できる", as
     "",
   ].join("\r\n");
   try {
-    await admin.page.goto("/csv");
+    await admin.page.goto("/talent/csv");
     await admin.page.getByRole("button", { name: "ロール", exact: true }).click();
     await admin.page.getByLabel("ロールのCSVファイル").setInputFiles({
       name: "roles.csv",
@@ -251,7 +251,7 @@ test("管理者がロールCSVで要件を更新・削除・追加できる", as
     await expect(admin.page.getByText("新規").first()).toBeVisible();
     await admin.page.getByRole("button", { name: "4件を登録" }).click();
     await expect(admin.page.getByRole("heading", { name: "登録しました" })).toBeVisible();
-    await admin.page.goto(`/roles?role=${encodeURIComponent(role.id)}`);
+    await admin.page.goto(`/talent/roles?role=${encodeURIComponent(role.id)}`);
     await expect(admin.page.getByRole("heading", { name: renamedRole })).toBeVisible();
     await expect(admin.page.getByRole("row", { name: new RegExp(`${first.skill.name}.*Lv4`) })).toBeVisible();
     await expect(admin.page.getByRole("row", { name: new RegExp(`${added.skill.name}.*Lv3`) })).toBeVisible();
@@ -268,14 +268,14 @@ async function importByApi(
   csv: string,
 ) {
   const previewResponse = await page.request.post(
-    `/api/csv/import/${target}/preview`,
+    `/api/talent/v1/csv/import/${target}/preview`,
     {
       data: Buffer.from(csv),
       headers: { "content-type": "application/octet-stream" },
     },
   );
   const preview = await previewResponse.json();
-  await page.request.post(`/api/csv/import/${target}/commit`, {
+  await page.request.post(`/api/talent/v1/csv/import/${target}/commit`, {
     data: Buffer.from(csv),
     headers: {
       "content-type": "application/octet-stream",

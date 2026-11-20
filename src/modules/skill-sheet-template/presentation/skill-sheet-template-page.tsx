@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Download } from "lucide-react";
 import { toast } from "sonner";
+import { downloadApiFile } from "@/shared/lib/api-client";
 import {
   repeatingSkillSheetMarkers,
   singleSkillSheetMarkers
@@ -258,13 +259,14 @@ function TemplateRow({
 
 function DownloadLink({ id }: { id: string }) {
   return (
-    <a
+    <button
+      type="button"
       className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--primary)]"
-      href={`/api/skill-sheet-templates/${id}`}
+      onClick={() => void downloadApiFile(`/api/talent/v1/skill-sheet-templates/${id}`)}
     >
       <Download className="h-4 w-4" aria-hidden="true" />
       ダウンロード
-    </a>
+    </button>
   );
 }
 

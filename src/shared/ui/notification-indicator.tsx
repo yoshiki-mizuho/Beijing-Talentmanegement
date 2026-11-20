@@ -81,7 +81,7 @@ export function NotificationIndicator({
         )}
         <div className="flex items-center justify-between gap-2 border-t border-[var(--border)] p-2">
           <Link
-            href="/notifications"
+            href="/talent/notifications"
             className="inline-flex min-h-11 items-center rounded-md px-3 text-sm font-semibold hover:bg-[var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
           >
             すべて見る
@@ -115,7 +115,7 @@ function NotificationPopoverItem({
     role,
     skillSelfAssessmentId: notification.skillSelfAssessmentId,
     skillLevelChangeId: notification.skillLevelChangeId
-  }) ?? "/notifications";
+  }) ?? "/talent/notifications";
 
   return (
     <ActionForm

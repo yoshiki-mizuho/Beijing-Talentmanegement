@@ -28,7 +28,7 @@ export default defineConfig({
   ],
   webServer: {
     command: "npm run start",
-    url: `${baseURL}/health`,
+    url: `${baseURL}/talent/health`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000
   }

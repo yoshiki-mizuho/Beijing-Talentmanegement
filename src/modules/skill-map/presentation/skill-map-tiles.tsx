@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
+import { apiClient } from "@/shared/lib/api-client";
 import { MemberAvatar } from "@/shared/ui/member-avatar";
 import { QueryProvider } from "@/shared/ui/query-provider";
 import type { buildSkillMap } from "@/modules/skill-map/domain/skill-map-matrix";
@@ -277,7 +278,7 @@ function SkillDetail({ skill, departmentId }: { skill: Skill; departmentId: stri
         {shown.map((person) => (
           <Link
             key={person.id}
-            href={`/people/${person.id}`}
+            href={`/talent/people/${person.id}`}
             className="flex items-center gap-3 border-t border-[var(--border)] py-2.5 text-sm"
           >
             <MemberAvatar
@@ -317,8 +318,8 @@ async function fetchSkillHolders(
   const params = new URLSearchParams();
   if (departmentId) params.set("department", departmentId);
   const query = params.toString();
-  const response = await fetch(
-    `/api/skill-map/skills/${encodeURIComponent(skillId)}/holders${query ? `?${query}` : ""}`,
+  const response = await apiClient(
+    `/api/talent/v1/skill-map/skills/${encodeURIComponent(skillId)}/holders${query ? `?${query}` : ""}`,
     { signal }
   );
   if (!response.ok) throw new Error("Failed to fetch skill holders.");

@@ -78,7 +78,7 @@ export function TeamDashboard({
           </div>
           <nav aria-label="表示する月" className="flex items-center justify-between gap-1 rounded-xl border border-[var(--border)] p-1">
             <Link
-              href={`/dashboard?view=team&month=${viewModel.month.previousKey}` as Route}
+              href={`/talent/dashboard?view=team&month=${viewModel.month.previousKey}` as Route}
               aria-label="前の月"
               className="grid h-11 w-11 place-items-center rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
             >
@@ -86,7 +86,7 @@ export function TeamDashboard({
             </Link>
             <span className="min-w-28 text-center text-sm font-semibold">{viewModel.month.label}</span>
             <Link
-              href={`/dashboard?view=team&month=${viewModel.month.nextKey}` as Route}
+              href={`/talent/dashboard?view=team&month=${viewModel.month.nextKey}` as Route}
               aria-label="次の月"
               className="grid h-11 w-11 place-items-center rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
             >
@@ -102,7 +102,7 @@ export function TeamDashboard({
         <h2 id="team-kpi-heading" className="sr-only">チームの指標</h2>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <KpiCard
-            href="/skill-approvals"
+            href="/talent/skill-approvals"
             icon={ClipboardCheck}
             label="承認待ち"
             value={`${viewModel.kpis.pending.count}件`}
@@ -110,21 +110,21 @@ export function TeamDashboard({
             warning={viewModel.kpis.pending.needsAttention}
           />
           <KpiCard
-            href={`/dashboard?view=team&month=${viewModel.month.key}#team-level-ups` as Route}
+            href={`/talent/dashboard?view=team&month=${viewModel.month.key}#team-level-ups` as Route}
             icon={TrendingUp}
             label={`${Number(viewModel.month.key.slice(5))}月のレベルアップ`}
             value={`${viewModel.kpis.levelUps.count}件`}
             caption={viewModel.kpis.levelUps.comparison}
           />
           <KpiCard
-            href="/members?targetRole=achieved"
+            href="/talent/members?targetRole=achieved"
             icon={Award}
             label="ロール達成者"
             value={`${viewModel.kpis.achieved}/${viewModel.memberCount}名`}
             caption="目標ロールの必須要件を達成"
           />
           <KpiCard
-            href={viewModel.kpis.targetSet < viewModel.memberCount ? "/members?targetRole=unset" : "/members"}
+            href={viewModel.kpis.targetSet < viewModel.memberCount ? "/talent/members?targetRole=unset" : "/talent/members"}
             icon={Target}
             label="目標ロールの設定"
             value={`${viewModel.kpis.targetSet}/${viewModel.memberCount}名`}
@@ -145,7 +145,7 @@ export function TeamDashboard({
                       memberId={item.memberId}
                       name={item.memberName}
                       avatarUpdatedAt={item.avatarUpdatedAt}
-                      href={`/people/${item.memberId}`}
+                      href={`/talent/people/${item.memberId}`}
                     />
                     <div className="min-w-0">
                     <p className="truncate text-sm font-semibold">{item.memberName}　{item.roleName}</p>
@@ -158,7 +158,7 @@ export function TeamDashboard({
                     <Button type="button" aria-label={`${item.memberName}を${cheeredIds.has(item.memberId) ? "応援しました" : "応援する"}`} variant={cheeredIds.has(item.memberId) ? "secondary" : "primary"} onClick={() => setCheerTarget(item)}>
                       {cheeredIds.has(item.memberId) ? "応援しました" : "応援する"}
                     </Button>
-                    <Link href="/members" className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--primary)] hover:underline">一覧で確認</Link>
+                    <Link href="/talent/members" className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--primary)] hover:underline">一覧で確認</Link>
                   </div>
                 </li>
               ))}
@@ -178,7 +178,7 @@ export function TeamDashboard({
                       memberId={item.memberId}
                       name={item.memberName}
                       avatarUpdatedAt={item.avatarUpdatedAt}
-                      href={`/people/${item.memberId}`}
+                      href={`/talent/people/${item.memberId}`}
                     />
                     <div>
                     <p className="text-sm font-semibold">{item.memberName}</p>

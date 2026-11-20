@@ -42,13 +42,13 @@ export async function createSkillCategoryAction(formData: FormData): Promise<Act
     await createSkillCategory({
       name: getString(formData, "name")
     }, session.user.memberId);
-    revalidatePath("/skills");
+    revalidatePath("/talent/skills");
   }, "カテゴリを登録しました。");
 }
 
 function revalidateSkillCategoryGroups() {
-  revalidatePath("/skills");
-  revalidatePath("/my/skills");
+  revalidatePath("/talent/skills");
+  revalidatePath("/talent/my/skills");
 }
 
 export async function createSkillCategoryGroupAction(formData: FormData): Promise<ActionResult> {
@@ -116,7 +116,7 @@ export async function updateSkillCategoryAction(formData: FormData): Promise<Act
     await updateSkillCategory(getString(formData, "id"), {
       name: getString(formData, "name")
     }, session.user.memberId);
-    revalidatePath("/skills");
+    revalidatePath("/talent/skills");
   }, "カテゴリを更新しました。");
 }
 
@@ -124,7 +124,7 @@ export async function deleteSkillCategoryAction(formData: FormData): Promise<Act
   return runAction(async () => {
     const session = await requireRoles(adminOnly);
     await deleteSkillCategory(getString(formData, "id"), session.user.memberId);
-    revalidatePath("/skills");
+    revalidatePath("/talent/skills");
   }, "カテゴリを削除しました。");
 }
 
@@ -141,7 +141,7 @@ export async function createSkillAction(formData: FormData): Promise<ActionResul
       },
       session.user.memberId
     );
-    revalidatePath("/skills");
+    revalidatePath("/talent/skills");
   }, "スキルを登録しました。");
 }
 
@@ -159,10 +159,10 @@ export async function updateSkillAction(formData: FormData): Promise<ActionResul
       },
       session.user.memberId
     );
-    revalidatePath("/skills");
-    revalidatePath("/members");
-    revalidatePath("/roles");
-    revalidatePath("/my/skills");
+    revalidatePath("/talent/skills");
+    revalidatePath("/talent/members");
+    revalidatePath("/talent/roles");
+    revalidatePath("/talent/my/skills");
   }, "スキルを更新しました。");
 }
 
@@ -170,9 +170,9 @@ export async function deactivateSkillAction(formData: FormData): Promise<ActionR
   return runAction(async () => {
     const session = await requireRoles(adminOnly);
     await deactivateSkill(getString(formData, "id"), session.user.memberId);
-    revalidatePath("/skills");
-    revalidatePath("/members");
-    revalidatePath("/roles");
+    revalidatePath("/talent/skills");
+    revalidatePath("/talent/members");
+    revalidatePath("/talent/roles");
   }, "スキルを無効化しました。");
 }
 
@@ -180,9 +180,9 @@ export async function deleteSkillAction(formData: FormData): Promise<ActionResul
   return runAction(async () => {
     const session = await requireRoles(adminOnly);
     await deleteSkill(getString(formData, "id"), session.user.memberId);
-    revalidatePath("/skills");
-    revalidatePath("/members");
-    revalidatePath("/roles");
+    revalidatePath("/talent/skills");
+    revalidatePath("/talent/members");
+    revalidatePath("/talent/roles");
   }, "スキルを削除しました。");
 }
 
@@ -192,9 +192,9 @@ export async function reorderSkillsAction(input: {
   return runAction(async () => {
     const session = await requireRoles(adminOnly);
     await reorderSkills(input, session.user.memberId);
-    revalidatePath("/skills");
-    revalidatePath("/my/skills");
-    revalidatePath("/skill-map");
+    revalidatePath("/talent/skills");
+    revalidatePath("/talent/my/skills");
+    revalidatePath("/talent/skill-map");
   }, "並び順を保存しました");
 }
 
@@ -212,8 +212,8 @@ export async function updateCommonSkillLevelGuidesAction(
       },
       session.user.memberId
     );
-    revalidatePath("/skills");
-    revalidatePath("/my/skills");
+    revalidatePath("/talent/skills");
+    revalidatePath("/talent/my/skills");
   }, "レベルの目安を更新しました");
 }
 
@@ -230,7 +230,7 @@ export async function createSuggestedSkillPrerequisitesAction(input: unknown) {
   return runAction(async () => {
     const session = await requireRoles(adminOnly);
     await createSkillPrerequisites(input, "AI_SUGGESTION", session.user.memberId);
-    revalidatePath("/skills");
+    revalidatePath("/talent/skills");
   }, "選んだ前提スキルを登録しました。");
 }
 
@@ -238,7 +238,7 @@ export async function createManualSkillPrerequisiteAction(input: unknown) {
   return runAction(async () => {
     const session = await requireRoles(adminOnly);
     await createSkillPrerequisite(input, session.user.memberId);
-    revalidatePath("/skills");
+    revalidatePath("/talent/skills");
   }, "前提スキルを登録しました。");
 }
 
@@ -246,6 +246,6 @@ export async function deleteSkillPrerequisiteAction(id: string) {
   return runAction(async () => {
     const session = await requireRoles(adminOnly);
     await deleteSkillPrerequisite(id, session.user.memberId);
-    revalidatePath("/skills");
+    revalidatePath("/talent/skills");
   }, "前提スキルを削除しました。");
 }

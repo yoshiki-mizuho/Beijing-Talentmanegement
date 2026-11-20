@@ -9,7 +9,7 @@ test("管理者が監査ログの差分と期間入力を確認できる", async
   const data = createE2eTestData();
   const categoryName = `E2E監査カテゴリ-${Date.now()}-${test.info().workerIndex}`;
   try {
-    await admin.page.goto("/skills");
+    await admin.page.goto("/talent/skills");
     await admin.page.getByRole("button", { name: "カテゴリを管理" }).click();
     const dialog = admin.page.getByRole("dialog", { name: "カテゴリを管理" });
     await dialog.getByLabel("カテゴリ名").first().fill(categoryName);
@@ -18,7 +18,7 @@ test("管理者が監査ログの差分と期間入力を確認できる", async
       admin.page.getByText("カテゴリを登録しました。"),
     ).toBeVisible();
     await data.trackCreated({ categoryNames: [categoryName] });
-    await admin.page.goto("/audit-logs?period=today");
+    await admin.page.goto("/talent/audit-logs?period=today");
     const row = admin.page
       .locator("details")
       .filter({ hasText: categoryName })

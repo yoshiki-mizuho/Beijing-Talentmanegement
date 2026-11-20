@@ -54,7 +54,7 @@ describe("buildSetupProgress", () => {
     expect(progress.items[0]).toEqual({
       id: "target-role",
       label: "目標ロールを決める",
-      href: "/dashboard#target-role",
+      href: "/talent/dashboard#target-role",
       completed: false
     });
   });
@@ -70,7 +70,7 @@ describe("buildSetupProgress", () => {
     expect(progress.items.find((item) => item.id === "first-approval")).toEqual({
       id: "first-approval",
       label: "上司の承認を待つ",
-      href: "/dashboard#first-steps",
+      href: "/talent/dashboard#first-steps",
       completed: false
     });
   });

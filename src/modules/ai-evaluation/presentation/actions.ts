@@ -22,6 +22,6 @@ export async function generateGrowthHintAction(memberId: string) {
     memberId: session.user.memberId,
     role: session.user.role,
   });
-  revalidatePath("/members");
+  revalidatePath("/talent/members");
   return result;
 }

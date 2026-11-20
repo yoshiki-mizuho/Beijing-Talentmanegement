@@ -3,6 +3,7 @@
 import { AlertCircle, CheckCircle2, Download, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState } from "react";
+import { apiClient, downloadApiFile } from "@/shared/lib/api-client";
 import type { CsvImportTarget } from "../domain/csv-import-columns";
 import { formatImportChanges } from "../domain/import-change-format";
 import { Button } from "@/shared/ui/button";
@@ -62,7 +63,7 @@ export function CsvImportPanel() {
     setFile(selected);
     setResult(null);
     try {
-      const response = await fetch(`/api/csv/import/${target}/preview`, {
+      const response = await apiClient(`/api/talent/v1/csv/import/${target}/preview`, {
         method: "POST",
         body: await selected.arrayBuffer(),
       });
@@ -88,7 +89,7 @@ export function CsvImportPanel() {
     setBusy(true);
     setMessage("");
     try {
-      const response = await fetch(`/api/csv/import/${target}/commit`, {
+      const response = await apiClient(`/api/talent/v1/csv/import/${target}/commit`, {
         method: "POST",
         headers: {
           "x-preview-token": preview.previewToken,
@@ -142,7 +143,7 @@ export function CsvImportPanel() {
         <div className="mt-6 flex justify-center gap-3">
           <Link
             className="inline-flex h-10 items-center rounded-lg border border-[var(--border-strong)] px-4 text-sm font-semibold"
-            href="/audit-logs?period=today&target=csv"
+            href="/talent/audit-logs?period=today&target=csv"
           >
             監査ログを見る
           </Link>
@@ -250,14 +251,14 @@ export function CsvImportPanel() {
           >
             ファイルを選ぶ
           </Button>
-          <a
-            href={`/api/csv/template/${target}`}
-            download
+          <button
+            type="button"
+            onClick={() => void downloadApiFile(`/api/talent/v1/csv/template/${target}`)}
             className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[var(--primary)]"
           >
             <Download className="h-4 w-4" aria-hidden="true" />
             ひな形をダウンロード
-          </a>
+          </button>
         </div>
       ) : (
         <>
@@ -267,14 +268,14 @@ export function CsvImportPanel() {
               {preview.totalRows}行
             </p>
             <div className="flex flex-wrap items-center gap-3">
-              <a
-                href={`/api/csv/template/${target}`}
-                download
+              <button
+                type="button"
+                onClick={() => void downloadApiFile(`/api/talent/v1/csv/template/${target}`)}
                 className="inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-[var(--primary)]"
               >
                 <Download className="h-4 w-4" aria-hidden="true" />
                 ひな形をダウンロード
-              </a>
+              </button>
               <Button variant="secondary" onClick={reset}>
                 選び直す
               </Button>

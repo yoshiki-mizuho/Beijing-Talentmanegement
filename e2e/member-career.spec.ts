@@ -11,7 +11,7 @@ test("本人が経歴と資格を登録でき、別のMEMBERにはタブが見�
   const other = await openLoggedInContext(browser, viewer.credential);
   try {
     await login(page, owner.credential);
-    await page.goto(`/people/${owner.member.id}?tab=career`);
+    await page.goto(`/talent/people/${owner.member.id}?tab=career`);
     await page.getByRole("button", { name: "経歴を追加" }).click();
     await page.getByLabel("開始年月").fill("2025-01");
     await page.getByLabel("業種").fill("製造");
@@ -31,7 +31,7 @@ test("本人が経歴と資格を登録でき、別のMEMBERにはタブが見�
     await page.getByRole("button", { name: "追加", exact: true }).click();
     await expect(page.getByText("E2E基本情報技術者")).toBeVisible();
 
-    await other.page.goto(`/people/${owner.member.id}`);
+    await other.page.goto(`/talent/people/${owner.member.id}`);
     await expect(other.page.getByRole("link", { name: "経歴・資格" })).toHaveCount(0);
   } finally {
     await other.context.close();

@@ -23,27 +23,27 @@ export async function inspectTemplateAction(file: File) {
 export async function registerTemplateAction(name: string, file: File) {
   return runAction(async () => {
     await registerTemplate(await context(), name, file);
-    revalidatePath("/skill-sheet-templates");
+    revalidatePath("/talent/skill-sheet-templates");
   }, "ひな形を登録しました。");
 }
 
 export async function renameTemplateAction(id: string, name: string) {
   return runAction(async () => {
     await renameTemplate(await context(), id, name);
-    revalidatePath("/skill-sheet-templates");
+    revalidatePath("/talent/skill-sheet-templates");
   }, "名前を変更しました。");
 }
 
 export async function replaceTemplateAction(id: string, file: File) {
   return runAction(async () => {
     await replaceTemplate(await context(), id, file);
-    revalidatePath("/skill-sheet-templates");
+    revalidatePath("/talent/skill-sheet-templates");
   }, "ひな形を差し替えました。");
 }
 
 export async function deleteTemplateAction(id: string) {
   return runAction(async () => {
     await removeTemplate(await context(), id);
-    revalidatePath("/skill-sheet-templates");
+    revalidatePath("/talent/skill-sheet-templates");
   }, "ひな形を削除しました。");
 }

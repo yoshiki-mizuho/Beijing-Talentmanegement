@@ -21,7 +21,7 @@ test("管理者がメンバーを登録し、詳細で役職を更新して無�
   const updatedJobTitle = `E2E役職-${uniqueSuffix}`;
 
   try {
-    await admin.page.goto("/members");
+    await admin.page.goto("/talent/members");
     await dismissExistingLevelUpDialogs(admin.page);
     await admin.page
       .getByRole("button", { name: "メンバーを追加", exact: true })
@@ -44,7 +44,7 @@ test("管理者がメンバーを登録し、詳細で役職を更新して無�
       platformRole: "MEMBER"
     });
     try {
-      await expect(newMember.page).toHaveURL(/\/dashboard/);
+      await expect(newMember.page).toHaveURL(/\/talent\/dashboard/);
       await expect(
         newMember.page.locator("#first-steps li").first(),
       ).toContainText("目標ロールを決める");
@@ -55,7 +55,7 @@ test("管理者がメンバーを登録し、詳細で役職を更新して無�
     // 絞り込みの取得が終わる前に更新すると、古い一覧で詳細が上書きされるため、結果を待つ。
     const searchResponse = admin.page.waitForResponse(
       (response) =>
-        response.url().includes("/api/members?") &&
+        response.url().includes("/api/talent/v1/members?") &&
         response.url().includes(`q=${employeeNo}`),
     );
     await admin.page.getByLabel("キーワード").fill(employeeNo);
@@ -120,12 +120,12 @@ test("マネージャーの一覧と更新APIは自組織の範囲に制限さ�
   const admin = await openLoggedInContext(browser, adminAccount.credential);
   const manager = await openLoggedInContext(browser, managerAccount.credential);
   try {
-    const response = await admin.page.request.get(`/api/members?q=${outside.member.employeeNo}`);
+    const response = await admin.page.request.get(`/api/talent/v1/members?q=${outside.member.employeeNo}`);
     const outsideMembers = (await response.json()) as { items: { id: string }[]; total: number };
     expect(outsideMembers.items).toHaveLength(1);
     expect(outsideMembers.total).toBe(1);
 
-    await manager.page.goto("/members");
+    await manager.page.goto("/talent/members");
     await manager.page.getByLabel("キーワード").fill(outside.member.employeeNo);
     await expect(manager.page.getByText(outside.member.name)).toHaveCount(0);
 
@@ -164,19 +164,19 @@ test("マネージャーの一覧と更新APIは自組織の範囲に制限さ�
     await skillRow.getByRole("button", { name: "訂正する", exact: true }).click();
     await expect(manager.page.getByText("メンバーのスキルを設定しました。").first()).toBeVisible();
 
-    const inScopeResponse = await manager.page.request.get("/api/members");
+    const inScopeResponse = await manager.page.request.get("/api/talent/v1/members");
     const inScopeMembers = (await inScopeResponse.json()) as { items: { id: string }[] };
     const forbiddenInScope = await manager.page.request.patch(
-      `/api/members/${inScopeMembers.items[0].id}`,
+      `/api/talent/v1/members/${inScopeMembers.items[0].id}`,
       { data: {} },
     );
     expect(forbiddenInScope.status()).toBe(403);
 
-    const outsideDetail = await manager.page.request.get(`/api/members/${outside.member.id}`);
+    const outsideDetail = await manager.page.request.get(`/api/talent/v1/members/${outside.member.id}`);
     expect(outsideDetail.status()).toBe(403);
 
     const forbidden = await manager.page.request.patch(
-      `/api/members/${outside.member.id}`,
+      `/api/talent/v1/members/${outside.member.id}`,
       { data: {} },
     );
     expect(forbidden.status()).toBe(403);
@@ -191,7 +191,7 @@ test(
   "メンバー一覧の絞り込みチップは外側や別のチップを押すと閉じる",
   async ({ page }) => {
     await login(page, credentials.ADMIN);
-    await page.goto("/members");
+    await page.goto("/talent/members");
 
     await page.getByText("部署", { exact: true }).click();
     await expect(page.getByRole("combobox", { name: "部署", exact: true })).toBeVisible();
@@ -221,7 +221,7 @@ test("部下がいる上司は無効化できず、上司を外した後は無�
   });
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
   try {
-    await admin.page.goto("/members");
+    await admin.page.goto("/talent/members");
     await admin.page.getByLabel("キーワード").fill(manager.member.employeeNo);
     const managerRow = admin.page.getByRole("row").filter({ hasText: manager.member.employeeNo });
     await managerRow.getByRole("button", { name: `${manager.member.name}の詳細を開く` }).click();
@@ -267,7 +267,7 @@ test("メンバー一覧の条件と詳細をURLから復元できる", async ({
 
   try {
     await login(page, credentials.ADMIN);
-    await page.goto("/members");
+    await page.goto("/talent/members");
     await page.getByLabel("キーワード").fill(account.member.employeeNo);
 
     // 社員番号に日本語が入るので、URL ではエンコードされた形で確かめる
@@ -288,13 +288,13 @@ test("メンバー一覧の条件と詳細をURLから復元できる", async ({
     await expect(page.getByRole("dialog", { name: `${account.member.name}の詳細` })).toHaveCount(0);
 
     // 開いた直後に、URL のページ番号を1ページ目へ書き戻さない（キーワードの反映は 300ms 後に走る）
-    await page.goto("/members?status=ALL&page=2");
+    await page.goto("/talent/members?status=ALL&page=2");
     await expect(page.getByRole("button", { name: "在籍中", exact: true })).toHaveAttribute("aria-pressed", "false");
     await page.waitForTimeout(600);
     await expect(page).toHaveURL(/page=2/);
 
     // 存在しないメンバーの ID は、エラーにせず URL から外す
-    await page.goto("/members?member=not-found-member");
+    await page.goto("/talent/members?member=not-found-member");
     await expect(page).not.toHaveURL(/member=/);
     await expect(page.getByRole("dialog")).toHaveCount(0);
   } finally {
@@ -304,7 +304,7 @@ test("メンバー一覧の条件と詳細をURLから復元できる", async ({
 
 test("URLから目標ロール未設定のメンバーに絞り込める", async ({ page }) => {
   await login(page, credentials.ADMIN);
-  await page.goto("/members?targetRole=unset");
+  await page.goto("/talent/members?targetRole=unset");
 
   const targetRoleFilters = page.getByRole("group", { name: "目標ロール" });
   await expect(targetRoleFilters.getByRole("button", { name: "未設定" })).toHaveAttribute(
@@ -325,7 +325,7 @@ test("URLから目標ロール未設定のメンバーに絞り込める", async
 
 test("チームダッシュボードのKPIから目標ロールで絞り込める", async ({ page }) => {
   await login(page, credentials.MANAGER);
-  await page.goto("/dashboard?view=team");
+  await page.goto("/talent/dashboard?view=team");
   await dismissExistingLevelUpDialogs(page);
 
   const unsetLink = page.getByRole("link", { name: /目標ロールの設定/ });
@@ -335,7 +335,7 @@ test("チームダッシュボードのKPIから目標ロールで絞り込め�
     : achievedLink;
   await link.click();
 
-  await expect(page).toHaveURL(/\/members\?targetRole=(unset|achieved)/);
+  await expect(page).toHaveURL(/\/talent\/members\?targetRole=(unset|achieved)/);
   await expect(
     page
       .getByRole("group", { name: "目標ロール" })
@@ -345,7 +345,7 @@ test("チームダッシュボードのKPIから目標ロールで絞り込め�
 
 test("スキルの面を押すと詳細が切り替わる", async ({ page }) => {
   await login(page, credentials.ADMIN);
-  await page.goto("/skill-map");
+  await page.goto("/talent/skill-map");
   const tiles = page
     .locator("button[aria-pressed]")
     .filter({ has: page.locator("strong") });
@@ -360,7 +360,7 @@ test("スキルの面を押すと詳細が切り替わる", async ({ page }) => 
 
 test("スキルマップの検索条件をクリアできる", async ({ page }) => {
   await login(page, credentials.ADMIN);
-  await page.goto("/skill-map");
+  await page.goto("/talent/skill-map");
 
   const searchInput = page.getByLabel("スキルを探す");
   await searchInput.fill("TypeScript");

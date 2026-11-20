@@ -34,7 +34,7 @@ TalentHub は Hub シリーズの製品 `talenthub` として、基盤（共通�
 ## この Hub の決まり
 
 - 製品名: `talenthub`（namespace は `talenthub-dev` / `talenthub-prod`）
-- パス: 画面は `/talent`、API は `/api/talent/v1`（経路の付け替えは H-2 で行う。それまでは今の `/` の下のまま）
+- パス: 画面は `/talent`（`src/app/talent/`）、API は `/api/talent/v1`（`src/app/api/talent/v1/`）。`basePath` は使わず、JS・CSS は `assetPrefix: "/talent"` で `/talent/_next/...` から読む（`basePath` では API を `/api/talent/v1` に置けないため）
 - 言語・フレームワーク: TypeScript、Next.js 16（App Router、`output: "standalone"`）、Prisma 7、PostgreSQL
 - ディレクトリと層の分け方: モジュラーモノリス（`src/modules/<モジュール>/{domain,application,infrastructure,presentation}`）。`docs/ARCHITECTURE.md` を正とする
 - ビルドのコマンド: `npm.cmd run build`

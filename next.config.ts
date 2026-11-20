@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  assetPrefix: "/talent",
   typedRoutes: true,
   poweredByHeader: false,
   // next dev が AGENTS.md に英語の注意書きを書き足さないようにする（同じ内容を日本語で AGENTS.md に書いている）

@@ -75,7 +75,7 @@ function ChallengeCard({ profile, isOwner }: { profile: Profile; isOwner: boolea
               <br />
               <Link
                 className="mt-3 inline-block font-semibold text-[var(--primary)]"
-                href="/dashboard#target-role"
+                href="/talent/dashboard#target-role"
               >
                 ダッシュボードで決める
               </Link>

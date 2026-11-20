@@ -31,7 +31,7 @@ export async function createRoleAction(formData: FormData): Promise<ActionResult
       requirements,
       session.user.memberId
     );
-    revalidatePath("/roles");
+    revalidatePath("/talent/roles");
   }, "ロールを登録しました。");
 }
 
@@ -47,7 +47,7 @@ export async function updateRoleAction(formData: FormData): Promise<ActionResult
       requirements,
       session.user.memberId
     );
-    revalidatePath("/roles");
+    revalidatePath("/talent/roles");
   }, "ロールを更新しました。");
 }
 
@@ -55,7 +55,7 @@ export async function deactivateRoleAction(formData: FormData): Promise<ActionRe
   return runAction(async () => {
     const session = await requireRoles(adminOnly);
     await deactivateRole(getString(formData, "id"), session.user.memberId);
-    revalidatePath("/roles");
+    revalidatePath("/talent/roles");
   }, "ロールを無効化しました。");
 }
 
@@ -63,7 +63,7 @@ export async function deleteRoleAction(formData: FormData): Promise<ActionResult
   return runAction(async () => {
     const session = await requireRoles(adminOnly);
     await deleteRole(getString(formData, "id"), session.user.memberId);
-    revalidatePath("/roles");
-    revalidatePath("/members");
+    revalidatePath("/talent/roles");
+    revalidatePath("/talent/members");
   }, "ロールを削除しました。");
 }

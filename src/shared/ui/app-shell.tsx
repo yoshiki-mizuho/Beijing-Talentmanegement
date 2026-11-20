@@ -238,7 +238,7 @@ function StandardAppShell({
 function Brand({ alwaysShowName = false }: { alwaysShowName?: boolean }) {
   return (
     <Link
-      href="/dashboard"
+      href="/talent/dashboard"
       className="flex shrink-0 items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2"
       aria-label="TalentHub ダッシュボード"
     >
@@ -270,7 +270,7 @@ function PrimaryAction({
 
   return (
     <Link
-      href={(isMember ? "/my/skills" : "/skill-approvals") as Route}
+      href={(isMember ? "/talent/my/skills" : "/talent/skill-approvals") as Route}
       aria-label={label}
       title={label}
       className={`inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 ${
@@ -371,7 +371,7 @@ function AccountMenu({ user }: { user: AppShellProps["user"] }) {
           <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">{roleLabels[user.role]}</p>
         </div>
         <Link
-          href={`/people/${user.memberId}` as Route}
+          href={`/talent/people/${user.memberId}` as Route}
           className="mt-1 flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium hover:bg-[var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
         >
           <Sparkles className="h-4 w-4 text-[var(--muted-foreground)]" aria-hidden="true" />

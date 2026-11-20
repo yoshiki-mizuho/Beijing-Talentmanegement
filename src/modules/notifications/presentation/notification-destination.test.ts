@@ -14,7 +14,7 @@ describe("getNotificationDestination", () => {
           skillSelfAssessmentId: "assessment-1",
           skillLevelChangeId: null
         })
-      ).toBe("/skill-approvals");
+      ).toBe("/talent/skill-approvals");
     }
   );
 
@@ -40,7 +40,7 @@ describe("getNotificationDestination", () => {
         skillSelfAssessmentId: "assessment-1",
         skillLevelChangeId: null
       })
-    ).toBe("/my/skills");
+    ).toBe("/talent/my/skills");
   });
 
   it("差し戻し結果は申告履歴へ遷移する", () => {
@@ -51,7 +51,7 @@ describe("getNotificationDestination", () => {
         skillSelfAssessmentId: "assessment-1",
         skillLevelChangeId: null
       })
-    ).toBe("/my/skills?tab=history");
+    ).toBe("/talent/my/skills?tab=history");
   });
 
   it("関連データがない通知は通知一覧に留まる", () => {
@@ -74,6 +74,6 @@ describe("getNotificationDestination", () => {
       role: AuthRole.MEMBER,
       skillSelfAssessmentId: null,
       skillLevelChangeId: "change-1"
-    })).toBe("/level-ups/change-1");
+    })).toBe("/talent/level-ups/change-1");
   });
 });

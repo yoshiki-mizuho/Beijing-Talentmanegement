@@ -15,7 +15,7 @@ test("本人がアイコン画像を登録して削除できる", async ({ page 
   await login(page, member.credential);
   await page.getByLabel("アカウントメニューを開く").click();
   await page.getByRole("link", { name: "スキルプロフィール" }).click();
-  await page.waitForURL("**/people/**");
+  await page.waitForURL("**/talent/people/**");
   // 画面の準備（ハイドレーション）が終わる前にファイルを渡すと、変更の処理が動かないため待つ
   await page.waitForLoadState("networkidle");
 

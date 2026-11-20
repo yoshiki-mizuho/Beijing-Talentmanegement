@@ -97,7 +97,7 @@ export function CheerCelebrationDialog({ celebrations }: { celebrations: CheerCe
             name={current.sender.name}
             avatarUpdatedAt={current.sender.avatarUpdatedAt}
             className="h-11 w-11"
-            href={`/people/${current.sender.id}`}
+            href={`/talent/people/${current.sender.id}`}
           />
           <p className="min-w-0 whitespace-pre-wrap break-words text-sm leading-7">
             「{current.message}」
@@ -118,7 +118,7 @@ export function CheerCelebrationDialog({ celebrations }: { celebrations: CheerCe
               教えてもらえそうな人
             </p>
             <Link
-              href={`/people/${current.mentorMember.id}`}
+              href={`/talent/people/${current.mentorMember.id}`}
               className="mt-1 inline-flex min-h-11 items-center font-semibold text-[var(--primary)] underline-offset-4 hover:underline focus-visible:underline"
             >
               {current.mentorMember.name}

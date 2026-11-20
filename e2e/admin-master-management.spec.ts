@@ -17,7 +17,7 @@ test("キーボードでスキルを別カテゴリへ並び替えられる", as
   const skillName = `E2E並替スキル-${suffix}`;
 
   try {
-    await admin.page.goto("/skills");
+    await admin.page.goto("/talent/skills");
     await admin.page.getByRole("button", { name: "カテゴリを管理" }).click();
     const categoryDialog = admin.page.getByRole("dialog", { name: "カテゴリを管理" });
     for (const name of [sourceCategory, targetCategory]) {
@@ -98,7 +98,7 @@ test("スキルごとのレベルの目安を保存してスキルシートに�
   const levelGuide = "E2Eで設定したLv3の目安";
 
   try {
-    await admin.page.goto("/skills");
+    await admin.page.goto("/talent/skills");
     await admin.page.getByRole("button", { name: "スキルを追加", exact: true }).click();
     const createDialog = admin.page.getByRole("dialog", { name: "スキルを追加" });
     await createDialog.getByLabel("スキル名").fill(skillName);
@@ -120,7 +120,7 @@ test("スキルごとのレベルの目安を保存してスキルシートに�
 
     const member = await openLoggedInContext(browser, credentials.MEMBER);
     try {
-      await member.page.goto("/my/skills");
+      await member.page.goto("/talent/my/skills");
       // 他のテストや撮影で届いた応援・レベルアップの演出が操作をふさがないよう閉じておく
       await dismissExistingLevelUpDialogs(member.page);
       await member.page.getByLabel("スキルを検索").fill(skillName);
@@ -131,7 +131,7 @@ test("スキルごとのレベルの目安を保存してスキルシートに�
       await member.context.close();
     }
 
-    await admin.page.goto("/skills");
+    await admin.page.goto("/talent/skills");
     await admin.page.getByLabel("スキル名").fill(skillName);
     await admin.page
       .getByRole("row")
@@ -158,7 +158,7 @@ test("共通のレベルの目安を編集して元に戻せる", async ({ brows
   const changedGuide = `E2E共通目安-${Date.now()}-${test.info().workerIndex}`;
 
   try {
-    await admin.page.goto("/skills");
+    await admin.page.goto("/talent/skills");
     await admin.page.getByRole("button", { name: "レベルの目安（共通）" }).click();
     let dialog = admin.page.getByRole("dialog", { name: "レベルの目安（共通）" });
     const originalGuide = await dialog.getByLabel("Lv1").inputValue();
@@ -190,7 +190,7 @@ test("管理者がスキルを作成・編集・無効化し、ロール要件�
   const editedSkillName = `${skillName}-編集済み`;
 
   try {
-    await admin.page.goto("/skills");
+    await admin.page.goto("/talent/skills");
     await admin.page.getByRole("button", { name: "スキルを追加", exact: true }).click();
 
     const createDialog = admin.page.getByRole("dialog", { name: "スキルを追加" });
@@ -218,7 +218,7 @@ test("管理者がスキルを作成・編集・無効化し、ロール要件�
       admin.page.getByRole("row").filter({ hasText: editedSkillName })
     ).toBeVisible();
 
-    await admin.page.goto("/roles");
+    await admin.page.goto("/talent/roles");
     await admin.page.getByRole("link", { name: new RegExp(role.name) }).click();
     await admin.page.getByRole("button", { name: "編集" }).click();
     const roleDialog = admin.page.getByRole("dialog", { name: /を編集$/ });
@@ -259,7 +259,7 @@ test("管理者がスキルを作成・編集・無効化し、ロール要件�
     await roleDialog.getByRole("button", { name: "保存", exact: true }).click();
     await expect(admin.page.getByText("ロールを更新しました。").last()).toBeVisible();
 
-    await admin.page.goto("/skills");
+    await admin.page.goto("/talent/skills");
     // 一覧の読み込みで行の位置がずれないよう、名前で1件に絞ってから操作する
     await admin.page.getByLabel("スキル名").fill(editedSkillName);
     await admin.page.getByLabel("無効を含む").check();
@@ -301,7 +301,7 @@ test("管理者がスキルを検索・削除し、要件付きロールも削�
   const roleName = `E2E削除ロール-${uniqueSuffix}`;
 
   try {
-    await admin.page.goto("/skills");
+    await admin.page.goto("/talent/skills");
     await admin.page.getByRole("button", { name: "カテゴリを管理" }).click();
     const categoryDialog = admin.page.getByRole("dialog", { name: "カテゴリを管理" });
     await categoryDialog.getByLabel("カテゴリ名").first().fill(categoryName);
@@ -348,7 +348,7 @@ test("管理者がスキルを検索・削除し、要件付きロールも削�
       .click();
     await expect(admin.page.getByText("カテゴリを削除しました。")).toBeVisible();
 
-    await admin.page.goto("/skills");
+    await admin.page.goto("/talent/skills");
     const usedSkillRow = admin.page.getByRole("row").filter({ hasText: "TypeScript" });
     await usedSkillRow.getByRole("button", { name: "TypeScriptを編集" }).click();
     const usedSkillDialog = admin.page.getByRole("dialog", { name: "TypeScriptを編集" });
@@ -356,7 +356,7 @@ test("管理者がスキルを検索・削除し、要件付きロールも削�
     await expect(usedSkillDialog.getByText(/ため削除できません。無効化してください。/)).toBeVisible();
     await usedSkillDialog.getByRole("button", { name: "ダイアログを閉じる" }).click();
 
-    await admin.page.goto("/roles");
+    await admin.page.goto("/talent/roles");
     await admin.page.getByRole("button", { name: "ロールを追加" }).click();
     let createRoleDialog = admin.page.getByRole("dialog", { name: "新規ロール" });
     await createRoleDialog.getByRole("button", { name: "＋ スキルを追加" }).click();
@@ -403,7 +403,7 @@ test("達成記録があるロールは削除できない", async ({ browser }) 
       level: 3,
     });
 
-    await admin.page.goto(`/roles?role=${role.id}`);
+    await admin.page.goto(`/talent/roles?role=${role.id}`);
     await admin.page.getByRole("button", { name: "編集" }).click();
     const roleDialog = admin.page.getByRole("dialog", { name: `${role.name}を編集` });
     await roleDialog.getByLabel("必要レベル").selectOption("3");
@@ -428,7 +428,7 @@ test("達成記録があるロールは削除できない", async ({ browser }) 
 test("スキル検索をクリアして一覧を元に戻せる", async ({ browser }) => {
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
   try {
-    await admin.page.goto("/skills");
+    await admin.page.goto("/talent/skills");
     const searchInput = admin.page.getByLabel("スキル名");
     // 一覧が描かれる前に数えると0行が基準になるため、最初の行が出るのを待つ
     await expect(admin.page.getByRole("row").nth(1)).toBeVisible();
@@ -447,7 +447,7 @@ test("スキル検索をクリアして一覧を元に戻せる", async ({ brows
 test("スキル管理の0件表示から条件をクリアして一覧を元に戻せる", async ({ browser }) => {
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
   try {
-    await admin.page.goto("/skills");
+    await admin.page.goto("/talent/skills");
     const searchInput = admin.page.getByLabel("スキル名");
     await expect(admin.page.getByRole("row").nth(1)).toBeVisible();
     await searchInput.fill(`存在しないスキル-${Date.now()}`);
@@ -470,7 +470,7 @@ test("大分類を作成してカテゴリを割り当て、削除すると未�
   const categoryName = `E2E大分類用-${suffix}`;
   const skillName = `E2E大分類スキル-${suffix}`;
   try {
-    await admin.page.goto("/skills");
+    await admin.page.goto("/talent/skills");
     await admin.page.getByRole("button", { name: "カテゴリを管理" }).click();
     const categoryDialog = admin.page.getByRole("dialog", { name: "カテゴリを管理" });
     await categoryDialog.getByLabel("カテゴリ名").first().fill(categoryName);
@@ -488,7 +488,7 @@ test("大分類を作成してカテゴリを割り当て、削除すると未�
     await expect(admin.page.getByText("スキルを登録しました。")).toBeVisible();
     await data.trackCreated({ skillNames: [skillName] });
 
-    await admin.page.goto("/skills?tab=groups");
+    await admin.page.goto("/talent/skills?tab=groups");
     await admin.page.getByLabel("新しい大分類").fill(groupName);
     await admin.page.getByRole("button", { name: "追加", exact: true }).click();
     await expect(admin.page.getByText("大分類を追加しました。")).toBeVisible();
@@ -501,7 +501,7 @@ test("大分類を作成してカテゴリを割り当て、削除すると未�
 
     const member = await openLoggedInContext(browser, credentials.MEMBER);
     try {
-      await member.page.goto("/my/skills");
+      await member.page.goto("/talent/my/skills");
       await dismissExistingLevelUpDialogs(member.page);
       await expect(member.page.getByRole("tab", { name: new RegExp(groupName) })).toBeVisible();
     } finally {
@@ -530,7 +530,7 @@ test("未分類のカテゴリを絞り込んで大分類を一括で割り当�
     `E2E一括カテゴリB-${suffix}`,
   ];
   try {
-    await admin.page.goto("/skills");
+    await admin.page.goto("/talent/skills");
     await admin.page.getByRole("button", { name: "カテゴリを管理" }).click();
     const categoryDialog = admin.page.getByRole("dialog", { name: "カテゴリを管理" });
     for (const categoryName of categoryNames) {
@@ -543,7 +543,7 @@ test("未分類のカテゴリを絞り込んで大分類を一括で割り当�
     }
     await categoryDialog.getByRole("button", { name: "ダイアログを閉じる" }).click();
 
-    await admin.page.goto("/skills?tab=groups");
+    await admin.page.goto("/talent/skills?tab=groups");
     await admin.page.getByLabel("新しい大分類").fill(groupName);
     await admin.page.getByRole("button", { name: "追加", exact: true }).click();
     await expect(admin.page.getByText("大分類を追加しました。")).toBeVisible();
@@ -576,7 +576,7 @@ test("未分類のカテゴリを絞り込んで大分類を一括で割り当�
 test("ロール詳細の全社の状況を切り替えられる", async ({ browser }) => {
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
   try {
-    await admin.page.goto("/roles");
+    await admin.page.goto("/talent/roles");
     await expect(admin.page.getByRole("heading", { name: "全社の状況" })).toBeVisible();
     await admin.page.getByRole("button", { name: /^達成 \d+$/ }).click();
   } finally {

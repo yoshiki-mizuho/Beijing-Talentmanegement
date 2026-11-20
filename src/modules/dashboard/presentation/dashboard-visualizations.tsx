@@ -101,7 +101,7 @@ export function DashboardVisualizations({
             }))}
           />
           <Link
-            href="/skill-map"
+            href="/talent/skill-map"
             className="mt-4 inline-block text-sm font-bold text-[var(--primary)]"
           >
             スキルマップで見る →

@@ -30,7 +30,7 @@ export function MonthlyRecapDialog({ celebration }: { celebration: Celebration |
       }
       setOpen(false);
       if (showAll) {
-        router.push(`/my/recap?month=${celebration.month}` as Route);
+        router.push(`/talent/my/recap?month=${celebration.month}` as Route);
       } else {
         router.refresh();
       }

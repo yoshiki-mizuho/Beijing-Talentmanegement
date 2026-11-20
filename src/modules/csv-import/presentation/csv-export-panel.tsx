@@ -15,6 +15,7 @@ import {
   type CsvExportTarget,
 } from "../domain/csv-export-columns";
 import { cn } from "@/shared/lib/utils";
+import { ApiDownloadButton } from "@/shared/ui/api-download-button";
 
 const icons: Record<CsvExportTarget, LucideIcon> = {
   departments: Building2,
@@ -71,15 +72,14 @@ export function CsvExportPanel({
                   {definition.columns.join(", ")}
                 </p>
               </div>
-              <a
-                href={`/api/csv/export/${target}?scope=${scope}`}
-                download
-                aria-label={`${definition.label}のCSVを出力`}
+              <ApiDownloadButton
+                url={`/api/talent/v1/csv/export/${target}?scope=${scope}`}
+                ariaLabel={`${definition.label}のCSVを出力`}
                 className="col-start-2 inline-flex h-10 w-fit items-center gap-2 rounded-lg border border-[var(--border-strong)] px-4 text-sm font-semibold hover:border-[var(--primary)] hover:text-[var(--primary)] sm:col-start-3 sm:row-start-1"
               >
                 <Download className="h-4 w-4" aria-hidden="true" />
                 CSVで出力
-              </a>
+              </ApiDownloadButton>
             </div>
           );
         })}
@@ -100,7 +100,7 @@ function ScopeLink({
   const active = scope === current;
   return (
     <Link
-      href={`/csv?tab=export&scope=${scope}`}
+      href={`/talent/csv?tab=export&scope=${scope}`}
       aria-pressed={active}
       className={cn(
         "inline-flex min-h-9 items-center rounded-full border px-3 text-sm font-medium",

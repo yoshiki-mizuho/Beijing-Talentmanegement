@@ -261,7 +261,7 @@ function HintContent({
           <p className="mt-4 text-sm">
             教えてもらえそうな人：
             <Link
-              href={`/people/${hint.content.mentor.memberId}`}
+              href={`/talent/people/${hint.content.mentor.memberId}`}
               className="font-semibold text-[var(--primary)] hover:underline"
             >
               {hint.content.mentor.name}

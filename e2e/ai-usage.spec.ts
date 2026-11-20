@@ -13,13 +13,13 @@ test("ADMINがAIの利用状況を確認できる", async ({ page }) => {
   const admin = await data.createMember({ label: "AI利用管理者", departmentId: department.id, role: "ADMIN" });
   const target = await data.createMember({ label: "AI利用対象", departmentId: department.id });
   await login(page, admin.credential);
-  await page.goto("/members");
+  await page.goto("/talent/members");
   await page.getByLabel("キーワード").fill(target.member.employeeNo);
   await page.getByRole("button", { name: `${target.member.name}の詳細を開く` }).click();
   await page.getByRole("tab", { name: "育成のヒント" }).click();
   await page.getByRole("button", { name: /ヒントを作る|作り直す/ }).click();
   await expect(page.getByText("AI", { exact: true })).toBeVisible();
-  await page.goto("/ai-usage");
+  await page.goto("/talent/ai-usage");
   await expect(
     page.getByRole("heading", { name: "AI の利用状況" }),
   ).toBeVisible();
@@ -32,7 +32,7 @@ test("ADMINがAIの利用状況を確認できる", async ({ page }) => {
 for (const role of ["MANAGER", "MEMBER"] as const) {
   test(`${role}はAIの利用状況に入れない`, async ({ page }) => {
     await login(page, credentials[role]);
-    await page.goto("/ai-usage");
-    await expect(page).toHaveURL(/\/dashboard/);
+    await page.goto("/talent/ai-usage");
+    await expect(page).toHaveURL(/\/talent\/dashboard/);
   });
 }

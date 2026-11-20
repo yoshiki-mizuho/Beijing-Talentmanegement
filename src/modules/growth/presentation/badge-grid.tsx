@@ -23,7 +23,7 @@ export function BadgeGrid({ badges, memberId }: { badges: DashboardBadge[]; memb
     <div>
       <div className="flex items-center justify-between gap-3">
         <span className="text-xs text-[var(--muted-foreground)]">{earned.length} / {badges.length}</span>
-        <Link href={`/people/${memberId}#badges`} className="inline-flex min-h-11 items-center text-xs font-semibold text-[var(--primary)]">すべて見る<ChevronRight className="h-4 w-4" aria-hidden="true" /></Link>
+        <Link href={`/talent/people/${memberId}#badges`} className="inline-flex min-h-11 items-center text-xs font-semibold text-[var(--primary)]">すべて見る<ChevronRight className="h-4 w-4" aria-hidden="true" /></Link>
       </div>
       {earned.length ? (
         <>

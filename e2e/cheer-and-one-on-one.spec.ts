@@ -51,7 +51,7 @@ test("MANAGERが1on1メモを追加して話した側へ移せる", async ({ bro
     const manager = await data.createMember({ label: "1on1管理者", departmentId: department.id, role: "MANAGER" });
     const member = await data.createMember({ label: "1on1部下", departmentId: department.id, managerId: manager.member.id });
     session = await openLoggedInContext(browser, manager.credential);
-    await session.page.goto("/members");
+    await session.page.goto("/talent/members");
     await session.page.getByRole("button", { name: `${member.member.name}の詳細を開く` }).click();
     await session.page.getByRole("tab", { name: "1on1 メモ" }).click();
     const body = `${data.prefix} 1on1`;
