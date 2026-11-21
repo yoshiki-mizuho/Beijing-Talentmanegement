@@ -19,6 +19,7 @@ import {
 import { getBadgeCalculationData } from "@/modules/growth/infrastructure/badge-calculation-repository";
 import { prisma } from "@/server/db/prisma";
 import { getMemberScope, memberIsInScope } from "@/modules/members/application/member-scope";
+import { displayMemberName } from "@/modules/members/domain/member-display";
 import { AuthorizationError } from "@/server/auth/authorization";
 import { listMemberRoleAchievements } from "@/modules/roles/application/role-achievement-service";
 
@@ -50,7 +51,7 @@ const getMonthlyRecapCached = cache(async function getMonthlyRecapCached(
       kind: "cheer" as const,
       createdAt: cheer.createdAt,
       senderId: cheer.fromMember.id,
-      senderName: cheer.fromMember.name,
+      senderName: displayMemberName(cheer.fromMember.name),
       text: cheer.message
     })),
     ...data.levelChanges
@@ -63,7 +64,7 @@ const getMonthlyRecapCached = cache(async function getMonthlyRecapCached(
       kind: "reaction" as const,
       createdAt: reaction.createdAt,
       senderId: reaction.member.id,
-      senderName: reaction.member.name,
+      senderName: displayMemberName(reaction.member.name),
       reactionType: reaction.type
       }))),
     ...data.levelChanges
@@ -76,7 +77,7 @@ const getMonthlyRecapCached = cache(async function getMonthlyRecapCached(
       kind: "comment" as const,
       createdAt: comment.createdAt,
       senderId: comment.authorMember.id,
-      senderName: comment.authorMember.name,
+      senderName: displayMemberName(comment.authorMember.name),
       text: comment.body
       })))
   ];
@@ -127,7 +128,7 @@ const getMonthlyRecapCached = cache(async function getMonthlyRecapCached(
   return {
     member: {
       id: data.member.id,
-      name: data.member.name,
+      name: displayMemberName(data.member.name),
       createdAt: data.member.createdAt.toISOString(),
       lastRecapSeenMonth: data.member.lastRecapSeenMonth
     },

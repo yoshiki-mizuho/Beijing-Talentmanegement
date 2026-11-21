@@ -1,5 +1,6 @@
 import type { AuthRole } from "@prisma/client";
 import { getMemberScope } from "@/modules/members/application/member-scope";
+import { displayMemberName } from "@/modules/members/domain/member-display";
 import { buildSkillMap } from "@/modules/skill-map/domain/skill-map-matrix";
 import {
   getSkillHolders,
@@ -9,7 +10,20 @@ import {
 export async function getSkillMapPageData(role: AuthRole, memberId: string, departmentId?: string) {
   const scope = await getMemberScope(role, memberId, departmentId);
   const now = new Date();
-  const skills = buildSkillMap({ skills: await getSkillMapData(scope.memberIds, new Date(now.getTime() - 90 * 86400000)), now });
+  const source = await getSkillMapData(
+    scope.memberIds,
+    new Date(now.getTime() - 90 * 86400000)
+  );
+  const skills = buildSkillMap({
+    skills: source.map((skill) => ({
+      ...skill,
+      holders: skill.holders.map((holder) => ({
+        ...holder,
+        name: displayMemberName(holder.name)
+      }))
+    })),
+    now
+  });
   const categories = [...new Map(skills.map((skill) => [skill.category.id, { id: skill.category.id, name: skill.category.name }])).values()];
   return {
     scope,

@@ -99,20 +99,6 @@ enum TeamGoalKind {
   SKILL_REACH
 }
 
-model User {
-  id             String    @id @default(cuid())
-  tenantId       String    @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
-  platformUserId String?
-  role           AuthRole  @default(MEMBER)
-  memberId       String?
-  member         Member?   @relation(fields: [memberId], references: [id])
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  @@unique([tenantId, platformUserId])
-  @@unique([tenantId, memberId])
-}
-
 model Department {
   id                 String       @id @default(cuid())
   tenantId           String       @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
@@ -133,11 +119,12 @@ model Department {
 model Member {
   id                    String                @id @default(cuid())
   tenantId              String                @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
-  employeeNo            String
-  name                  String
-  email                 String
-  departmentId          String
-  department            Department            @relation(fields: [departmentId], references: [id])
+  platformUserId        String?
+  employeeNo            String?
+  name                  String?
+  email                 String?
+  departmentId          String?
+  department            Department?           @relation(fields: [departmentId], references: [id])
   status                MemberStatus          @default(ACTIVE)
   jobTitle              String?
   profile               String?
@@ -153,7 +140,6 @@ model Member {
   targetRoleId          String?
   targetRole            Role?                 @relation("MemberTargetRole", fields: [targetRoleId], references: [id])
   lastRecapSeenMonth    String?
-  users                 User[]
   memberSkills          MemberSkill[]         @relation("MemberSkills")
   approvedMemberSkills  MemberSkill[]         @relation("ApprovedMemberSkills")
   selfAssessments       SkillSelfAssessment[] @relation("AssessmentMember")
@@ -186,8 +172,7 @@ model Member {
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
 
-  @@unique([tenantId, employeeNo])
-  @@unique([tenantId, email])
+  @@unique([tenantId, platformUserId])
   @@index([departmentId])
   @@index([status])
   @@index([managerId])

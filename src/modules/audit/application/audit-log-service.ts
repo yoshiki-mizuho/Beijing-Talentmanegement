@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { displayMemberName } from "@/modules/members/domain/member-display";
 import { AUDIT_ACTION } from "../domain/audit-action";
 import {
   buildActionDescription,
@@ -64,7 +65,9 @@ async function buildListItems(
 ) {
   const lookup = await loadAuditNameMaps(logs);
   const names: NameMaps = {
-    members: Object.fromEntries(lookup.members.map((x) => [x.id, x.name])),
+    members: Object.fromEntries(
+      lookup.members.map((x) => [x.id, displayMemberName(x.name)])
+    ),
     departments: Object.fromEntries(
       lookup.departments.map((x) => [x.id, x.name]),
     ),

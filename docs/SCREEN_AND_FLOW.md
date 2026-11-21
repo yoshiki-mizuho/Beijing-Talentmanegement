@@ -13,7 +13,7 @@
 | ダッシュボード | `/talent/dashboard` | 全ロール | `admin`・`manager`は組織集計、`member`は本人のスキルと成長課題 |
 | 通知一覧 | `/talent/notifications` | 全ロール | ヘッダーに未読件数を表示し、確認後は対応画面へ遷移 |
 | メンバー一覧 | `/talent/members` | `admin`、`manager` | 検索、部署フィルタ、スキル条件検索、行選択による詳細モーダル表示 |
-| メンバー詳細 | `/talent/members` のモーダル | `admin`、`manager` | 「育成」と「アカウント」を分け、成長情報と管理項目を表示 |
+| メンバー詳細 | `/talent/members` のモーダル | `admin`、`manager` | 成長情報とHub固有の目標ロール、プロフィール、経歴・資格を表示。メンバー登録、役割・上司・在籍の変更画面は持たない |
 | 自分のスキル申告 | `/talent/my/skills` | `member`、`manager`、`admin` | カテゴリごとのスキルシートでLvを選び、変更した行をまとめて申請 |
 | スキル承認 | `/talent/skill-approvals` | `manager`、`admin` | 申告スキルの承認、補正承認、差し戻し |
 | スキル管理 | `/talent/skills` | `admin` | スキルの作成・更新・無効化はダイアログで行う。一覧上でカテゴリとスキルを並び替え、共通・個別のレベルの目安を編集 |

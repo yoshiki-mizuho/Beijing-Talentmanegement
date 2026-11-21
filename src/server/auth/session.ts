@@ -1,8 +1,35 @@
-import { AuthRole } from "@prisma/client";
+import { AuthRole, Prisma } from "@prisma/client";
 import { headers } from "next/headers";
 import { cache } from "react";
 
-import { prisma } from "@/server/db/prisma";
+import { getTenantId, prisma } from "@/server/db/prisma";
+import { getLeaderScope, getUser, type PlatformUser } from "@/server/platform/directory";
+
+async function findOrCreateMember(platformUserId: string, platformUser: PlatformUser | null) {
+  const found = await prisma.member.findUnique({
+    where: { tenantId_platformUserId: {
+      tenantId: await getTenantId(),
+      platformUserId
+    } }
+  });
+  if (found) return found;
+
+  try {
+    return await prisma.member.create({
+      data: {
+        platformUserId,
+        // H-4c で表示を基盤から引き、H-4d でこの写しの列を削除するまでのつなぎ。
+        name: platformUser?.name || null,
+        email: platformUser?.email || null
+      }
+    });
+  } catch (error) {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
+      throw error;
+    }
+    return prisma.member.findFirstOrThrow({ where: { platformUserId } });
+  }
+}
 
 export type CurrentSession = {
   tenantId: string;
@@ -32,25 +59,31 @@ export async function resolveCurrentSession(
     return { status: "unauthenticated", session: null };
   }
 
-  const user = await prisma.user.findFirst({
-    where: { platformUserId },
-    select: {
-      id: true,
-      role: true,
-      member: { select: { id: true, name: true, status: true } }
-    }
-  });
-
-  if (!user?.member || user.member.status !== "ACTIVE") {
+  let platformUser = null;
+  try {
+    platformUser = await getUser(platformUserId);
+  } catch {
+    // 基盤障害時は既存の Hub 固有データを利用できるようにする。
+  }
+  if (platformUser?.status === "INACTIVE") {
     return { status: "unregistered", session: null };
   }
 
+  const member = await findOrCreateMember(platformUserId, platformUser);
+
   const platformRole = requestHeaders.get("x-auth-user-role")?.trim().toUpperCase();
-  const role = platformRole === "ADMIN"
-    ? AuthRole.ADMIN
-    : user.role === AuthRole.MANAGER
-      ? AuthRole.MANAGER
-      : AuthRole.MEMBER;
+  let role: AuthRole = AuthRole.MEMBER;
+  if (platformRole === "ADMIN") {
+    role = AuthRole.ADMIN;
+  } else {
+    try {
+      if ((await getLeaderScope(platformUserId)).nodeIds.length > 0) {
+        role = AuthRole.MANAGER;
+      }
+    } catch {
+      role = AuthRole.MEMBER;
+    }
+  }
 
   return {
     status: "authenticated",
@@ -59,10 +92,10 @@ export async function resolveCurrentSession(
       tenantSlug: requestHeaders.get("x-auth-tenant-slug")?.trim() || null,
       requestId: requestHeaders.get("x-auth-request-id")?.trim() || null,
       user: {
-        id: user.id,
+        id: member.id,
         platformUserId,
-        memberId: user.member.id,
-        name: user.member.name,
+        memberId: member.id,
+        name: platformUser?.name || member.name || "",
         role,
         isActive: true
       }

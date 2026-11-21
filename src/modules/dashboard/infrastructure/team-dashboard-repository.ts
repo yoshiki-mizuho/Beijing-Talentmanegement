@@ -3,8 +3,9 @@ import { nonGrowthLevelChangeSources } from "@/modules/growth/domain/level-chang
 
 import { prisma } from "@/server/db/prisma";
 
-export function getTeamDashboardData(managerMemberId: string) {
-  return prisma.member.findUnique({
+export async function getTeamDashboardData(managerMemberId: string, reportMemberIds: string[]) {
+  const [manager, reports] = await Promise.all([
+    prisma.member.findUnique({
     where: { id: managerMemberId },
     select: {
       id: true,
@@ -18,8 +19,10 @@ export function getTeamDashboardData(managerMemberId: string) {
         where: { discussedAt: null },
         select: { memberId: true }
       },
-      reports: {
-        where: { status: MemberStatus.ACTIVE },
+    }
+  }),
+    prisma.member.findMany({
+      where: { id: { in: reportMemberIds }, status: MemberStatus.ACTIVE },
         select: {
           id: true,
           name: true,
@@ -62,9 +65,9 @@ export function getTeamDashboardData(managerMemberId: string) {
           }
         },
         orderBy: { name: "asc" }
-      }
-    }
-  });
+      })
+  ]);
+  return manager ? { ...manager, reports } : null;
 }
 
 export function countSkillExperts(skillId: string) {

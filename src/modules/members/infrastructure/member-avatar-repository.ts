@@ -5,7 +5,6 @@ export function getMemberAvatar(memberId: string) {
     where: { id: memberId },
     select: {
       id: true,
-      managerId: true,
       status: true,
       isProfilePublic: true,
       avatarImage: true,

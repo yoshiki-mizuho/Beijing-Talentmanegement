@@ -62,7 +62,7 @@ test("ヘッダが無いと画面は未登録案内、APIは401になる", async
   }
 });
 
-test("登録されていない基盤利用者は画面とAPIを利用できない", async ({ browser }) => {
+test("基盤に見つからない利用者も Hub 固有の行を自動作成して利用できる", async ({ browser }) => {
   const context = await browser.newContext({
     extraHTTPHeaders: {
       "X-Auth-Tenant-Id": "11111111-1111-4111-8111-111111111111",
@@ -73,10 +73,36 @@ test("登録されていない基盤利用者は画面とAPIを利用できな�
   const page = await context.newPage();
   try {
     await page.goto("/talent/dashboard");
+    await expect(page).toHaveURL(/\/talent\/dashboard$/);
+    expect((await page.request.get("/api/talent/v1/members")).status()).toBe(403);
+  } finally {
+    await context.close();
+  }
+});
+
+test("基盤で INACTIVE の利用者は画面とAPIを利用できない", async ({ browser }) => {
+  const data = createE2eTestData();
+  const department = await data.createDepartment("非在籍");
+  const account = await data.createMember({
+    label: "非在籍利用者",
+    departmentId: department.id,
+    platformStatus: "INACTIVE"
+  });
+  const context = await browser.newContext({
+    extraHTTPHeaders: {
+      "X-Auth-Tenant-Id": "11111111-1111-4111-8111-111111111111",
+      "X-Auth-User-Id": account.credential.platformUserId,
+      "X-Auth-User-Role": "MEMBER"
+    }
+  });
+  const page = await context.newPage();
+  try {
+    await page.goto("/talent/dashboard");
     await expect(page).toHaveURL(/\/talent\/unregistered$/);
     expect((await page.request.get("/api/talent/v1/members")).status()).toBe(403);
   } finally {
     await context.close();
+    await data.cleanup();
   }
 });
 

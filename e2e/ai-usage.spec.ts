@@ -14,8 +14,8 @@ test("ADMINがAIの利用状況を確認できる", async ({ page }) => {
   const target = await data.createMember({ label: "AI利用対象", departmentId: department.id });
   await login(page, admin.credential);
   await page.goto("/talent/members");
-  await page.getByLabel("キーワード").fill(target.member.employeeNo);
-  await page.getByRole("button", { name: `${target.member.name}の詳細を開く` }).click();
+  await page.getByLabel("キーワード").fill(target.member.employeeNo ?? "");
+  await page.getByRole("button", { name: `${target.member.name ?? ""}の詳細を開く` }).click();
   await page.getByRole("tab", { name: "育成のヒント" }).click();
   await page.getByRole("button", { name: /ヒントを作る|作り直す/ }).click();
   await expect(page.getByText("AI", { exact: true })).toBeVisible();

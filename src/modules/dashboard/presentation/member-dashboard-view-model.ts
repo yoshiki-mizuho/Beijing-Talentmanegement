@@ -11,6 +11,7 @@ import {
 import type { MemberGrowthData } from "@/modules/growth/infrastructure/member-growth-repository";
 import type { BadgeCalculationData } from "@/modules/growth/infrastructure/badge-calculation-repository";
 import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
+import { displayMemberName } from "@/modules/members/domain/member-display";
 
 export function buildMemberDashboardViewModel(
   data: MemberGrowthData & {
@@ -74,8 +75,10 @@ export function buildMemberDashboardViewModel(
 
   return {
     memberId: data.member.id,
-    memberName: data.member.name,
-    managerName: data.member.manager?.name ?? null,
+    memberName: displayMemberName(data.member.name),
+    managerName: data.member.manager
+      ? displayMemberName(data.member.manager.name)
+      : null,
     approvedSkillCount,
     pendingAssessmentCount,
     onboardingState,
@@ -147,7 +150,7 @@ export function buildMemberDashboardViewModel(
       })),
       candidates: data.mentorCandidates.map((candidate) => ({
         id: candidate.id,
-        name: candidate.name,
+        name: displayMemberName(candidate.name),
         jobTitle: candidate.jobTitle,
         status: candidate.status,
         skills: candidate.memberSkills.map((skill) => ({
@@ -166,12 +169,12 @@ export function buildMemberDashboardViewModel(
     cheers: data.receivedCheers.slice(0, 3).map((cheer) => ({
       id: cheer.id,
       senderId: cheer.fromMember.id,
-      senderName: cheer.fromMember.name,
+      senderName: displayMemberName(cheer.fromMember.name),
       senderAvatarUpdatedAt: cheer.fromMember.avatarUpdatedAt?.toISOString() ?? null,
       message: cheer.message,
       createdAt: cheer.createdAt.toISOString(),
       mentor: cheer.mentorMember && cheer.targetSkill ? {
-        name: cheer.mentorMember.name,
+        name: displayMemberName(cheer.mentorMember.name),
         skillName: cheer.targetSkill.name,
         level: cheer.mentorMember.memberSkills.find((skill) => skill.skillId === cheer.targetSkill?.id)?.level ?? null
       } : null

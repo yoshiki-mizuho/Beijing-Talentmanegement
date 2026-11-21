@@ -17,8 +17,6 @@ import {
 } from "@/modules/growth/presentation/actions";
 
 import type {
-  DepartmentOption,
-  ManagerOption,
   MemberRow,
   RoleOption,
   SkillOption,
@@ -30,43 +28,36 @@ import { EmptyState } from "@/shared/ui/empty-state";
 import { TextareaField } from "@/shared/ui/form-field";
 import { Button } from "@/shared/ui/button";
 import { SubmitButton } from "@/shared/ui/submit-button";
-import {
-  MemberAccountPanel,
-  MemberOverviewPanel
-} from "@/modules/members/presentation/member-detail-panels";
+import { MemberOverviewPanel } from "@/modules/members/presentation/member-detail-panels";
 
-type DetailTabId = "overview" | "growth-hint" | "recap" | "one-on-one" | "account";
+type DetailTabId = "overview" | "growth-hint" | "recap" | "one-on-one";
 
 export function MemberDetailModal({
   member,
-  departments,
-  managerCandidates,
   targetRoles,
   roles,
-  canEditGrowthSettings,
-  viewerMemberId,
+  oneOnOneViewerMemberId,
   onClose,
   onMemberChanged
 }: {
   member: MemberRow;
-  departments: DepartmentOption[];
   skills: SkillOption[];
-  managerCandidates: ManagerOption[];
   targetRoles: TargetRoleOption[];
   roles: RoleOption[];
-  canDeactivateMembers: boolean;
-  canEditGrowthSettings: boolean;
-  viewerMemberId: string;
+  oneOnOneViewerMemberId: string | null;
   onClose: () => void;
   onMemberChanged: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<DetailTabId>("overview");
+  const canUseOneOnOne =
+    oneOnOneViewerMemberId !== null && oneOnOneViewerMemberId !== member.id;
   const detailTabs: Array<{ id: DetailTabId; label: string }> = [
     { id: "overview", label: "概要" },
     { id: "growth-hint", label: "育成のヒント" },
     { id: "recap", label: "振り返り" },
-    ...(member.managerId === viewerMemberId ? [{ id: "one-on-one" as const, label: "1on1 メモ" }] : []),
-    ...(canEditGrowthSettings ? [{ id: "account" as const, label: "アカウント" }] : [])
+    ...(canUseOneOnOne
+      ? [{ id: "one-on-one" as const, label: "1on1 メモ" }]
+      : [])
   ];
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const titleId = `member-detail-${member.id}`;
@@ -169,21 +160,11 @@ export function MemberDetailModal({
       ) : activeTab === "recap" ? (
         <MemberRecapPanel
           member={member}
-          canAddNotes={member.managerId === viewerMemberId}
+          canAddNotes={canUseOneOnOne}
           panelId={`${titleId}-recap-panel`}
           tabId={`${titleId}-recap-tab`}
         />
-      ) : (
-        <MemberAccountPanel
-          member={member}
-          departments={departments}
-          managerCandidates={managerCandidates}
-          viewerMemberId={viewerMemberId}
-          onMemberChanged={onMemberChanged}
-          panelId={`${titleId}-account-panel`}
-          tabId={`${titleId}-account-tab`}
-        />
-      )}
+      ) : null}
     </Dialog>
   );
 }

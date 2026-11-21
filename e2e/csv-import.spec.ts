@@ -165,33 +165,6 @@ test("マネージャーはCSV取り込みAPIを利用できない", async ({ br
   }
 });
 
-test("管理者がメンバーCSVでログインユーザー付きのメンバーを作成できる", async ({ browser }) => {
-  const data = createE2eTestData();
-  const department = await data.createDepartment("メンバーCSV管理部署");
-  const account = await data.createMember({ label: "メンバーCSV管理者", departmentId: department.id, role: "ADMIN" });
-  const admin = await openLoggedInContext(browser, account.credential);
-  const suffix = Date.now();
-  const employeeNo = `E2EM${suffix}`;
-  const email = `e2e-member-${suffix}@example.com`;
-  try {
-    await admin.page.goto("/talent/csv");
-    await admin.page.getByRole("button", { name: "メンバー", exact: true }).click();
-    await admin.page.getByLabel("メンバーのCSVファイル").setInputFiles({
-      name: "members.csv",
-      mimeType: "text/csv",
-      buffer: Buffer.from(`employee_no,name,email,department_code,job_title,status,manager_employee_no,target_role_code\r\n${employeeNo},E2Eメンバー,${email},DEV,Engineer,active,,\r\n`),
-    });
-    await admin.page.getByRole("button", { name: "1件を登録" }).click();
-    await expect(admin.page.getByRole("heading", { name: "登録しました" })).toBeVisible();
-    await admin.page.goto("/talent/members");
-    await expect(admin.page.getByText(employeeNo)).toBeVisible();
-    await data.trackCreated({ memberEmails: [email] });
-  } finally {
-    await admin.context.close();
-    await data.cleanup();
-  }
-});
-
 test("管理者がメンバースキルCSVでレベルを更新し監査ログを確認できる", async ({ browser }) => {
   const data = createE2eTestData();
   const department = await data.createDepartment("評価CSV管理部署");

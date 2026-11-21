@@ -22,6 +22,7 @@ import {
   findTeamGoalCelebrationCandidates,
   findTeamGoalCelebrationContext,
   findLatestGoals,
+  findMemberIdsByPlatformUserIds,
   findMemberManagerId,
   findManagerWithReports,
   listGoalProgressChanges,
@@ -29,15 +30,20 @@ import {
   markGoalAchieved,
   saveTeamGoal
 } from "@/modules/team-goals/infrastructure/team-goal-repository";
+import { displayMemberName } from "@/modules/members/domain/member-display";
+import { getMemberScope, memberIsInScope } from "@/modules/members/application/member-scope";
+import { getDirectLeaderIds } from "@/server/platform/directory";
 import { AuthorizationError } from "@/server/auth/authorization";
 import { UserFacingError } from "@/shared/lib/user-facing-error";
 
 export async function getManagerTeamGoal(managerId: string, now = new Date()) {
   const manager = await findManagerWithReports(managerId);
-  if (!manager || manager.reports.length === 0) return null;
+  const scope = await getMemberScope("MANAGER", managerId);
+  const reportIds = scope.memberIds.filter((id) => id !== managerId);
+  if (!manager || reportIds.length === 0) return null;
   const [goal, skills] = await Promise.all([
     resolveCurrentGoal(managerId, now),
-    listActiveSkills(managerId)
+    listActiveSkills(reportIds)
   ]);
   const previous = await getPreviousResults(managerId, now);
   return { goal, skills, previous, currentMonth: getTokyoMonth(now) };
@@ -45,14 +51,21 @@ export async function getManagerTeamGoal(managerId: string, now = new Date()) {
 
 export async function getMemberTeamGoal(memberId: string, now = new Date()) {
   const member = await findMemberManagerId(memberId);
-  return member?.managerId ? resolveCurrentGoal(member.managerId, now) : null;
+  if (!member?.platformUserId) return null;
+  const leaderIds = await getDirectLeaderIds(member.platformUserId);
+  const leaders = await findMemberIdsByPlatformUserIds(leaderIds);
+  return leaders[0] ? resolveCurrentGoal(leaders[0].id, now) : null;
 }
 
 export async function getTeamGoalCelebration(memberId: string, now = new Date()) {
   const context = await findTeamGoalCelebrationContext(memberId);
   if (!context) return null;
   const managerIds = [context.id];
-  if (context.status === "ACTIVE" && context.managerId) managerIds.push(context.managerId);
+  if (context.status === "ACTIVE" && context.platformUserId) {
+    const leaderIds = await getDirectLeaderIds(context.platformUserId);
+    const leaders = await findMemberIdsByPlatformUserIds(leaderIds);
+    managerIds.push(...leaders.map((leader) => leader.id));
+  }
   const candidates = await findTeamGoalCelebrationCandidates(
     managerIds,
     context.teamGoalAcknowledgements.map((item) => item.teamGoalId)
@@ -72,9 +85,13 @@ export async function getTeamGoalCelebration(memberId: string, now = new Date())
 }
 
 export async function acknowledgeTeamGoalCelebration(teamGoalId: string, memberId: string) {
-  const goal = await findTeamGoalAcknowledgementTarget(teamGoalId, memberId);
+  const goal = await findTeamGoalAcknowledgementTarget(teamGoalId);
+  const scope = goal
+    ? await getMemberScope("MANAGER", goal.managerId)
+    : null;
   const isTarget = goal && (
-    goal.managerId === memberId || goal.manager.reports.length > 0
+    goal.managerId === memberId ||
+    (scope ? memberIsInScope(scope, memberId) : false)
   );
   if (!goal?.achievedAt || !isTarget) return;
   await createTeamGoalAcknowledgement(goal.id, memberId);
@@ -89,7 +106,8 @@ export async function upsertTeamGoal(input: unknown, actor: {
   }
   const parsed = teamGoalInputSchema.parse(input);
   const manager = await findManagerWithReports(actor.memberId);
-  if (!manager || manager.reports.length === 0) {
+  const scope = await getMemberScope("MANAGER", actor.memberId);
+  if (!manager || scope.memberIds.every((id) => id === actor.memberId)) {
     throw new AuthorizationError("チーム目標を決める権限がありません。", 403);
   }
   const current = await resolveCurrentGoal(actor.memberId, now);
@@ -125,7 +143,15 @@ export async function upsertTeamGoal(input: unknown, actor: {
 async function resolveCurrentGoal(managerId: string, now: Date) {
   const goals = await findLatestGoals(managerId);
   const goal = goals.find((item) => isDateInTeamGoalPeriod(now, item.startMonth, item.months));
-  return goal ? resolveGoal(goal, now) : null;
+  return goal
+    ? resolveGoal({
+        ...goal,
+        manager: {
+          ...goal.manager,
+          name: displayMemberName(goal.manager.name)
+        }
+      }, now)
+    : null;
 }
 
 async function resolveGoal(goal: TeamGoal & {
@@ -133,7 +159,9 @@ async function resolveGoal(goal: TeamGoal & {
   manager?: { id: string; name: string; avatarUpdatedAt: Date | null };
 }, now: Date) {
   const period = getTeamGoalPeriod(goal.startMonth, goal.months);
-  const progress = await countGoalProgress(goal, period.start, period.end);
+  const scope = await getMemberScope("MANAGER", goal.managerId);
+  const memberIds = scope.memberIds.filter((id) => id !== goal.managerId);
+  const progress = await countGoalProgress(goal, period.start, period.end, memberIds);
   if (progress >= goal.targetCount && !goal.achievedAt) {
     await markGoalAchieved(goal.id, now);
   }
@@ -166,8 +194,9 @@ async function getPreviousResults(managerId: string, now: Date) {
     months,
     ...getPreviousTeamGoalPeriod(startMonth, months)
   }));
+  const scope = await getMemberScope("MANAGER", managerId);
   const changes = await listGoalProgressChanges(
-    managerId,
+    scope.memberIds.filter((id) => id !== managerId),
     periods[periods.length - 1].start,
     periods[0].end
   );

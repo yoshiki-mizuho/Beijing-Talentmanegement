@@ -6,12 +6,8 @@ import { useState } from "react";
 import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
 
 import {
-  deactivateMemberAction,
   removeMemberSkillAction,
   setMemberSkillLevelAction,
-  updateMemberAction,
-  updateMemberManagerAction,
-  updateMemberRoleAction,
   updateMemberTargetRoleAction,
 } from "@/modules/members/presentation/actions";
 import {
@@ -19,8 +15,6 @@ import {
   sortMemberSkillsByLevel,
 } from "@/modules/members/presentation/member-display";
 import type {
-  DepartmentOption,
-  ManagerOption,
   MemberRow,
   RoleOption,
   TargetRoleOption,
@@ -35,17 +29,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/ui/card";
-import { FormField, SelectField, TextareaField } from "@/shared/ui/form-field";
+import { SelectField } from "@/shared/ui/form-field";
 import { SubmitButton } from "@/shared/ui/submit-button";
 import { Tooltip } from "@/shared/ui/tooltip";
 
-const memberStatuses = ["ACTIVE", "LEAVE", "INACTIVE"] as const;
 const skillLevels = [1, 2, 3, 4, 5] as const;
-const roleLabels = {
-  ADMIN: "管理者（基盤）",
-  MANAGER: "マネージャー",
-  MEMBER: "メンバー",
-} as const;
 
 type PanelProps = {
   member: MemberRow;
@@ -109,7 +97,7 @@ export function MemberOverviewPanel({
           </CardHeader>
           <CardContent>
             <dl className="grid gap-3 sm:grid-cols-2">
-              <ReadOnlyField label="部署" value={member.department.name} />
+              <ReadOnlyField label="部署" value={member.department?.name ?? "所属なし"} />
               <ReadOnlyField label="役職" value={member.jobTitle ?? "未設定"} />
               <ReadOnlyField
                 label="上司"
@@ -360,238 +348,5 @@ function EditableSkillRow({
         </div>
       ) : null}
     </div>
-  );
-}
-
-export function MemberAccountPanel({
-  member,
-  departments,
-  managerCandidates,
-  viewerMemberId,
-  onMemberChanged,
-  panelId,
-  tabId,
-}: {
-  member: MemberRow;
-  departments: DepartmentOption[];
-  managerCandidates: ManagerOption[];
-  viewerMemberId: string;
-  onMemberChanged: () => void;
-  panelId: string;
-  tabId: string;
-}) {
-  const [selectedRole, setSelectedRole] = useState(member.role ?? "MEMBER");
-
-  return (
-    <section
-      id={panelId}
-      role="tabpanel"
-      aria-labelledby={tabId}
-      className="space-y-5"
-    >
-      <Card>
-        <CardHeader>
-          <CardTitle>基本情報の編集</CardTitle>
-          <CardDescription>CSV の取り込みでも更新できます。</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ActionForm
-            key={member.id}
-            action={updateMemberAction}
-            className="grid gap-4 md:grid-cols-3"
-            onSuccess={onMemberChanged}
-          >
-            <input type="hidden" name="id" value={member.id} />
-            <FormField
-              id={`employee-no-${member.id}`}
-              label="社員番号"
-              name="employeeNo"
-              defaultValue={member.employeeNo}
-              required
-            />
-            <FormField
-              id={`member-name-${member.id}`}
-              label="氏名"
-              name="name"
-              defaultValue={member.name}
-              required
-            />
-            <FormField
-              id={`member-email-${member.id}`}
-              label="メール"
-              name="email"
-              type="email"
-              defaultValue={member.email}
-              required
-            />
-            <FormField
-              id={`member-platform-user-id-${member.id}`}
-              label="基盤の利用者 ID"
-              name="platformUserId"
-              defaultValue={member.platformUserId ?? ""}
-              placeholder="UUID（未登録なら空欄）"
-            />
-            <SelectField
-              id={`member-department-${member.id}`}
-              label="部署"
-              name="departmentId"
-              defaultValue={member.departmentId}
-            >
-              {departments.map((department) => (
-                <option key={department.id} value={department.id}>
-                  {department.name}
-                </option>
-              ))}
-            </SelectField>
-            <FormField
-              id={`member-job-title-${member.id}`}
-              label="役職"
-              name="jobTitle"
-              defaultValue={member.jobTitle ?? ""}
-            />
-            <SelectField
-              id={`member-status-${member.id}`}
-              label="状態"
-              name="status"
-              defaultValue={member.status}
-            >
-              {memberStatuses.map((status) => (
-                <option key={status} value={status}>
-                  {getMemberStatusLabel(status)}
-                </option>
-              ))}
-            </SelectField>
-            <TextareaField
-              id={`member-profile-${member.id}`}
-              label="プロフィール"
-              name="profile"
-              defaultValue={member.profile ?? ""}
-              className="md:col-span-3"
-            />
-            <div className="flex justify-end md:col-span-3">
-              <SubmitButton pendingLabel="保存中…">基本情報を保存</SubmitButton>
-            </div>
-          </ActionForm>
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-5 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>上司</CardTitle>
-            <CardDescription>承認依頼が届く相手です。</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ActionForm
-              key={member.managerId ?? "none"}
-              action={updateMemberManagerAction}
-              className="space-y-3"
-              onSuccess={onMemberChanged}
-            >
-              <input type="hidden" name="memberId" value={member.id} />
-              <SelectField
-                id={`member-manager-${member.id}`}
-                label="上司"
-                name="managerId"
-                defaultValue={member.managerId ?? ""}
-              >
-                <option value="">未設定</option>
-                {managerCandidates
-                  .filter((candidate) => candidate.id !== member.id)
-                  .map((candidate) => (
-                    <option key={candidate.id} value={candidate.id}>
-                      {candidate.employeeNo} / {candidate.name}
-                    </option>
-                  ))}
-              </SelectField>
-              <SubmitButton pendingLabel="更新中…">上司を更新</SubmitButton>
-            </ActionForm>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>権限</CardTitle>
-            <CardDescription>画面と操作の範囲が変わります。</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {member.role === "ADMIN" ? (
-              <p className="text-sm font-semibold">管理者（基盤で決まります）</p>
-            ) : member.role ? (
-              <ActionForm
-                key={member.role}
-                action={updateMemberRoleAction}
-                className="space-y-3"
-                onSuccess={onMemberChanged}
-                confirm={{
-                  title: "権限を変更しますか",
-                  description: `${member.name}さんの権限を ${roleLabels[member.role]} → ${roleLabels[selectedRole]} に変更します。`,
-                  confirmLabel: "変更する",
-                }}
-              >
-                <input type="hidden" name="memberId" value={member.id} />
-                <SelectField
-                  id={`member-permission-${member.id}`}
-                  label="権限"
-                  name="role"
-                  value={selectedRole}
-                  disabled={member.id === viewerMemberId}
-                  onChange={(event) =>
-                    setSelectedRole(
-                      event.target.value as keyof typeof roleLabels,
-                    )
-                  }
-                >
-                  {Object.entries(roleLabels).filter(([role]) => role !== "ADMIN").map(([role, label]) => (
-                    <option key={role} value={role}>
-                      {label}
-                    </option>
-                  ))}
-                </SelectField>
-                <SubmitButton
-                  pendingLabel="変更中…"
-                  disabled={
-                    member.id === viewerMemberId || selectedRole === member.role
-                  }
-                >
-                  変更
-                </SubmitButton>
-              </ActionForm>
-            ) : null}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="border-[var(--destructive)]">
-        <CardHeader>
-          <CardTitle>無効化</CardTitle>
-          <CardDescription>
-            退職などでログインできなくします。記録は残ります。
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ActionForm
-            action={deactivateMemberAction}
-            onSuccess={onMemberChanged}
-            confirm={{
-              title: "メンバーを無効化しますか",
-              description: `「${member.name}」を無効化します。本人は業務機能を利用できなくなります。`,
-              confirmLabel: "無効化する",
-              destructive: true,
-            }}
-          >
-            <input type="hidden" name="id" value={member.id} />
-            <SubmitButton
-              pendingLabel="無効化中…"
-              variant="destructive"
-              disabled={
-                member.id === viewerMemberId || member.status === "INACTIVE"
-              }
-            >
-              {member.status === "INACTIVE" ? "無効化済み" : "無効化"}
-            </SubmitButton>
-          </ActionForm>
-        </CardContent>
-      </Card>
-    </section>
   );
 }

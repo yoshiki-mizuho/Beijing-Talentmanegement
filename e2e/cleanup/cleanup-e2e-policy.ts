@@ -29,22 +29,22 @@ export function isLocalDatabaseUrl(databaseUrl: string) {
 }
 
 export type CleanupMemberCandidate = {
-  employeeNo: string;
-  name: string;
-  email: string;
+  employeeNo: string | null;
+  name: string | null;
+  email: string | null;
 };
 
 export function isE2eMember(candidate: CleanupMemberCandidate) {
   if (
-    seedMemberEmployeeNos.has(candidate.employeeNo) ||
-    seedMemberEmails.has(candidate.email)
+    (candidate.employeeNo && seedMemberEmployeeNos.has(candidate.employeeNo)) ||
+    (candidate.email && seedMemberEmails.has(candidate.email))
   ) {
     return false;
   }
 
   return (
-    /^(E2E|FIRST-|初回画面-|撮影|LK\d|LF\d)/i.test(candidate.employeeNo) ||
-    /^(E2E|FIRST-|初回画面-|撮影|LK\d|LF\d)/i.test(candidate.name) ||
-    /^(e2e-|first-|look-)/i.test(candidate.email)
+    /^(E2E|FIRST-|初回画面-|撮影|LK\d|LF\d)/i.test(candidate.employeeNo ?? "") ||
+    /^(E2E|FIRST-|初回画面-|撮影|LK\d|LF\d)/i.test(candidate.name ?? "") ||
+    /^(e2e-|first-|look-)/i.test(candidate.email ?? "")
   );
 }

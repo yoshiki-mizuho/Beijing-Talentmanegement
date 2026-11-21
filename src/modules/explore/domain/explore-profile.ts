@@ -73,16 +73,19 @@ export function splitTopSkills<T extends { skillName: string; level: number }>(
 export type ProfileViewer = { role: string; memberId: string };
 export type VisibleMember = {
   id: string;
-  managerId: string | null;
   status: string;
   isProfilePublic: boolean;
 };
 
-export function canViewProfile(viewer: ProfileViewer, member: VisibleMember) {
+export function canViewProfile(
+  viewer: ProfileViewer,
+  member: VisibleMember,
+  targetIsInScope = false
+) {
   if (viewer.role === "ADMIN") return true;
   if (member.status !== "ACTIVE") return false;
   return (
-    member.isProfilePublic || viewer.memberId === member.id || member.managerId === viewer.memberId
+    member.isProfilePublic || viewer.memberId === member.id || targetIsInScope
   );
 }
 

@@ -18,8 +18,8 @@ test("目標ロール達成を祝い、次の目標をあとで決めると再�
     const memberAccount = await data.createMember({ label: "ロール達成申請者", departmentId: department.id, managerId: managerAccount.member.id });
     await data.createMemberSkill({ memberId: memberAccount.member.id, skillId: skill.id, level: 1, approvedByMemberId: managerAccount.member.id });
     member = await openLoggedInContext(browser, memberAccount.credential);
-    await member.page.goto("/talent/roles");
-    await member.page.getByRole("link", { name: new RegExp(role.name) }).click();
+    // ロールを指定して開く（一覧のリンクを押した直後だと、前に選ばれていた別のロールが目標になることがある）
+    await member.page.goto(`/talent/roles?role=${encodeURIComponent(role.id)}`);
     await member.page.getByRole("button", { name: "目標にする" }).click();
     await expect(member.page.getByText("目標ロールを更新しました。")).toBeVisible();
     await member.page.goto("/talent/my/skills");

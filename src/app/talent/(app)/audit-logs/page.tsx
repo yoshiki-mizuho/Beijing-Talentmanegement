@@ -1,4 +1,5 @@
 import { listAuditLogs } from "@/modules/audit/application/audit-log-service";
+import { displayMemberName } from "@/modules/members/domain/member-display";
 import { AuditLogFilters } from "@/modules/audit/presentation/audit-log-filters";
 import { AuditLogList } from "@/modules/audit/presentation/audit-log-list";
 import { Card, CardContent } from "@/shared/ui/card";
@@ -37,7 +38,13 @@ export default async function AuditLogsPage({
             </span>
           </h1>
         </div>
-        <AuditLogFilters query={result.query} actors={result.actors} />
+        <AuditLogFilters
+          query={result.query}
+          actors={result.actors.map((actor) => ({
+            ...actor,
+            name: displayMemberName(actor.name)
+          }))}
+        />
         <AuditLogList
           items={result.items}
           total={result.total}

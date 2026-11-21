@@ -28,7 +28,7 @@ async function markPreviousMonthRecapSeen(platformUserId: string) {
   const previousMonth = `${previous.getUTCFullYear()}-${String(previous.getUTCMonth() + 1).padStart(2, "0")}`;
   await runWithTenant(tenantId, () =>
     prisma.member.updateMany({
-      where: { users: { some: { platformUserId } } },
+      where: { platformUserId },
       data: { lastRecapSeenMonth: previousMonth }
     })
   );

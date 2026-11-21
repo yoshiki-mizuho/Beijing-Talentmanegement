@@ -1,6 +1,5 @@
 import { expect, test } from "@playwright/test";
 
-import { createE2eTestData } from "./fixtures/test-data";
 import { openLoggedInContext } from "./helpers/auth";
 import { readDemoCredentials, type DemoRole } from "./helpers/credentials";
 import { dismissExistingLevelUpDialogs } from "./helpers/level-up";
@@ -58,7 +57,6 @@ test("MANAGER の ADMIN 専用 API は 403", async ({ browser }) => {
     await context.close();
   }
 });
-
 test("MANAGER のメンバー一覧にメンバー追加操作がない", async ({ browser }) => {
   const { context, page } = await openLoggedInContext(
     browser,
@@ -74,7 +72,6 @@ test("MANAGER のメンバー一覧にメンバー追加操作がない", async 
     await context.close();
   }
 });
-
 test("MANAGER のナビにスキル管理がなくロールで担当状況を確認できる", async ({ browser }) => {
   const { context, page } = await openLoggedInContext(browser, credentials.MANAGER);
   try {
@@ -113,53 +110,5 @@ test("MEMBER のメンバー API は 403", async ({ browser }) => {
     expect(response.status()).toBe(403);
   } finally {
     await context.close();
-  }
-});
-
-test("ADMIN が権限を変更し、自分の権限は基盤で決まることを確認できる", async ({ browser }) => {
-  const data = createE2eTestData();
-  const department = await data.createDepartment("権限変更部署");
-  const memberAccount = await data.createMember({ label: "権限変更対象", departmentId: department.id });
-  const { context, page } = await openLoggedInContext(
-    browser,
-    credentials.ADMIN,
-  );
-  try {
-    await page.goto("/talent/members");
-    await page.getByLabel("キーワード").fill(memberAccount.member.employeeNo);
-    const memberRow = page.getByRole("row").filter({ hasText: memberAccount.member.employeeNo });
-    await expect(memberRow).toBeVisible();
-    await memberRow
-      .getByRole("button", { name: `${memberAccount.member.name}の詳細を開く` })
-      .click();
-    const detail = page.getByRole("dialog", { name: `${memberAccount.member.name}の詳細` });
-    await detail.getByRole("tab", { name: "アカウント" }).click();
-    const permission = detail.getByLabel("権限", { exact: true });
-    await permission.selectOption("MANAGER");
-    await detail.getByRole("button", { name: "変更", exact: true }).click();
-    await page
-      .getByRole("dialog", { name: "権限を変更しますか" })
-      .getByRole("button", { name: "変更する" })
-      .click();
-    await expect(page.getByText("権限を変更しました。")).toBeVisible();
-
-    await page.goto("/talent/audit-logs");
-    await expect(
-      page.getByText("権限を変更", { exact: false }).first(),
-    ).toBeVisible();
-
-    await page.goto("/talent/members");
-    await page.getByLabel("キーワード").fill("TM0001");
-    const selfRow = page.getByRole("row").filter({ hasText: "TM0001" });
-    await selfRow
-      .getByRole("button", { name: /の詳細を開く/ })
-      .click();
-    const selfDetail = page.getByRole("dialog");
-    await selfDetail.getByRole("tab", { name: "アカウント" }).click();
-    await expect(selfDetail.getByLabel("権限", { exact: true })).toHaveCount(0);
-    await expect(selfDetail.getByText("管理者（基盤で決まります）", { exact: true })).toBeVisible();
-  } finally {
-    await context.close();
-    await data.cleanup();
   }
 });

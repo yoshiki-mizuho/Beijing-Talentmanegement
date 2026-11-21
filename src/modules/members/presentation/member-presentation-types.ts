@@ -7,11 +7,11 @@ export type MemberRow = {
   profile: string | null;
   status: string;
   jobTitle: string | null;
-  departmentId: string;
+  departmentId: string | null;
   department: {
     id: string;
     name: string;
-  };
+  } | null;
   managerId: string | null;
   manager: { id: string; name: string } | null;
   targetRoleId: string | null;

@@ -86,10 +86,11 @@ export type CsvExportRows = {
     isActive: boolean;
   }>;
   members: Array<{
-    employeeNo: string;
-    name: string;
-    email: string;
-    department: { code: string };
+    // H-4b で自動作成した行は空のことがある（H-4d でメンバーの CSV ごと外す）。
+    employeeNo: string | null;
+    name: string | null;
+    email: string | null;
+    department: { code: string } | null;
     jobTitle: string | null;
     status: string;
     manager: RelatedEmployee;
@@ -142,10 +143,10 @@ export function toCsvExportRows<T extends CsvExportTarget>(
       ]);
     case "members":
       return (rows as CsvExportRows["members"]).map((row) => [
-        row.employeeNo,
-        row.name,
-        row.email,
-        row.department.code,
+        row.employeeNo ?? "",
+        row.name ?? "",
+        row.email ?? "",
+        row.department?.code ?? "",
         row.jobTitle ?? "",
         row.status.toLowerCase(),
         row.manager?.employeeNo ?? "",

@@ -11,6 +11,7 @@ import {
 } from "@/modules/dashboard/infrastructure/team-dashboard-repository";
 import { getLevelUpFeed, listSkillMentorCandidates } from "@/modules/growth/application/growth-service";
 import { listRoleAchievements } from "@/modules/roles/application/role-achievement-service";
+import { getMemberScope } from "@/modules/members/application/member-scope";
 
 export async function getTeamDashboard(
   managerMemberId: string,
@@ -18,7 +19,11 @@ export async function getTeamDashboard(
   now: Date = new Date()
 ) {
   const month = parseDashboardMonth(monthValue, now);
-  const data = await getTeamDashboardData(managerMemberId);
+  const scope = await getMemberScope("MANAGER", managerMemberId);
+  const data = await getTeamDashboardData(
+    managerMemberId,
+    scope.memberIds.filter((id) => id !== managerMemberId)
+  );
   if (!data) return null;
   const roleAchievements = await listRoleAchievements({
     memberIds: data.reports.map((member) => member.id)
@@ -26,7 +31,7 @@ export async function getTeamDashboard(
 
   const members: TeamMemberSnapshot[] = data.reports.map((member) => ({
     id: member.id,
-    name: member.name,
+    name: member.name ?? "",
     avatarUpdatedAt: member.avatarUpdatedAt,
     createdAt: member.createdAt,
     targetRole: member.targetRole
@@ -69,8 +74,8 @@ export async function getTeamDashboard(
   return {
     manager: {
       id: data.id,
-      name: data.name,
-      departmentName: data.department.name
+      name: data.name ?? "",
+      departmentName: data.department?.name ?? "担当範囲"
     },
     members,
     month,

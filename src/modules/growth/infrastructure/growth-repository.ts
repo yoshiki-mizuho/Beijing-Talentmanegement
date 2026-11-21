@@ -1,4 +1,5 @@
-import { AuthRole, MemberStatus, NotificationType, Prisma } from "@prisma/client";
+import { MemberStatus, NotificationType, Prisma } from "@prisma/client";
+import { displayMemberName } from "@/modules/members/domain/member-display";
 
 import type {
   CheerInput,
@@ -58,7 +59,7 @@ export function addLevelUpReaction(input: LevelUpReactionInput) {
     const data = {
       title: "レベルアップにリアクションが届きました",
       body: buildLevelUpReactionNotificationBody({
-        actorName: actor.name,
+        actorName: displayMemberName(actor.name),
         reactorCount: reactors.length,
         skillName: levelChange.skill.name,
         toLevel: levelChange.toLevel
@@ -88,35 +89,13 @@ export function removeLevelUpReaction(input: LevelUpReactionInput) {
 }
 
 export async function getLevelUpInteractionAccess(
-  levelChangeId: string,
-  viewerMemberId: string,
-  viewerRole: AuthRole
+  levelChangeId: string
 ) {
-  const [levelChange, viewer] = await Promise.all([
-    prisma.skillLevelChange.findUnique({
-      where: { id: levelChangeId },
-      select: {
-        memberId: true,
-        toLevel: true,
-        member: { select: { managerId: true, departmentId: true } }
-      }
-    }),
-    prisma.member.findUnique({
-      where: { id: viewerMemberId },
-      select: { departmentId: true, status: true }
-    })
-  ]);
-  if (
-    !levelChange ||
-    levelChange.toLevel === null ||
-    !viewer ||
-    viewer.status !== MemberStatus.ACTIVE
-  ) return null;
-  const canView =
-    viewerRole === AuthRole.ADMIN ||
-    levelChange.member.managerId === viewerMemberId ||
-    levelChange.member.departmentId === viewer.departmentId;
-  return canView ? { ownerMemberId: levelChange.memberId } : null;
+  const levelChange = await prisma.skillLevelChange.findUnique({
+    where: { id: levelChangeId },
+    select: { memberId: true, toLevel: true }
+  });
+  return levelChange?.toLevel === null ? null : levelChange;
 }
 
 export function createLevelUpComment(input: LevelUpCommentInput) {
@@ -339,10 +318,7 @@ export function createCheer(input: CheerInput) {
 export function getCheerAccessContext(toMemberId: string) {
   return prisma.member.findUnique({
     where: { id: toMemberId },
-    select: {
-      id: true,
-      managerId: true
-    }
+    select: { id: true }
   });
 }
 
@@ -378,7 +354,7 @@ export function listSkillMentorCandidates(skillIds: string[]) {
 export function getOneOnOneMember(memberId: string) {
   return prisma.member.findUnique({
     where: { id: memberId },
-    select: { id: true, managerId: true }
+    select: { id: true }
   });
 }
 

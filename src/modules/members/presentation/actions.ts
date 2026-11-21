@@ -1,98 +1,26 @@
 "use server";
 
-import { MemberStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 import {
   approveSkillAssessments,
   createSkillAssessment,
   createSkillAssessments,
-  createMember,
-  deactivateMember,
   removeMemberSkill,
   reviewSkillAssessment,
   setMemberSkillLevel,
-  updateMember,
-  updateMemberManager,
-  updateMemberRole,
   updateMemberTargetRole
 } from "@/modules/members/application/member-service";
 import { canUpdateMemberTargetRole } from "@/modules/members/domain/member-target-role-policy";
 import { getMemberScope, memberIsInScope } from "@/modules/members/application/member-scope";
 import {
   AuthorizationError,
-  adminOnly,
   managerOrAdmin,
   requireAuthenticatedMember,
   requireRoles
 } from "@/server/auth/authorization";
-import { runAction, runActionWithData, type ActionResult } from "@/shared/lib/action-result";
+import { runAction, type ActionResult } from "@/shared/lib/action-result";
 import { getNumber, getOptionalString, getString } from "@/shared/lib/form-data";
-
-function parseMemberForm(formData: FormData) {
-  return {
-    employeeNo: getString(formData, "employeeNo"),
-    name: getString(formData, "name"),
-    email: getString(formData, "email"),
-    departmentId: getString(formData, "departmentId"),
-    jobTitle: getOptionalString(formData, "jobTitle"),
-    profile: getOptionalString(formData, "profile"),
-    platformUserId: getOptionalString(formData, "platformUserId") ?? "",
-    status: getString(formData, "status") as MemberStatus
-  };
-}
-
-export async function createMemberAction(formData: FormData): Promise<ActionResult> {
-  return runActionWithData(async () => {
-    const session = await requireRoles(adminOnly);
-    const member = await createMember(parseMemberForm(formData), session.user.memberId);
-
-    if (session.user.role === "ADMIN") {
-      await updateMemberManager({
-        memberId: member.id,
-        managerId: getOptionalString(formData, "managerId") ?? null
-      }, session.user.memberId);
-      await updateMemberTargetRole({
-        memberId: member.id,
-        targetRoleId: getOptionalString(formData, "targetRoleId") ?? null
-      }, session.user.memberId);
-    }
-    revalidatePath("/talent/members");
-    return { name: member.name, email: member.email };
-  }, "メンバーを登録しました。");
-}
-
-export async function updateMemberRoleAction(
-  formData: FormData
-): Promise<ActionResult> {
-  return runAction(async () => {
-    const session = await requireRoles(adminOnly);
-    await updateMemberRole(
-      getString(formData, "memberId"),
-      getString(formData, "role"),
-      session.user.memberId
-    );
-    revalidatePath("/talent/members");
-    revalidatePath("/talent", "layout");
-  }, "権限を変更しました。");
-}
-
-export async function updateMemberAction(formData: FormData): Promise<ActionResult> {
-  return runAction(async () => {
-    const session = await requireRoles(adminOnly);
-    const memberId = getString(formData, "id");
-    await updateMember(memberId, parseMemberForm(formData), session.user.memberId);
-    revalidatePath("/talent/members");
-  }, "メンバー情報を更新しました。");
-}
-
-export async function deactivateMemberAction(formData: FormData): Promise<ActionResult> {
-  return runAction(async () => {
-    const session = await requireRoles(adminOnly);
-    await deactivateMember(getString(formData, "id"), session.user.memberId);
-    revalidatePath("/talent/members");
-  }, "メンバーを無効化しました。");
-}
 
 export async function setMemberSkillLevelAction(formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
@@ -204,20 +132,6 @@ export async function approveSkillAssessmentsAction(
     revalidatePath("/talent/roles");
     return approved.length;
   }, (count) => `${count}件の申請を承認しました。`);
-}
-
-export async function updateMemberManagerAction(
-  formData: FormData
-): Promise<ActionResult> {
-  return runAction(async () => {
-    const session = await requireRoles(adminOnly);
-    await updateMemberManager({
-      memberId: getString(formData, "memberId"),
-      managerId: getOptionalString(formData, "managerId") ?? null
-    }, session.user.memberId);
-    revalidatePath("/talent/members");
-    revalidatePath("/talent/skill-approvals");
-  }, "上司を更新しました。");
 }
 
 export async function updateMemberTargetRoleAction(

@@ -145,7 +145,8 @@ async function main() {
               email: memberInput.email,
               departmentId: department.id,
               jobTitle: memberInput.jobTitle,
-              status: MemberStatus.ACTIVE
+              status: MemberStatus.ACTIVE,
+              platformUserId: memberInput.platformUserId
             }
           })
         : await tx.member.create({
@@ -155,34 +156,11 @@ async function main() {
               email: memberInput.email,
               departmentId: department.id,
               jobTitle: memberInput.jobTitle,
-              status: MemberStatus.ACTIVE
+              status: MemberStatus.ACTIVE,
+              platformUserId: memberInput.platformUserId
             }
           });
-
-      const existingUser = await tx.user.findFirst({
-        where: { memberId: member.id },
-        select: { id: true }
-      });
-
-      if (existingUser) {
-        await tx.user.update({
-          where: { id: existingUser.id },
-          data: {
-            platformUserId: memberInput.platformUserId,
-            role: memberInput.role,
-            memberId: member.id
-          }
-        });
-        continue;
-      }
-
-      await tx.user.create({
-        data: {
-          platformUserId: memberInput.platformUserId,
-          role: memberInput.role,
-          memberId: member.id
-        }
-      });
+      void member;
     }
   });
 
@@ -412,10 +390,14 @@ async function main() {
       select: { id: true, employeeNo: true, name: true }
     });
     const memberIdsByEmployeeNo = new Map(
-      members.map((member) => [member.employeeNo, member.id])
+      members.flatMap((member) => member.employeeNo
+        ? [[member.employeeNo, member.id] as const]
+        : [])
     );
     const memberNamesByEmployeeNo = new Map(
-      members.map((member) => [member.employeeNo, member.name])
+      members.flatMap((member) => member.employeeNo && member.name
+        ? [[member.employeeNo, member.name] as const]
+        : [])
     );
 
     for (const profile of demoMemberProfiles) {
@@ -642,28 +624,9 @@ async function main() {
     });
 
     if (!existingAssessment) {
-      const assessmentMember = await tx.member.findUniqueOrThrow({
-        where: { id: assessmentMemberId },
-        select: { managerId: true }
-      });
-      const reviewerUsers = await tx.user.findMany({
-        where: assessmentMember.managerId
-          ? {
-              OR: [
-                { role: AuthRole.ADMIN },
-                { memberId: assessmentMember.managerId }
-              ],
-              memberId: { not: null }
-            }
-          : {
-              role: { in: [AuthRole.ADMIN, AuthRole.MANAGER] },
-              memberId: { not: null }
-            },
-        select: { memberId: true }
-      });
-      const recipientMemberIds = reviewerUsers
-        .map((user) => user.memberId)
-        .filter((memberId): memberId is string => Boolean(memberId));
+      const recipientMemberIds = [
+        requireId(memberIdsByEmployeeNo, "TM0002", "Manager")
+      ];
       const assessmentMemberName = requireId(
         memberNamesByEmployeeNo,
         "TM0003",

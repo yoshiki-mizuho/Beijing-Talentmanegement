@@ -3,6 +3,7 @@ import type { Route } from "next";
 import { ScrollText } from "lucide-react";
 import type { AuditLogListItem } from "../application/audit-log-service";
 import { MemberAvatar } from "@/shared/ui/member-avatar";
+import { displayMemberName } from "@/modules/members/domain/member-display";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { cn } from "@/shared/lib/utils";
 import { Pagination } from "@/shared/ui/pagination";
@@ -85,7 +86,7 @@ function AuditRow({ item }: { item: AuditLogListItem }) {
         {item.actor ? (
           <MemberAvatar
             memberId={item.actor.id}
-            name={item.actor.name}
+            name={displayMemberName(item.actor.name)}
             avatarUpdatedAt={item.actor.avatarUpdatedAt}
             size="sm"
           />

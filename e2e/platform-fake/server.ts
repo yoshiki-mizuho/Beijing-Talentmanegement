@@ -108,7 +108,8 @@ const supportedMethods = new Set([
   "GetLeaderScopeNodeIDs",
   "GetNodeMembers",
   "GetNodeMembersBatch",
-  "GetSuperiorIDs"
+  "GetSuperiorIDs",
+  "GetDirectLeaderIDs"
 ]);
 const implementations: grpc.UntypedServiceImplementation = Object.fromEntries(
   Object.keys(loaded.user.v1.UserService.service)
@@ -174,6 +175,14 @@ Object.assign(implementations, {
       nodeId = node.parentId;
     }
     callback(null, { superiorIds: [...new Set(superiorIds)] });
+  }),
+  getDirectLeaderIDs: withTenant((call, callback, tenant) => {
+    const user = tenant.users.find((candidate) => candidate.id === call.request.userId);
+    if (!user) return callback(grpcError(grpc.status.NOT_FOUND, "user not found"));
+    const node = tenant.nodes.find((candidate) => candidate.id === user.organizationNodeId);
+    callback(null, {
+      userIds: node?.leaderUserIds.filter((id) => id !== user.id) ?? []
+    });
   })
 });
 
@@ -215,6 +224,14 @@ export async function startFakePlatform(grpcPort = 0, httpPort = 0) {
       const tenant = tenants.find((candidate) => candidate.id === body.tenantId);
       if (!tenant) response.statusCode = 404;
       else tenant.nodes.push(body.node as FakeNode);
+    } else if (request.url === "/__fake/users/delete") {
+      const tenant = tenants.find((candidate) => candidate.id === body.tenantId);
+      if (!tenant) response.statusCode = 404;
+      else tenant.users = tenant.users.filter((user) => user.id !== body.userId);
+    } else if (request.url === "/__fake/nodes/delete") {
+      const tenant = tenants.find((candidate) => candidate.id === body.tenantId);
+      if (!tenant) response.statusCode = 404;
+      else tenant.nodes = tenant.nodes.filter((node) => node.id !== body.nodeId);
     } else if (request.url === "/__fake/delay") {
       delayMs = Math.max(0, Number(body.delayMs) || 0);
     } else {

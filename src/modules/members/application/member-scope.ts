@@ -1,82 +1,57 @@
-import type { AuthRole, MemberStatus } from "@prisma/client";
+import type { AuthRole } from "@prisma/client";
 import { cache } from "react";
 
 import * as memberScopeRepository from "@/modules/members/infrastructure/member-scope-repository";
-import { collectDescendantIds } from "@/modules/members/domain/department-hierarchy";
+import { getLeaderScope, getOrganization } from "@/server/platform/directory";
+import type { PlatformUser } from "@/server/platform/types";
 
 export type MemberScope = {
-  // 在籍状態を問わず、閲覧・管理できるメンバー（休職中・退職も一覧の絞り込みで見るため含める）
   memberIds: string[];
   activeMemberCount: number;
   name: string;
   departmentId: string | null;
 };
 
-type ScopeMember = {
-  id: string;
-  departmentId: string;
-  managerId: string | null;
-  status: MemberStatus;
-};
-
-export function resolveMemberScope(input: {
-  role: AuthRole;
-  requestedDepartmentId?: string;
-  viewer: { id: string; departmentId: string; departmentName: string };
-  departments: { id: string; name: string; parentDepartmentId: string | null }[];
-  members: ScopeMember[];
-}): MemberScope {
-  if (input.role === "ADMIN") {
-    const department = input.departments.find(
-      (item) => item.id === input.requestedDepartmentId
-    );
-    const departmentIds = department
-      ? new Set(collectDescendantIds(input.departments, department.id))
-      : null;
-    return buildScope(
-      input.members.filter((member) => !departmentIds || departmentIds.has(member.departmentId)),
-      department?.name ?? "全社",
-      department?.id ?? null
-    );
+async function platformScope(role: AuthRole, platformUserId: string) {
+  if (role === "ADMIN") {
+    const organization = await getOrganization(platformUserId);
+    return { members: organization.members, name: "全社" };
   }
-
-  const departmentIds = new Set(
-    collectDescendantIds(input.departments, input.viewer.departmentId)
-  );
-  return buildScope(
-    input.members.filter(
-      (member) =>
-        departmentIds.has(member.departmentId) ||
-        member.managerId === input.viewer.id
-    ),
-    input.viewer.departmentName,
-    input.viewer.departmentId
-  );
-}
-
-function buildScope(
-  members: ScopeMember[],
-  name: string,
-  departmentId: string | null
-): MemberScope {
+  if (role === "MANAGER") {
+    const leaderScope = await getLeaderScope(platformUserId);
+    const members = new Map(leaderScope.members);
+    if (!members.has(platformUserId)) {
+      members.set(platformUserId, await memberScopeRepository.platformUserFallback(platformUserId));
+    }
+    return { members, name: "担当範囲" };
+  }
   return {
-    memberIds: members.map((member) => member.id),
-    activeMemberCount: members.filter((member) => member.status === "ACTIVE").length,
-    name,
-    departmentId
+    members: new Map<string, PlatformUser>([
+      [platformUserId, await memberScopeRepository.platformUserFallback(platformUserId)]
+    ]),
+    name: "本人"
   };
 }
 
 export const getMemberScope = cache(async function getMemberScope(
   role: AuthRole,
   memberId: string,
-  requestedDepartmentId?: string
-) {
-  return resolveMemberScope({
-    role,
-    requestedDepartmentId,
-    ...(await memberScopeRepository.getMemberScopeSource(memberId))
-  });
+  _requestedDepartmentId?: string
+): Promise<MemberScope> {
+  void _requestedDepartmentId;
+  const viewer = await memberScopeRepository.getScopeViewer(memberId);
+  if (!viewer.platformUserId) {
+    return { memberIds: [viewer.id], activeMemberCount: 1, name: "本人", departmentId: null };
+  }
+
+  const scope = await platformScope(role, viewer.platformUserId);
+  const members = await memberScopeRepository.ensureScopeMembers(scope.members);
+  return {
+    memberIds: members.map((member) => member.id),
+    activeMemberCount: [...scope.members.values()].filter((member) => member.status === "ACTIVE").length,
+    name: scope.name,
+    departmentId: null
+  };
 });
 
 export function memberIsInScope(scope: MemberScope, memberId: string) {
