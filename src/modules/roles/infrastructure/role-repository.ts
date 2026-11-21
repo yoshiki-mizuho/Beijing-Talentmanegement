@@ -192,8 +192,8 @@ export async function updateRoleWithRequirements(
     for (const current of before.roleRequirements) {
       const next = nextBySkillId.get(current.skillId);
       if (!next) {
-        await tx.roleRequirement.delete({
-          where: { roleId_skillId: { roleId: id, skillId: current.skillId } }
+        await tx.roleRequirement.deleteMany({
+          where: { roleId: id, skillId: current.skillId }
         });
         await recordAuditLog(tx, {
           actorMemberId,
@@ -216,8 +216,8 @@ export async function updateRoleWithRequirements(
         { requiredLevel: next.requiredLevel, isRequired: current.isRequired, anyOfGroup: next.anyOfGroup ?? null }
       );
       if (requirementDiff) {
-        await tx.roleRequirement.update({
-          where: { roleId_skillId: { roleId: id, skillId: current.skillId } },
+        await tx.roleRequirement.updateMany({
+          where: { roleId: id, skillId: current.skillId },
           data: { requiredLevel: next.requiredLevel, anyOfGroup: next.anyOfGroup ?? null }
         });
         await recordAuditLog(tx, {
@@ -296,25 +296,19 @@ export async function upsertRoleRequirement(
   actorMemberId: string | null
 ) {
   return prisma.$transaction(async (tx) => {
-    const before = await tx.roleRequirement.findUnique({
-      where: {
-        roleId_skillId: { roleId: input.roleId, skillId: input.skillId }
-      }
+    const before = await tx.roleRequirement.findFirst({
+      where: { roleId: input.roleId, skillId: input.skillId }
     });
-    const requirement = await tx.roleRequirement.upsert({
-      where: {
-        roleId_skillId: {
-          roleId: input.roleId,
-          skillId: input.skillId
-        }
-      },
-      update: {
-        requiredLevel: input.requiredLevel,
-        isRequired: input.isRequired,
-        anyOfGroup: input.anyOfGroup ?? null
-      },
-      create: input
-    });
+    const requirement = before
+      ? await tx.roleRequirement.update({
+          where: { id: before.id },
+          data: {
+            requiredLevel: input.requiredLevel,
+            isRequired: input.isRequired,
+            anyOfGroup: input.anyOfGroup ?? null
+          }
+        })
+      : await tx.roleRequirement.create({ data: input });
     const diff = diffForAudit(
       before
         ? { requiredLevel: before.requiredLevel, isRequired: before.isRequired, anyOfGroup: before.anyOfGroup ?? null }

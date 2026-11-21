@@ -23,8 +23,9 @@ const mocks = vi.hoisted(() => ({
   notificationCreateMany: vi.fn(),
   notificationCreate: vi.fn(),
   notificationUpdateMany: vi.fn(),
-  memberSkillFindUnique: vi.fn(),
-  memberSkillUpsert: vi.fn(),
+  memberSkillFindFirst: vi.fn(),
+  memberSkillCreate: vi.fn(),
+  memberSkillUpdate: vi.fn(),
   skillLevelChangeCreate: vi.fn(),
   auditLogCreate: vi.fn(),
   auditLogCreateMany: vi.fn(),
@@ -73,8 +74,9 @@ const transactionClient = {
     updateMany: mocks.notificationUpdateMany
   },
   memberSkill: {
-    findUnique: mocks.memberSkillFindUnique,
-    upsert: mocks.memberSkillUpsert
+    findFirst: mocks.memberSkillFindFirst,
+    create: mocks.memberSkillCreate,
+    update: mocks.memberSkillUpdate
   },
   skillLevelChange: { create: mocks.skillLevelChangeCreate },
   auditLog: {
@@ -380,8 +382,8 @@ describe("approveSkillAssessments transaction boundary", () => {
         skill: { name: `スキル${id}` }
       })
     );
-    mocks.memberSkillFindUnique.mockResolvedValue(null);
-    mocks.memberSkillUpsert.mockResolvedValue({});
+    mocks.memberSkillFindFirst.mockResolvedValue(null);
+    mocks.memberSkillCreate.mockResolvedValue({});
     mocks.skillLevelChangeCreate.mockResolvedValue({});
     mocks.assessmentUpdate.mockImplementation(({ where: { id }, data }) =>
       Promise.resolve({ id, ...data })
@@ -401,7 +403,7 @@ describe("approveSkillAssessments transaction boundary", () => {
 
     expect(mocks.transaction).toHaveBeenCalledTimes(1);
     expect(mocks.assessmentFindUnique).toHaveBeenCalledTimes(2);
-    expect(mocks.memberSkillUpsert).toHaveBeenCalledTimes(2);
+    expect(mocks.memberSkillCreate).toHaveBeenCalledTimes(2);
     expect(mocks.skillLevelChangeCreate).toHaveBeenCalledTimes(2);
     expect(mocks.notificationCreate).toHaveBeenCalledTimes(2);
     expect(mocks.notificationUpdateMany).toHaveBeenCalledTimes(2);

@@ -300,7 +300,7 @@ export async function createMemberWithUser(
   const { platformUserId, ...memberInput } = input;
   const member = await tx.member.create({ data: memberInput });
   if (platformUserId) {
-    const existingUser = await tx.user.findUnique({
+    const existingUser = await tx.user.findFirst({
       where: { platformUserId },
       select: { id: true, memberId: true }
     });
@@ -404,33 +404,23 @@ export async function upsertMemberSkill(
   actorMemberId: string | null
 ) {
   return prisma.$transaction(async (tx) => {
-    const current = await tx.memberSkill.findUnique({
-      where: {
-        memberId_skillId: {
-          memberId: input.memberId,
-          skillId: input.skillId
-        }
-      }
+    const current = await tx.memberSkill.findFirst({
+      where: { memberId: input.memberId, skillId: input.skillId }
     });
     const changedAt = new Date();
-    const memberSkill = await tx.memberSkill.upsert({
-      where: {
-        memberId_skillId: {
-          memberId: input.memberId,
-          skillId: input.skillId
-        }
-      },
-      update: {
-        level: input.level,
-        lastAssessedAt: changedAt
-      },
-      create: {
-        memberId: input.memberId,
-        skillId: input.skillId,
-        level: input.level,
-        lastAssessedAt: changedAt
-      }
-    });
+    const memberSkill = current
+      ? await tx.memberSkill.update({
+          where: { id: current.id },
+          data: { level: input.level, lastAssessedAt: changedAt }
+        })
+      : await tx.memberSkill.create({
+          data: {
+            memberId: input.memberId,
+            skillId: input.skillId,
+            level: input.level,
+            lastAssessedAt: changedAt
+          }
+        });
 
     if (shouldRecordSkillLevelChange(current?.level ?? null, input.level)) {
       await tx.skillLevelChange.create({
@@ -477,13 +467,12 @@ export async function removeMemberSkill(
 ) {
   return prisma.$transaction(async (tx) => {
     const changedAt = new Date();
+    const existing = await tx.memberSkill.findFirstOrThrow({
+      where: { memberId, skillId },
+      select: { id: true }
+    });
     const removed = await tx.memberSkill.delete({
-      where: {
-        memberId_skillId: {
-          memberId,
-          skillId
-        }
-      }
+      where: { id: existing.id }
     });
     await tx.skillLevelChange.create({
       data: {
@@ -963,38 +952,33 @@ async function reviewSkillAssessmentInTransaction(
 
     const reviewedAt = new Date();
     if (reviewStatus !== SkillSelfAssessmentStatus.REJECTED && approvedLevel) {
-      const currentMemberSkill = await tx.memberSkill.findUnique({
+      const currentMemberSkill = await tx.memberSkill.findFirst({
         where: {
-          memberId_skillId: {
-            memberId: assessment.memberId,
-            skillId: assessment.skillId
-          }
+          memberId: assessment.memberId,
+          skillId: assessment.skillId
         }
       });
-      await tx.memberSkill.upsert({
-        where: {
-          memberId_skillId: {
-            memberId: assessment.memberId,
-            skillId: assessment.skillId
-          }
-        },
-        update: {
+      const memberSkillData = {
           level: approvedLevel,
           yearsOfExperience: assessment.yearsOfExperience,
           approvedByMemberId: input.reviewerMemberId,
           approvedAt: reviewedAt,
           lastAssessedAt: reviewedAt
-        },
-        create: {
+      };
+      if (currentMemberSkill) {
+        await tx.memberSkill.update({
+          where: { id: currentMemberSkill.id },
+          data: memberSkillData
+        });
+      } else {
+        await tx.memberSkill.create({
+          data: {
           memberId: assessment.memberId,
           skillId: assessment.skillId,
-          level: approvedLevel,
-          yearsOfExperience: assessment.yearsOfExperience,
-          approvedByMemberId: input.reviewerMemberId,
-          approvedAt: reviewedAt,
-          lastAssessedAt: reviewedAt
-        }
-      });
+          ...memberSkillData
+          }
+        });
+      }
       if (shouldRecordSkillLevelChange(currentMemberSkill?.level ?? null, approvedLevel)) {
         await tx.skillLevelChange.create({
           data: {

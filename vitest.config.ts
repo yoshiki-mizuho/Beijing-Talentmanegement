@@ -8,7 +8,8 @@ export default defineConfig({
       "src/**/*.test.tsx",
       "prisma/**/*.test.ts",
       "e2e/**/*.test.ts"
-    ]
+    ],
+    exclude: ["src/**/*.db.test.ts"]
   },
   resolve: {
     alias: {

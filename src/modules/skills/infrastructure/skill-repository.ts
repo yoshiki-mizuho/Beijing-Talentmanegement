@@ -77,7 +77,7 @@ export async function createSkillCategoryGroup(
   actorMemberId: string | null
 ) {
   return prisma.$transaction(async (tx) => {
-    const duplicate = await tx.skillCategoryGroup.findUnique({
+    const duplicate = await tx.skillCategoryGroup.findFirst({
       where: { name: input.name }, select: { id: true }
     });
     if (duplicate) throw new UserFacingError("同じ名前の大分類がすでにあります。");
@@ -705,11 +705,20 @@ export async function updateSkillWithLevelGuides(
           where: { skillId: id, level: guide.level }
         });
       } else {
-        await transaction.skillLevelGuide.upsert({
-          where: { skillId_level: { skillId: id, level: guide.level } },
-          create: { skillId: id, ...guide },
-          update: { description: guide.description }
+        const existingGuide = await transaction.skillLevelGuide.findFirst({
+          where: { skillId: id, level: guide.level },
+          select: { id: true }
         });
+        if (existingGuide) {
+          await transaction.skillLevelGuide.update({
+            where: { id: existingGuide.id },
+            data: { description: guide.description }
+          });
+        } else {
+          await transaction.skillLevelGuide.create({
+            data: { skillId: id, ...guide }
+          });
+        }
       }
     }
 

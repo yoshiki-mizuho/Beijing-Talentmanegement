@@ -23,17 +23,27 @@ test("MEMBERがスキルとレベルで人を探しプロフィールを開く",
 });
 
 test("いま伸びている技術から移動すると選択欄にスキル名が表示される", async ({ page }) => {
-  await login(page, credentials.MEMBER);
-  await dismissExistingLevelUpDialogs(page);
-  await page.goto("/talent/explore");
-  const trendingSkill = page
-    .getByRole("region", { name: "いま伸びている技術" })
-    .getByRole("link")
-    .first();
-  const skillName = await trendingSkill.locator("strong").textContent();
-  await trendingSkill.click();
-  await expect(page).toHaveURL(/skill=.+/);
-  await expect(page.getByRole("combobox", { name: "探すスキル" })).toHaveValue(skillName ?? "");
+  // 直近 30 日のレベルアップから作る一覧なので、seed の古い履歴に頼らず 1 件作る。
+  const data = createE2eTestData();
+  try {
+    const department = await data.createDepartment("伸びている技術部署");
+    const member = await data.createMember({ label: "伸びている技術メンバー", departmentId: department.id });
+    const { skill } = await data.createSkill("伸びている技術");
+    await data.createLevelChange({ memberId: member.member.id, skillId: skill.id, fromLevel: 1, toLevel: 2 });
+    await login(page, credentials.MEMBER);
+    await dismissExistingLevelUpDialogs(page);
+    await page.goto("/talent/explore");
+    const trendingSkill = page
+      .getByRole("region", { name: "いま伸びている技術" })
+      .getByRole("link")
+      .first();
+    const skillName = await trendingSkill.locator("strong").textContent();
+    await trendingSkill.click();
+    await expect(page).toHaveURL(/skill=.+/);
+    await expect(page.getByRole("combobox", { name: "探すスキル" })).toHaveValue(skillName ?? "");
+  } finally {
+    await data.cleanup();
+  }
 });
 
 test("コンボボックスはキーボードだけでスキルを選べる", async ({ page }) => {

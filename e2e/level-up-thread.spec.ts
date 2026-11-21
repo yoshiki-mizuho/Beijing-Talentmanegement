@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { prisma } from "../src/server/db/prisma";
+import { withE2eTenant } from "./fixtures/test-data";
 import { createE2eTestData } from "./fixtures/test-data";
 import { openLoggedInContext } from "./helpers/auth";
 
@@ -57,10 +58,10 @@ test("レベルアップのリアクション、コメント、返信を通知�
     await expect(secondReaction).toHaveAttribute("aria-pressed", "true");
     // 2人目のリアクションでも通知は1件のまま、未読に戻る（サーバーの処理を待ってから確かめる）
     await expect(async () => {
-      const notifications = await prisma.notification.findMany({
+      const notifications = await withE2eTenant(() => prisma.notification.findMany({
         where: { skillLevelChangeId: levelChangeId, type: "LEVEL_UP_REACTED" },
         select: { status: true, body: true }
-      });
+      }));
       expect(notifications).toHaveLength(1);
       expect(notifications[0]?.status).toBe("UNREAD");
       expect(notifications[0]?.body).toMatch(/ほか 1人が/);

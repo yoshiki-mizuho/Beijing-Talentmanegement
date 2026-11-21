@@ -364,8 +364,8 @@ async function applyRoles(
     const roleId = roleIds.get(change.roleCode);
     if (!roleId || !change.skillId) throw new Error(`ロール ${change.roleName} の要件登録に失敗しました`);
     if (change.kind === "delete") {
-      await tx.roleRequirement.delete({
-        where: { roleId_skillId: { roleId, skillId: change.skillId } },
+      await tx.roleRequirement.deleteMany({
+        where: { roleId, skillId: change.skillId },
       });
       await recordAuditLog(tx, {
         actorMemberId,
@@ -693,11 +693,20 @@ async function applySkills(
             where: { skillId: saved.id, level: guide.level },
           });
         } else {
-          await tx.skillLevelGuide.upsert({
-            where: { skillId_level: { skillId: saved.id, level: guide.level } },
-            create: { skillId: saved.id, ...guide },
-            update: { description: guide.description },
+          const existingGuide = await tx.skillLevelGuide.findFirst({
+            where: { skillId: saved.id, level: guide.level },
+            select: { id: true },
           });
+          if (existingGuide) {
+            await tx.skillLevelGuide.update({
+              where: { id: existingGuide.id },
+              data: { description: guide.description },
+            });
+          } else {
+            await tx.skillLevelGuide.create({
+              data: { skillId: saved.id, ...guide },
+            });
+          }
         }
       }
       const before = Object.fromEntries(

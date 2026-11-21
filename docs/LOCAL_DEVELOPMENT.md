@@ -10,15 +10,16 @@
 ## 初回セットアップ（Windows）
 
 1. PostgreSQL 17をインストールする（例: `winget install PostgreSQL.PostgreSQL.17`）。サービス `postgresql-x64-17` が起動していることを確認する。
-2. `postgres` ユーザーで、アプリ用のroleとdatabaseを作成する。値は `.env.example` と同じローカル専用の値にする。
+2. `postgres` ユーザーで、migration 用の role と database を作成する。次に、RLS が効くアプリ用 role `talent_app` を作る SQL を1回だけ流す（テーブルへの権限は、手順 4 の migration の後に `grant-local-app-role.sql` で付ける）。パスワードはファイルへ書かず、`app_password` 変数で渡す。
 
 ```powershell
 & "C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres -h localhost -c "CREATE ROLE talent WITH LOGIN PASSWORD 'talent_password' CREATEDB;" -c "CREATE DATABASE talentmanagement OWNER talent;"
+& "C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres -h localhost -d talentmanagement -v app_password="ローカル用のアプリパスワード" -f prisma/sql/create-local-app-role.sql
 ```
 
 `CREATEDB` は、Prismaのmigration差分確認でshadow databaseを作るために必要。
 
-3. `.env.example` を `.env` にコピーする。`.env` はGit管理外であり、コミットしない。
+3. `.env.example` を `.env` にコピーする。`DATABASE_URL` は `talent_app` のアプリ用 URL、`MIGRATE_DATABASE_URL` は `talent` の migration 用 URL にする。`.env` はGit管理外であり、コミットしない。
 
 AIを通信なしで確認する場合は、`.env`の`AI_API_BASE_URL`を`fake`にする。
 
@@ -39,8 +40,11 @@ seedは`localhost`、`127.0.0.1`、`postgres`への接続ではそのまま実�
 ```powershell
 npm.cmd ci
 npm.cmd exec -- prisma migrate deploy
+npm.cmd exec -- prisma db execute --file prisma/sql/grant-local-app-role.sql
 npm.cmd run db:seed
 ```
+
+`prisma.config.ts` は `MIGRATE_DATABASE_URL` を優先する。クラスタの migrate ジョブは移行用の値を `DATABASE_URL` として受け取るため、`MIGRATE_DATABASE_URL` が無い場合は `DATABASE_URL` を使う。seed、アプリ、E2E は `DATABASE_URL` の `talent_app` で動かす。
 
 5. 画面は基盤の入口（hub-devkit）を通して開く。seed の利用者は、管理者 `22222222-2222-4222-8222-222222222222`、マネージャー `22222222-2222-4222-8222-000000000004`、メンバー `22222222-2222-4222-8222-000000000005`（テナント `11111111-1111-4111-8111-111111111111`）。
 
@@ -53,6 +57,8 @@ npm.cmd run verify
 ```
 
 一部の手順を省略する場合は、`npm.cmd run verify -- --skip=build,migrate` のように手順名をカンマ区切りで指定する。手順名は `typecheck`、`lint`、`test`、`build`、`migrate` である。各手順は `npm.cmd run typecheck` などの個別コマンドでも引き続き実行できる。
+
+RLS の DB 専用テストは migration 後に `npm.cmd run test:db` で実行する。通常の `npm.cmd run test` には含まれない。
 
 ## E2Eテスト
 
@@ -88,7 +94,7 @@ npm.cmd run db:cleanup-e2e -- --yes
 
 ## DBを作り直す
 
-DBの状態が壊れた場合は、`npm.cmd exec -- prisma migrate reset` で作り直してからseedを再実行する。ローカルDBの中身は使い捨てとして扱い、共有したいデータはseedに反映する。
+DBの状態が壊れた場合は、`MIGRATE_DATABASE_URL` に migration 用 URL が設定されていることを確認し、`npm.cmd exec -- prisma migrate reset` で作り直す。reset はスキーマを作り直して `talent_app` の権限が消えるので、`npm.cmd exec -- prisma db execute --file prisma/sql/grant-local-app-role.sql` で権限を付け直してから、seedを再実行する。ローカルDBの中身は使い捨てとして扱い、共有したいデータはseedに反映する。
 
 ## hub-devkit で動かす
 

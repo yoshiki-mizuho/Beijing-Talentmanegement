@@ -3,7 +3,9 @@ import path from "node:path";
 import { delimiter } from "node:path";
 import pg from "pg";
 
+// migration は移行用のロールで確かめる（DATABASE_URL はアプリ用のロールで、DB を作れない）。
 const databaseUrl =
+  process.env.MIGRATE_DATABASE_URL ??
   process.env.DATABASE_URL ??
   "postgresql://talent:talent_password@localhost:5432/talentmanagement?schema=public";
 const shadowDatabaseUrl =

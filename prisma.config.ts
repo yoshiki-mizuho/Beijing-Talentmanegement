@@ -1,8 +1,7 @@
 import "dotenv/config";
 import { defineConfig, env } from "prisma/config";
 
-function defaultShadowDatabaseUrl() {
-  const databaseUrl = process.env.DATABASE_URL;
+function defaultShadowDatabaseUrl(databaseUrl: string | undefined) {
 
   if (!databaseUrl) {
     return undefined;
@@ -20,8 +19,11 @@ export default defineConfig({
     seed: "tsx prisma/seed.ts"
   },
   datasource: {
-    url: env("DATABASE_URL"),
+    url: process.env.MIGRATE_DATABASE_URL ?? env("DATABASE_URL"),
     shadowDatabaseUrl:
-      process.env.SHADOW_DATABASE_URL ?? defaultShadowDatabaseUrl()
+      process.env.SHADOW_DATABASE_URL ??
+      defaultShadowDatabaseUrl(
+        process.env.MIGRATE_DATABASE_URL ?? process.env.DATABASE_URL
+      )
   }
 });

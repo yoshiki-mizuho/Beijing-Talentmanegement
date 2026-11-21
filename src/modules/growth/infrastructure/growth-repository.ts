@@ -16,8 +16,8 @@ import { UserFacingError } from "@/shared/lib/user-facing-error";
 
 export function addLevelUpReaction(input: LevelUpReactionInput) {
   return prisma.$transaction(async (tx) => {
-    const existing = await tx.levelUpReaction.findUnique({
-      where: { levelChangeId_memberId_type: input }
+    const existing = await tx.levelUpReaction.findFirst({
+      where: input
     });
     if (existing) return existing;
 
