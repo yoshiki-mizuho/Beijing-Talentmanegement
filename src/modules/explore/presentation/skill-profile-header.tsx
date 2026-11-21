@@ -37,7 +37,7 @@ export function SkillProfileHeader({
               avatarUpdatedAt={profile.avatarUpdatedAt}
               size="lg"
               className="h-28 w-28 border-4 border-white text-4xl shadow-lg"
-              href={`/people/${profile.id}`}
+              href={`/talent/people/${profile.id}`}
             />
             {isOwner ? (
               <AvatarEditor hasAvatar={Boolean(profile.avatarUpdatedAt)} />

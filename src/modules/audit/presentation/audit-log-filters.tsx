@@ -52,7 +52,7 @@ export function AuditLogFilters({ query, actors }: Props) {
         value.forEach((item) => params.append(key, item));
       else if (value) params.set(key, value);
     }
-    startTransition(() => router.push(`/audit-logs?${params.toString()}`));
+    startTransition(() => router.push(`/talent/audit-logs?${params.toString()}`));
   };
   const updatePeriod = (from: string, to: string) => {
     if (isValidDate(from) && isValidDate(to) && from <= to) {
@@ -142,7 +142,7 @@ export function AuditLogFilters({ query, actors }: Props) {
         />
         <form
           className="self-end"
-          action="/audit-logs"
+          action="/talent/audit-logs"
           onSubmit={(event) => {
             event.preventDefault();
             update({ q: search });
@@ -224,7 +224,7 @@ export function AuditLogFilters({ query, actors }: Props) {
           size="small"
           className="ml-auto"
           onClick={() =>
-            startTransition(() => router.push("/audit-logs?period=30"))
+            startTransition(() => router.push("/talent/audit-logs?period=30"))
           }
         >
           <FilterX className="h-4 w-4" />

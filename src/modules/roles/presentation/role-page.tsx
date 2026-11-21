@@ -155,7 +155,7 @@ function RoleList({
         return (
           <Link
             key={role.id}
-            href={`/roles?role=${encodeURIComponent(role.id)}`}
+            href={`/talent/roles?role=${encodeURIComponent(role.id)}`}
             className={`block rounded-xl border p-4 ${role.id === selectedRoleId ? "border-[var(--primary)] bg-[var(--primary-subtle)]" : "border-[var(--border)] bg-[var(--surface)]"}`}
           >
             <div className="flex items-center justify-between gap-2">
@@ -235,7 +235,7 @@ function RoleDetail({
           ) : role.isTarget ? (
             <p>
               <strong>あと {missingCount} スキルで達成</strong>　
-              <Link className="underline" href="/my/skills">
+              <Link className="underline" href="/talent/my/skills">
                 スキルシートで申請する
               </Link>
             </p>
@@ -295,7 +295,7 @@ function RoleDetail({
                     ) : (
                       <Link
                         className="text-[var(--primary)] underline"
-                        href={`/explore?skill=${encodeURIComponent(requirement.skillId)}`}
+                        href={`/talent/explore?skill=${encodeURIComponent(requirement.skillId)}`}
                       >
                         あと{" "}
                         {requirement.requiredLevel -
@@ -360,7 +360,7 @@ function MemberStatus({ role, title }: { role: RoleItem; title: string }) {
                 memberId={member.id}
                 name={member.name}
                 avatarUpdatedAt={member.avatarUpdatedAt}
-                href={`/people/${member.id}`}
+                href={`/talent/people/${member.id}`}
               />
               <div className="min-w-0">
                 <p className="truncate font-medium">{member.name}</p>

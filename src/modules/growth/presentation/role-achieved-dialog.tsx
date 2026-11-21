@@ -173,7 +173,7 @@ export function RoleAchievedDialog({
               })}
             </div>
           ) : <p className="rounded-xl bg-[var(--surface-subtle)] p-5 text-center text-sm text-[var(--muted-foreground)]">ほかに目指せるロールはまだありません</p>}
-          <Link href="/roles" onClick={onClose} className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--primary)] underline-offset-4 hover:underline">ほかのロールを見る</Link>
+          <Link href="/talent/roles" onClick={onClose} className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--primary)] underline-offset-4 hover:underline">ほかのロールを見る</Link>
         </div>
       )}
     </Dialog>

@@ -260,7 +260,7 @@ export function SkillSheetForm({
         setSelectedLevels({});
         setComments({});
         setActiveSkillId(null);
-        if (initial) router.push("/dashboard");
+        if (initial) router.push("/talent/dashboard");
       }}
     >
       <input type="hidden" name="assessments" value={JSON.stringify(payload)} />

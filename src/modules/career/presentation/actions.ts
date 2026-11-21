@@ -33,7 +33,7 @@ export async function saveProjectHistoryAction(formData: FormData): Promise<Acti
       phases: formData.getAll("phases").map(String),
       technologies: String(formData.get("technologies") ?? "")
     });
-    revalidatePath(`/people/${memberId}`);
+    revalidatePath(`/talent/people/${memberId}`);
   }, formData.get("id") ? "経歴を更新しました。" : "経歴を追加しました。");
 }
 
@@ -42,7 +42,7 @@ export async function deleteProjectHistoryAction(formData: FormData): Promise<Ac
     const session = await requireAuthenticatedMember();
     const memberId = String(formData.get("memberId"));
     await removeProjectHistory(actor(session), memberId, String(formData.get("id")));
-    revalidatePath(`/people/${memberId}`);
+    revalidatePath(`/talent/people/${memberId}`);
   }, "経歴を削除しました。");
 }
 
@@ -54,7 +54,7 @@ export async function addCertificationAction(formData: FormData): Promise<Action
       name: String(formData.get("name") ?? ""),
       acquiredMonth: optional(formData.get("acquiredMonth"))
     });
-    revalidatePath(`/people/${memberId}`);
+    revalidatePath(`/talent/people/${memberId}`);
   }, "資格を追加しました。");
 }
 
@@ -63,7 +63,7 @@ export async function deleteCertificationAction(formData: FormData): Promise<Act
     const session = await requireAuthenticatedMember();
     const memberId = String(formData.get("memberId"));
     await removeCertification(actor(session), memberId, String(formData.get("id")));
-    revalidatePath(`/people/${memberId}`);
+    revalidatePath(`/talent/people/${memberId}`);
   }, "資格を削除しました。");
 }
 
@@ -75,7 +75,7 @@ export async function saveSkillSheetBasicsAction(formData: FormData): Promise<Ac
       itCareerStartMonth: optional(formData.get("itCareerStartMonth")),
       skillSheetNote: optional(formData.get("skillSheetNote"))
     });
-    revalidatePath(`/people/${memberId}`);
+    revalidatePath(`/talent/people/${memberId}`);
   }, "シートの基本情報を保存しました。");
 }
 

@@ -15,12 +15,12 @@ test("本人にはバッジの進み具合を表示し、他の人には表示�
     const member = await data.createMember({ label: "バッジ本人", departmentId: department.id, managerId: managerAccount.member.id });
     owner = await openLoggedInContext(browser, member.credential);
     manager = await openLoggedInContext(browser, managerAccount.credential);
-    await owner.page.goto(`/people/${member.member.id}`);
+    await owner.page.goto(`/talent/people/${member.member.id}`);
     const ownerMain = owner.page.getByRole("main");
     await expect(ownerMain.getByRole("heading", { name: /バッジ（\d+ \/ 19）/ })).toBeVisible();
     await expect(ownerMain.getByRole("progressbar").first()).toBeVisible();
 
-    await manager.page.goto(`/people/${member.member.id}`);
+    await manager.page.goto(`/talent/people/${member.member.id}`);
     const managerMain = manager.page.getByRole("main");
     await expect(managerMain.getByRole("heading", { name: /バッジ（\d+ \/ 19）/ })).toBeVisible();
     await expect(managerMain.getByRole("progressbar")).toHaveCount(0);

@@ -1,0 +1,149 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import type { Route } from "next";
+
+import { getDashboardSummary } from "@/modules/dashboard/application/dashboard-service";
+import { getMemberDashboard } from "@/modules/dashboard/application/member-dashboard-service";
+import { getTeamDashboard } from "@/modules/dashboard/application/team-dashboard-service";
+import { OrganizationDashboard } from "@/modules/dashboard/presentation/organization-dashboard";
+import { MemberDashboard } from "@/modules/dashboard/presentation/member-dashboard";
+import { buildMemberDashboardViewModel } from "@/modules/dashboard/presentation/member-dashboard-view-model";
+import { TeamDashboard } from "@/modules/dashboard/presentation/team-dashboard";
+import { buildTeamDashboardViewModel } from "@/modules/dashboard/presentation/team-dashboard-view-model";
+import {
+  getCheerCelebrations,
+  getDepartmentLevelUpFeed,
+  getLevelUpCelebrations,
+  getRoleAchievementCelebration
+} from "@/modules/growth/application/growth-service";
+import {
+  getMonthlyRecap,
+  getMonthlyRecapCelebration
+} from "@/modules/growth/application/monthly-recap-service";
+import {
+  getManagerTeamGoal,
+  getMemberTeamGoal,
+  getTeamGoalCelebration
+} from "@/modules/team-goals/application/team-goal-service";
+import { getCurrentSession } from "@/server/auth/session";
+
+export const dynamic = "force-dynamic";
+type DashboardView = "personal" | "team" | "organization";
+
+async function getDashboardTeamGoalCelebration(memberId: string, now: Date = new Date()) {
+  const [levelUps, roleAchievement, cheers, monthlyRecap] = await Promise.all([
+    getLevelUpCelebrations(memberId),
+    getRoleAchievementCelebration(memberId),
+    getCheerCelebrations(memberId),
+    getMonthlyRecapCelebration(memberId, now)
+  ]);
+  if (levelUps.length > 0 || roleAchievement || cheers.length > 0 || monthlyRecap) {
+    return null;
+  }
+  return getTeamGoalCelebration(memberId, now);
+}
+
+function DashboardViewSwitch({ current }: { current: DashboardView }) {
+  const items: { view: DashboardView; label: string; href: Route }[] = [
+    {
+      view: "personal",
+      label: "個人",
+      href: "/talent/dashboard?view=personal" as Route,
+    },
+    { view: "team", label: "チーム", href: "/talent/dashboard?view=team" as Route },
+    {
+      view: "organization",
+      label: "組織",
+      href: "/talent/dashboard?view=organization" as Route,
+    },
+  ];
+  return (
+    <nav aria-label="ダッシュボードの表示切り替え" className="flex justify-end">
+      <div className="inline-flex gap-1 rounded-xl bg-[var(--muted)] p-1">
+        {items.map((item) => (
+          <Link
+            key={item.view}
+            href={item.href}
+            aria-current={item.view === current ? "page" : undefined}
+            className={`inline-flex h-11 items-center rounded-lg px-4 text-sm ${item.view === current ? "bg-white font-semibold shadow-sm" : "text-[var(--muted-foreground)]"}`}
+          >
+            {item.label}
+          </Link>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string; month?: string; department?: string }>;
+}) {
+  const session = await getCurrentSession();
+  const { view, month, department } = await searchParams;
+  const management =
+    session?.user.role === "ADMIN" || session?.user.role === "MANAGER";
+  const personal =
+    Boolean(session?.user.memberId) && (!management || view === "personal");
+  if (session?.user.memberId && personal) {
+    const now = new Date();
+    const [data, feed, monthlyRecap, teamGoal] = await Promise.all([
+      getMemberDashboard(session.user.memberId),
+      getDepartmentLevelUpFeed(session.user.memberId, 5),
+      getMonthlyRecap(session.user.memberId, undefined, now),
+      getMemberTeamGoal(session.user.memberId, now)
+    ]);
+    const teamGoalCelebration = await getDashboardTeamGoalCelebration(session.user.memberId, now);
+    const model = buildMemberDashboardViewModel(data);
+    if (!model) redirect("/talent/unregistered");
+    return (
+      <div className="space-y-4">
+        {management ? <DashboardViewSwitch current="personal" /> : null}
+        <MemberDashboard
+          viewModel={model}
+          skillReminders={data.skillReminders}
+          monthlyRecap={monthlyRecap?.months.length ? monthlyRecap.recap : null}
+          teamGoal={teamGoal}
+          teamGoalCelebration={teamGoalCelebration}
+          levelUpFeed={feed.map((item) => ({
+            ...item,
+            avatarUpdatedAt: item.avatarUpdatedAt?.toISOString() ?? null,
+            changedAt: item.changedAt.toISOString(),
+            comments: item.comments.map((comment) => ({
+              ...comment,
+              createdAt: comment.createdAt.toISOString(),
+            })),
+          }))}
+        />
+      </div>
+    );
+  }
+  if (session?.user.memberId && management && view !== "organization") {
+    const [team, teamGoal] = await Promise.all([
+      getTeamDashboard(session.user.memberId, month),
+      getManagerTeamGoal(session.user.memberId)
+    ]);
+    const teamGoalCelebration = await getDashboardTeamGoalCelebration(session.user.memberId);
+    if (!team) redirect("/talent/unregistered");
+    if (view === "team" || team.members.length > 0)
+      return (
+        <div className="space-y-4">
+          <DashboardViewSwitch current="team" />
+          <TeamDashboard
+            viewModel={buildTeamDashboardViewModel(team)}
+            teamGoal={teamGoal}
+            teamGoalCelebration={teamGoalCelebration}
+          />
+        </div>
+      );
+  }
+  if (!session?.user.memberId || !management) redirect("/talent/unregistered");
+  const organization = await getDashboardSummary(session.user.role, session.user.memberId, department);
+  return (
+    <div className="space-y-5">
+      <DashboardViewSwitch current="organization" />
+      <OrganizationDashboard model={organization} />
+    </div>
+  );
+}

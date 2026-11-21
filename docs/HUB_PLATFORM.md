@@ -22,7 +22,7 @@ TalentHub は、Hub シリーズの製品 `talenthub` として、社内サー�
 | `talenthub-web` | 8080 | `db: true` | 画面 `/talent`、API `/api/talent/v1`、死活 `/talent/health`（認証なし） |
 
 - 画面と API は 1 つのサービスで受ける（基盤に確認済み。hub-platform#4）。
-- 経路の付け替え（`basePath` を `/talent` にし、API を `/api/talent/v1` に移す）は H-2 で行う。それまでは今の `/` の下のまま。死活の確認は、今は `/health`、H-2 の後は `/talent/health`。
+- 画面は `src/app/talent/`、API は `src/app/api/talent/v1/` に置き、静的アセットには `assetPrefix: "/talent"` を使う。API を `/talent` の外に置くため、`basePath` は使わない。死活の確認は `/talent/health`。
 - テーブルは `migrate` のジョブ（移行用のロール）が作る。アプリ用のロールはテーブルを作れない。
 
 ## 配布の流れ

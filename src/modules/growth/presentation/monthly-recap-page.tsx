@@ -70,7 +70,7 @@ export function MonthlyRecapPage({ result }: { result: Result }) {
             <ul className="mt-3 divide-y divide-[var(--border)]">
               {recap.levelUps.map((item) => (
                 <li key={item.id}>
-                  <Link href={`/level-ups/${item.id}` as Route} className="flex min-h-14 items-center justify-between gap-3 py-3 hover:text-[var(--primary)]">
+                  <Link href={`/talent/level-ups/${item.id}` as Route} className="flex min-h-14 items-center justify-between gap-3 py-3 hover:text-[var(--primary)]">
                     <span>
                       <strong className="block text-sm">{item.skillName}</strong>
                       <span className="text-xs text-[var(--muted-foreground)]">{item.fromLevel === null ? "未登録" : `Lv${item.fromLevel}`} → Lv{item.toLevel}・{formatDate(item.changedAt)}</span>
@@ -139,7 +139,7 @@ export function MonthlyRecapPage({ result }: { result: Result }) {
             来月の一歩
           </h2>
           <p className="mt-2 text-sm">{recap.nextStep}</p>
-          <Link href="/my/skills" className="mt-4 inline-flex h-10 items-center rounded-md bg-[var(--primary)] px-4 text-sm font-semibold text-white hover:bg-[var(--primary-hover)]">スキルシートで申請する</Link>
+          <Link href="/talent/my/skills" className="mt-4 inline-flex h-10 items-center rounded-md bg-[var(--primary)] px-4 text-sm font-semibold text-white hover:bg-[var(--primary-hover)]">スキルシートで申請する</Link>
         </section>
       ) : null}
     </div>
@@ -164,7 +164,7 @@ function MonthLink({ month, direction }: { month?: string; direction: "previous"
   }
   return (
     <Link
-      href={`/my/recap?month=${month}` as Route}
+      href={`/talent/my/recap?month=${month}` as Route}
       aria-label={label}
       className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[var(--border-strong)] bg-[var(--surface)] hover:bg-[var(--surface-subtle)]"
     >

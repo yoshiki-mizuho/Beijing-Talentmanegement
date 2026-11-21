@@ -40,7 +40,7 @@ export function PeopleSearchFilters({
     if (skill) params.set("skill", skill);
     params.set("level", String(minimumLevel));
     startTransition(() => {
-      router.replace(`/explore?${params.toString()}`, { scroll: false });
+      router.replace(`/talent/explore?${params.toString()}`, { scroll: false });
     });
   }
 
@@ -48,7 +48,7 @@ export function PeopleSearchFilters({
     latestSkill.current = null;
     latestLevel.current = 1;
     startTransition(() => {
-      router.replace("/explore", { scroll: false });
+      router.replace("/talent/explore", { scroll: false });
     });
   }
 

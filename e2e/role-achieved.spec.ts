@@ -18,21 +18,21 @@ test("目標ロール達成を祝い、次の目標をあとで決めると再�
     const memberAccount = await data.createMember({ label: "ロール達成申請者", departmentId: department.id, managerId: managerAccount.member.id });
     await data.createMemberSkill({ memberId: memberAccount.member.id, skillId: skill.id, level: 1, approvedByMemberId: managerAccount.member.id });
     member = await openLoggedInContext(browser, memberAccount.credential);
-    await member.page.goto("/roles");
+    await member.page.goto("/talent/roles");
     await member.page.getByRole("link", { name: new RegExp(role.name) }).click();
     await member.page.getByRole("button", { name: "目標にする" }).click();
     await expect(member.page.getByText("目標ロールを更新しました。")).toBeVisible();
-    await member.page.goto("/my/skills");
+    await member.page.goto("/talent/my/skills");
     await member.page.locator(`[role="group"][aria-label="${skill.name}のレベル"]`).getByRole("button", { name: "Lv2", exact: true }).click();
     await member.page.getByRole("button", { name: "1件を申請", exact: true }).click();
 
     manager = await openLoggedInContext(browser, managerAccount.credential);
-    await manager.page.goto("/skill-approvals");
+    await manager.page.goto("/talent/skill-approvals");
     const approval = manager.page.getByRole("listitem", { name: `${memberAccount.member.name} / ${skill.name}の承認` });
     await approval.getByRole("button", { name: `${memberAccount.member.name}の${skill.name}を承認`, exact: true }).click();
     await expect(manager.page.getByText("スキル申請を承認しました。")).toBeVisible();
 
-    await member.page.goto("/dashboard");
+    await member.page.goto("/talent/dashboard");
     let dialog = member.page.getByRole("dialog");
     await expect(dialog.getByText("LEVEL UP", { exact: true })).toBeVisible();
     await dialog.getByRole("button", { name: "続ける", exact: true }).click();
@@ -46,14 +46,14 @@ test("目標ロール達成を祝い、次の目標をあとで決めると再�
     await expect(member.page.getByRole("dialog")).toHaveCount(0);
 
     admin = await openLoggedInContext(browser, adminAccount.credential);
-    await admin.page.goto(`/roles?role=${encodeURIComponent(role.id)}`);
+    await admin.page.goto(`/talent/roles?role=${encodeURIComponent(role.id)}`);
     await admin.page.getByRole("button", { name: "編集" }).click();
     const editDialog = admin.page.getByRole("dialog", { name: `${role.name}を編集` });
     await editDialog.getByLabel("必要レベル").selectOption("3");
     await editDialog.getByRole("button", { name: "保存", exact: true }).click();
     await expect(admin.page.getByText("ロールを更新しました。")).toBeVisible();
 
-    await member.page.goto(`/people/${memberAccount.member.id}`);
+    await member.page.goto(`/talent/people/${memberAccount.member.id}`);
     const updatedMark = member.page.getByLabel("要件が更新されました");
     await expect(updatedMark).toBeVisible();
     await updatedMark.hover();

@@ -24,8 +24,8 @@ export async function confirmNotificationAction(formData: FormData): Promise<Act
     }
 
     await markNotificationRead(id, session.user.memberId);
-    revalidatePath("/notifications");
-    revalidatePath("/", "layout");
+    revalidatePath("/talent/notifications");
+    revalidatePath("/talent", "layout");
   }, "通知を確認しました。");
 }
 
@@ -34,8 +34,8 @@ export async function markAllNotificationsReadAction(): Promise<ActionResult> {
     const session = await requirePasswordReadyMember();
 
     await markAllNotificationsRead(session.user.memberId);
-    revalidatePath("/notifications");
-    revalidatePath("/", "layout");
+    revalidatePath("/talent/notifications");
+    revalidatePath("/talent", "layout");
   }, "すべての通知を既読にしました。確認済みの通知は引き続き一覧で確認できます。");
 }
 

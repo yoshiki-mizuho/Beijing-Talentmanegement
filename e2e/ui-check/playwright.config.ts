@@ -11,5 +11,5 @@ export default defineConfig({
   reporter: [["list"]],
   use: { baseURL, viewport: { width: 1440, height: 900 } },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } } }],
-  webServer: { command: "npm run start", url: `${baseURL}/health`, reuseExistingServer: true, timeout: 120_000 }
+  webServer: { command: "npm run start", url: `${baseURL}/talent/health`, reuseExistingServer: true, timeout: 120_000 }
 });

@@ -37,44 +37,44 @@ export const appNavigationGroups: readonly AppNavigationGroup[] = [
   {
     label: "概要",
     items: [
-      { href: "/dashboard", label: "ダッシュボード", icon: "dashboard", allowedRoles: allRoles }
+      { href: "/talent/dashboard", label: "ダッシュボード", icon: "dashboard", allowedRoles: allRoles }
     ]
   },
   {
     label: "メンバーの機能",
     items: [
-      { href: "/my/skills", label: "自分のスキル", icon: "mySkills", allowedRoles: allRoles },
-      { href: "/explore", label: "得意な人を探す", icon: "explore", allowedRoles: allRoles },
-      { href: "/roles", label: "ロール", icon: "roles", allowedRoles: allRoles },
-      { href: "/people/:memberId", label: "プロフィール", icon: "profile", allowedRoles: allRoles }
+      { href: "/talent/my/skills", label: "自分のスキル", icon: "mySkills", allowedRoles: allRoles },
+      { href: "/talent/explore", label: "得意な人を探す", icon: "explore", allowedRoles: allRoles },
+      { href: "/talent/roles", label: "ロール", icon: "roles", allowedRoles: allRoles },
+      { href: "/talent/people/:memberId", label: "プロフィール", icon: "profile", allowedRoles: allRoles }
     ]
   },
   {
     label: "マネージャーの機能",
     items: [
-      { href: "/skill-approvals", label: "スキル承認", icon: "approvals", allowedRoles: managementRoles },
-      { href: "/members", label: "メンバー", icon: "members", allowedRoles: managementRoles },
-      { href: "/skill-map", label: "スキルマップ", icon: "skillMap", allowedRoles: managementRoles }
+      { href: "/talent/skill-approvals", label: "スキル承認", icon: "approvals", allowedRoles: managementRoles },
+      { href: "/talent/members", label: "メンバー", icon: "members", allowedRoles: managementRoles },
+      { href: "/talent/skill-map", label: "スキルマップ", icon: "skillMap", allowedRoles: managementRoles }
     ]
   },
   {
     label: "管理者の機能",
     items: [
-      { href: "/skills", label: "スキル管理", icon: "skills", allowedRoles: adminOnly },
-      { href: "/skill-sheet-templates", label: "スキルシートのひな形", icon: "skillSheetTemplates", allowedRoles: adminOnly },
-      { href: "/csv", label: "CSV", icon: "csv", allowedRoles: adminOnly },
-      { href: "/audit-logs", label: "監査ログ", icon: "auditLogs", allowedRoles: adminOnly },
-      { href: "/ai-usage", label: "AI の利用状況", icon: "aiUsage", allowedRoles: adminOnly }
+      { href: "/talent/skills", label: "スキル管理", icon: "skills", allowedRoles: adminOnly },
+      { href: "/talent/skill-sheet-templates", label: "スキルシートのひな形", icon: "skillSheetTemplates", allowedRoles: adminOnly },
+      { href: "/talent/csv", label: "CSV", icon: "csv", allowedRoles: adminOnly },
+      { href: "/talent/audit-logs", label: "監査ログ", icon: "auditLogs", allowedRoles: adminOnly },
+      { href: "/talent/ai-usage", label: "AI の利用状況", icon: "aiUsage", allowedRoles: adminOnly }
     ]
   }
 ] as const;
 
 const nonNavigationRoutes: readonly Pick<AppNavigationItem, "href" | "allowedRoles">[] = [
-  { href: "/people", allowedRoles: allRoles },
-  { href: "/notifications", allowedRoles: allRoles },
-  { href: "/my/recap", allowedRoles: allRoles },
-  { href: "/level-ups", allowedRoles: allRoles },
-  { href: "/proposal-sheets", allowedRoles: managementRoles }
+  { href: "/talent/people", allowedRoles: allRoles },
+  { href: "/talent/notifications", allowedRoles: allRoles },
+  { href: "/talent/my/recap", allowedRoles: allRoles },
+  { href: "/talent/level-ups", allowedRoles: allRoles },
+  { href: "/talent/proposal-sheets", allowedRoles: managementRoles }
 ];
 const appRouteRules: readonly Pick<AppNavigationItem, "href" | "allowedRoles">[] = [
   ...appNavigationGroups.flatMap((group) => group.items),
@@ -94,14 +94,18 @@ export function getNavigationGroupsForRole(role: AppRole, memberId: string): App
 }
 
 export function canAccessAppPath(role: AppRole, pathname: string): boolean {
+  if (!isSameOrNestedPath(pathname, "/talent")) {
+    return false;
+  }
+
   const rule = appRouteRules.find((candidate) => isSameOrNestedPath(pathname, candidate.href));
 
   // New application screens are closed to non-admin roles until explicitly classified.
   return rule ? rule.allowedRoles.includes(role) : role === "ADMIN";
 }
 
-export function getUnauthorizedRedirectPath(): "/dashboard" {
-  return "/dashboard";
+export function getUnauthorizedRedirectPath(): "/talent/dashboard" {
+  return "/talent/dashboard";
 }
 
 export function isSameOrNestedPath(pathname: string, href: string): boolean {

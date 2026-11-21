@@ -11,7 +11,7 @@ test("月初の振り返りを閉じると再表示されない", async ({ brows
   let session: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
   try {
     session = await openLoggedInContext(browser, fixture.member.credential);
-    await session.page.goto("/dashboard?view=personal");
+    await session.page.goto("/talent/dashboard?view=personal");
     const dialog = session.page.getByRole("dialog").filter({ hasText: "先月の振り返り" });
     await expect(dialog).toBeVisible();
     await dialog.getByRole("button", { name: "閉じる", exact: true }).click();
@@ -29,7 +29,7 @@ test("マネージャーが振り返りから1on1メモを追加できる", asyn
   let session: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
   try {
     session = await openLoggedInContext(browser, fixture.manager.credential);
-    await session.page.goto("/members");
+    await session.page.goto("/talent/members");
     await session.page.getByRole("button", { name: `${fixture.member.member.name}の詳細を開く` }).click();
     const dialog = session.page.getByRole("dialog");
     await dialog.getByRole("tab", { name: "振り返り" }).click();

@@ -53,7 +53,7 @@ export function SkillApprovalList({ rows }: { rows: SkillApprovalRow[] }) {
     return (
       <Card className="overflow-hidden rounded-2xl">
         <Link
-          href="/dashboard"
+          href="/talent/dashboard"
           className="block rounded-2xl focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
           aria-label="承認待ちはありません。チームのレベルアップにリアクションを送ってみませんか。"
         >
@@ -252,7 +252,7 @@ function SkillApprovalItem({
             memberId={row.memberId}
             name={row.memberName}
             avatarUpdatedAt={row.avatarUpdatedAt}
-            href={`/people/${row.memberId}`}
+            href={`/talent/people/${row.memberId}`}
           />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">{row.memberName}</p>

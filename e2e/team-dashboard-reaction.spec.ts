@@ -15,7 +15,7 @@ test("チームフィードのおめでとうリアクションを付け外し�
     await data.createMemberSkill({ memberId: member.member.id, skillId: skill.id, level: 2, approvedByMemberId: managerMember.member.id });
     await data.createLevelChange({ memberId: member.member.id, skillId: skill.id, fromLevel: 1, toLevel: 2, changedByMemberId: managerMember.member.id });
     manager = await openLoggedInContext(browser, managerMember.credential);
-    await manager.page.goto("/dashboard?view=team");
+    await manager.page.goto("/talent/dashboard?view=team");
     const firstItem = manager.page.locator("#team-level-ups li").first();
     await expect(firstItem).toBeVisible();
     const reaction = firstItem.getByRole("button", { name: /おめでとう \d+件/ });

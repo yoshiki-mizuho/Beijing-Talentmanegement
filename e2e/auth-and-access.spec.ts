@@ -29,8 +29,8 @@ test("マネージャーはCSV画面へアクセスするとダッシュボー�
   const { context, page } = await openLoggedInContext(browser, credentials.MANAGER);
 
   try {
-    await page.goto("/csv");
-    await expect(page).toHaveURL(/\/dashboard(?:\?.*)?$/);
+    await page.goto("/talent/csv");
+    await expect(page).toHaveURL(/\/talent\/dashboard(?:\?.*)?$/);
   } finally {
     await context.close();
   }
@@ -40,9 +40,9 @@ test("メンバーは管理対象画面へアクセスするとダッシュボ�
   const { context, page } = await openLoggedInContext(browser, credentials.MEMBER);
 
   try {
-    for (const path of ["/members", "/skill-approvals"]) {
+    for (const path of ["/talent/members", "/talent/skill-approvals"]) {
       await page.goto(path);
-      await expect(page).toHaveURL(/\/dashboard(?:\?.*)?$/);
+      await expect(page).toHaveURL(/\/talent\/dashboard(?:\?.*)?$/);
     }
   } finally {
     await context.close();
@@ -54,9 +54,9 @@ test("ヘッダが無いと画面は未登録案内、APIは401になる", async
   const page = await context.newPage();
 
   try {
-    await page.goto("/dashboard");
-    await expect(page).toHaveURL(/\/unregistered$/);
-    expect((await page.request.get("/api/members")).status()).toBe(401);
+    await page.goto("/talent/dashboard");
+    await expect(page).toHaveURL(/\/talent\/unregistered$/);
+    expect((await page.request.get("/api/talent/v1/members")).status()).toBe(401);
   } finally {
     await context.close();
   }
@@ -72,9 +72,9 @@ test("登録されていない基盤利用者は画面とAPIを利用できな�
   });
   const page = await context.newPage();
   try {
-    await page.goto("/dashboard");
-    await expect(page).toHaveURL(/\/unregistered$/);
-    expect((await page.request.get("/api/members")).status()).toBe(403);
+    await page.goto("/talent/dashboard");
+    await expect(page).toHaveURL(/\/talent\/unregistered$/);
+    expect((await page.request.get("/api/talent/v1/members")).status()).toBe(403);
   } finally {
     await context.close();
   }
@@ -97,8 +97,8 @@ test("DB の ADMIN は基盤が MEMBER なら管理画面を利用できない",
   });
   const page = await context.newPage();
   try {
-    await page.goto("/skills");
-    await expect(page).toHaveURL(/\/dashboard$/);
+    await page.goto("/talent/skills");
+    await expect(page).toHaveURL(/\/talent\/dashboard$/);
   } finally {
     await context.close();
     await data.cleanup();

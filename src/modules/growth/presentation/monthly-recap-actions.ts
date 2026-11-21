@@ -14,7 +14,7 @@ export async function markMonthlyRecapSeenAction(formData: FormData): Promise<Ac
   return runAction(async () => {
     const session = await requirePasswordReadyMember();
     await markMonthlyRecapSeen(session.user.memberId, getString(formData, "month"));
-    revalidatePath("/", "layout");
+    revalidatePath("/talent", "layout");
   }, "振り返りを確認しました。");
 }
 

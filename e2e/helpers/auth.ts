@@ -35,7 +35,7 @@ async function markPreviousMonthRecapSeen(platformUserId: string) {
 export async function login(
   page: Page,
   credential: DemoCredential,
-  expectedUrl: RegExp = /\/dashboard(?:\?.*)?$/
+  expectedUrl: RegExp = /\/talent\/dashboard(?:\?.*)?$/
 ) {
   // 専用データのアカウントは、テストが用意した振り返りの状態をそのまま使う
   if (sharedDemoUserIds.has(credential.platformUserId)) {
@@ -48,7 +48,7 @@ export async function login(
     "X-Auth-User-Role": credential.platformRole,
     "X-Auth-Request-Id": crypto.randomUUID()
   });
-  await page.goto("/dashboard");
+  await page.goto("/talent/dashboard");
   await expect(page).toHaveURL(expectedUrl);
 }
 

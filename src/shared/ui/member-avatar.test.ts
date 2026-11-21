@@ -5,7 +5,7 @@ import { buildMemberAvatarUrl } from "@/shared/ui/member-avatar";
 describe("buildMemberAvatarUrl", () => {
   it("更新日時をミリ秒にしてURLへ付ける", () => {
     expect(buildMemberAvatarUrl("member/a", "2026-10-12T12:00:00.123Z")).toBe(
-      "/api/members/member%2Fa/avatar?v=1791806400123"
+      "/api/talent/v1/members/member%2Fa/avatar?v=1791806400123"
     );
   });
 

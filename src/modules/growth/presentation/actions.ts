@@ -25,9 +25,9 @@ export async function toggleLevelUpReactionAction(formData: FormData): Promise<A
     const viewer = { memberId: session.user.memberId, role: session.user.role };
     if (getString(formData, "pressed") === "true") await removeLevelUpReaction(input, viewer);
     else await addLevelUpReaction(input, viewer);
-    revalidatePath("/dashboard");
-    revalidatePath(`/level-ups/${input.levelChangeId}`);
-    revalidatePath("/notifications");
+    revalidatePath("/talent/dashboard");
+    revalidatePath(`/talent/level-ups/${input.levelChangeId}`);
+    revalidatePath("/talent/notifications");
   }, "リアクションを更新しました。");
 }
 
@@ -36,9 +36,9 @@ export async function createLevelUpCommentAction(formData: FormData): Promise<Ac
     const session = await requirePasswordReadyMember();
     const levelChangeId = getString(formData, "levelChangeId");
     await createLevelUpComment({ levelChangeId, authorMemberId: session.user.memberId, body: getString(formData, "body") }, { memberId: session.user.memberId, role: session.user.role });
-    revalidatePath("/dashboard");
-    revalidatePath(`/level-ups/${levelChangeId}`);
-    revalidatePath("/notifications");
+    revalidatePath("/talent/dashboard");
+    revalidatePath(`/talent/level-ups/${levelChangeId}`);
+    revalidatePath("/talent/notifications");
   }, "コメントを投稿しました。");
 }
 
@@ -51,8 +51,8 @@ export async function createCheerAction(formData: FormData): Promise<ActionResul
       targetSkillId: getOptionalString(formData, "targetSkillId"),
       mentorMemberId: getOptionalString(formData, "mentorMemberId")
     }, { memberId: session.user.memberId, role: session.user.role });
-    revalidatePath("/dashboard");
-    revalidatePath("/notifications");
+    revalidatePath("/talent/dashboard");
+    revalidatePath("/talent/notifications");
   }, "応援を送りました");
 }
 
@@ -63,8 +63,8 @@ export async function createOneOnOneNoteAction(formData: FormData): Promise<Acti
       memberId: getString(formData, "memberId"),
       body: getString(formData, "body")
     }, session.user.memberId);
-    revalidatePath("/dashboard");
-    revalidatePath("/members");
+    revalidatePath("/talent/dashboard");
+    revalidatePath("/talent/members");
   }, "1on1 メモに追加しました");
 }
 
@@ -75,7 +75,7 @@ export async function updateOneOnOneNoteAction(formData: FormData): Promise<Acti
       id: getString(formData, "id"),
       body: getString(formData, "body")
     }, session.user.memberId);
-    revalidatePath("/members");
+    revalidatePath("/talent/members");
   }, "1on1 メモを更新しました");
 }
 
@@ -83,7 +83,7 @@ export async function toggleOneOnOneNoteDiscussedAction(formData: FormData): Pro
   return runAction(async () => {
     const session = await requirePasswordReadyMember();
     await toggleOneOnOneNoteDiscussed(getString(formData, "id"), session.user.memberId);
-    revalidatePath("/members");
+    revalidatePath("/talent/members");
   }, "1on1 メモの状態を更新しました");
 }
 
@@ -107,6 +107,6 @@ export async function acknowledgeRoleAchievementCelebrationAction(
       achievementId,
       session.user.memberId
     );
-    revalidatePath("/dashboard");
+    revalidatePath("/talent/dashboard");
   }, "ロール達成のお祝いを確認しました。");
 }

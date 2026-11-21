@@ -18,7 +18,7 @@ test("MEMBERがロールを確認して目標を変更し元に戻せる", async
   try {
     // 専用のメンバーは目標ロールが未設定なので、専用のロールAを目標にしてからBへ変える
     for (const role of [roleA, roleB]) {
-      await member.page.goto(`/roles?role=${encodeURIComponent(role.id)}`);
+      await member.page.goto(`/talent/roles?role=${encodeURIComponent(role.id)}`);
       await member.page.getByRole("button", { name: "目標にする" }).click();
       await expect(member.page.getByText("目標ロールを更新しました。")).toBeVisible();
     }
@@ -35,7 +35,7 @@ test("ADMINが必要なスキルを2つ選んでロールを作成できる", as
   const data = createE2eTestData();
   const roleName = `E2E要件付きロール-${Date.now()}-${test.info().workerIndex}`;
   try {
-    await admin.page.goto("/roles");
+    await admin.page.goto("/talent/roles");
     await admin.page.getByRole("button", { name: "ロールを追加" }).click();
     const dialog = admin.page.getByRole("dialog", { name: "新規ロール" });
     await dialog.getByLabel("ロール名").fill(roleName);

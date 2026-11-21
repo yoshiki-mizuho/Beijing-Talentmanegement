@@ -55,9 +55,9 @@
 ```text
 src/
   app/
-    (app)/        ログイン後の画面（ダッシュボード、メンバー、スキルなど）
-    api/          Route Handlers
-    login/
+    talent/       ログイン後の画面と死活確認（/talent、/talent/health）
+    api/
+      talent/v1/  Route Handlers（/api/talent/v1）
   modules/
     <module>/     上の表のモジュールごとに1つ
       domain/
@@ -72,8 +72,8 @@ src/
   server/
     auth/
     db/
-    security/     CSPと同一オリジンの検査
-  proxy.ts        リクエストの入口（認証とセキュリティの検査）
+    security/     CSP
+  proxy.ts        画面リクエストへのCSPとパス情報の設定
 prisma/
   schema.prisma
   migrations/
@@ -87,6 +87,7 @@ scripts/          検証とデータ掃除のスクリプト
 配置ルールは以下です。
 
 - 画面ルーティングは `src/app` に置き、業務ロジックは原則として `src/modules/<module>` に置く。
+- 画面は `/talent`、Route Handler は `/api/talent/v1` の下だけに置く。Next.js の `basePath` は使わず、静的アセットには `assetPrefix: "/talent"` を使う。
 - `src/modules/<module>/domain` はフレームワークやDB実装に依存しない純粋な業務ルールを置く。
 - `src/modules/<module>/application` はuse case、DTO、トランザクション境界を置く。
 - `src/modules/<module>/infrastructure` はPrisma repository、外部API、永続化の実装詳細を置く。

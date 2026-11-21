@@ -26,25 +26,25 @@ test.describe("UI check", () => {
     test.skip(!enabled("ADMIN"));
     await login(page, credentials.ADMIN);
     await dismissExistingLevelUpDialogs(page);
-    await page.goto("/dashboard");
+    await page.goto("/talent/dashboard");
     await capture(page, "ADMIN", "dashboard");
-    await page.goto("/dashboard?view=organization");
+    await page.goto("/talent/dashboard?view=organization");
     await capture(page, "ADMIN", "organization");
-    await page.goto("/skill-map");
+    await page.goto("/talent/skill-map");
     await capture(page, "ADMIN", "skill-map");
-    await page.goto("/members");
+    await page.goto("/talent/members");
     await capture(page, "ADMIN", "members");
     await page.getByRole("button", { name: "メンバーを追加" }).click();
     await capture(page, "ADMIN", "member-create-dialog");
     // メンバー詳細の基本情報（権限の欄を含む）
-    await page.goto("/members");
+    await page.goto("/talent/members");
     await page.getByRole("button", { name: "Member Userの詳細を開く" }).click();
     await capture(page, "ADMIN", "member-detail");
-    await page.goto("/skills");
+    await page.goto("/talent/skills");
     await capture(page, "ADMIN", "skills");
-    await page.goto("/roles");
+    await page.goto("/talent/roles");
     await capture(page, "ADMIN", "roles");
-    await page.goto("/audit-logs");
+    await page.goto("/talent/audit-logs");
     await capture(page, "ADMIN", "audit-logs");
     const firstAuditLog = page.locator("main details").first();
     if (await firstAuditLog.count()) {
@@ -52,9 +52,9 @@ test.describe("UI check", () => {
       await firstAuditLog.locator("summary time").click();
       await capture(page, "ADMIN", "audit-logs-detail");
     }
-    await page.goto("/ai-usage");
+    await page.goto("/talent/ai-usage");
     await capture(page, "ADMIN", "ai-usage");
-    await page.goto("/csv");
+    await page.goto("/talent/csv");
     await capture(page, "ADMIN", "csv");
     // 確認の段階（登録はしない）。新規・更新・エラーを1件ずつ含む部署の CSV を選ぶ
     await page.getByLabel("部署のCSVファイル").setInputFiles({
@@ -71,7 +71,7 @@ test.describe("UI check", () => {
     await page.screenshot({
       path: "test-results/ui-check/ADMIN-csv-import-preview-bottom.png",
     });
-    await page.goto("/csv");
+    await page.goto("/talent/csv");
     await page.getByRole("button", { name: "メンバー", exact: true }).click();
     await page.getByLabel("メンバーのCSVファイル").setInputFiles({
       name: "members.csv",
@@ -82,9 +82,9 @@ test.describe("UI check", () => {
     });
     await page.getByText("エラー").first().waitFor();
     await capture(page, "ADMIN", "csv-import-members-preview");
-    await page.goto("/csv?tab=export");
+    await page.goto("/talent/csv?tab=export");
     await capture(page, "ADMIN", "csv-export");
-    await page.goto("/roles");
+    await page.goto("/talent/roles");
     await page.getByRole("button", { name: "編集", exact: true }).first().click();
     await capture(page, "ADMIN", "role-detail");
     await page.keyboard.press("Escape");
@@ -95,15 +95,15 @@ test.describe("UI check", () => {
     test.skip(!enabled("MANAGER"));
     await login(page, credentials.MANAGER);
     await dismissExistingLevelUpDialogs(page);
-    await page.goto("/dashboard");
+    await page.goto("/talent/dashboard");
     await capture(page, "MANAGER", "dashboard-team");
-    await page.goto("/dashboard?view=organization");
+    await page.goto("/talent/dashboard?view=organization");
     await capture(page, "MANAGER", "organization");
-    await page.goto("/skill-map");
+    await page.goto("/talent/skill-map");
     await capture(page, "MANAGER", "skill-map");
     await page.getByLabel(/通知を開く/).click();
     await capture(page, "MANAGER", "header-notifications");
-    await page.goto("/dashboard");
+    await page.goto("/talent/dashboard");
     await page.waitForLoadState("networkidle");
     const cheer = page
       .getByRole("button", { name: /応援する|応援しました/ })
@@ -116,7 +116,7 @@ test.describe("UI check", () => {
       await page.getByRole("button", { name: "送信する" }).click();
       await page.getByText("応援を送りました").waitFor();
     }
-    await page.goto("/members");
+    await page.goto("/talent/members");
     await page.getByRole("button", { name: "Member Userの詳細を開く" }).click();
     await page.getByRole("tab", { name: "育成のヒント" }).click();
     const createHint = page.getByRole("button", { name: "ヒントを作る" });
@@ -128,19 +128,19 @@ test.describe("UI check", () => {
     await page.getByRole("tab", { name: "1on1 メモ" }).click();
     await capture(page, "MANAGER", "member-one-on-one");
     await page.getByRole("link", { name: "プロフィールを見る", exact: true }).click();
-    await page.waitForURL("**/people/**");
+    await page.waitForURL("**/talent/people/**");
     await capture(page, "MANAGER", "subordinate-profile");
     await page.getByRole("link", { name: "経歴・資格", exact: true }).click();
     await page.waitForURL(/tab=career/);
     await capture(page, "MANAGER", "subordinate-career");
-    await page.goto("/skill-approvals");
+    await page.goto("/talent/skill-approvals");
     await capture(page, "MANAGER", "skill-approvals");
   });
   test("MEMBER", async ({ page }) => {
     test.skip(!enabled("MEMBER"));
     await login(page, credentials.MEMBER);
     await dismissExistingLevelUpDialogs(page);
-    await page.goto("/dashboard");
+    await page.goto("/talent/dashboard");
     await page.waitForLoadState("networkidle");
     // 未確認のレベルアップ・応援の演出を撮ってから閉じる（閉じると残りもまとめて既読になる）
     const celebration = page.getByRole("dialog").filter({ hasText: /LEVEL UP|CHEER/ });
@@ -159,7 +159,7 @@ test.describe("UI check", () => {
     await page.getByRole("button", { name: "キャンセル" }).click();
     await page.getByLabel(/通知を開く/).click();
     await capture(page, "MEMBER", "header-notifications");
-    await page.goto("/explore");
+    await page.goto("/talent/explore");
     await capture(page, "MEMBER", "explore");
     await page.getByRole("combobox", { name: "探すスキル" }).fill("フレーム");
     await capture(page, "MEMBER", "explore-combobox");
@@ -169,7 +169,7 @@ test.describe("UI check", () => {
     await capture(page, "MEMBER", "explore-results");
     await page.getByLabel("アカウントメニューを開く").click();
     await page.getByRole("link", { name: "スキルプロフィール" }).click();
-    await page.waitForURL("**/people/**");
+    await page.waitForURL("**/talent/people/**");
     await capture(page, "MEMBER", "skill-profile");
     // アイコン画像を登録した状態を撮り、最後に削除して元に戻す（1×1 の PNG を 256px に拡大した単色の画像になる）
     await page.locator('input[type="file"]').setInputFiles({
@@ -194,16 +194,16 @@ test.describe("UI check", () => {
     await capture(page, "MEMBER", "career");
     await page.getByRole("button", { name: "経歴を追加" }).click();
     await capture(page, "MEMBER", "career-form");
-    await page.goto("/explore");
+    await page.goto("/talent/explore");
     await page
       .getByRole("link", { name: /デモメンバー01/ })
       .first()
       .click();
-    await page.waitForURL("**/people/**");
+    await page.waitForURL("**/talent/people/**");
     await capture(page, "MEMBER", "other-profile");
-    await page.goto("/my/skills");
+    await page.goto("/talent/my/skills");
     await capture(page, "MEMBER", "my-skills");
-    await page.goto("/notifications");
+    await page.goto("/talent/notifications");
     await capture(page, "MEMBER", "notifications");
   });
 });

@@ -39,7 +39,7 @@ export function AiUsageDashboard({
         <div className="flex min-h-11 items-center gap-3 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3">
           <Link
             aria-label="前の月"
-            href={`/ai-usage?month=${previous}` as Route}
+            href={`/talent/ai-usage?month=${previous}` as Route}
             className="p-2"
           >
             ‹
@@ -48,7 +48,7 @@ export function AiUsageDashboard({
           {next <= currentMonth ? (
             <Link
               aria-label="次の月"
-              href={`/ai-usage?month=${next}` as Route}
+              href={`/talent/ai-usage?month=${next}` as Route}
               className="p-2"
             >
               ›

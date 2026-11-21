@@ -18,7 +18,7 @@ export function TrendingSkills({ items, level }: { items: Data["trending"]; leve
           <Link
             key={item.skillId}
             href={
-              `/explore?skill=${encodeURIComponent(item.skillId)}&level=${level}#people-search` as Route
+              `/talent/explore?skill=${encodeURIComponent(item.skillId)}&level=${level}#people-search` as Route
             }
             className="flex min-h-14 items-center justify-between gap-3 px-2 hover:bg-[var(--surface-subtle)]"
           >

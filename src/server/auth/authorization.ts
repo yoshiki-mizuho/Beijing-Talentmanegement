@@ -52,11 +52,11 @@ export async function requirePageRoles(allowedRoles: readonly AuthRole[]) {
   const session = await getCurrentSession();
 
   if (!session?.user.memberId) {
-    redirect("/unregistered");
+    redirect("/talent/unregistered");
   }
 
   if (!allowedRoles.includes(session.user.role)) {
-    redirect("/dashboard");
+    redirect("/talent/dashboard");
   }
 
   return session as MemberSession;

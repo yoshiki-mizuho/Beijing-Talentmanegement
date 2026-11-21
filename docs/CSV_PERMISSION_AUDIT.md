@@ -273,11 +273,11 @@ flowchart TD
 
 | API | 許可するロール | 担当範囲・本人判定 |
 | --- | --- | --- |
-| `GET /api/members` | admin、manager | manager は担当範囲。 |
-| `POST /api/members`、`DELETE /api/members/[memberId]` | admin | なし。 |
-| `PATCH /api/members/[memberId]` | admin | なし。 |
-| `/api/members/[memberId]/skills` | admin、manager | manager は担当範囲。 |
-| `/api/members/[memberId]/avatar` | admin、manager、member | サービスで本人だけを許可。 |
+| `GET /api/talent/v1/members` | admin、manager | manager は担当範囲。 |
+| `POST /api/talent/v1/members`、`DELETE /api/talent/v1/members/[memberId]` | admin | なし。 |
+| `PATCH /api/talent/v1/members/[memberId]` | admin | なし。 |
+| `/api/talent/v1/members/[memberId]/skills` | admin、manager | manager は担当範囲。 |
+| `/api/talent/v1/members/[memberId]/avatar` | admin、manager、member | サービスで本人だけを許可。 |
 | `/api/skill-assessments` | admin、manager、member | 作成対象はセッション本人。参照は manager の担当範囲。 |
 | `/api/skill-assessments/[assessmentId]/review` | admin、manager | manager は担当範囲。 |
 | スキル、カテゴリ、ロールの参照 API | admin、manager | なし。 |

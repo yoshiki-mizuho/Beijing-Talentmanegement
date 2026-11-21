@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { cn } from "@/shared/lib/utils";
+import { apiPath } from "@/shared/lib/app-paths";
 
 export type MemberAvatarSize = "sm" | "md" | "lg";
 
@@ -37,7 +38,7 @@ export function buildMemberAvatarUrl(memberId: string, avatarUpdatedAt: Date | s
   if (!avatarUpdatedAt) return null;
   const milliseconds = new Date(avatarUpdatedAt).getTime();
   if (!Number.isFinite(milliseconds)) return null;
-  return `/api/members/${encodeURIComponent(memberId)}/avatar?v=${milliseconds}`;
+  return `${apiPath(`/members/${encodeURIComponent(memberId)}/avatar`)}?v=${milliseconds}`;
 }
 
 export function MemberAvatar({

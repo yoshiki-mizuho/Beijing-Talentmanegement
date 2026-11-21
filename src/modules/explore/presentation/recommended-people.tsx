@@ -24,7 +24,7 @@ export function RecommendedPeople({ people }: { people: Data["recommendations"] 
         {people.map((person) => (
           <Link
             key={person.id}
-            href={`/people/${person.id}` as Route}
+            href={`/talent/people/${person.id}` as Route}
             className="flex min-h-20 items-center gap-3 px-2 py-3 hover:bg-[var(--surface-subtle)]"
           >
             <MemberAvatar

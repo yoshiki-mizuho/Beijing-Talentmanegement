@@ -11,7 +11,7 @@ test("ADMINがAI候補と手動追加を登録し削除できる", async ({ page
   const { skill } = await data.createSkill("前提元");
   const { skill: prerequisite } = await data.createSkill("前提先");
   await login(page, admin.credential);
-  await page.goto("/skills?tab=prerequisites");
+  await page.goto("/talent/skills?tab=prerequisites");
   const existingAiRows = await page.getByRole("row").filter({ hasText: "AI の候補から" }).count();
   await page.getByRole("button", { name: "候補を作る" }).click();
 

@@ -6,10 +6,10 @@ import {
 } from "@/shared/auth/app-access";
 
 type NotificationDestination =
-  | "/skill-approvals"
-  | "/my/skills"
-  | "/my/skills?tab=history"
-  | `/level-ups/${string}`;
+  | "/talent/skill-approvals"
+  | "/talent/my/skills"
+  | "/talent/my/skills?tab=history"
+  | `/talent/level-ups/${string}`;
 
 type NotificationDestinationInput = {
   type: NotificationType;
@@ -26,7 +26,7 @@ export function getNotificationDestination({
 }: NotificationDestinationInput): NotificationDestination | null {
   if (type === "LEVEL_UP_COMMENTED" || type === "LEVEL_UP_REACTED") {
     const destination = skillLevelChangeId
-      ? `/level-ups/${encodeURIComponent(skillLevelChangeId)}` as const
+      ? `/talent/level-ups/${encodeURIComponent(skillLevelChangeId)}` as const
       : null;
     return destination && canAccessAppPath(role, destination) ? destination : null;
   }
@@ -36,14 +36,14 @@ export function getNotificationDestination({
   let destination: NotificationDestination | null = null;
 
   if (type === "SKILL_ASSESSMENT_REQUESTED") {
-    destination = "/skill-approvals";
+    destination = "/talent/skill-approvals";
   } else if (
     type === "SKILL_ASSESSMENT_APPROVED" ||
     type === "SKILL_ASSESSMENT_CORRECTED"
   ) {
-    destination = "/my/skills";
+    destination = "/talent/my/skills";
   } else if (type === "SKILL_ASSESSMENT_REJECTED") {
-    destination = "/my/skills?tab=history";
+    destination = "/talent/my/skills?tab=history";
   }
 
   const accessPath = destination?.split("?")[0] ?? null;

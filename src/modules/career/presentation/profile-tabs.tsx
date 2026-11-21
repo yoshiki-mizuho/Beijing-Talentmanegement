@@ -18,7 +18,7 @@ export function ProfileTabs({
             ? "border-b-2 border-[var(--primary)] text-[var(--primary)]"
             : "text-[var(--muted-foreground)]"
         }`}
-        href={`/people/${memberId}`}
+        href={`/talent/people/${memberId}`}
       >
         スキル
       </Link>
@@ -28,7 +28,7 @@ export function ProfileTabs({
             ? "border-b-2 border-[var(--primary)] text-[var(--primary)]"
             : "text-[var(--muted-foreground)]"
         }`}
-        href={`/people/${memberId}?tab=career`}
+        href={`/talent/people/${memberId}?tab=career`}
       >
         経歴・資格
       </Link>

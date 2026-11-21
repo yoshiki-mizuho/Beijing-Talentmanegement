@@ -95,7 +95,7 @@ export function LevelUpCelebrationDialog({
         if (destination === "role") {
           setShowRoleAchievement(true);
         } else if (destination === "timeline") {
-          router.push("/dashboard#growth-timeline");
+          router.push("/talent/dashboard#growth-timeline");
         } else {
           router.refresh();
         }

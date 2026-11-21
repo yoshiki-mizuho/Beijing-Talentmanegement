@@ -14,7 +14,7 @@ test("スマホ幅でセットアップ進捗と一覧が画面内に収まる",
 
   try {
     await member.page.setViewportSize({ width: 375, height: 812 });
-    await member.page.goto("/dashboard");
+    await member.page.goto("/talent/dashboard");
 
     expect(
       await member.page.evaluate(

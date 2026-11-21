@@ -1,5 +1,6 @@
 "use client";
 
+import { apiClient } from "@/shared/lib/api-client";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { FilterX, Search, UsersRound } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -107,7 +108,7 @@ function MemberSearchTableInner({
       memberId: next.selectedMemberId
     });
     const queryString = params.toString();
-    router.replace(queryString ? `/members?${queryString}` : "/members", { scroll: false });
+    router.replace(queryString ? `/talent/members?${queryString}` : "/talent/members", { scroll: false });
   }, [router]);
   const closeMemberDetail = useCallback(() => {
     if (openedMemberFromList.current) {
@@ -245,7 +246,7 @@ function MemberSearchTableInner({
       page: latestState.current.page,
       memberId
     });
-    router.push(`/members?${params.toString()}`, { scroll: false });
+    router.push(`/talent/members?${params.toString()}`, { scroll: false });
   };
 
   return (
@@ -459,7 +460,7 @@ function MemberSearchTableInner({
                         memberId={member.id}
                         name={member.name}
                         avatarUpdatedAt={member.avatarUpdatedAt}
-                        href={`/people/${member.id}`}
+                        href={`/talent/people/${member.id}`}
                       />
                       <div>
                         <button
@@ -640,13 +641,13 @@ function TargetRoleCell({ member, roles }: { member: MemberListItem; roles: Role
   );
 }
 async function fetchMembers(searchParams: string, signal: AbortSignal) {
-  const response = await fetch(`/api/members?${searchParams}`, { signal });
+  const response = await apiClient(`/api/talent/v1/members?${searchParams}`, { signal });
   if (!response.ok) throw new Error("Failed to fetch members.");
   return (await response.json()) as MemberListData;
 }
 
 async function fetchMember(memberId: string, signal: AbortSignal) {
-  const response = await fetch(`/api/members/${encodeURIComponent(memberId)}`, { signal });
+  const response = await apiClient(`/api/talent/v1/members/${encodeURIComponent(memberId)}`, { signal });
   if (!response.ok) throw new Error("Failed to fetch member.");
   return (await response.json()) as MemberRow;
 }

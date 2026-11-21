@@ -1,5 +1,6 @@
 "use client";
 
+import { apiClient } from "@/shared/lib/api-client";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ColumnDef, type Row, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import {
@@ -892,7 +893,7 @@ function useReducedMotion() {
 async function fetchSkills(filters: SkillSearchFilters) {
   const searchParams = buildSkillSearchParams(filters);
   const queryString = searchParams.toString();
-  const response = await fetch(`/api/skills${queryString ? `?${queryString}` : ""}`);
+  const response = await apiClient(`/api/talent/v1/skills${queryString ? `?${queryString}` : ""}`);
 
   if (!response.ok) {
     throw new Error("Failed to fetch skills.");

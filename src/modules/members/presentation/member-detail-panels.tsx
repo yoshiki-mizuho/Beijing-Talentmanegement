@@ -149,7 +149,7 @@ export function MemberOverviewPanel({
                     <p>あと {remainingSkillCount} スキル</p>
                   )}
                   <Link
-                    href={`/roles?role=${encodeURIComponent(member.targetRole.id)}`}
+                    href={`/talent/roles?role=${encodeURIComponent(member.targetRole.id)}`}
                     className="inline-flex min-h-11 items-center font-semibold text-[var(--primary)] hover:underline"
                   >
                     ロールの詳細を見る
@@ -223,7 +223,7 @@ export function MemberOverviewPanel({
                   </div>
                   <Badge>未登録 → Lv{assessment.requestedLevel} を申請中</Badge>
                   <Link
-                    href="/skill-approvals"
+                    href="/talent/skill-approvals"
                     className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--primary)] hover:underline"
                   >
                     承認画面へ

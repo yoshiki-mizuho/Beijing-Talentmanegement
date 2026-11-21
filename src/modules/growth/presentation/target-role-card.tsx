@@ -81,7 +81,7 @@ export function TargetRoleCard({
             </div>
             <div>
               <h3 className="text-xl font-semibold">
-                <Link href={`/roles?role=${encodeURIComponent(role.id)}`} className="hover:underline">
+                <Link href={`/talent/roles?role=${encodeURIComponent(role.id)}`} className="hover:underline">
                   {role.name}
                 </Link>
               </h3>
@@ -102,7 +102,7 @@ export function TargetRoleCard({
                   {role.gaps[0] ? (
                     <div className="mt-3 rounded-lg bg-[var(--surface-subtle)] p-3">
                       <p className="text-sm font-medium">{role.gaps[0].skillName} {role.gaps[0].currentLevel === null ? "未保有" : `Lv${role.gaps[0].currentLevel}`} → 必要 Lv{role.gaps[0].requiredLevel}</p>
-                      <Link href="/my/skills" className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-[var(--primary)] hover:underline">申請する</Link>
+                      <Link href="/talent/my/skills" className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-[var(--primary)] hover:underline">申請する</Link>
                     </div>
                   ) : null}
                 </>

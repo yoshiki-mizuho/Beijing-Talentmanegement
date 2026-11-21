@@ -23,8 +23,8 @@ test("レベルアップのリアクション、コメント、返信を通知�
     manager = await openLoggedInContext(browser, managerAccount.credential);
     member = await openLoggedInContext(browser, memberAccount.credential);
     admin = await openLoggedInContext(browser, adminAccount.credential);
-    await member.page.goto("/dashboard?view=personal");
-    const detailLink = member.page.locator('#growth-timeline a[href^="/level-ups/"]').first();
+    await member.page.goto("/talent/dashboard?view=personal");
+    const detailLink = member.page.locator('#growth-timeline a[href^="/talent/level-ups/"]').first();
     await expect(detailLink).toBeVisible();
     const href = await detailLink.getAttribute("href");
     const levelChangeId = href?.split("/").pop() ?? null;
@@ -38,7 +38,7 @@ test("レベルアップのリアクション、コメント、返信を通知�
     await manager.page.getByPlaceholder("お祝いのコメントを書く").fill(comment);
     await manager.page.getByRole("button", { name: "投稿", exact: true }).click();
 
-    await member.page.goto("/notifications?view=unread");
+    await member.page.goto("/talent/notifications?view=unread");
     await member.page
       .getByRole("main")
       .locator("form")
@@ -46,7 +46,7 @@ test("レベルアップのリアクション、コメント、返信を通知�
       .first()
       .getByRole("button", { name: "確認", exact: true })
       .click();
-    await expect(member.page).toHaveURL(new RegExp(`/level-ups/${levelChangeId}$`));
+    await expect(member.page).toHaveURL(new RegExp(`/talent/level-ups/${levelChangeId}$`));
     await expect(member.page.getByText(comment, { exact: true })).toBeVisible();
     await expect(member.page.getByText(/おめでとう：.+さん/)).toBeVisible();
 
@@ -65,7 +65,7 @@ test("レベルアップのリアクション、コメント、返信を通知�
       expect(notifications[0]?.status).toBe("UNREAD");
       expect(notifications[0]?.body).toMatch(/ほか 1人が/);
     }).toPass({ timeout: 20_000 });
-    await member.page.goto("/notifications?view=unread");
+    await member.page.goto("/talent/notifications?view=unread");
     await expect(
       member.page.getByRole("main").getByText("レベルアップにリアクションが届きました", { exact: true }).first()
     ).toBeVisible();
@@ -77,7 +77,7 @@ test("レベルアップのリアクション、コメント、返信を通知�
     await expect(member.page.getByText(reply, { exact: true })).toBeVisible();
     const managerPage = manager.page;
     await expect(async () => {
-      await managerPage.goto("/notifications?view=unread");
+      await managerPage.goto("/talent/notifications?view=unread");
       await expect(
         managerPage.getByRole("main").getByText(/さんから返信が届きました/).first()
       ).toBeVisible({ timeout: 1_000 });

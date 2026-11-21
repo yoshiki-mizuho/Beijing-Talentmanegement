@@ -9,31 +9,31 @@ import {
 
 const expectedNavigation = {
   ADMIN: [
-    "/dashboard",
-    "/my/skills",
-    "/explore",
-    "/roles",
-    "/people/member-admin",
-    "/skill-approvals",
-    "/members",
-    "/skill-map",
-    "/skills",
-    "/skill-sheet-templates",
-    "/csv",
-    "/audit-logs",
-    "/ai-usage"
+    "/talent/dashboard",
+    "/talent/my/skills",
+    "/talent/explore",
+    "/talent/roles",
+    "/talent/people/member-admin",
+    "/talent/skill-approvals",
+    "/talent/members",
+    "/talent/skill-map",
+    "/talent/skills",
+    "/talent/skill-sheet-templates",
+    "/talent/csv",
+    "/talent/audit-logs",
+    "/talent/ai-usage"
   ],
   MANAGER: [
-    "/dashboard",
-    "/my/skills",
-    "/explore",
-    "/roles",
-    "/people/member-manager",
-    "/skill-approvals",
-    "/members",
-    "/skill-map"
+    "/talent/dashboard",
+    "/talent/my/skills",
+    "/talent/explore",
+    "/talent/roles",
+    "/talent/people/member-manager",
+    "/talent/skill-approvals",
+    "/talent/members",
+    "/talent/skill-map"
   ],
-  MEMBER: ["/dashboard", "/my/skills", "/explore", "/roles", "/people/member-member"]
+  MEMBER: ["/talent/dashboard", "/talent/my/skills", "/talent/explore", "/talent/roles", "/talent/people/member-member"]
 } satisfies Record<AppRole, string[]>;
 
 describe("application route access", () => {
@@ -58,54 +58,52 @@ describe("application route access", () => {
   });
 
   it("ADMINは定義済み画面と新規画面へアクセスできる", () => {
-    expect(canAccessAppPath("ADMIN", "/audit-logs")).toBe(true);
-    expect(canAccessAppPath("ADMIN", "/future-screen")).toBe(true);
+    expect(canAccessAppPath("ADMIN", "/talent/audit-logs")).toBe(true);
+    expect(canAccessAppPath("ADMIN", "/talent/future-screen")).toBe(true);
+    expect(canAccessAppPath("ADMIN", "/future-screen")).toBe(false);
   });
 
   it("MANAGERはCSVと監査ログへアクセスできない", () => {
-    expect(canAccessAppPath("MANAGER", "/members")).toBe(true);
-    expect(canAccessAppPath("MANAGER", "/csv")).toBe(false);
-    expect(canAccessAppPath("MANAGER", "/audit-logs/2026")).toBe(false);
-    expect(canAccessAppPath("MANAGER", "/ai-usage")).toBe(false);
-    expect(canAccessAppPath("MANAGER", "/skills")).toBe(false);
-    expect(canAccessAppPath("MANAGER", "/roles")).toBe(true);
+    expect(canAccessAppPath("MANAGER", "/talent/members")).toBe(true);
+    expect(canAccessAppPath("MANAGER", "/talent/csv")).toBe(false);
+    expect(canAccessAppPath("MANAGER", "/talent/audit-logs/2026")).toBe(false);
+    expect(canAccessAppPath("MANAGER", "/talent/ai-usage")).toBe(false);
+    expect(canAccessAppPath("MANAGER", "/talent/skills")).toBe(false);
+    expect(canAccessAppPath("MANAGER", "/talent/roles")).toBe(true);
   });
 
   it("提案用スキルシートはADMINとMANAGERがアクセスでき、MEMBERはアクセスできない", () => {
-    expect(canAccessAppPath("ADMIN", "/proposal-sheets/member-id")).toBe(true);
-    expect(canAccessAppPath("MANAGER", "/proposal-sheets/member-id")).toBe(true);
-    expect(canAccessAppPath("MEMBER", "/proposal-sheets/member-id")).toBe(false);
+    expect(canAccessAppPath("ADMIN", "/talent/proposal-sheets/member-id")).toBe(true);
+    expect(canAccessAppPath("MANAGER", "/talent/proposal-sheets/member-id")).toBe(true);
+    expect(canAccessAppPath("MEMBER", "/talent/proposal-sheets/member-id")).toBe(false);
   });
 
   it("AIの利用状況はADMINだけがアクセスできる", () => {
-    expect(canAccessAppPath("ADMIN", "/ai-usage")).toBe(true);
-    expect(canAccessAppPath("MANAGER", "/ai-usage")).toBe(false);
-    expect(canAccessAppPath("MEMBER", "/ai-usage")).toBe(false);
+    expect(canAccessAppPath("ADMIN", "/talent/ai-usage")).toBe(true);
+    expect(canAccessAppPath("MANAGER", "/talent/ai-usage")).toBe(false);
+    expect(canAccessAppPath("MEMBER", "/talent/ai-usage")).toBe(false);
   });
 
   it("スキルシートのひな形はADMINだけがアクセスできる", () => {
-    expect(canAccessAppPath("ADMIN", "/skill-sheet-templates")).toBe(true);
-    expect(canAccessAppPath("MANAGER", "/skill-sheet-templates")).toBe(false);
-    expect(canAccessAppPath("MEMBER", "/skill-sheet-templates")).toBe(false);
+    expect(canAccessAppPath("ADMIN", "/talent/skill-sheet-templates")).toBe(true);
+    expect(canAccessAppPath("MANAGER", "/talent/skill-sheet-templates")).toBe(false);
+    expect(canAccessAppPath("MEMBER", "/talent/skill-sheet-templates")).toBe(false);
   });
 
   it("MEMBERはメンバー向け画面へアクセスでき、管理画面へアクセスできない", () => {
-    expect(canAccessAppPath("MEMBER", "/dashboard")).toBe(true);
-    expect(canAccessAppPath("MEMBER", "/explore")).toBe(true);
-    expect(canAccessAppPath("MEMBER", "/people/member-id")).toBe(true);
-    expect(canAccessAppPath("MEMBER", "/my/skills/history")).toBe(true);
-    expect(canAccessAppPath("MEMBER", "/notifications")).toBe(true);
-    expect(canAccessAppPath("MEMBER", "/roles")).toBe(true);
-    expect(canAccessAppPath("MEMBER", "/level-ups/change-1")).toBe(true);
-    expect(canAccessAppPath("MEMBER", "/members")).toBe(false);
-    expect(canAccessAppPath("MEMBER", "/skill-approvals")).toBe(false);
-  });
-
-  it("パスワード変更画面は全ロールが利用できる", () => {
+    expect(canAccessAppPath("MEMBER", "/talent/dashboard")).toBe(true);
+    expect(canAccessAppPath("MEMBER", "/talent/explore")).toBe(true);
+    expect(canAccessAppPath("MEMBER", "/talent/people/member-id")).toBe(true);
+    expect(canAccessAppPath("MEMBER", "/talent/my/skills/history")).toBe(true);
+    expect(canAccessAppPath("MEMBER", "/talent/notifications")).toBe(true);
+    expect(canAccessAppPath("MEMBER", "/talent/roles")).toBe(true);
+    expect(canAccessAppPath("MEMBER", "/talent/level-ups/change-1")).toBe(true);
+    expect(canAccessAppPath("MEMBER", "/talent/members")).toBe(false);
+    expect(canAccessAppPath("MEMBER", "/talent/skill-approvals")).toBe(false);
   });
 
   it("パス境界を越えた前方一致を許可しない", () => {
-    expect(isSameOrNestedPath("/csv-import", "/csv")).toBe(false);
+    expect(isSameOrNestedPath("/csv-import", "/talent/csv")).toBe(false);
     expect(canAccessAppPath("MANAGER", "/csv-import")).toBe(false);
   });
 });

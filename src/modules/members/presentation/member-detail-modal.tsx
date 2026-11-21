@@ -105,14 +105,14 @@ export function MemberDetailModal({
       headerActions={(
         <div className="flex items-center gap-2">
           <Link
-            href={`/proposal-sheets/${member.id}` as Route}
+            href={`/talent/proposal-sheets/${member.id}` as Route}
             className="inline-flex h-8 items-center gap-2 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-sm font-semibold text-[var(--foreground)] hover:bg-[var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
           >
             <FileText className="h-4 w-4" aria-hidden="true" />
             <span className="hidden sm:inline">提案用シート</span>
           </Link>
           <Link
-            href={`/people/${member.id}` as Route}
+            href={`/talent/people/${member.id}` as Route}
             className="inline-flex h-8 items-center gap-2 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-sm font-semibold text-[var(--foreground)] hover:bg-[var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
           >
             <UserRound className="h-4 w-4" aria-hidden="true" />

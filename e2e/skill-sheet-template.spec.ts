@@ -14,7 +14,7 @@ test("ADMINがひな形を登録し提案用シートをExcelで出力できる"
   const member = await data.createMember({ label: "ひな形対象", departmentId: department.id });
   try {
     await login(page, admin.credential);
-    await page.goto(`/people/${member.member.id}?tab=career`);
+    await page.goto(`/talent/people/${member.member.id}?tab=career`);
     await page.getByRole("button", { name: "経歴を追加" }).click();
     await page.getByLabel("開始年月").fill("2025-01");
     await page.getByLabel("業種").fill("製造");
@@ -40,7 +40,7 @@ test("ADMINがひな形を登録し提案用シートをExcelで出力できる"
     const template = Buffer.from(await workbook.xlsx.writeBuffer());
 
     const templateName = `E2Eひな形-${Date.now()}`;
-    await page.goto("/skill-sheet-templates");
+    await page.goto("/talent/skill-sheet-templates");
     await page.getByLabel("名前", { exact: true }).fill(templateName);
     await page.getByLabel("ファイル", { exact: true }).setInputFiles({
       name: "e2e-template.xlsx",
@@ -51,7 +51,7 @@ test("ADMINがひな形を登録し提案用シートをExcelで出力できる"
     await page.getByRole("button", { name: "登録", exact: true }).click();
     await expect(page.getByText("ひな形を登録しました。")).toBeVisible();
 
-    await page.goto(`/proposal-sheets/${member.member.id}`);
+    await page.goto(`/talent/proposal-sheets/${member.member.id}`);
     await page.getByRole("button", { name: "AI で下書きを作る" }).click();
     await page.getByLabel("表示名").fill("E2E表示名");
     await page.getByLabel("自己 PR").fill("E2E自己PR");

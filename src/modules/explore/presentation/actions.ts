@@ -18,8 +18,8 @@ export async function setProfileVisibilityAction(formData: FormData) {
       const session = await requirePasswordReadyMember();
       const isPublic = formData.get("isPublic") === "true";
       await setProfileVisibility(session.user.memberId, isPublic);
-      revalidatePath(`/people/${session.user.memberId}`);
-      revalidatePath("/explore");
+      revalidatePath(`/talent/people/${session.user.memberId}`);
+      revalidatePath("/talent/explore");
       return isPublic;
     },
     (isPublic) => (isPublic ? "プロフィールを公開しました。" : "プロフィールを非公開にしました。")
@@ -32,7 +32,7 @@ export async function updateMyAvatarAction(formData: FormData) {
     const avatar = formData.get("avatar");
     if (!(avatar instanceof File)) throw new Error("Avatar file is required.");
     await updateMyAvatar(session.user.memberId, avatar);
-    revalidatePath("/", "layout");
+    revalidatePath("/talent", "layout");
   }, "アイコン画像を変更しました。");
 }
 
@@ -40,7 +40,7 @@ export async function deleteMyAvatarAction() {
   return runAction(async () => {
     const session = await requirePasswordReadyMember();
     await deleteMyAvatar(session.user.memberId);
-    revalidatePath("/", "layout");
+    revalidatePath("/talent", "layout");
   }, "アイコン画像を削除しました。");
 }
 
@@ -51,6 +51,6 @@ export async function updateMyProfileAction(formData: FormData) {
       profileMessage: String(formData.get("profileMessage") ?? ""),
       consultTopics: formData.getAll("consultTopics").map(String)
     });
-    revalidatePath(`/people/${session.user.memberId}`);
+    revalidatePath(`/talent/people/${session.user.memberId}`);
   }, "プロフィールを更新しました");
 }

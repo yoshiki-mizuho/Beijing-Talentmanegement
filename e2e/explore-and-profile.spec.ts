@@ -9,7 +9,7 @@ const credentials = readDemoCredentials();
 test("MEMBERがスキルとレベルで人を探しプロフィールを開く", async ({ page }) => {
   await login(page, credentials.MEMBER);
   await dismissExistingLevelUpDialogs(page);
-  await page.goto("/explore");
+  await page.goto("/talent/explore");
   await page.getByRole("combobox", { name: "探すスキル" }).fill("type");
   await page.getByRole("option", { name: "TypeScript" }).click();
   await page.getByRole("button", { name: "Lv4以上" }).click();
@@ -18,14 +18,14 @@ test("MEMBERがスキルとレベルで人を探しプロフィールを開く",
   const result = page.locator("#people-search li a").first();
   await expect(result).toBeVisible();
   await result.click();
-  await expect(page).toHaveURL(/\/people\//);
+  await expect(page).toHaveURL(/\/talent\/people\//);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 });
 
 test("いま伸びている技術から移動すると選択欄にスキル名が表示される", async ({ page }) => {
   await login(page, credentials.MEMBER);
   await dismissExistingLevelUpDialogs(page);
-  await page.goto("/explore");
+  await page.goto("/talent/explore");
   const trendingSkill = page
     .getByRole("region", { name: "いま伸びている技術" })
     .getByRole("link")
@@ -39,7 +39,7 @@ test("いま伸びている技術から移動すると選択欄にスキル名�
 test("コンボボックスはキーボードだけでスキルを選べる", async ({ page }) => {
   await login(page, credentials.MEMBER);
   await dismissExistingLevelUpDialogs(page);
-  await page.goto("/explore");
+  await page.goto("/talent/explore");
   const combobox = page.getByRole("combobox", { name: "探すスキル" });
   await combobox.fill("type");
   await combobox.press("ArrowDown");
@@ -55,7 +55,7 @@ test("本人が公開設定を切り替え、最後に公開へ戻す", async ({
     await login(page, member.credential);
     await page.getByLabel("アカウントメニューを開く").click();
     await page.getByRole("link", { name: "スキルプロフィール" }).click();
-    await expect(page).toHaveURL(/\/people\//);
+    await expect(page).toHaveURL(/\/talent\/people\//);
     const visibility = page.getByRole("switch", { name: "プロフィールを公開" });
     await expect(visibility).toBeVisible();
     await expect(visibility).toContainText("公開中");
@@ -106,7 +106,7 @@ test("非公開プロフィールは別のMEMBER相当の閲覧者に氏名を�
   try {
     await manager.page.getByLabel("アカウントメニューを開く").click();
     await manager.page.getByRole("link", { name: "スキルプロフィール" }).click();
-    await expect(manager.page).toHaveURL(/\/people\//);
+    await expect(manager.page).toHaveURL(/\/talent\/people\//);
     const profileUrl = manager.page.url();
     const managerName = await manager.page.getByRole("heading", { level: 1 }).textContent();
     const visibility = manager.page.getByRole("switch", { name: "プロフィールを公開" });

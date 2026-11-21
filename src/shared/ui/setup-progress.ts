@@ -7,7 +7,7 @@ export type SetupProgressInput = {
 export type SetupProgressItem = {
   id: "target-role" | "first-assessment" | "first-approval";
   label: string;
-  href: "/dashboard#target-role" | "/my/skills" | "/dashboard#first-steps";
+  href: "/talent/dashboard#target-role" | "/talent/my/skills" | "/talent/dashboard#first-steps";
   completed: boolean;
 };
 
@@ -22,13 +22,13 @@ const setupItemDefinitions = [
   {
     id: "target-role",
     label: "目標ロールを決める",
-    href: "/dashboard#target-role",
+    href: "/talent/dashboard#target-role",
     isCompleted: (input: SetupProgressInput) => input.hasTargetRole
   },
   {
     id: "first-assessment",
     label: "得意なスキルを申請する",
-    href: "/my/skills",
+    href: "/talent/my/skills",
     // CSV や seed でスキルを登録済みの人は、申請していなくても済んだとみなす
     isCompleted: (input: SetupProgressInput) =>
       input.assessmentCount >= 1 || input.approvedSkillCount >= 1
@@ -36,7 +36,7 @@ const setupItemDefinitions = [
   {
     id: "first-approval",
     label: "上司の承認を待つ",
-    href: "/dashboard#first-steps",
+    href: "/talent/dashboard#first-steps",
     isCompleted: (input: SetupProgressInput) => input.approvedSkillCount >= 1
   }
 ] as const;
