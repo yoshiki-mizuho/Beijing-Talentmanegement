@@ -34,7 +34,7 @@ function startsWith(bytes: Uint8Array, signature: number[]) {
 
 export function canViewMemberAvatar(input: {
   viewer: { role: string; memberId: string };
-  member: { id: string; managerId: string | null; status: string; isProfilePublic: boolean };
+  member: { id: string; status: string; isProfilePublic: boolean };
   managerScopeIncludesMember: boolean;
 }) {
   const { viewer, member } = input;
@@ -42,8 +42,7 @@ export function canViewMemberAvatar(input: {
   if (member.status === "ACTIVE") {
     if (
       member.isProfilePublic ||
-      viewer.memberId === member.id ||
-      member.managerId === viewer.memberId
+      viewer.memberId === member.id
     ) {
       return true;
     }

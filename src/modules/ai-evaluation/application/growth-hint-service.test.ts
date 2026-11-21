@@ -282,6 +282,6 @@ describe("generateGrowthHint", () => {
   ])("ADMINは誰の育成のヒントでも%sできる", async (_label, action) => {
     mocks.getAiConfig.mockReturnValue({ kind: "none" });
     await action();
-    expect(mocks.getScope).not.toHaveBeenCalled();
+    expect(mocks.getScope).toHaveBeenCalledWith("ADMIN", "admin");
   });
 });

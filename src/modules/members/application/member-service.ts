@@ -18,6 +18,8 @@ import {
 } from "@/modules/members/domain/skill-assessment-schema";
 import * as memberRepository from "@/modules/members/infrastructure/member-repository";
 import { buildDepartmentTree } from "@/modules/members/domain/department-hierarchy";
+import { displayMemberName } from "@/modules/members/domain/member-display";
+import { getMemberScope } from "@/modules/members/application/member-scope";
 import { paginateItems } from "@/modules/members/domain/member-page";
 import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
 import type {
@@ -97,18 +99,12 @@ function toMemberListItem(
 }
 
 export function omitMemberDetailFields(member: MemberRow): MemberListItem {
-  const {
-    email: _email,
-    profile: _profile,
-    managerId: _managerId,
-    manager: _manager,
-    pendingAssessments,
-    ...item
-  } = member;
-  void _email;
-  void _profile;
-  void _managerId;
-  void _manager;
+  const { pendingAssessments, ...memberWithDetail } = member;
+  const item = { ...memberWithDetail } as unknown as MemberListItem;
+  delete (item as Partial<MemberRow>).email;
+  delete (item as Partial<MemberRow>).profile;
+  delete (item as Partial<MemberRow>).managerId;
+  delete (item as Partial<MemberRow>).manager;
   return {
     ...item,
     pendingAssessmentCount: pendingAssessments?.length ?? 0
@@ -120,17 +116,17 @@ function toMemberRow(
 ): MemberRow {
   return {
     id: member.id,
-    employeeNo: member.employeeNo,
-    name: member.name,
+    employeeNo: member.employeeNo ?? "",
+    name: displayMemberName(member.name),
     avatarUpdatedAt: member.avatarUpdatedAt?.toISOString() ?? null,
-    email: member.email,
+    email: member.email ?? "",
     profile: member.profile,
     status: member.status,
     jobTitle: member.jobTitle,
-    departmentId: member.departmentId,
-    department: member.department,
-    managerId: member.managerId,
-    manager: member.manager,
+    departmentId: member.departmentId ?? "",
+    department: member.department ?? { id: "", name: "", code: "", tenantId: "", parentDepartmentId: null, isActive: true, createdAt: new Date(0), updatedAt: new Date(0) },
+    managerId: null,
+    manager: null,
     targetRoleId: member.targetRoleId,
     targetRole: member.targetRole
       ? {
@@ -146,8 +142,8 @@ function toMemberRow(
       roleId: achievement.roleId,
       achievedAt: achievement.achievedAt.toISOString()
     })),
-    role: member.users[0]?.role ?? null,
-    platformUserId: member.users[0]?.platformUserId ?? null,
+    role: null,
+    platformUserId: member.platformUserId,
     pendingAssessments: member.selfAssessments,
     memberSkills: member.memberSkills.map((memberSkill) => ({
       id: memberSkill.id,
@@ -205,23 +201,25 @@ export function getMemberSkillSheetContext(memberId: string) {
   return memberRepository.getMemberSkillSheetContext(memberId);
 }
 
-export function listPendingSkillAssessments(
+export async function listPendingSkillAssessments(
   reviewerRole: AuthRole,
   reviewerMemberId: string
 ) {
+  const scope = await getMemberScope(reviewerRole, reviewerMemberId);
   return memberRepository.listPendingSkillAssessments(
     reviewerRole,
-    reviewerMemberId
+    scope.memberIds
   );
 }
 
-export function countPendingSkillAssessments(
+export async function countPendingSkillAssessments(
   reviewerRole: AuthRole,
   reviewerMemberId: string
 ) {
+  const scope = await getMemberScope(reviewerRole, reviewerMemberId);
   return memberRepository.countPendingSkillAssessments(
     reviewerRole,
-    reviewerMemberId
+    scope.memberIds
   );
 }
 
@@ -257,16 +255,42 @@ export function createSkillAssessments(input: unknown, actorMemberId: string | n
     skillAssessmentBatchInputSchema.parse(input), actorMemberId
   );
 }
-export function reviewSkillAssessment(input: unknown) {
-  return memberRepository.reviewSkillAssessment(
-    skillAssessmentReviewInputSchema.parse(input)
+export async function reviewSkillAssessment(input: unknown) {
+  const parsed = skillAssessmentReviewInputSchema.parse(input);
+  await assertAssessmentScope(
+    [parsed.assessmentId],
+    parsed.reviewerRole,
+    parsed.reviewerMemberId
   );
+  return memberRepository.reviewSkillAssessment(parsed);
 }
 
-export function approveSkillAssessments(input: unknown) {
-  return memberRepository.approveSkillAssessments(
-    skillAssessmentApprovalBatchInputSchema.parse(input)
+export async function approveSkillAssessments(input: unknown) {
+  const parsed = skillAssessmentApprovalBatchInputSchema.parse(input);
+  await assertAssessmentScope(
+    parsed.assessmentIds,
+    parsed.reviewerRole,
+    parsed.reviewerMemberId
   );
+  return memberRepository.approveSkillAssessments(parsed);
+}
+
+async function assertAssessmentScope(
+  assessmentIds: string[],
+  reviewerRole: AuthRole,
+  reviewerMemberId: string
+) {
+  if (reviewerRole === "ADMIN") return;
+  const [scope, assessments] = await Promise.all([
+    getMemberScope(reviewerRole, reviewerMemberId),
+    memberRepository.getAssessmentMemberIds(assessmentIds)
+  ]);
+  if (
+    assessments.length !== assessmentIds.length ||
+    assessments.some((assessment) => !scope.memberIds.includes(assessment.memberId))
+  ) {
+    throw new Error("skill_assessment_forbidden");
+  }
 }
 
 export function updateMemberManager(input: unknown, actorMemberId: string | null) {

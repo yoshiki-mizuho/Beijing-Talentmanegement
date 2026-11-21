@@ -10,7 +10,6 @@ import {
   parseMemberListSearchParams
 } from "@/modules/members/domain/member-search";
 import { MemberDetailModal } from "@/modules/members/presentation/member-detail-modal";
-import { MemberCreateDialog } from "@/modules/members/presentation/member-create-dialog";
 import {
   getMemberStatusLabel,
   getTargetRoleProgressLabel,
@@ -23,7 +22,6 @@ import {
 } from "@/modules/members/presentation/member-search-filters";
 import type {
   DepartmentOption,
-  ManagerOption,
   MemberListData,
   MemberListItem,
   MemberRow,
@@ -52,12 +50,8 @@ type Props = {
   departments: DepartmentOption[];
   skills: SkillOption[];
   roles: RoleOption[];
-  managerCandidates: ManagerOption[];
   targetRoles: TargetRoleOption[];
-  canCreateMembers: boolean;
-  canDeactivateMembers: boolean;
-  canEditGrowthSettings: boolean;
-  viewerMemberId: string;
+  oneOnOneViewerMemberId: string | null;
   scopeName: string;
   initialFilters: MemberSearchFilters;
   initialPage: number;
@@ -78,12 +72,8 @@ function MemberSearchTableInner({
   departments,
   skills,
   roles,
-  managerCandidates,
   targetRoles,
-  canCreateMembers,
-  canDeactivateMembers,
-  canEditGrowthSettings,
-  viewerMemberId,
+  oneOnOneViewerMemberId,
   scopeName,
   initialFilters,
   initialPage,
@@ -258,14 +248,6 @@ function MemberSearchTableInner({
             {scopeName}・{total}名
           </span>
         </h1>
-        {canCreateMembers ? (
-          <MemberCreateDialog
-            departments={departments}
-            managerCandidates={managerCandidates}
-            targetRoles={targetRoles}
-            canEditGrowthSettings={canEditGrowthSettings}
-          />
-        ) : null}
       </div>
       <div className="flex flex-wrap items-center gap-3 border-b border-[var(--border)] pb-4">
         <div className="relative min-w-56 flex-1 md:max-w-xs">
@@ -526,14 +508,10 @@ function MemberSearchTableInner({
       {detailQuery.data ? (
         <MemberDetailModal
           member={detailQuery.data}
-          departments={departments}
           skills={skills}
-          managerCandidates={managerCandidates}
           targetRoles={targetRoles}
           roles={roles}
-          canDeactivateMembers={canDeactivateMembers}
-          canEditGrowthSettings={canEditGrowthSettings}
-          viewerMemberId={viewerMemberId}
+          oneOnOneViewerMemberId={oneOnOneViewerMemberId}
           onClose={closeMemberDetail}
           onMemberChanged={refreshMembers}
         />

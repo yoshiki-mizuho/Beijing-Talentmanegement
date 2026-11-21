@@ -24,7 +24,7 @@ type MemberSource = {
   id: string;
   name: string;
   avatarUpdatedAt: Date | null;
-  department: { name: string };
+  department: { name: string } | null;
   jobTitle: string | null;
   targetRoleId: string | null;
   memberSkills: { skillId: string; level: number; skill: { name: string } }[];
@@ -80,7 +80,7 @@ export function buildRolePageViewModel(input: {
                 id: member.id,
                 name: member.name,
                 avatarUpdatedAt: member.avatarUpdatedAt?.toISOString() ?? null,
-                departmentName: member.department.name,
+                departmentName: member.department?.name ?? "所属なし",
                 jobTitle: member.jobTitle,
                 isTarget: member.targetRoleId === role.id,
                 achieved: recorded,

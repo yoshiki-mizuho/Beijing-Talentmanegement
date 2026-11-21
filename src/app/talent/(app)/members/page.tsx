@@ -1,6 +1,5 @@
 import {
   listDepartments,
-  listManagerCandidates,
   listMemberPage
 } from "@/modules/members/application/member-service";
 import { MemberSearchTable } from "@/modules/members/presentation/member-search-table";
@@ -22,14 +21,14 @@ export default async function MembersPage({
 }) {
   const initialUrlState = parseMemberListSearchParams(await searchParams);
   const session = await requirePageRoles(managerOrAdmin);
-  const canCreateMembers = session.user.role === "ADMIN";
-  const canDeactivateMembers = session.user.role === "ADMIN";
-  const canEditGrowthSettings = session.user.role === "ADMIN";
+  // 1on1 メモは、範囲の部下を開いた MANAGER だけが使う（範囲はサーバでも確かめる）。
+  const oneOnOneViewerMemberId =
+    session.user.role === "MANAGER" ? session.user.memberId : null;
   const scope = await getMemberScope(session.user.role, session.user.memberId);
   const initialMemberParams = Object.fromEntries(
     buildMemberSearchParams(initialUrlState.filters)
   );
-  const [memberData, departments, skills, roles, managerCandidates] = await Promise.all([
+  const [memberData, departments, skills, roles] = await Promise.all([
     listMemberPage(
       {
         ...initialMemberParams,
@@ -40,8 +39,7 @@ export default async function MembersPage({
     ),
     listDepartments(),
     listSkills(),
-    listRoles(),
-    listManagerCandidates()
+    listRoles()
   ]);
   const activeSkills = skills.filter((skill) => skill.isActive);
   const skillOptions = activeSkills.map((skill) => ({
@@ -77,12 +75,8 @@ export default async function MembersPage({
             departments={departments}
             skills={skillOptions}
             roles={roleOptions}
-            managerCandidates={managerCandidates}
             targetRoles={targetRoleOptions}
-            canCreateMembers={canCreateMembers}
-            canDeactivateMembers={canDeactivateMembers}
-            canEditGrowthSettings={canEditGrowthSettings}
-            viewerMemberId={session.user.memberId}
+            oneOnOneViewerMemberId={oneOnOneViewerMemberId}
             scopeName={scope.name}
             initialFilters={initialUrlState.filters}
             initialPage={initialUrlState.page}

@@ -29,6 +29,7 @@ import {
 import { resolveSkillLevelDescription } from "@/modules/skills/domain/skill-level-guide";
 import { AuthorizationError } from "@/server/auth/authorization";
 import { UserFacingError } from "@/shared/lib/user-facing-error";
+import { getMemberScope, memberIsInScope } from "@/modules/members/application/member-scope";
 
 export async function addLevelUpReaction(
   input: unknown,
@@ -84,11 +85,10 @@ export async function getLevelUpThread(
   viewer: { memberId: string; role: AuthRole }
 ) {
   const access = await growthRepository.getLevelUpInteractionAccess(
-    levelChangeId,
-    viewer.memberId,
-    viewer.role
+    levelChangeId
   );
-  if (!access) return null;
+  const scope = await getMemberScope(viewer.role, viewer.memberId);
+  if (!access || !memberIsInScope(scope, access.memberId)) return null;
   const thread = await growthRepository.getLevelUpThread(levelChangeId);
   if (!thread) return null;
   const ids = await listFirstMoverLevelChangeIds({ levelChangeIds: [levelChangeId] });
@@ -111,7 +111,8 @@ export async function createCheer(
     throw new AuthorizationError("自分自身には応援を送れません。", 403);
   }
   const target = await growthRepository.getCheerAccessContext(parsed.toMemberId);
-  if (!target || (viewer.role !== "ADMIN" && target.managerId !== viewer.memberId)) {
+  const scope = await getMemberScope(viewer.role, viewer.memberId);
+  if (!target || !memberIsInScope(scope, parsed.toMemberId)) {
     throw new AuthorizationError("このメンバーに応援を送る権限がありません。", 403);
   }
   if (parsed.mentorMemberId) {
@@ -126,7 +127,8 @@ export async function createCheer(
 export async function createOneOnOneNote(input: unknown, managerMemberId: string) {
   const parsed = oneOnOneNoteInputSchema.omit({ managerMemberId: true }).parse(input);
   const member = await growthRepository.getOneOnOneMember(parsed.memberId);
-  if (!member || member.managerId !== managerMemberId) {
+  const scope = await getMemberScope("MANAGER", managerMemberId);
+  if (!member || !memberIsInScope(scope, parsed.memberId)) {
     throw new AuthorizationError("このメンバーの1on1メモを追加する権限がありません。", 403);
   }
   return growthRepository.createOneOnOneNote({ ...parsed, managerMemberId });
@@ -373,14 +375,13 @@ async function assertLevelUpInteractionAccess(
   disallowOwner: boolean
 ) {
   const access = await growthRepository.getLevelUpInteractionAccess(
-    levelChangeId,
-    viewer.memberId,
-    viewer.role
+    levelChangeId
   );
-  if (!access) {
+  const scope = await getMemberScope(viewer.role, viewer.memberId);
+  if (!access || !memberIsInScope(scope, access.memberId)) {
     throw new AuthorizationError("このレベルアップを操作する権限がありません。", 403);
   }
-  if (disallowOwner && access.ownerMemberId === viewer.memberId) {
+  if (disallowOwner && access.memberId === viewer.memberId) {
     throw new UserFacingError("自分のレベルアップにはリアクションできません。");
   }
 }

@@ -9,6 +9,7 @@ import {
 } from "@/modules/dashboard/domain/team-dashboard";
 import type { TeamDashboardResult } from "@/modules/dashboard/application/team-dashboard-service";
 import { buildCheerMessage, selectMentorCandidates } from "@/modules/growth/domain/cheer-and-one-on-one";
+import { displayMemberName } from "@/modules/members/domain/member-display";
 
 const millisecondsPerDay = 86_400_000;
 
@@ -61,7 +62,11 @@ export function buildTeamDashboardViewModel(data: TeamDashboardResult) {
       mentorCandidates: selectMentorCandidates(
         data.mentorSkills
           .filter((candidate) => candidate.skillId === item.skillId)
-          .map((candidate) => ({ ...candidate.member, level: candidate.level })),
+          .map((candidate) => ({
+            ...candidate.member,
+            name: displayMemberName(candidate.member.name),
+            level: candidate.level
+          })),
         [data.manager.id, item.memberId]
       )
     })),

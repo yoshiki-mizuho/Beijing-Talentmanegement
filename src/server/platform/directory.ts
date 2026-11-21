@@ -22,6 +22,7 @@ type UserInfo = {
   avatarUrl?: string;
   avatarColor?: string;
   isNodeLeader?: boolean;
+  role?: string;
 };
 
 type NodeMember = {
@@ -63,7 +64,8 @@ function mapUser(user: UserInfo): PlatformUser {
     nodeName: user.nodeName || null,
     avatarUrl: user.avatarUrl || null,
     avatarColor: user.avatarColor || null,
-    isNodeLeader: user.isNodeLeader ?? false
+    isNodeLeader: user.isNodeLeader ?? false,
+    role: user.role === "ADMIN" ? "ADMIN" : "MEMBER"
   };
 }
 
@@ -80,19 +82,38 @@ export async function getUsers(userIds: string[]) {
   const uniqueIds = [...new Set(userIds.filter(Boolean))];
   if (uniqueIds.length === 0) return new Map<string, PlatformUser>();
 
-  return cached(`users:${[...uniqueIds].sort().join(",")}`, async () => {
-    const users = new Map<string, PlatformUser>();
+  const tenantId = await getTenantId();
+  const users = new Map<string, PlatformUser>();
+  const missingIds: string[] = [];
+  for (const userId of uniqueIds) {
+    const found = readCache<PlatformUser | null>(tenantId, `user:${userId}`);
+    if (found) users.set(userId, found);
+    else if (found === undefined) missingIds.push(userId);
+  }
 
-    for (const batch of chunks(uniqueIds, 200)) {
+  for (const batch of chunks(missingIds, 200)) {
+    try {
       const response = await callUserService<{ users: UserInfo[] }>(
         "getUsers",
         { userIds: batch }
       );
-      for (const user of response.users) users.set(user.id, mapUser(user));
+      const foundIds = new Set<string>();
+      for (const item of response.users) {
+        const user = mapUser(item);
+        foundIds.add(user.id);
+        users.set(user.id, user);
+        writeCache(tenantId, `user:${user.id}`, user);
+      }
+      for (const userId of batch) {
+        if (!foundIds.has(userId)) writeCache(tenantId, `user:${userId}`, null);
+      }
+    } catch (error) {
+      if (!isNotFound(error)) throw error;
+      for (const userId of batch) writeCache(tenantId, `user:${userId}`, null);
     }
+  }
 
-    return users;
-  });
+  return users;
 }
 
 export async function getUser(userId: string) {
@@ -143,7 +164,8 @@ function mapOrganization(nodes: OrgSubtreeNode[]): Organization {
         nodeName: node.name,
         avatarUrl: member.avatarUrl || null,
         avatarColor: member.avatarColor || null,
-        isNodeLeader: node.leaderUserIds.includes(member.userId)
+        isNodeLeader: node.leaderUserIds.includes(member.userId),
+        role: "MEMBER"
       });
     }
 
@@ -200,10 +222,13 @@ export async function getOrganization(currentUserId?: string) {
 
 export async function getLeaderScope(userId: string) {
   return cached<LeaderScope>(`leader-scope:${userId}`, async () => {
-    const response = await callUserService<{ nodeIds: string[] }>(
-      "getLeaderScopeNodeIDs",
-      { userId }
-    );
+    let response: { nodeIds: string[] };
+    try {
+      response = await callUserService("getLeaderScopeNodeIDs", { userId });
+    } catch (error) {
+      if (isNotFound(error)) return { nodeIds: [], members: new Map() };
+      throw error;
+    }
     if (response.nodeIds.length === 0) {
       return { nodeIds: [], members: new Map() };
     }
@@ -225,7 +250,8 @@ export async function getLeaderScope(userId: string) {
             nodeName: null,
             avatarUrl: member.avatarUrl || null,
             avatarColor: member.avatarColor || null,
-            isNodeLeader: false
+            isNodeLeader: false,
+            role: "MEMBER"
           });
         }
       }
@@ -240,11 +266,31 @@ export async function getLeaderScope(userId: string) {
 
 export async function getSuperiorIds(userId: string) {
   return cached<string[]>(`superiors:${userId}`, async () => {
-    const response = await callUserService<{ superiorIds: string[] }>(
-      "getSuperiorIDs",
-      { userId }
-    );
-    return response.superiorIds;
+    try {
+      const response = await callUserService<{ superiorIds: string[] }>(
+        "getSuperiorIDs",
+        { userId }
+      );
+      return response.superiorIds;
+    } catch (error) {
+      if (isNotFound(error)) return [];
+      throw error;
+    }
+  });
+}
+
+export async function getDirectLeaderIds(userId: string) {
+  return cached<string[]>(`direct-leaders:${userId}`, async () => {
+    try {
+      const response = await callUserService<{ userIds: string[] }>(
+        "getDirectLeaderIDs",
+        { userId }
+      );
+      return response.userIds;
+    } catch (error) {
+      if (isNotFound(error)) return [];
+      throw error;
+    }
   });
 }
 

@@ -31,7 +31,7 @@ export async function getDashboardSummary(
   const visibleIds = dashboardVisibleDepartmentIds(
     role,
     scope.departments,
-    scope.viewer.departmentId,
+    scope.viewer.departmentId ?? "",
   );
   const source = await getOrganizationDashboardSource({
     departmentIds:
@@ -51,6 +51,7 @@ export async function getDashboardSummary(
   }
   const sourceMembers = source.members.map((member) => ({
     ...member,
+    departmentId: member.departmentId ?? "",
     roleAchievements: achievementsByMember.get(member.id) ?? [],
   }));
   const changesByMember = groupLevelChangesByMember(source.changes);

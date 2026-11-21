@@ -335,7 +335,7 @@ export async function listPopularSkillsForMember(memberId: string) {
     : await countPopularSkills({});
 
   return {
-    departmentName: useDepartment ? member?.department.name ?? null : null,
+    departmentName: useDepartment ? member?.department?.name ?? null : null,
     skillIds: counts
       .sort((left, right) => right.count - left.count || left.name.localeCompare(right.name, "ja"))
       .slice(0, 8)

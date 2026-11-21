@@ -4,6 +4,7 @@ import {
 } from "@/modules/members/application/member-service";
 import { getApprovalCheckPoints } from "@/modules/members/domain/approval-check-points";
 import { buildApprovalLevelDistribution } from "@/modules/members/domain/approval-level-distribution";
+import { displayMemberName } from "@/modules/members/domain/member-display";
 import { SkillApprovalList } from "@/modules/members/presentation/skill-approval-list";
 import {
   formatSkillApprovalDate,
@@ -26,7 +27,15 @@ export default async function SkillApprovalsPage() {
     listSkillPrerequisitesBySkillIds([
       ...new Set(assessments.map((assessment) => assessment.skillId))
     ]),
-    getSkillApprovalInsightContext(assessments)
+    getSkillApprovalInsightContext(
+      assessments.map((assessment) => ({
+        ...assessment,
+        member: {
+          ...assessment.member,
+          departmentId: assessment.member.departmentId ?? ""
+        }
+      }))
+    )
   ]);
   const now = new Date();
   const rows: SkillApprovalRow[] = assessments.map((assessment) => {
@@ -74,9 +83,9 @@ export default async function SkillApprovalsPage() {
     return {
       id: assessment.id,
       memberId: assessment.memberId,
-      memberName: assessment.member.name,
+      memberName: displayMemberName(assessment.member.name),
       avatarUpdatedAt: assessment.member.avatarUpdatedAt?.toISOString() ?? null,
-      departmentName: assessment.member.department.name,
+      departmentName: assessment.member.department?.name ?? "所属なし",
       targetRoleName: assessment.member.targetRole?.name ?? null,
       jobTitle: assessment.member.jobTitle,
       skillName: assessment.skill.name,

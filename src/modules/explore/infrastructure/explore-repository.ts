@@ -3,11 +3,15 @@ import { nonGrowthLevelChangeSources } from "@/modules/growth/domain/level-chang
 import type { ProfileViewer } from "@/modules/explore/domain/explore-profile";
 import { prisma } from "@/server/db/prisma";
 
-export async function getExploreSourceData(viewer: ProfileViewer, since: Date) {
+export async function getExploreSourceData(
+  viewer: ProfileViewer,
+  since: Date,
+  scopedMemberIds: string[]
+) {
   const visible = [
     { isProfilePublic: true },
     { id: viewer.memberId },
-    { managerId: viewer.memberId }
+    { id: { in: scopedMemberIds } }
   ];
   const [viewerMember, skills, changes, candidates] = await Promise.all([
     prisma.member.findUnique({
@@ -69,7 +73,7 @@ export async function getExploreSourceData(viewer: ProfileViewer, since: Date) {
 export function getProfileVisibility(memberId: string) {
   return prisma.member.findUnique({
     where: { id: memberId },
-    select: { id: true, managerId: true, status: true, isProfilePublic: true }
+    select: { id: true, status: true, isProfilePublic: true }
   });
 }
 

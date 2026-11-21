@@ -24,6 +24,7 @@ import {
 import { isGrowthLevelChange } from "@/modules/growth/domain/level-change-source";
 import { listSkillMentorCandidates } from "@/modules/growth/application/growth-service";
 import { getGrowthHintMemberContext } from "@/modules/members/application/member-service";
+import { displayMemberName } from "@/modules/members/domain/member-display";
 import {
   getMemberScope,
   memberIsInScope,
@@ -67,24 +68,32 @@ export async function assertGrowthHintAccess(
 
 async function prepare(memberId: string, viewer: GrowthHintViewer) {
   await assertGrowthHintAccess(memberId, viewer);
+  const scope = await getMemberScope(viewer.role, viewer.memberId);
+  const canAddOneOnOneNotes =
+    viewer.role === "MANAGER" && memberIsInScope(scope, memberId);
   const since = new Date();
   since.setDate(since.getDate() - 180);
   const context = await getGrowthHintMemberContext(memberId, since);
   if (!context) throw new Error("member_not_found");
   const input = buildInput(context);
-  return { context, input, inputHash: hashGrowthHintInput(input) };
+  return {
+    context,
+    input,
+    inputHash: hashGrowthHintInput(input),
+    canAddOneOnOneNotes
+  };
 }
 
 export async function getGrowthHint(
   memberId: string,
   viewer: GrowthHintViewer,
 ) {
-  const [{ context, inputHash }, saved] = await Promise.all([
+  const [{ inputHash, canAddOneOnOneNotes }, saved] = await Promise.all([
     prepare(memberId, viewer),
     hintRepository.findGrowthHint(memberId),
   ]);
   return saved
-    ? toView(saved, inputHash, context.managerId === viewer.memberId)
+    ? toView(saved, inputHash, canAddOneOnOneNotes)
     : null;
 }
 
@@ -93,7 +102,7 @@ export async function generateGrowthHint(
   viewer: GrowthHintViewer,
 ) {
   const startedAt = Date.now();
-  const { context, input, inputHash } = await prepare(memberId, viewer);
+  const { input, inputHash, canAddOneOnOneNotes } = await prepare(memberId, viewer);
   const previous = await hintRepository.findGrowthHint(memberId);
   const base = await buildComputedContent(memberId, input);
   const config = getAiConfig();
@@ -105,7 +114,7 @@ export async function generateGrowthHint(
     );
     await log("FALLBACK", Date.now() - startedAt, "not_configured");
     return {
-      hint: toView(saved, inputHash, context.managerId === viewer.memberId),
+      hint: toView(saved, inputHash, canAddOneOnOneNotes),
       keptPrevious: false,
       message: null,
     };
@@ -126,7 +135,7 @@ export async function generateGrowthHint(
     );
     await log("FALLBACK", Date.now() - startedAt, "monthly_limit");
     return {
-      hint: toView(saved, inputHash, context.managerId === viewer.memberId),
+      hint: toView(saved, inputHash, canAddOneOnOneNotes),
       keptPrevious: false,
       message: "今月の AI の利用上限に達したため、簡易版で作りました。",
     };
@@ -136,7 +145,7 @@ export async function generateGrowthHint(
     const message = "短い時間に何度も作り直したため、少し待ってからもう一度お試しください。";
     if (previous) {
       return {
-        hint: toView(previous, inputHash, context.managerId === viewer.memberId),
+        hint: toView(previous, inputHash, canAddOneOnOneNotes),
         keptPrevious: true,
         message,
       };
@@ -147,7 +156,7 @@ export async function generateGrowthHint(
       null,
     );
     return {
-      hint: toView(saved, inputHash, context.managerId === viewer.memberId),
+      hint: toView(saved, inputHash, canAddOneOnOneNotes),
       keptPrevious: false,
       message,
     };
@@ -172,7 +181,7 @@ export async function generateGrowthHint(
       latencyMs: result.latencyMs,
     });
     return {
-      hint: toView(saved, inputHash, context.managerId === viewer.memberId),
+      hint: toView(saved, inputHash, canAddOneOnOneNotes),
       keptPrevious: false,
       message: null,
     };
@@ -188,7 +197,7 @@ export async function generateGrowthHint(
         hint: toView(
           previous,
           inputHash,
-          context.managerId === viewer.memberId,
+          canAddOneOnOneNotes,
         ),
         keptPrevious: true,
         message: "作り直しに失敗しました。前回のヒントを表示しています。",
@@ -200,7 +209,7 @@ export async function generateGrowthHint(
       null,
     );
     return {
-      hint: toView(saved, inputHash, context.managerId === viewer.memberId),
+      hint: toView(saved, inputHash, canAddOneOnOneNotes),
       keptPrevious: false,
       message: getFallbackMessage(errorCode),
     };
@@ -331,7 +340,10 @@ async function buildComputedContent(memberId: string, input: GrowthHintInput) {
     .sort(
       (left, right) =>
         right.level - left.level ||
-        left.member.name.localeCompare(right.member.name, "ja"),
+        displayMemberName(left.member.name).localeCompare(
+          displayMemberName(right.member.name),
+          "ja"
+        ),
     )[0];
   return {
     strengths,
@@ -341,7 +353,7 @@ async function buildComputedContent(memberId: string, input: GrowthHintInput) {
       mentor && firstGap
         ? {
             memberId: mentor.member.id,
-            name: mentor.member.name,
+            name: displayMemberName(mentor.member.name),
             skillName: firstGap.name,
           }
         : null,

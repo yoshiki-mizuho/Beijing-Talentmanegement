@@ -7,6 +7,7 @@ import {
 
 const mocks = vi.hoisted(() => ({
   transaction: vi.fn(),
+  memberFindUniqueOrThrowOutsideTransaction: vi.fn(),
   memberFindUniqueOrThrow: vi.fn(),
   memberUpdate: vi.fn(),
   memberCount: vi.fn(),
@@ -29,16 +30,29 @@ const mocks = vi.hoisted(() => ({
   skillLevelChangeCreate: vi.fn(),
   auditLogCreate: vi.fn(),
   auditLogCreateMany: vi.fn(),
-  recordRoleAchievements: vi.fn()
+  recordRoleAchievements: vi.fn(),
+  getDirectLeaderIds: vi.fn(),
+  getOrganization: vi.fn(),
+  getUsers: vi.fn(),
+  ensureScopeMembers: vi.fn()
 }));
 
 vi.mock("@/server/db/prisma", () => ({
   prisma: {
-    $transaction: mocks.transaction
+    $transaction: mocks.transaction,
+    member: { findUniqueOrThrow: mocks.memberFindUniqueOrThrowOutsideTransaction }
   }
 }));
 vi.mock("@/modules/roles/application/role-achievement-service", () => ({
   recordRoleAchievements: mocks.recordRoleAchievements
+}));
+vi.mock("@/server/platform/directory", () => ({
+  getDirectLeaderIds: mocks.getDirectLeaderIds,
+  getOrganization: mocks.getOrganization,
+  getUsers: mocks.getUsers
+}));
+vi.mock("@/modules/members/infrastructure/member-scope-repository", () => ({
+  ensureScopeMembers: mocks.ensureScopeMembers
 }));
 
 import {
@@ -155,96 +169,6 @@ describe("updateMember audit log", () => {
     expect(mocks.auditLogCreate).not.toHaveBeenCalled();
   });
 
-  it("sets the platform user ID by creating a linked user", async () => {
-    mocks.userFindFirst.mockResolvedValue(null);
-    mocks.memberUpdate.mockResolvedValue({
-      ...before,
-      email: "new@example.com"
-    });
-
-    await updateMember("member-1", {
-      employeeNo: "E001",
-      name: "変更前",
-      email: "NEW@EXAMPLE.COM",
-      departmentId: "department-1",
-      jobTitle: "Engineer",
-      profile: "変更前プロフィール",
-      status: "ACTIVE",
-      platformUserId: "11111111-1111-4111-8111-111111111111"
-    }, "actor-1");
-
-    expect(mocks.memberUpdate).toHaveBeenCalledWith({
-      where: { id: "member-1" },
-      data: expect.objectContaining({ email: "new@example.com" })
-    });
-    expect(mocks.userCreate).toHaveBeenCalledWith({
-      data: {
-        platformUserId: "11111111-1111-4111-8111-111111111111",
-        memberId: "member-1",
-        role: "MEMBER"
-      }
-    });
-  });
-
-  it("changes the platform user ID", async () => {
-    mocks.userFindFirst
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ id: "user-1" });
-    mocks.memberUpdate.mockResolvedValue(before);
-
-    await updateMember("member-1", {
-      employeeNo: "E001",
-      name: "変更前",
-      email: "member@example.com",
-      departmentId: "department-1",
-      jobTitle: "Engineer",
-      profile: "変更前プロフィール",
-      status: "ACTIVE",
-      platformUserId: "22222222-2222-4222-8222-222222222222"
-    }, "actor-1");
-
-    expect(mocks.userUpdate).toHaveBeenCalledWith({
-      where: { id: "user-1" },
-      data: { platformUserId: "22222222-2222-4222-8222-222222222222" }
-    });
-  });
-
-  it("rejects a platform user ID used by another user", async () => {
-    mocks.userFindFirst.mockResolvedValue({ id: "user-2" });
-
-    await expect(updateMember("member-1", {
-      employeeNo: "E001",
-      name: "変更前",
-      email: "used@example.com",
-      departmentId: "department-1",
-      jobTitle: "Engineer",
-      profile: "変更前プロフィール",
-      status: "ACTIVE",
-      platformUserId: "22222222-2222-4222-8222-222222222222"
-    }, "actor-1")).rejects.toThrow("この基盤の利用者 ID は使われています");
-    expect(mocks.memberUpdate).not.toHaveBeenCalled();
-  });
-
-  it("clears the platform user ID without deleting the linked user", async () => {
-    mocks.userFindFirst.mockResolvedValue({ id: "user-1" });
-    mocks.memberUpdate.mockResolvedValue(before);
-
-    await updateMember("member-1", {
-      employeeNo: "E001",
-      name: "変更前",
-      email: "member@example.com",
-      departmentId: "department-1",
-      jobTitle: "Engineer",
-      profile: "変更前プロフィール",
-      status: "ACTIVE",
-      platformUserId: ""
-    }, "actor-1");
-
-    expect(mocks.userUpdate).toHaveBeenCalledWith({
-      where: { id: "user-1" },
-      data: { platformUserId: null }
-    });
-  });
 });
 
 describe("createSkillAssessments transaction boundary", () => {
@@ -252,9 +176,22 @@ describe("createSkillAssessments transaction boundary", () => {
     vi.clearAllMocks();
     mocks.transaction.mockImplementation(async (callback) => callback(transactionClient));
     mocks.memberFindUniqueOrThrow.mockResolvedValue({
-      name: "テスト太郎",
-      managerId: "manager-1"
+      name: "テスト太郎"
     });
+    mocks.memberFindUniqueOrThrowOutsideTransaction.mockResolvedValue({
+      platformUserId: "applicant-platform-id"
+    });
+    mocks.getDirectLeaderIds.mockResolvedValue(["manager-platform-id"]);
+    mocks.getUsers.mockResolvedValue(new Map([
+      ["manager-platform-id", { id: "manager-platform-id", role: "MEMBER" }]
+    ]));
+    mocks.getOrganization.mockResolvedValue({
+      nodes: [],
+      members: new Map([
+        ["manager-platform-id", { id: "manager-platform-id", role: "MEMBER" }]
+      ])
+    });
+    mocks.ensureScopeMembers.mockResolvedValue([{ id: "manager-1" }]);
     // 申請したスキルだけを返す（件数が合わないと無効なスキルとして扱われる）
     mocks.skillFindMany.mockImplementation(({ where }) =>
       Promise.resolve(
@@ -266,10 +203,6 @@ describe("createSkillAssessments transaction boundary", () => {
       )
     );
     mocks.assessmentFindMany.mockResolvedValue([]);
-    mocks.userFindMany.mockResolvedValue([
-      { memberId: "manager-1", role: "MANAGER" },
-      { memberId: "admin-1", role: "ADMIN" }
-    ]);
     mocks.assessmentCreate.mockImplementation(({ data }) => {
       const assessmentNumber = data.skillId.replace("skill-", "");
       return Promise.resolve({
@@ -307,33 +240,23 @@ describe("createSkillAssessments transaction boundary", () => {
   });
 
   it("falls back to active admins when the member has no manager user", async () => {
-    mocks.memberFindUniqueOrThrow.mockResolvedValue({
-      name: "テスト太郎",
-      managerId: null
+    mocks.getDirectLeaderIds.mockResolvedValue([]);
+    mocks.getOrganization.mockResolvedValue({
+      nodes: [],
+      members: new Map([
+        ["admin-platform-1", { id: "admin-platform-1", role: "ADMIN" }],
+        ["admin-platform-2", { id: "admin-platform-2", role: "ADMIN" }]
+      ])
     });
+    mocks.ensureScopeMembers.mockResolvedValue([{ id: "admin-1" }, { id: "admin-2" }]);
     mocks.skillFindMany.mockResolvedValue([{ id: "skill-1", name: "React" }]);
-    mocks.userFindMany.mockResolvedValue([
-      { memberId: "admin-1", role: "ADMIN" },
-      { memberId: "admin-2", role: "ADMIN" }
-    ]);
 
     await createSkillAssessments({
       memberId: "member-1",
       assessments: [{ skillId: "skill-1", requestedLevel: 3 }]
     }, null);
 
-    expect(mocks.userFindMany).toHaveBeenCalledWith({
-      where: {
-        OR: [
-          {
-            role: "ADMIN",
-            member: { status: "ACTIVE" }
-          }
-        ],
-        memberId: { not: "member-1" }
-      },
-      select: { memberId: true, role: true }
-    });
+    expect(mocks.getOrganization).toHaveBeenCalledWith("applicant-platform-id");
     expect(mocks.notificationCreateMany).toHaveBeenCalledWith({
       data: [
         expect.objectContaining({
@@ -451,41 +374,6 @@ describe("approveSkillAssessments transaction boundary", () => {
     expect(mocks.notificationUpdateMany).not.toHaveBeenCalled();
   });
 
-  it("identifies the out-of-scope assessment and rejects the transaction", async () => {
-    mocks.assessmentFindUnique
-      .mockResolvedValueOnce({
-        id: "assessment-1",
-        memberId: "member-1",
-        skillId: "skill-1",
-        requestedLevel: 3,
-        yearsOfExperience: null,
-        status: SkillSelfAssessmentStatus.PENDING,
-        member: { name: "申請者1", managerId: "manager-1" },
-        skill: { name: "スキル1" }
-      })
-      .mockResolvedValueOnce({
-        id: "assessment-2",
-        memberId: "member-2",
-        skillId: "skill-2",
-        requestedLevel: 4,
-        yearsOfExperience: null,
-        status: SkillSelfAssessmentStatus.PENDING,
-        member: { name: "申請者2", managerId: "other-manager" },
-        skill: { name: "スキル2" }
-      });
-
-    await expect(
-      approveSkillAssessments({
-        assessmentIds: ["assessment-1", "assessment-2"],
-        reviewerMemberId: "manager-1",
-        reviewerRole: "MANAGER"
-      })
-    ).rejects.toThrow(
-      "申請者2 / スキル2（申請ID: assessment-2）を承認する権限がありません。"
-    );
-
-    expect(mocks.transaction).toHaveBeenCalledTimes(1);
-  });
 });
 
 describe("buildMemberSearchWhere", () => {

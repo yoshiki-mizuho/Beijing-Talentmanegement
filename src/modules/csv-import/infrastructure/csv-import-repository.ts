@@ -134,7 +134,6 @@ export async function loadMemberImportState(): Promise<MemberImportState> {
         manager: { select: { employeeNo: true } },
         targetRoleId: true,
         targetRole: { select: { name: true } },
-        users: { select: { role: true } },
       },
     }),
     prisma.department.findMany({ select: { id: true, code: true } }),
@@ -143,12 +142,14 @@ export async function loadMemberImportState(): Promise<MemberImportState> {
   return {
     members: members.map((member) => ({
       ...member,
-      departmentCode: member.department.code,
+      employeeNo: member.employeeNo ?? "",
+      name: member.name ?? "",
+      email: member.email ?? "",
+      departmentId: member.departmentId ?? "",
+      departmentCode: member.department?.code ?? "",
       managerEmployeeNo: member.manager?.employeeNo ?? null,
       targetRoleName: member.targetRole?.name ?? null,
-      canManage: member.users.some(
-        (user) => user.role === "ADMIN" || user.role === "MANAGER",
-      ),
+      canManage: false,
     })),
     departments,
     roles
@@ -175,7 +176,11 @@ export async function loadMemberSkillImportState(): Promise<MemberSkillImportSta
     }),
   ]);
   return {
-    members,
+    members: members.map((member) => ({
+      ...member,
+      employeeNo: member.employeeNo ?? "",
+      name: member.name ?? ""
+    })),
     skills,
     memberSkills: memberSkills.map((item) => ({
       ...item,

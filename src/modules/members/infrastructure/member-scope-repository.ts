@@ -1,32 +1,54 @@
 import { prisma } from "@/server/db/prisma";
+import { getUser } from "@/server/platform/directory";
+import type { PlatformUser } from "@/server/platform/types";
 
-export async function getMemberScopeSource(memberId: string) {
-  const [viewer, departments, members] = await Promise.all([
-    prisma.member.findUniqueOrThrow({
-      where: { id: memberId },
-      select: {
-        id: true,
-        departmentId: true,
-        department: { select: { name: true } }
-      }
-    }),
-    prisma.department.findMany({
-      where: { isActive: true },
-      select: { id: true, name: true, parentDepartmentId: true },
-      orderBy: { name: "asc" }
-    }),
-    prisma.member.findMany({
-      select: { id: true, departmentId: true, managerId: true, status: true }
-    })
-  ]);
+export function getScopeViewer(memberId: string) {
+  return prisma.member.findUniqueOrThrow({
+    where: { id: memberId },
+    select: { id: true, platformUserId: true }
+  });
+}
 
+export async function platformUserFallback(platformUserId: string): Promise<PlatformUser> {
+  try {
+    const user = await getUser(platformUserId);
+    if (user) return user;
+  } catch {
+    // 基盤障害時は権限を広げず、本人だけの範囲を維持する。
+  }
   return {
-    viewer: {
-      id: viewer.id,
-      departmentId: viewer.departmentId,
-      departmentName: viewer.department.name
-    },
-    departments,
-    members
+    id: platformUserId,
+    name: "",
+    email: "",
+    status: "ACTIVE",
+    organizationNodeId: null,
+    nodeName: null,
+    avatarUrl: null,
+    avatarColor: null,
+    isNodeLeader: false,
+    role: "MEMBER"
   };
+}
+
+export async function ensureScopeMembers(platformMembers: Map<string, PlatformUser>) {
+  const platformUserIds = [...platformMembers.keys()];
+  if (platformUserIds.length === 0) return [];
+
+  await prisma.member.createMany({
+    data: platformUserIds.map((platformUserId) => {
+      const user = platformMembers.get(platformUserId);
+      return {
+        platformUserId,
+        // H-4c/H-4d までの表示用の写し。
+        name: user?.name || null,
+        email: user?.email || null
+      };
+    }),
+    skipDuplicates: true
+  });
+
+  return prisma.member.findMany({
+    where: { platformUserId: { in: platformUserIds } },
+    select: { id: true, platformUserId: true }
+  });
 }

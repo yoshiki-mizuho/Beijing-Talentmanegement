@@ -10,7 +10,7 @@ export function findManagerWithReports(managerId: string) {
     where: { id: managerId },
     select: {
       id: true,
-      reports: { where: { status: MemberStatus.ACTIVE }, select: { id: true } }
+      platformUserId: true
     }
   });
 }
@@ -18,7 +18,7 @@ export function findManagerWithReports(managerId: string) {
 export function findMemberManagerId(memberId: string) {
   return prisma.member.findUnique({
     where: { id: memberId },
-    select: { managerId: true }
+    select: { platformUserId: true }
   });
 }
 
@@ -27,7 +27,7 @@ export function findTeamGoalCelebrationContext(memberId: string) {
     where: { id: memberId },
     select: {
       id: true,
-      managerId: true,
+      platformUserId: true,
       status: true,
       teamGoalAcknowledgements: { select: { teamGoalId: true } }
     }
@@ -48,22 +48,22 @@ export function findTeamGoalCelebrationCandidates(
   });
 }
 
-export function findTeamGoalAcknowledgementTarget(teamGoalId: string, memberId: string) {
+export function findTeamGoalAcknowledgementTarget(teamGoalId: string) {
   return prisma.teamGoal.findUnique({
     where: { id: teamGoalId },
     select: {
       id: true,
       managerId: true,
       achievedAt: true,
-      manager: {
-        select: {
-          reports: {
-            where: { id: memberId, status: MemberStatus.ACTIVE },
-            select: { id: true }
-          }
-        }
-      }
+      manager: { select: { id: true } }
     }
+  });
+}
+
+export function findMemberIdsByPlatformUserIds(platformUserIds: string[]) {
+  return prisma.member.findMany({
+    where: { platformUserId: { in: platformUserIds } },
+    select: { id: true }
   });
 }
 
@@ -85,7 +85,7 @@ export function findLatestGoals(managerId: string) {
   });
 }
 
-export function listActiveSkills(managerId: string) {
+export function listActiveSkills(memberIds: string[]) {
   return prisma.skill.findMany({
     where: { isActive: true },
     orderBy: [{ category: { displayOrder: "asc" } }, { displayOrder: "asc" }, { name: "asc" }],
@@ -94,15 +94,20 @@ export function listActiveSkills(managerId: string) {
       name: true,
       category: { select: { name: true } },
       memberSkills: {
-        where: { member: { managerId, status: MemberStatus.ACTIVE } },
+        where: { member: { id: { in: memberIds }, status: MemberStatus.ACTIVE } },
         select: { level: true }
       }
     }
   });
 }
 
-export async function countGoalProgress(goal: TeamGoal, start: Date, end: Date) {
-  const reportWhere = { managerId: goal.managerId, status: MemberStatus.ACTIVE };
+export async function countGoalProgress(
+  goal: TeamGoal,
+  start: Date,
+  end: Date,
+  memberIds: string[]
+) {
+  const reportWhere = { id: { in: memberIds }, status: MemberStatus.ACTIVE };
   if (goal.kind === "SKILL_REACH") {
     return prisma.member.count({
       where: {
@@ -129,10 +134,10 @@ export async function countGoalProgress(goal: TeamGoal, start: Date, end: Date) 
     : new Set(increases.map((change) => change.memberId)).size;
 }
 
-export function listGoalProgressChanges(managerId: string, start: Date, end: Date) {
+export function listGoalProgressChanges(memberIds: string[], start: Date, end: Date) {
   return prisma.skillLevelChange.findMany({
     where: {
-      member: { managerId, status: MemberStatus.ACTIVE },
+      member: { id: { in: memberIds }, status: MemberStatus.ACTIVE },
       changedAt: { gte: start, lt: end },
       source: { notIn: [...nonGrowthLevelChangeSources] }
     },

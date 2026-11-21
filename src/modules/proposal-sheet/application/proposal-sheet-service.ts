@@ -8,6 +8,7 @@ import {
   type ProposalSheetText
 } from "@/modules/ai-evaluation/domain/proposal-sheet";
 import { getMemberScope, memberIsInScope } from "@/modules/members/application/member-scope";
+import { displayMemberName } from "@/modules/members/domain/member-display";
 import { AuthorizationError } from "@/server/auth/authorization";
 import { canAccessProposalSheet, initialProposalDisplayName } from "../domain/proposal-sheet-access";
 import {
@@ -42,7 +43,7 @@ export async function getProposalSheet(actor: ProposalSheetActor, memberId: stri
   const excludedSkillIds = draft?.excludedSkillIds ?? [];
   const input = buildPromptInput(context, career, selectedProjectIds, excludedSkillIds, draft?.customerRequest ?? "");
   return {
-    member: { id: context.id, name: context.name },
+    member: { id: context.id, name: displayMemberName(context.name) },
     experienceLabel: calculateExperienceLabel(career.itCareerStartMonth),
     projects: career.projectHistories,
     certifications: career.certifications,
@@ -58,7 +59,7 @@ export async function getProposalSheet(actor: ProposalSheetActor, memberId: stri
       generatedAt: draft.generatedAt?.toISOString() ?? null,
       isStale: draft.inputHash !== hashProposalSheetInput(input)
     } : null,
-    initialDisplayName: initialProposalDisplayName(context.name)
+    initialDisplayName: initialProposalDisplayName(displayMemberName(context.name))
   };
 }
 

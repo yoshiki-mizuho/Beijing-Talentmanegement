@@ -1,12 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { ZodError } from "zod";
 
-import {
-  createMember,
-  listMemberPage
-} from "@/modules/members/application/member-service";
-import { MemberUserLinkError } from "@/modules/members/domain/member-user-policy";
-import { adminOnly, authorizeApi, managerOrAdmin } from "@/server/auth/authorization";
+import { listMemberPage } from "@/modules/members/application/member-service";
+import { authorizeApi, managerOrAdmin } from "@/server/auth/authorization";
 import { getMemberScope } from "@/modules/members/application/member-scope";
 
 export async function GET(request: NextRequest) {
@@ -32,27 +28,5 @@ export async function GET(request: NextRequest) {
     }
 
     throw error;
-  }
-}
-
-export async function POST(request: NextRequest) {
-  const auth = await authorizeApi(adminOnly);
-
-  if ("response" in auth) {
-    return auth.response;
-  }
-
-  try {
-    const member = await createMember(await request.json(), auth.session.user.memberId);
-    return NextResponse.json(member, { status: 201 });
-  } catch (error) {
-    if (error instanceof MemberUserLinkError) {
-      return NextResponse.json(
-        { error: "User email is already linked to another member" },
-        { status: 409 }
-      );
-    }
-
-    return NextResponse.json({ error: "Invalid member input" }, { status: 400 });
   }
 }

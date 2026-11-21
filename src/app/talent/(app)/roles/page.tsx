@@ -9,6 +9,7 @@ import { RolePage } from "@/modules/roles/presentation/role-page";
 import { buildRolePageViewModel } from "@/modules/roles/presentation/role-page-view-model";
 import { listSkills } from "@/modules/skills/application/skill-service";
 import { requirePageRoles } from "@/server/auth/authorization";
+import { displayMemberName } from "@/modules/members/domain/member-display";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,14 @@ export default async function RolesPage({
     viewerMemberId: session.user.memberId,
     scopedMemberIds: scope?.memberIds ?? [session.user.memberId],
     roles,
-    activeMembers,
+    activeMembers: activeMembers.map((member) => ({
+      ...member,
+      name: displayMemberName(member.name),
+      department: member.department ?? {
+        id: "",
+        name: "所属なし"
+      }
+    })),
     achievements
   });
 

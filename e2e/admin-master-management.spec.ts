@@ -536,7 +536,7 @@ test("未分類のカテゴリを絞り込んで大分類を一括で割り当�
     for (const categoryName of categoryNames) {
       await categoryDialog.getByLabel("カテゴリ名").first().fill(categoryName);
       await categoryDialog.getByRole("button", { name: "追加", exact: true }).click();
-      await expect(admin.page.getByText("カテゴリを登録しました。")).toBeVisible();
+      await expect(admin.page.getByText("カテゴリを登録しました。").first()).toBeVisible();
       // 1件目のトーストを2件目の完了と見間違えないよう、一覧に出るまで待つ
       await expect(categoryDialog.locator(`input[value="${categoryName}"]`)).toHaveCount(1);
       await data.trackCreated({ categoryNames: [categoryName] });

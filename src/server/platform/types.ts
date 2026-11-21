@@ -10,6 +10,7 @@ export type PlatformUser = {
   avatarUrl: string | null;
   avatarColor: string | null;
   isNodeLeader: boolean;
+  role: "ADMIN" | "MEMBER";
 };
 
 export type OrganizationMember = PlatformUser;

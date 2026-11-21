@@ -45,7 +45,11 @@ test("複数のスキル申告を上司への通知1件にまとめ、承認後�
   let manager: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
   let admin: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
   try {
-    const adminAccount = await fixture.data.createMember({ label: "一括申請管理者外", departmentId: fixture.member.member.departmentId, role: "ADMIN" });
+    const adminAccount = await fixture.data.createMember({
+      label: "一括申請管理者外",
+      departmentId: fixture.member.member.departmentId ?? "",
+      role: "ADMIN"
+    });
     const skills = await Promise.all([fixture.data.createSkill("一括申請スキルA"), fixture.data.createSkill("一括申請スキルB")]);
     member = await openLoggedInContext(browser, fixture.member.credential);
     manager = await openLoggedInContext(browser, fixture.manager.credential);
@@ -64,7 +68,11 @@ test("複数のスキル申告を上司への通知1件にまとめ、承認後�
     await admin.page.goto("/talent/dashboard");
     expect(await unreadCount(admin.page)).toBe(adminBefore);
     await manager.page.goto("/talent/skill-approvals");
-    for (const { skill } of skills) await manager.page.getByLabel(`${fixture.member.member.name}の${skill.name}申請を選択`).check();
+    for (const { skill } of skills) {
+      await manager.page
+        .getByLabel(`${fixture.member.member.name ?? ""}の${skill.name}申請を選択`)
+        .check();
+    }
     await manager.page.getByRole("button", { name: "選択した 2件を承認" }).click();
     await manager.page.getByRole("button", { name: "承認する", exact: true }).click();
     await expect(manager.page.getByText("2件の申請を承認しました。")).toBeVisible();

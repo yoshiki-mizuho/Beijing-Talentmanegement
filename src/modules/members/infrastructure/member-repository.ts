@@ -10,7 +10,6 @@ import {
 import { AUDIT_ACTION, AUDIT_TARGET_TYPE } from "@/modules/audit/domain/audit-action";
 import { diffForAudit } from "@/modules/audit/domain/audit-diff";
 import { recordAuditLog, recordAuditLogs } from "@/modules/audit/infrastructure/audit-repository";
-import { createsManagerCycle } from "@/modules/members/domain/member-manager-policy";
 import type {
   MemberInput,
   MemberManagerInput,
@@ -18,10 +17,7 @@ import type {
   MemberTargetRoleInput
 } from "@/modules/members/domain/member-schema";
 import type { MemberSearchInput } from "@/modules/members/domain/member-search";
-import { canReviewSkillAssessment } from "@/modules/members/domain/skill-assessment-policy";
 import { shouldRecordSkillLevelChange } from "@/modules/members/domain/skill-level-change-policy";
-import { assertUserCanLinkToMember } from "@/modules/members/domain/member-user-policy";
-import { getActiveReportError } from "@/modules/members/domain/member-role-policy";
 import type {
   SkillAssessmentApprovalBatchInput,
   SkillAssessmentBatchInput,
@@ -32,12 +28,15 @@ import { recordRoleAchievements } from "@/modules/roles/application/role-achieve
 import { collectDescendantIds } from "@/modules/members/domain/department-hierarchy";
 import { prisma } from "@/server/db/prisma";
 import { UserFacingError } from "@/shared/lib/user-facing-error";
+import { getActiveReportError } from "@/modules/members/domain/member-role-policy";
+import { getDirectLeaderIds, getOrganization, getUsers } from "@/server/platform/directory";
+import { ensureScopeMembers } from "@/modules/members/infrastructure/member-scope-repository";
 
 function memberAuditFields(member: {
-  employeeNo: string;
-  name: string;
-  email: string;
-  departmentId: string;
+  employeeNo: string | null;
+  name: string | null;
+  email: string | null;
+  departmentId: string | null;
   jobTitle: string | null;
   status: string;
 }) {
@@ -63,7 +62,7 @@ export async function listManagerCandidates() {
   return prisma.member.findMany({
     where: {
       status: "ACTIVE",
-      users: { some: { role: { in: [AuthRole.ADMIN, AuthRole.MANAGER] } } }
+      platformUserId: { not: null }
     },
     select: { id: true, name: true, employeeNo: true },
     orderBy: { employeeNo: "asc" }
@@ -122,7 +121,6 @@ export async function listMembers(input?: MemberSearchInput, memberIds?: string[
       ]
     },
     include: {
-      users: { select: { role: true, platformUserId: true } },
       department: true,
       manager: { select: { id: true, name: true } },
       targetRole: {
@@ -187,7 +185,6 @@ export function getGrowthHintMemberContext(memberId: string, since: Date) {
     where: { id: memberId },
     select: {
       id: true,
-      managerId: true,
       memberSkills: {
         where: { approvedAt: { not: null } },
         select: {
@@ -230,49 +227,10 @@ export async function updateMemberRole(
   nextRole: AuthRole,
   actorMemberId: string
 ) {
-  return prisma.$transaction(async (tx) => {
-    const member = await tx.member.findUniqueOrThrow({
-      where: { id: memberId },
-      select: {
-        status: true,
-        users: { select: { id: true, role: true } },
-        _count: {
-          select: { reports: { where: { status: "ACTIVE" } } }
-        }
-      }
-    });
-    const user = member.users[0];
-    if (!user) {
-      throw new UserFacingError("ログイン用のユーザーがありません");
-    }
-    if (nextRole !== AuthRole.MEMBER && nextRole !== AuthRole.MANAGER) {
-      throw new UserFacingError("権限はメンバーまたはマネージャーから選んでください");
-    }
-    if (actorMemberId === memberId) {
-      throw new UserFacingError("自分の権限は変更できません");
-    }
-    if (nextRole === AuthRole.MEMBER) {
-      const error = getActiveReportError(member._count.reports, "変更できません");
-      if (error) throw new UserFacingError(error);
-    }
-    if (user.role === nextRole) {
-      return member;
-    }
-    await tx.user.update({
-      where: { id: user.id },
-      data: { role: nextRole }
-    });
-    await recordAuditLog(tx, {
-      actorMemberId,
-      action: AUDIT_ACTION.MEMBER_ROLE_UPDATE,
-      targetType: AUDIT_TARGET_TYPE.MEMBER,
-      targetId: memberId,
-      before: { role: user.role },
-      after: { role: nextRole },
-      changedFields: ["role"]
-    });
-    return member;
-  });
+  void memberId;
+  void nextRole;
+  void actorMemberId;
+  throw new UserFacingError("権限は基盤の組織から自動で決まります");
 }
 
 export async function createMember(input: MemberInput, actorMemberId: string | null) {
@@ -297,23 +255,7 @@ export async function createMemberWithUser(
     targetRoleId?: string | null;
   },
 ) {
-  const { platformUserId, ...memberInput } = input;
-  const member = await tx.member.create({ data: memberInput });
-  if (platformUserId) {
-    const existingUser = await tx.user.findFirst({
-      where: { platformUserId },
-      select: { id: true, memberId: true }
-    });
-    if (existingUser) {
-      assertUserCanLinkToMember(existingUser.memberId, member.id);
-      await tx.user.update({ where: { id: existingUser.id }, data: { memberId: member.id } });
-    } else {
-      await tx.user.create({
-        data: { platformUserId, role: AuthRole.MEMBER, memberId: member.id }
-      });
-    }
-  }
-  return member;
+  return tx.member.create({ data: input });
 }
 
 export async function updateMember(
@@ -323,14 +265,6 @@ export async function updateMember(
 ) {
   return prisma.$transaction(async (tx) => {
     const before = await tx.member.findUniqueOrThrow({ where: { id } });
-    const platformUserId = input.platformUserId || null;
-    const conflictingUser = platformUserId ? await tx.user.findFirst({
-      where: { platformUserId, memberId: { not: id } },
-      select: { id: true }
-    }) : null;
-    if (conflictingUser) {
-      throw new UserFacingError("この基盤の利用者 ID は使われています");
-    }
     if (before.status === "ACTIVE" && input.status !== "ACTIVE") {
       const reportCount = await tx.member.count({
         where: { managerId: id, status: "ACTIVE" }
@@ -347,17 +281,10 @@ export async function updateMember(
         departmentId: input.departmentId,
         jobTitle: input.jobTitle,
         profile: input.profile,
-        status: input.status
+        status: input.status,
+        platformUserId: input.platformUserId || null
       }
     });
-    const linkedUser = await tx.user.findFirst({ where: { memberId: id }, select: { id: true } });
-    if (!platformUserId && linkedUser) {
-      await tx.user.update({ where: { id: linkedUser.id }, data: { platformUserId: null } });
-    } else if (platformUserId && linkedUser) {
-      await tx.user.update({ where: { id: linkedUser.id }, data: { platformUserId } });
-    } else if (platformUserId) {
-      await tx.user.create({ data: { platformUserId, memberId: id, role: AuthRole.MEMBER } });
-    }
     const diff = diffForAudit(
       { ...memberAuditFields(before), profile: before.profile },
       { ...memberAuditFields(member), profile: member.profile },
@@ -617,29 +544,24 @@ export async function getMemberSkillSheetContext(memberId: string) {
 
 function pendingSkillAssessmentWhere(
   reviewerRole: AuthRole,
-  reviewerMemberId: string
+  scopedMemberIds: string[]
 ): Prisma.SkillSelfAssessmentWhereInput {
   return {
     status: SkillSelfAssessmentStatus.PENDING,
     ...(reviewerRole === AuthRole.ADMIN
       ? {}
       : {
-          member: {
-            OR: [
-              { managerId: reviewerMemberId },
-              { managerId: null }
-            ]
-          }
+          memberId: { in: scopedMemberIds }
         })
   };
 }
 
 export async function listPendingSkillAssessments(
   reviewerRole: AuthRole,
-  reviewerMemberId: string
+  scopedMemberIds: string[]
 ) {
   return prisma.skillSelfAssessment.findMany({
-    where: pendingSkillAssessmentWhere(reviewerRole, reviewerMemberId),
+    where: pendingSkillAssessmentWhere(reviewerRole, scopedMemberIds),
     include: {
       member: {
         include: {
@@ -677,10 +599,10 @@ export async function listPendingSkillAssessments(
 
 export function countPendingSkillAssessments(
   reviewerRole: AuthRole,
-  reviewerMemberId: string
+  scopedMemberIds: string[]
 ) {
   return prisma.skillSelfAssessment.count({
-    where: pendingSkillAssessmentWhere(reviewerRole, reviewerMemberId)
+    where: pendingSkillAssessmentWhere(reviewerRole, scopedMemberIds)
   });
 }
 
@@ -792,13 +714,35 @@ export async function createSkillAssessments(
   input: SkillAssessmentBatchInput,
   actorMemberId: string | null
 ) {
+  const applicant = await prisma.member.findUniqueOrThrow({
+    where: { id: input.memberId },
+    select: { platformUserId: true }
+  });
+  let reviewerMemberIds: string[] = [];
+  if (applicant.platformUserId) {
+    try {
+      const directLeaderIds = await getDirectLeaderIds(applicant.platformUserId);
+      const reviewerUsers = directLeaderIds.length > 0
+        ? await getUsers(directLeaderIds)
+        : new Map(
+            [...(await getOrganization(applicant.platformUserId)).members.values()]
+              .filter((user) => user.role === "ADMIN")
+              .map((user) => [user.id, user])
+          );
+      reviewerMemberIds = (await ensureScopeMembers(reviewerUsers))
+        .map((member) => member.id)
+        .filter((id) => id !== input.memberId);
+    } catch {
+      reviewerMemberIds = [];
+    }
+  }
   return prisma.$transaction(async (tx) => {
     const skillIds = input.assessments.map((assessment) => assessment.skillId);
     const member = await tx.member.findUniqueOrThrow({
       where: { id: input.memberId },
-      select: { name: true, managerId: true }
+      select: { name: true }
     });
-    const [skills, pendingAssessments, reviewerMembers] = await Promise.all([
+    const [skills, pendingAssessments] = await Promise.all([
       tx.skill.findMany({
         where: { id: { in: skillIds }, isActive: true },
         select: { id: true, name: true }
@@ -810,19 +754,6 @@ export async function createSkillAssessments(
           status: SkillSelfAssessmentStatus.PENDING
         },
         select: { skillId: true }
-      }),
-      tx.user.findMany({
-        where: {
-          OR: [
-            ...(member.managerId ? [{ memberId: member.managerId }] : []),
-            {
-              role: AuthRole.ADMIN,
-              member: { status: "ACTIVE" }
-            }
-          ],
-          memberId: { not: input.memberId }
-        },
-        select: { memberId: true, role: true }
       })
     ]);
 
@@ -852,19 +783,6 @@ export async function createSkillAssessments(
       }));
     }
 
-    const managerReviewer = reviewerMembers.find(
-      (reviewer) => reviewer.memberId === member.managerId
-    );
-    const selectedReviewers = managerReviewer
-      ? [managerReviewer]
-      : reviewerMembers.filter((reviewer) => reviewer.role === AuthRole.ADMIN);
-    const reviewerMemberIds = [
-      ...new Set(
-        selectedReviewers
-          .map((reviewer) => reviewer.memberId)
-          .filter((memberId): memberId is string => Boolean(memberId))
-      )
-    ];
     const assessmentLabels = assessments.map(
       (assessment) => `${skillNames.get(assessment.skillId)} Lv${assessment.requestedLevel}`
     );
@@ -926,16 +844,6 @@ async function reviewSkillAssessmentInTransaction(
     if (assessment.status !== SkillSelfAssessmentStatus.PENDING) {
       throw new UserFacingError(
         `${assessmentLabel}は承認待ちではありません。`
-      );
-    }
-
-    if (!canReviewSkillAssessment({
-      reviewerRole: input.reviewerRole,
-      reviewerMemberId: input.reviewerMemberId,
-      applicantManagerId: assessment.member.managerId
-    })) {
-      throw new UserFacingError(
-        `${assessmentLabel}を承認する権限がありません。`
       );
     }
 
@@ -1083,6 +991,13 @@ export async function reviewSkillAssessment(input: SkillAssessmentReviewInput) {
   );
 }
 
+export function getAssessmentMemberIds(assessmentIds: string[]) {
+  return prisma.skillSelfAssessment.findMany({
+    where: { id: { in: assessmentIds } },
+    select: { id: true, memberId: true }
+  });
+}
+
 export async function approveSkillAssessments(
   input: SkillAssessmentApprovalBatchInput
 ) {
@@ -1108,7 +1023,10 @@ export async function updateMemberManager(
   input: MemberManagerInput,
   actorMemberId: string | null
 ) {
-  return prisma.$transaction(async (tx) => {
+  void input;
+  void actorMemberId;
+  throw new UserFacingError("上司は基盤の組織から自動で決まります");
+  /* return prisma.$transaction(async (tx) => {
     const before = await tx.member.findUniqueOrThrow({ where: { id: input.memberId } });
     if (input.managerId) {
       const manager = await tx.member.findFirst({
@@ -1146,7 +1064,7 @@ export async function updateMemberManager(
       });
     }
     return member;
-  });
+  }); */
 }
 
 export async function updateMemberTargetRole(

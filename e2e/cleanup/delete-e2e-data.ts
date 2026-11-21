@@ -125,7 +125,6 @@ export async function deleteE2eData(
     await record("roleRequirements", tx.roleRequirement.deleteMany({ where: { OR: [
       { roleId: { in: roleIds } }, { skillId: { in: skillIds } },
     ] } }));
-    await record("users", tx.user.deleteMany({ where: { memberId: { in: memberIds } } }));
     await record("auditLogs", tx.auditLog.deleteMany({ where: { OR: [
       { actorMemberId: { in: memberIds } }, { targetId: { in: targetIds } },
       { csvImportJobId: { in: csvImportJobIds } },

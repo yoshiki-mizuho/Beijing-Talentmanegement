@@ -23,6 +23,8 @@ import { badgeDefinitions, badgeRarities, secretBadgeArt } from "@/modules/growt
 import { calculateBadgeAchievements, calculateBadgeProgress } from "@/modules/growth/domain/growth-insights";
 import { getBadgeCalculationData } from "@/modules/growth/infrastructure/badge-calculation-repository";
 import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
+import { displayMemberName } from "@/modules/members/domain/member-display";
+import { getMemberScope, memberIsInScope } from "@/modules/members/application/member-scope";
 import { listMemberRoleAchievements } from "@/modules/roles/application/role-achievement-service";
 
 export async function getExploreData(
@@ -32,7 +34,15 @@ export async function getExploreData(
 ) {
   const since = new Date(now);
   since.setDate(since.getDate() - 30);
-  const { viewerMember, skills, changes, candidates } = await getExploreSourceData(viewer, since);
+  const scope = await getMemberScope(
+    viewer.role as "ADMIN" | "MANAGER" | "MEMBER",
+    viewer.memberId
+  );
+  const { viewerMember, skills, changes, candidates } = await getExploreSourceData(
+    viewer,
+    since,
+    scope.memberIds
+  );
   const normalizedChanges = changes.map((change) => ({
     ...change,
     skillName: change.skill.name
@@ -56,7 +66,7 @@ export async function getExploreData(
     .flatMap((candidate) => {
       const reasons = getRecommendationReasons({
         candidate: {
-          departmentId: candidate.departmentId,
+          departmentId: candidate.departmentId ?? "",
           skills: candidate.memberSkills,
           recentLevelUp: candidate.skillLevelChanges.some(
             (change) =>
@@ -72,9 +82,9 @@ export async function getExploreData(
         ? [
             {
               id: candidate.id,
-              name: candidate.name,
+              name: displayMemberName(candidate.name),
               avatarUpdatedAt: candidate.avatarUpdatedAt?.toISOString() ?? null,
-              departmentName: candidate.department.name,
+              departmentName: candidate.department?.name ?? "所属なし",
               jobTitle: candidate.jobTitle,
               reasons,
               strengths: candidate.memberSkills
@@ -97,9 +107,9 @@ export async function getExploreData(
             ? [
                 {
                   id: candidate.id,
-                  name: candidate.name,
+                  name: displayMemberName(candidate.name),
                   avatarUpdatedAt: candidate.avatarUpdatedAt?.toISOString() ?? null,
-                  departmentName: candidate.department.name,
+                  departmentName: candidate.department?.name ?? "所属なし",
                   jobTitle: candidate.jobTitle,
                   level: skill.level
                 }
@@ -107,7 +117,9 @@ export async function getExploreData(
             : [];
         })
         .sort(
-          (left, right) => right.level - left.level || left.name.localeCompare(right.name, "ja")
+          (left, right) =>
+            right.level - left.level ||
+            displayMemberName(left.name).localeCompare(displayMemberName(right.name), "ja")
         )
     : [];
 
@@ -116,7 +128,11 @@ export async function getExploreData(
 
 export async function getSkillProfile(viewer: ProfileViewer, memberId: string, now = new Date()) {
   const guard = await getProfileVisibility(memberId);
-  if (!guard || !canViewProfile(viewer, guard)) return null;
+  const scope = await getMemberScope(
+    viewer.role as "ADMIN" | "MANAGER" | "MEMBER",
+    viewer.memberId
+  );
+  if (!guard || !canViewProfile(viewer, guard, memberIsInScope(scope, memberId))) return null;
 
   const [{ member }, badgeData, roleAchievements] = await Promise.all([
     getSkillProfileSourceData(memberId),
@@ -199,7 +215,7 @@ export async function getSkillProfile(viewer: ProfileViewer, memberId: string, n
       changedAt: item.changedAt.toISOString()
     }));
   const template = process.env.CHAT_LINK_TEMPLATE;
-  const chatUrl = buildChatUrl(template, member.email);
+  const chatUrl = buildChatUrl(template, member.email ?? "");
 
   const targetEvaluation = member.targetRole
     ? evaluateRoleAchievement(
@@ -227,8 +243,8 @@ export async function getSkillProfile(viewer: ProfileViewer, memberId: string, n
   const skillGroups = splitTopSkills(skills);
   return {
     id: member.id,
-    name: member.name,
-    departmentName: member.department.name,
+    name: displayMemberName(member.name),
+    departmentName: member.department?.name ?? "所属なし",
     jobTitle: member.jobTitle,
     isProfilePublic: member.isProfilePublic,
     avatarUpdatedAt: member.avatarUpdatedAt?.toISOString() ?? null,
