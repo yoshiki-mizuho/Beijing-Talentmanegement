@@ -10,6 +10,7 @@ export type CurrentSession = {
   requestId: string | null;
   user: {
     id: string;
+    platformUserId: string;
     memberId: string;
     name: string;
     role: AuthRole;
@@ -59,6 +60,7 @@ export async function resolveCurrentSession(
       requestId: requestHeaders.get("x-auth-request-id")?.trim() || null,
       user: {
         id: user.id,
+        platformUserId,
         memberId: user.member.id,
         name: user.member.name,
         role,

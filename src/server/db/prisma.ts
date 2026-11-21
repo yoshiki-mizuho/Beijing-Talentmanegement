@@ -34,7 +34,7 @@ export function runWithTenant<T>(
   return tenantStorage.run(tenantId, async () => await fn());
 }
 
-async function getTenantId() {
+export async function getTenantId() {
   const storedTenantId = tenantStorage.getStore();
 
   if (storedTenantId) {

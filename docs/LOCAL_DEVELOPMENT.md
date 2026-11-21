@@ -69,11 +69,14 @@ npx playwright install chromium
 ```
 
 E2Eテストは本番ビルドを起動し、基盤の入口を通さず `X-Auth-*` ヘッダを付けて直接実行する。
+Playwright は `npm.cmd run platform:fake` で TalentHub 所有の偽の社員・組織基盤も起動し、アプリへ `PLATFORM_USER_ORG_GRPC_ADDR=127.0.0.1:50051` を渡す。操作用 HTTP は `127.0.0.1:50052` で、`POST /__fake/users`、`POST /__fake/nodes`、`POST /__fake/reset`、遅延確認用の `POST /__fake/delay` を E2E からだけ使う。
 
 ```powershell
 npm.cmd run build
 npm.cmd run test:e2e
 ```
+
+偽の基盤だけを手元で起動するときは `npm.cmd run platform:fake` を使う。停止は起動した端末で `Ctrl+C`。既定データは hub-devkit と同じ `local-dev` 9 人、`no-hub` 2 人と組織の木である。
 
 E2Eテストはスキル申告と承認を行い、ローカルDBのデータを変更する。共有DBでは実行せず、使い捨て可能なローカルDBを使用する。
 
