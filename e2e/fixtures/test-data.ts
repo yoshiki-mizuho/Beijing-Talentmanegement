@@ -15,14 +15,23 @@ import type {
 } from "@prisma/client";
 
 import { deleteE2eData, type E2eDataIds } from "../cleanup/delete-e2e-data";
-import { prisma } from "../../src/server/db/prisma";
+import { prisma, runWithTenant } from "../../src/server/db/prisma";
 import type { DemoCredential } from "../helpers/credentials";
 
 export function createE2ePrefix() {
   return `E2E-${Date.now()}-${randomBytes(4).toString("hex")}`;
 }
 
+// E2E のデータは devkit のテナント local-dev に入れる（ブラウザに付ける X-Auth-Tenant-Id と同じ値）。
+export const E2E_TENANT_ID = "11111111-1111-4111-8111-111111111111";
+
+// spec の中で DB を直接読むときに使う。
+export function withE2eTenant<T>(fn: () => T | PromiseLike<T>): Promise<T> {
+  return runWithTenant(E2E_TENANT_ID, fn);
+}
+
 export function createE2eTestData() {
+  const tenantId = E2E_TENANT_ID;
   const prefix = createE2ePrefix();
   const ids: E2eDataIds = {
     memberIds: [], skillIds: [], categoryIds: [], roleIds: [], departmentIds: [],
@@ -35,7 +44,7 @@ export function createE2eTestData() {
     }
   };
 
-  return {
+  const fixture = {
     prefix,
     track(input: Partial<E2eDataIds>) {
       appendUnique(ids.memberIds, input.memberIds ?? []);
@@ -190,4 +199,13 @@ export function createE2eTestData() {
       return deleteE2eData(prisma, ids);
     },
   };
+
+  return new Proxy(fixture, {
+    get(target, property, receiver) {
+      const value = Reflect.get(target, property, receiver);
+      return typeof value === "function"
+        ? (...args: unknown[]) => runWithTenant(tenantId, () => value(...args))
+        : value;
+    },
+  });
 }

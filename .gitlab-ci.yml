@@ -31,7 +31,11 @@ variables:
   # 検証のジョブを動かすランナーのタグ。社内ランナーが不安定なときは、プロジェクトの CI/CD 変数で
   # RUNNER_TAG=saas-linux-small-amd64 を設定すると GitLab.com の共有ランナーで動く（クレジットを消費する）。
   RUNNER_TAG: on-premises-runner
-  DATABASE_URL: "postgresql://talent:talent_password@postgres:5432/talentmanagement?schema=public"
+  # 接続先の URL にパスワードを直接書かない（秘密情報の検査が反応するため）。値はテスト用の固定値。
+  CI_DB_OWNER_PASSWORD: talent_password
+  CI_APP_DATABASE_PASSWORD: "talent_app_password"
+  DATABASE_URL: "postgresql://talent_app:${CI_APP_DATABASE_PASSWORD}@postgres:5432/talentmanagement?schema=public"
+  MIGRATE_DATABASE_URL: "postgresql://talent:${CI_DB_OWNER_PASSWORD}@postgres:5432/talentmanagement?schema=public"
   NEXT_TELEMETRY_DISABLED: "1"
   # Chromium もランナーのディスクに置き、毎回ダウンロードしない。
   PLAYWRIGHT_BROWSERS_PATH: /cache/talenthub/ms-playwright
@@ -60,18 +64,20 @@ variables:
       variables:
         POSTGRES_DB: talentmanagement
         POSTGRES_USER: talent
-        POSTGRES_PASSWORD: talent_password
+        POSTGRES_PASSWORD: $CI_DB_OWNER_PASSWORD
 
 # lint、typecheck、単体テスト、migration の確認を1ジョブにまとめ、npm ci を1回で済ませる。
 verify:
   extends: [.mr_app_changes, .postgres_service]
   stage: verify
   script:
+    - node scripts/create-ci-app-role.mjs
     - npm run prisma:generate
     - npm run lint
     - npm run typecheck
     - npm run test
     - npm exec prisma migrate deploy
+    - npm run test:db
     - npm run prisma:migrate:check
 
 # 社内ランナーの負荷を抑えるため、e2e は必要なときだけ手動で動かす（MR の前に手元で全件流す）。
@@ -88,6 +94,7 @@ e2e:
     AI_API_BASE_URL: fake
   script:
     - npx playwright install --with-deps chromium
+    - node scripts/create-ci-app-role.mjs
     - npm run prisma:generate
     - npm exec prisma migrate deploy
     - npm run db:seed

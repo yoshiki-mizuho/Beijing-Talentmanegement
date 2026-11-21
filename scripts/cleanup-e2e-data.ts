@@ -1,10 +1,10 @@
 import "dotenv/config";
 
-import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "@prisma/client";
-
 import { isE2eMember, isLocalDatabaseUrl } from "../e2e/cleanup/cleanup-e2e-policy";
 import { deleteE2eData } from "../e2e/cleanup/delete-e2e-data";
+import { prisma, runWithTenant } from "../src/server/db/prisma";
+
+const tenantId = "11111111-1111-4111-8111-111111111111";
 
 function printCounts(heading: string, counts: Record<string, number>) {
   console.log(heading);
@@ -20,7 +20,6 @@ async function main() {
     process.exitCode = 1;
     return;
   }
-  const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: databaseUrl }) });
   try {
     const [members, skills, categories, roles, departments] = await Promise.all([
       prisma.member.findMany({ select: { id: true, employeeNo: true, name: true, email: true } }),
@@ -53,7 +52,7 @@ async function main() {
   }
 }
 
-main().catch((error: unknown) => {
+runWithTenant(tenantId, main).catch((error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
   console.error(`E2Eデータの掃除に失敗しました：${message}`);
   process.exitCode = 1;

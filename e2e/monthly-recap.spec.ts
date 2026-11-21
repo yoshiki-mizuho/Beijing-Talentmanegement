@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { prisma } from "../src/server/db/prisma";
-import { createE2eTestData } from "./fixtures/test-data";
+import { createE2eTestData, withE2eTenant } from "./fixtures/test-data";
 import { openLoggedInContext } from "./helpers/auth";
 
 test.setTimeout(120_000);
@@ -40,7 +40,7 @@ test("マネージャーが振り返りから1on1メモを追加できる", asyn
     await expect(row.locator("textarea")).toHaveValue(expected);
     await row.getByRole("button", { name: "追加する" }).click();
     await expect(row.getByText("メモに追加済み", { exact: true })).toBeVisible();
-    expect(await prisma.oneOnOneNote.count({ where: { memberId: fixture.member.member.id, body: expected } })).toBe(1);
+    expect(await withE2eTenant(() => prisma.oneOnOneNote.count({ where: { memberId: fixture.member.member.id, body: expected } }))).toBe(1);
     await dialog.getByRole("tab", { name: "1on1 メモ" }).click();
     await expect(dialog.getByRole("tabpanel", { name: "1on1 メモ" }).getByText(expected, { exact: true })).toBeVisible();
   } finally {

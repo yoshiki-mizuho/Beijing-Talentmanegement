@@ -24,6 +24,7 @@ TalentHub は、Hub シリーズの製品 `talenthub` として、社内サー�
 - 画面と API は 1 つのサービスで受ける（基盤に確認済み。hub-platform#4）。
 - 画面は `src/app/talent/`、API は `src/app/api/talent/v1/` に置き、静的アセットには `assetPrefix: "/talent"` を使う。API を `/talent` の外に置くため、`basePath` は使わない。死活の確認は `/talent/health`。
 - テーブルは `migrate` のジョブ（移行用のロール）が作る。アプリ用のロールはテーブルを作れない。
+- `SkillLevel` を除く全テーブルは `tenant_id` と RLS を持つ。アプリはリクエストごとに `X-Auth-Tenant-Id` をトランザクション内の `app.tenant_id` へ設定し、別テナントの行を DB 層で読み書きできない。migration 用の所有者 role は RLS の外、アプリ用 role は RLS の対象として動く。
 
 ## 配布の流れ
 

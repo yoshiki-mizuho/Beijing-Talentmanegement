@@ -96,6 +96,10 @@ scripts/          検証とデータ掃除のスクリプト
 - `src/server` はPrisma Client、`X-Auth-*` から身元を解決する境界、セキュリティの検査など、アプリ全体で1つだけ持つサーバー基盤を置く。
 - Prisma schemaは `prisma/schema.prisma` の1ファイルで持ち、肥大化した場合に分割方針を再検討する。
 
+### DB のテナント分離
+
+`SkillLevel` を除く全モデルは `tenant_id` を持ち、PostgreSQL の RLS で `app.tenant_id` と一致する行だけを読み書きできる。`src/server/db/prisma.ts` は、各クエリまたは対話型トランザクションの先頭で `set_config('app.tenant_id', tenantId, true)` を同じトランザクション内に設定する。画面と API は `X-Auth-Tenant-Id`、seed・E2E・定期処理は `runWithTenant` から tenant ID を渡す。`SkillLevel` は Lv1〜5 の共通かつ読み取り専用の目安なので、tenant ID と RLS の対象外とする。
+
 ## 依存方向
 
 依存方向は以下を基本とします。

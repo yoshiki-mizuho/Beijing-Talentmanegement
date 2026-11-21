@@ -1,6 +1,6 @@
 import { expect, type Browser, type BrowserContext, type Page } from "@playwright/test";
 
-import { prisma } from "../../src/server/db/prisma";
+import { prisma, runWithTenant } from "../../src/server/db/prisma";
 import type { DemoCredential } from "./credentials";
 
 const tenantId = "11111111-1111-4111-8111-111111111111";
@@ -26,10 +26,12 @@ async function markPreviousMonthRecapSeen(platformUserId: string) {
   const month = Number(parts.find((part) => part.type === "month")?.value);
   const previous = new Date(Date.UTC(year, month - 2, 1));
   const previousMonth = `${previous.getUTCFullYear()}-${String(previous.getUTCMonth() + 1).padStart(2, "0")}`;
-  await prisma.member.updateMany({
-    where: { users: { some: { platformUserId } } },
-    data: { lastRecapSeenMonth: previousMonth }
-  });
+  await runWithTenant(tenantId, () =>
+    prisma.member.updateMany({
+      where: { users: { some: { platformUserId } } },
+      data: { lastRecapSeenMonth: previousMonth }
+    })
+  );
 }
 
 export async function login(

@@ -1,9 +1,7 @@
 import "dotenv/config";
 
-import { PrismaPg } from "@prisma/adapter-pg";
 import {
   Prisma,
-  PrismaClient,
   AuthRole,
   LevelUpReactionType,
   MemberStatus,
@@ -15,6 +13,7 @@ import {
 } from "@prisma/client";
 
 import { generateNextRoleCodeFromExistingCodes } from "../src/modules/roles/domain/role-code";
+import { prisma, runWithTenant } from "../src/server/db/prisma";
 import { assertDemoSeedAllowed } from "./seed-config";
 import {
   buildSkillAssessmentRequestNotificationBody,
@@ -42,11 +41,8 @@ assertDemoSeedAllowed(
   process.env.ALLOW_DEMO_SEED
 );
 
-const prisma = new PrismaClient({
-  adapter: new PrismaPg({
-    connectionString: process.env.DATABASE_URL
-  })
-});
+const seedTenantId =
+  process.env.SEED_TENANT_ID ?? "11111111-1111-4111-8111-111111111111";
 
 const skillLevels = [
   {
@@ -98,18 +94,17 @@ async function main() {
       });
     }
 
-    const department = await tx.department.upsert({
-      where: { code: "DEV" },
-      update: {
-        name: "開発部",
-        isActive: true
-      },
-      create: {
-        code: "DEV",
-        name: "開発部",
-        isActive: true
-      }
+    const existingDepartment = await tx.department.findFirst({
+      where: { code: "DEV" }
     });
+    const department = existingDepartment
+      ? await tx.department.update({
+          where: { id: existingDepartment.id },
+          data: { name: "開発部", isActive: true }
+        })
+      : await tx.department.create({
+          data: { code: "DEV", name: "開発部", isActive: true }
+        });
 
     const members = [
       {
@@ -139,26 +134,32 @@ async function main() {
     ];
 
     for (const memberInput of members) {
-      const member = await tx.member.upsert({
-        where: { employeeNo: memberInput.employeeNo },
-        update: {
-          name: memberInput.name,
-          email: memberInput.email,
-          departmentId: department.id,
-          jobTitle: memberInput.jobTitle,
-          status: MemberStatus.ACTIVE
-        },
-        create: {
-          employeeNo: memberInput.employeeNo,
-          name: memberInput.name,
-          email: memberInput.email,
-          departmentId: department.id,
-          jobTitle: memberInput.jobTitle,
-          status: MemberStatus.ACTIVE
-        }
+      const existingMember = await tx.member.findFirst({
+        where: { employeeNo: memberInput.employeeNo }
       });
+      const member = existingMember
+        ? await tx.member.update({
+            where: { id: existingMember.id },
+            data: {
+              name: memberInput.name,
+              email: memberInput.email,
+              departmentId: department.id,
+              jobTitle: memberInput.jobTitle,
+              status: MemberStatus.ACTIVE
+            }
+          })
+        : await tx.member.create({
+            data: {
+              employeeNo: memberInput.employeeNo,
+              name: memberInput.name,
+              email: memberInput.email,
+              departmentId: department.id,
+              jobTitle: memberInput.jobTitle,
+              status: MemberStatus.ACTIVE
+            }
+          });
 
-      const existingUser = await tx.user.findUnique({
+      const existingUser = await tx.user.findFirst({
         where: { memberId: member.id },
         select: { id: true }
       });
@@ -187,15 +188,19 @@ async function main() {
 
   await prisma.$transaction(async (tx) => {
     for (const department of demoDepartments) {
-      await tx.department.upsert({
+      const existing = await tx.department.findFirst({
         where: { code: department.code },
-        update: {},
-        create: {
+        select: { id: true }
+      });
+      if (!existing) {
+        await tx.department.create({
+          data: {
           code: department.code,
           name: department.name,
           isActive: true
-        }
-      });
+          }
+        });
+      }
     }
 
     const hierarchyDepartmentCodes = [
@@ -223,21 +228,20 @@ async function main() {
     }
 
     for (const category of demoSkillCategories) {
-      await tx.skillCategory.upsert({
+      const existing = await tx.skillCategory.findFirst({
         where: { name: category.name },
-        update: {},
-        create: category
+        select: { id: true }
       });
+      if (!existing) await tx.skillCategory.create({ data: category });
     }
 
     for (const group of demoSkillCategoryGroups) {
-      const categoryGroup = await tx.skillCategoryGroup.upsert({
+      const existing = await tx.skillCategoryGroup.findFirst({
         where: { name: group.name },
-        update: {},
-        create: {
-          name: group.name,
-          displayOrder: group.displayOrder
-        }
+        select: { id: true }
+      });
+      const categoryGroup = existing ?? await tx.skillCategoryGroup.create({
+        data: { name: group.name, displayOrder: group.displayOrder }
       });
       await tx.skillCategory.updateMany({
         where: {
@@ -259,10 +263,13 @@ async function main() {
     );
 
     for (const skill of demoSkills) {
-      await tx.skill.upsert({
+      const existing = await tx.skill.findFirst({
         where: { code: skill.code },
-        update: {},
-        create: {
+        select: { id: true }
+      });
+      if (!existing) {
+        await tx.skill.create({
+          data: {
           code: skill.code,
           name: skill.name,
           description: skill.description,
@@ -272,14 +279,15 @@ async function main() {
             "SkillCategory"
           ),
           isActive: true
-        }
-      });
+          }
+        });
+      }
     }
 
     const roleCodes = (await tx.role.findMany({ select: { code: true } }))
       .map((role) => role.code);
     for (const role of demoRoles) {
-      const existingRole = await tx.role.findUnique({
+      const existingRole = await tx.role.findFirst({
         where: { name: role.name },
         select: { id: true }
       });
@@ -310,10 +318,13 @@ async function main() {
     );
 
     for (const member of demoMembers) {
-      await tx.member.upsert({
+      const existing = await tx.member.findFirst({
         where: { employeeNo: member.employeeNo },
-        update: {},
-        create: {
+        select: { id: true }
+      });
+      if (!existing) {
+        await tx.member.create({
+          data: {
           employeeNo: member.employeeNo,
           name: member.name,
           email: member.email,
@@ -324,8 +335,9 @@ async function main() {
           ),
           status: member.status,
           jobTitle: member.jobTitle
-        }
-      });
+          }
+        });
+      }
     }
 
     const skills = await tx.skill.findMany({
@@ -373,19 +385,21 @@ async function main() {
           requirement.skillCode,
           "Skill"
         );
-        await tx.roleRequirement.upsert({
-          where: {
-            roleId_skillId: { roleId, skillId }
-          },
-          update: {},
-          create: {
+        const existing = await tx.roleRequirement.findFirst({
+          where: { roleId, skillId },
+          select: { id: true }
+        });
+        if (!existing) {
+          await tx.roleRequirement.create({
+            data: {
             roleId,
             skillId,
             requiredLevel: requirement.requiredLevel,
             isRequired: requirement.isRequired,
             anyOfGroup: "anyOfGroup" in requirement ? requirement.anyOfGroup : null
-          }
-        });
+            }
+          });
+        }
       }
     }
 
@@ -463,12 +477,13 @@ async function main() {
         memberSkill.skillCode,
         "Skill"
       );
-      await tx.memberSkill.upsert({
-        where: {
-          memberId_skillId: { memberId, skillId }
-        },
-        update: {},
-        create: {
+      const existing = await tx.memberSkill.findFirst({
+        where: { memberId, skillId },
+        select: { id: true }
+      });
+      if (!existing) {
+        await tx.memberSkill.create({
+          data: {
           memberId,
           skillId,
           level: memberSkill.level,
@@ -478,8 +493,9 @@ async function main() {
           approvedByMemberId: approvingMemberId,
           approvedAt,
           lastAssessedAt
-        }
-      });
+          }
+        });
+      }
     }
 
     const levelChangeEmployeeNos = [
@@ -547,29 +563,28 @@ async function main() {
       if (!levelChange) {
         continue;
       }
-      await tx.levelUpReaction.upsert({
+      const reactionMemberId = requireId(
+        memberIdsByEmployeeNo,
+        reaction.memberEmployeeNo,
+        "Reaction member"
+      );
+      const existing = await tx.levelUpReaction.findFirst({
         where: {
-          levelChangeId_memberId_type: {
+          levelChangeId: levelChange.id,
+          memberId: reactionMemberId,
+          type: reaction.type as LevelUpReactionType
+        },
+        select: { id: true }
+      });
+      if (!existing) {
+        await tx.levelUpReaction.create({
+          data: {
             levelChangeId: levelChange.id,
-            memberId: requireId(
-              memberIdsByEmployeeNo,
-              reaction.memberEmployeeNo,
-              "Reaction member"
-            ),
+            memberId: reactionMemberId,
             type: reaction.type as LevelUpReactionType
           }
-        },
-        update: {},
-        create: {
-          levelChangeId: levelChange.id,
-          memberId: requireId(
-            memberIdsByEmployeeNo,
-            reaction.memberEmployeeNo,
-            "Reaction member"
-          ),
-          type: reaction.type as LevelUpReactionType
-        }
-      });
+        });
+      }
     }
 
     for (const comment of demoLevelUpComments) {
@@ -696,7 +711,7 @@ async function main() {
       }
     }
 
-    const demoManager = await tx.member.findUnique({
+    const demoManager = await tx.member.findFirst({
       where: { email: "manager@example.com" },
       select: { id: true, teamGoals: { select: { id: true }, take: 1 } }
     });
@@ -717,7 +732,7 @@ async function main() {
   }, { timeout: 60_000 });
 }
 
-main()
+runWithTenant(seedTenantId, main)
   .then(async () => {
     await prisma.$disconnect();
   })

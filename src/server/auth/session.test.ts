@@ -1,10 +1,10 @@
 import { AuthRole } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ findUnique: vi.fn() }));
+const mocks = vi.hoisted(() => ({ findFirst: vi.fn() }));
 
 vi.mock("@/server/db/prisma", () => ({
-  prisma: { user: { findUnique: mocks.findUnique } }
+  prisma: { user: { findFirst: mocks.findFirst } }
 }));
 
 import { resolveCurrentSession } from "@/server/auth/session";
@@ -28,7 +28,7 @@ function user(role: AuthRole, status = "ACTIVE") {
 }
 
 describe("resolveCurrentSession", () => {
-  beforeEach(() => mocks.findUnique.mockReset());
+  beforeEach(() => mocks.findFirst.mockReset());
 
   it("必須ヘッダが無いリクエストを未認証にする", async () => {
     const headers = requestHeaders();
@@ -37,33 +37,33 @@ describe("resolveCurrentSession", () => {
       status: "unauthenticated",
       session: null
     });
-    expect(mocks.findUnique).not.toHaveBeenCalled();
+    expect(mocks.findFirst).not.toHaveBeenCalled();
   });
 
   it("登録されていない利用者を拒否する", async () => {
-    mocks.findUnique.mockResolvedValue(null);
+    mocks.findFirst.mockResolvedValue(null);
     expect((await resolveCurrentSession(requestHeaders())).status).toBe("unregistered");
   });
 
   it("在籍中でないメンバーを拒否する", async () => {
-    mocks.findUnique.mockResolvedValue(user(AuthRole.MEMBER, "INACTIVE"));
+    mocks.findFirst.mockResolvedValue(user(AuthRole.MEMBER, "INACTIVE"));
     expect((await resolveCurrentSession(requestHeaders())).status).toBe("unregistered");
   });
 
   it("基盤の ADMIN を管理者として扱う", async () => {
-    mocks.findUnique.mockResolvedValue(user(AuthRole.MEMBER));
+    mocks.findFirst.mockResolvedValue(user(AuthRole.MEMBER));
     const result = await resolveCurrentSession(requestHeaders({ "X-Auth-User-Role": "ADMIN" }));
     expect(result.session?.user.role).toBe(AuthRole.ADMIN);
   });
 
   it("Hub の MANAGER をマネージャーとして扱う", async () => {
-    mocks.findUnique.mockResolvedValue(user(AuthRole.MANAGER));
+    mocks.findFirst.mockResolvedValue(user(AuthRole.MANAGER));
     const result = await resolveCurrentSession(requestHeaders());
     expect(result.session?.user.role).toBe(AuthRole.MANAGER);
   });
 
   it("DB の ADMIN を基盤が MEMBER ならメンバーとして扱う", async () => {
-    mocks.findUnique.mockResolvedValue(user(AuthRole.ADMIN));
+    mocks.findFirst.mockResolvedValue(user(AuthRole.ADMIN));
     const result = await resolveCurrentSession(requestHeaders());
     expect(result.session?.user.role).toBe(AuthRole.MEMBER);
   });

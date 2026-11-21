@@ -2,11 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   transaction: vi.fn(),
-  requirementFindUnique: vi.fn(),
-  requirementUpsert: vi.fn(),
+  requirementFindFirst: vi.fn(),
   requirementCreate: vi.fn(),
-  requirementUpdate: vi.fn(),
-  requirementDelete: vi.fn(),
+  requirementUpdateMany: vi.fn(),
+  requirementDeleteMany: vi.fn(),
   roleFindUniqueOrThrow: vi.fn(),
   roleUpdate: vi.fn(),
   auditLogCreate: vi.fn(),
@@ -27,11 +26,10 @@ import {
 
 const transactionClient = {
   roleRequirement: {
-    findUnique: mocks.requirementFindUnique,
-    upsert: mocks.requirementUpsert,
+    findFirst: mocks.requirementFindFirst,
     create: mocks.requirementCreate,
-    update: mocks.requirementUpdate,
-    delete: mocks.requirementDelete,
+    updateMany: mocks.requirementUpdateMany,
+    deleteMany: mocks.requirementDeleteMany,
   },
   role: {
     findUniqueOrThrow: mocks.roleFindUniqueOrThrow,
@@ -46,8 +44,8 @@ describe("upsertRoleRequirement audit log", () => {
     mocks.transaction.mockImplementation(async (callback) =>
       callback(transactionClient),
     );
-    mocks.requirementFindUnique.mockResolvedValue(null);
-    mocks.requirementUpsert.mockResolvedValue({
+    mocks.requirementFindFirst.mockResolvedValue(null);
+    mocks.requirementCreate.mockResolvedValue({
       roleId: "role-1",
       skillId: "skill-1",
       requiredLevel: 3,
@@ -118,11 +116,11 @@ describe("updateRoleWithRequirements", () => {
       "actor-1",
     );
 
-    expect(mocks.requirementDelete).toHaveBeenCalledWith({
-      where: { roleId_skillId: { roleId: "role-1", skillId: "remove" } },
+    expect(mocks.requirementDeleteMany).toHaveBeenCalledWith({
+      where: { roleId: "role-1", skillId: "remove" },
     });
-    expect(mocks.requirementUpdate).toHaveBeenCalledWith({
-      where: { roleId_skillId: { roleId: "role-1", skillId: "change" } },
+    expect(mocks.requirementUpdateMany).toHaveBeenCalledWith({
+      where: { roleId: "role-1", skillId: "change" },
       data: { requiredLevel: 4, anyOfGroup: null },
     });
     expect(mocks.requirementCreate).toHaveBeenCalledWith({
@@ -149,8 +147,8 @@ describe("updateRoleWithRequirements", () => {
       "actor-1",
     );
 
-    expect(mocks.requirementUpdate).not.toHaveBeenCalled();
-    expect(mocks.requirementDelete).not.toHaveBeenCalled();
+    expect(mocks.requirementUpdateMany).not.toHaveBeenCalled();
+    expect(mocks.requirementDeleteMany).not.toHaveBeenCalled();
     expect(mocks.requirementCreate).not.toHaveBeenCalled();
   });
 
@@ -165,7 +163,7 @@ describe("updateRoleWithRequirements", () => {
       "actor-1",
     );
 
-    expect(mocks.requirementUpdate).toHaveBeenCalledWith(expect.objectContaining({
+    expect(mocks.requirementUpdateMany).toHaveBeenCalledWith(expect.objectContaining({
       data: { requiredLevel: 2, anyOfGroup: 1 },
     }));
     expect(mocks.requirementCreate).toHaveBeenCalledWith({

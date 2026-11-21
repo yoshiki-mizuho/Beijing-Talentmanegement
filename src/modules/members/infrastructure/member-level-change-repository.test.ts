@@ -8,7 +8,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   transaction: vi.fn(),
   memberSkillFind: vi.fn(),
-  memberSkillUpsert: vi.fn(),
+  memberSkillCreate: vi.fn(),
+  memberSkillUpdate: vi.fn(),
+  memberSkillFindFirstOrThrow: vi.fn(),
   memberSkillDelete: vi.fn(),
   levelChangeCreate: vi.fn(),
   assessmentFind: vi.fn(),
@@ -35,8 +37,10 @@ import {
 
 const transactionClient = {
   memberSkill: {
-    findUnique: mocks.memberSkillFind,
-    upsert: mocks.memberSkillUpsert,
+    findFirst: mocks.memberSkillFind,
+    findFirstOrThrow: mocks.memberSkillFindFirstOrThrow,
+    create: mocks.memberSkillCreate,
+    update: mocks.memberSkillUpdate,
     delete: mocks.memberSkillDelete
   },
   skillLevelChange: { create: mocks.levelChangeCreate },
@@ -56,7 +60,9 @@ describe("member skill level change recording", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.transaction.mockImplementation(async (callback) => callback(transactionClient));
-    mocks.memberSkillUpsert.mockResolvedValue({ id: "member-skill" });
+    mocks.memberSkillCreate.mockResolvedValue({ id: "member-skill" });
+    mocks.memberSkillUpdate.mockResolvedValue({ id: "member-skill" });
+    mocks.memberSkillFindFirstOrThrow.mockResolvedValue({ id: "member-skill" });
     mocks.levelChangeCreate.mockResolvedValue({ id: "change" });
   });
 

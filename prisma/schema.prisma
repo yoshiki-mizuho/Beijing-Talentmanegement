@@ -101,17 +101,22 @@ enum TeamGoalKind {
 
 model User {
   id             String    @id @default(cuid())
-  platformUserId String?   @unique
+  tenantId       String    @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
+  platformUserId String?
   role           AuthRole  @default(MEMBER)
-  memberId       String?   @unique
+  memberId       String?
   member         Member?   @relation(fields: [memberId], references: [id])
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+
+  @@unique([tenantId, platformUserId])
+  @@unique([tenantId, memberId])
 }
 
 model Department {
   id                 String       @id @default(cuid())
-  code               String       @unique
+  tenantId           String       @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
+  code               String
   name               String
   parentDepartmentId String?
   parentDepartment   Department?  @relation("DepartmentHierarchy", fields: [parentDepartmentId], references: [id])
@@ -121,14 +126,16 @@ model Department {
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
 
+  @@unique([tenantId, code])
   @@index([parentDepartmentId])
 }
 
 model Member {
   id                    String                @id @default(cuid())
-  employeeNo            String                @unique
+  tenantId              String                @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
+  employeeNo            String
   name                  String
-  email                 String                @unique
+  email                 String
   departmentId          String
   department            Department            @relation(fields: [departmentId], references: [id])
   status                MemberStatus          @default(ACTIVE)
@@ -179,6 +186,8 @@ model Member {
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
 
+  @@unique([tenantId, employeeNo])
+  @@unique([tenantId, email])
   @@index([departmentId])
   @@index([status])
   @@index([managerId])
@@ -187,6 +196,7 @@ model Member {
 
 model MemberProjectHistory {
   id           String   @id @default(cuid())
+  tenantId     String   @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
   memberId     String
   member       Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
   title        String
@@ -202,11 +212,13 @@ model MemberProjectHistory {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  @@index([tenantId])
   @@index([memberId, startMonth])
 }
 
 model MemberCertification {
   id            String   @id @default(cuid())
+  tenantId      String   @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
   memberId      String
   member        Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
   name          String
@@ -214,12 +226,14 @@ model MemberCertification {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  @@index([tenantId])
   @@index([memberId])
 }
 
 model SkillCategory {
   id           String   @id @default(cuid())
-  name         String   @unique
+  tenantId     String   @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
+  name         String
   displayOrder Int      @default(0)
   groupId      String?
   group        SkillCategoryGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
@@ -227,21 +241,26 @@ model SkillCategory {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  @@unique([tenantId, name])
   @@index([groupId])
 }
 
 model SkillCategoryGroup {
   id           String          @id @default(cuid())
-  name         String          @unique
+  tenantId     String          @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
+  name         String
   displayOrder Int             @default(0)
   categories   SkillCategory[]
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
+
+  @@unique([tenantId, name])
 }
 
 model Skill {
   id                String                @id @default(cuid())
-  code              String                @unique
+  tenantId          String                @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
+  code              String
   name              String
   categoryId        String
   category          SkillCategory         @relation(fields: [categoryId], references: [id])
@@ -260,12 +279,14 @@ model Skill {
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
 
-  @@unique([categoryId, name])
+  @@unique([tenantId, code])
+  @@unique([tenantId, categoryId, name])
   @@index([categoryId])
 }
 
 model TeamGoal {
   id          String       @id @default(cuid())
+  tenantId    String       @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
   managerId   String
   manager     Member       @relation("TeamGoalManager", fields: [managerId], references: [id], onDelete: Cascade)
   kind        TeamGoalKind
@@ -281,22 +302,25 @@ model TeamGoal {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
+  @@index([tenantId])
   @@index([managerId, createdAt])
 }
 
 model TeamGoalAcknowledgement {
   id         String   @id @default(cuid())
+  tenantId   String   @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
   teamGoalId String
   teamGoal   TeamGoal @relation(fields: [teamGoalId], references: [id], onDelete: Cascade)
   memberId   String
   member     Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())
 
-  @@unique([teamGoalId, memberId])
+  @@unique([tenantId, teamGoalId, memberId])
 }
 
 model SkillPrerequisite {
   id                  String                  @id @default(cuid())
+  tenantId            String                  @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
   skillId             String
   skill               Skill                   @relation("SkillPrerequisites", fields: [skillId], references: [id], onDelete: Cascade)
   prerequisiteSkillId String
@@ -306,12 +330,13 @@ model SkillPrerequisite {
   createdBy           Member?                 @relation("SkillPrerequisiteCreatedBy", fields: [createdById], references: [id])
   createdAt           DateTime                @default(now())
 
-  @@unique([skillId, prerequisiteSkillId])
+  @@unique([tenantId, skillId, prerequisiteSkillId])
   @@index([prerequisiteSkillId])
 }
 
 model SkillLevelGuide {
   id          String   @id @default(cuid())
+  tenantId    String   @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
   skillId     String
   skill       Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
   level       Int
@@ -319,7 +344,7 @@ model SkillLevelGuide {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  @@unique([skillId, level])
+  @@unique([tenantId, skillId, level])
   @@index([skillId])
 }
 
@@ -334,6 +359,7 @@ model SkillLevel {
 
 model MemberSkill {
   id                 String     @id @default(cuid())
+  tenantId           String     @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
   memberId           String
   member             Member     @relation("MemberSkills", fields: [memberId], references: [id])
   skillId            String
@@ -348,13 +374,14 @@ model MemberSkill {
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 
-  @@unique([memberId, skillId])
+  @@unique([tenantId, memberId, skillId])
   @@index([skillId])
   @@index([approvedByMemberId])
 }
 
 model SkillSelfAssessment {
   id                  String                    @id @default(cuid())
+  tenantId            String                    @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
   memberId            String
   member              Member                    @relation("AssessmentMember", fields: [memberId], references: [id])
   skillId             String
@@ -373,6 +400,7 @@ model SkillSelfAssessment {
   createdAt           DateTime                  @default(now())
   updatedAt           DateTime                  @updatedAt
 
+  @@index([tenantId])
   @@index([memberId])
   @@index([skillId])
   @@index([status])
@@ -381,6 +409,7 @@ model SkillSelfAssessment {
 
 model Notification {
   id                    String               @id @default(cuid())
+  tenantId              String               @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
   recipientMemberId     String
   recipientMember       Member               @relation("NotificationRecipient", fields: [recipientMemberId], references: [id])
   type                  NotificationType
@@ -396,6 +425,7 @@ model Notification {
   createdAt             DateTime             @default(now())
   readAt                DateTime?
 
+  @@index([tenantId])
   @@index([recipientMemberId, status])
   @@index([skillSelfAssessmentId])
   @@index([skillLevelChangeId])
@@ -404,8 +434,9 @@ model Notification {
 
 model Role {
   id               String            @id @default(cuid())
-  code             String            @unique
-  name             String            @unique
+  tenantId         String            @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
+  code             String
+  name             String
   description      String?
   isActive         Boolean           @default(true)
   roleRequirements RoleRequirement[]
@@ -413,10 +444,14 @@ model Role {
   roleAchievements RoleAchievement[]
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
+
+  @@unique([tenantId, code])
+  @@unique([tenantId, name])
 }
 
 model RoleAchievement {
   id               String   @id @default(cuid())
+  tenantId         String   @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
   memberId         String
   member           Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
   roleId           String
@@ -427,12 +462,13 @@ model RoleAchievement {
   requirements     Json
   createdAt        DateTime @default(now())
 
-  @@unique([memberId, roleId])
+  @@unique([tenantId, memberId, roleId])
   @@index([roleId])
 }
 
 model SkillLevelChange {
   id                    String                 @id @default(cuid())
+  tenantId              String                 @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
   memberId              String
   member                Member                 @relation("SkillLevelChangeMember", fields: [memberId], references: [id])
   skillId               String
@@ -450,6 +486,7 @@ model SkillLevelChange {
   comments              LevelUpComment[]
   notifications         Notification[]
 
+  @@index([tenantId])
   @@index([memberId, changedAt])
   @@index([changedAt])
   @@index([skillSelfAssessmentId])
@@ -457,6 +494,7 @@ model SkillLevelChange {
 
 model LevelUpReaction {
   id            String              @id @default(cuid())
+  tenantId      String              @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
   levelChangeId String
   levelChange   SkillLevelChange    @relation(fields: [levelChangeId], references: [id], onDelete: Cascade)
   memberId      String
@@ -464,12 +502,13 @@ model LevelUpReaction {
   type          LevelUpReactionType
   createdAt     DateTime            @default(now())
 
-  @@unique([levelChangeId, memberId, type])
+  @@unique([tenantId, levelChangeId, memberId, type])
   @@index([memberId])
 }
 
 model LevelUpComment {
   id             String           @id @default(cuid())
+  tenantId       String           @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
   levelChangeId  String
   levelChange    SkillLevelChange @relation(fields: [levelChangeId], references: [id], onDelete: Cascade)
   authorMemberId String
@@ -477,11 +516,13 @@ model LevelUpComment {
   body           String
   createdAt      DateTime         @default(now())
 
+  @@index([tenantId])
   @@index([levelChangeId, createdAt])
 }
 
 model Cheer {
   id             String         @id @default(cuid())
+  tenantId       String         @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
   fromMemberId   String
   fromMember     Member         @relation("CheerSender", fields: [fromMemberId], references: [id])
   toMemberId     String
@@ -494,12 +535,14 @@ model Cheer {
   createdAt      DateTime       @default(now())
   notifications  Notification[]
 
+  @@index([tenantId])
   @@index([toMemberId, createdAt])
   @@index([mentorMemberId])
 }
 
 model OneOnOneNote {
   id              String    @id @default(cuid())
+  tenantId        String    @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
   managerMemberId String
   managerMember   Member    @relation("OneOnOneNoteManager", fields: [managerMemberId], references: [id])
   memberId        String
@@ -509,11 +552,13 @@ model OneOnOneNote {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
+  @@index([tenantId])
   @@index([managerMemberId, memberId])
 }
 
 model RoleRequirement {
   id            String     @id @default(cuid())
+  tenantId      String     @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
   roleId        String
   role          Role       @relation(fields: [roleId], references: [id])
   skillId       String
@@ -525,12 +570,13 @@ model RoleRequirement {
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
-  @@unique([roleId, skillId])
+  @@unique([tenantId, roleId, skillId])
   @@index([skillId])
 }
 
 model AuditLog {
   id             String        @id @default(cuid())
+  tenantId       String        @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
   actorMemberId  String?
   actorMember    Member?       @relation("AuditActor", fields: [actorMemberId], references: [id])
   action         String
@@ -543,6 +589,7 @@ model AuditLog {
   csvImportJob   CsvImportJob? @relation(fields: [csvImportJobId], references: [id])
   occurredAt     DateTime      @default(now())
 
+  @@index([tenantId])
   @@index([actorMemberId])
   @@index([targetType, targetId])
   @@index([csvImportJobId])
@@ -551,6 +598,7 @@ model AuditLog {
 
 model CsvImportJob {
   id           String              @id @default(cuid())
+  tenantId     String              @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
   targetType   CsvImportTargetType
   status       CsvImportStatus     @default(UPLOADED)
   originalName String?
@@ -563,11 +611,13 @@ model CsvImportJob {
   updatedAt    DateTime            @updatedAt
   auditLogs    AuditLog[]
 
+  @@index([tenantId])
   @@index([targetType, status])
 }
 
 model GrowthHint {
   id            String           @id @default(cuid())
+  tenantId      String           @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
   memberId      String           @unique
   member        Member           @relation("GrowthHintMember", fields: [memberId], references: [id], onDelete: Cascade)
   source        GrowthHintSource
@@ -578,10 +628,13 @@ model GrowthHint {
   generatedBy   Member?          @relation("GrowthHintGeneratedBy", fields: [generatedById], references: [id])
   generatedAt   DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
+
+  @@index([tenantId])
 }
 
 model ProposalSheetDraft {
   id                  String                   @id @default(cuid())
+  tenantId            String                   @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
   memberId            String                   @unique
   member              Member                   @relation("ProposalSheetDraftMember", fields: [memberId], references: [id], onDelete: Cascade)
   displayName         String
@@ -600,12 +653,14 @@ model ProposalSheetDraft {
   createdAt           DateTime                 @default(now())
   updatedAt           DateTime                 @updatedAt
 
+  @@index([tenantId])
   @@index([updatedById])
 }
 
 model SkillSheetTemplate {
   id          String   @id @default(cuid())
-  name        String   @unique @db.VarChar(50)
+  tenantId    String   @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
+  name        String   @db.VarChar(50)
   fileName    String   @db.VarChar(200)
   content     Bytes
   sizeBytes   Int
@@ -616,11 +671,13 @@ model SkillSheetTemplate {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@unique([tenantId, name])
   @@index([updatedById])
 }
 
 model AiUsageLog {
   id               String        @id @default(cuid())
+  tenantId         String        @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
   feature          String
   actorMemberId    String?
   actorMember      Member?       @relation("AiUsageActor", fields: [actorMemberId], references: [id])
@@ -634,6 +691,7 @@ model AiUsageLog {
   errorCode        String?
   createdAt        DateTime      @default(now())
 
+  @@index([tenantId])
   @@index([createdAt])
   @@index([feature, createdAt])
 }

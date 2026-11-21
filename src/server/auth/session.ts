@@ -31,7 +31,7 @@ export async function resolveCurrentSession(
     return { status: "unauthenticated", session: null };
   }
 
-  const user = await prisma.user.findUnique({
+  const user = await prisma.user.findFirst({
     where: { platformUserId },
     select: {
       id: true,
