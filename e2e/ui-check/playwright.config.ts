@@ -11,5 +11,8 @@ export default defineConfig({
   reporter: [["list"]],
   use: { baseURL, viewport: { width: 1440, height: 900 } },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } } }],
-  webServer: { command: "npm run start", url: `${baseURL}/talent/health`, reuseExistingServer: true, timeout: 120_000 }
+  webServer: [
+    { command: "npm run platform:fake", url: "http://127.0.0.1:50052/__fake/health", reuseExistingServer: true, timeout: 120_000 },
+    { command: "npm run start", url: `${baseURL}/talent/health`, reuseExistingServer: true, timeout: 120_000, env: { ...process.env, PLATFORM_USER_ORG_GRPC_ADDR: "127.0.0.1:50051" } }
+  ]
 });

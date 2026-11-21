@@ -26,6 +26,10 @@ TalentHub は、Hub シリーズの製品 `talenthub` として、社内サー�
 - テーブルは `migrate` のジョブ（移行用のロール）が作る。アプリ用のロールはテーブルを作れない。
 - `SkillLevel` を除く全テーブルは `tenant_id` と RLS を持つ。アプリはリクエストごとに `X-Auth-Tenant-Id` をトランザクション内の `app.tenant_id` へ設定し、別テナントの行を DB 層で読み書きできない。migration 用の所有者 role は RLS の外、アプリ用 role は RLS の対象として動く。
 
+## H-4 社員・組織の載せ替え
+
+H-4 は、H-4a（gRPC の呼び出し基盤と偽の基盤）、H-4b（身元と権限）、H-4c（氏名・所属の表示、通知・監査ログの利用者 ID 化）、H-4d（自前の社員・部署列と CSV の整理）に分ける。H-4a では `src/server/platform/` の社員・組織取得、テナント別キャッシュ、エラー分類、standalone イメージへの proto 同梱と、E2E 用の偽の基盤までを用意し、画面・API・DB の動きはまだ変えない。
+
 ## 配布の流れ
 
 1. `main` に merge する。

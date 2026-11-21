@@ -94,6 +94,7 @@ scripts/          検証とデータ掃除のスクリプト
 - `src/modules/<module>/presentation` は該当モジュール専用のフォーム、Server Actions、Route Handlers、画面補助部品を置く。
 - `src/shared` は複数モジュールで利用する汎用UI、純粋なユーティリティ、横断DTOに限定する。
 - `src/server` はPrisma Client、`X-Auth-*` から身元を解決する境界、セキュリティの検査など、アプリ全体で1つだけ持つサーバー基盤を置く。
+- `src/server/platform` は基盤の社員・組織 gRPC をアプリの型で包み、テナント別の短時間キャッシュと、基盤停止を判別できるエラーを提供する。組織一覧では未所属者を列挙できないため、呼び出し本人だけを補い、本人も未所属なら空の木と本人だけを返す。
 - Prisma schemaは `prisma/schema.prisma` の1ファイルで持ち、肥大化した場合に分割方針を再検討する。
 
 ### DB のテナント分離

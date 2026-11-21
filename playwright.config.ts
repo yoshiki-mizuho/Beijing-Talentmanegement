@@ -26,10 +26,22 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] }
     }
   ],
-  webServer: {
-    command: "npm run start",
-    url: `${baseURL}/talent/health`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000
-  }
+  webServer: [
+    {
+      command: "npm run platform:fake",
+      url: "http://127.0.0.1:50052/__fake/health",
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000
+    },
+    {
+      command: "npm run start",
+      url: `${baseURL}/talent/health`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      env: {
+        ...process.env,
+        PLATFORM_USER_ORG_GRPC_ADDR: "127.0.0.1:50051"
+      }
+    }
+  ]
 });
