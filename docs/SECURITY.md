@@ -34,6 +34,8 @@ TalentHub のセキュリティ対策と、意図して対象外にしたリス�
 
 Excel の読み書きには `exceljs` 4.4.0 を使用する。間接依存の `uuid` は `package.json` の overrides で固定する。
 
+Prisma（`@prisma/config`）が固定している間接依存の `effect` は、ReDoS の脆弱性（GHSA-7589-6fvf-x4pw、3.22.0 以前）があるため、`package.json` の overrides で 3.22.4 にする。Prisma が直った版に上げたら、この指定を外す。
+
 ### AI
 
 | 対策 | 内容 |
