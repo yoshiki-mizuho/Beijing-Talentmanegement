@@ -65,7 +65,6 @@ import { AiClientError } from "../infrastructure/ai-client";
 const viewer = { memberId: "manager", role: "MANAGER" as const };
 const context = {
   id: "member",
-  managerId: "manager",
   memberSkills: [
     {
       skillId: "skill-1",

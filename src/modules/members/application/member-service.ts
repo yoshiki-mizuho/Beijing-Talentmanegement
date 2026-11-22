@@ -1,8 +1,6 @@
 import { AuthRole } from "@prisma/client";
 
 import {
-  memberInputSchema,
-  memberManagerInputSchema,
   memberSkillInputSchema,
   memberTargetRoleInputSchema
 } from "@/modules/members/domain/member-schema";
@@ -35,7 +33,7 @@ import { getLeaderScope, getOrganization } from "@/server/platform/directory";
 
 export const MEMBER_PAGE_SIZE = 20;
 
-export async function listDepartments() {
+export async function listNodes() {
   const session = await getCurrentSession();
   if (!session) return [];
   try {
@@ -160,8 +158,6 @@ export function omitMemberDetailFields(member: MemberRow): MemberListItem {
   const item = { ...memberWithDetail } as unknown as MemberListItem;
   delete (item as Partial<MemberRow>).email;
   delete (item as Partial<MemberRow>).profile;
-  delete (item as Partial<MemberRow>).managerId;
-  delete (item as Partial<MemberRow>).manager;
   return {
     ...item,
     pendingAssessmentCount: pendingAssessments?.length ?? 0
@@ -184,8 +180,6 @@ function toMemberRow(
     organizationNode: profile.nodeId
       ? { id: profile.nodeId, name: profile.nodeName ?? "所属未設定" }
       : null,
-    managerId: null,
-    manager: null,
     targetRoleId: member.targetRoleId,
     targetRole: member.targetRole
       ? {
@@ -219,29 +213,6 @@ function toMemberRow(
 
 export function getGrowthHintMemberContext(memberId: string, since: Date) {
   return memberRepository.getGrowthHintMemberContext(memberId, since);
-}
-
-export function createMember(input: unknown, actorMemberId: string | null) {
-  return memberRepository.createMember(memberInputSchema.parse(input), actorMemberId);
-}
-
-export function updateMember(id: string, input: unknown, actorMemberId: string | null) {
-  return memberRepository.updateMember(id, memberInputSchema.parse(input), actorMemberId);
-}
-
-export function deactivateMember(id: string, actorMemberId: string | null) {
-  return memberRepository.deactivateMember(id, actorMemberId);
-}
-
-export function updateMemberRole(
-  memberId: string,
-  role: unknown,
-  actorMemberId: string
-) {
-  if (!Object.values(AuthRole).includes(role as AuthRole)) {
-    throw new Error("Invalid role");
-  }
-  return memberRepository.updateMemberRole(memberId, role as AuthRole, actorMemberId);
 }
 
 export function setMemberSkillLevel(input: unknown, actorMemberId: string | null) {
@@ -350,12 +321,6 @@ async function assertAssessmentScope(
   ) {
     throw new Error("skill_assessment_forbidden");
   }
-}
-
-export function updateMemberManager(input: unknown, actorMemberId: string | null) {
-  return memberRepository.updateMemberManager(
-    memberManagerInputSchema.parse(input), actorMemberId
-  );
 }
 
 export function updateMemberTargetRole(input: unknown, actorMemberId: string | null) {

@@ -4,6 +4,7 @@ import { listActiveSkillsForReminders } from "@/modules/dashboard/infrastructure
 import { getBadgeCalculationData } from "@/modules/growth/application/badge-service";
 import { listMemberRoleAchievements } from "@/modules/roles/application/role-achievement-service";
 import { resolveMemberProfiles } from "@/modules/members/application/member-directory";
+import { getDirectLeaderIds, getUsers } from "@/server/platform/directory";
 
 export async function getMemberDashboard(memberId: string) {
   const [growthData, badgeData, achievements, skills] = await Promise.all([
@@ -14,7 +15,6 @@ export async function getMemberDashboard(memberId: string) {
   ]);
   const profileIds = [
     memberId,
-    growthData.member?.manager?.id,
     ...growthData.mentorCandidates.map((member) => member.id),
     ...growthData.receivedCheers.flatMap((cheer) => [
       cheer.fromMember.id,
@@ -22,8 +22,12 @@ export async function getMemberDashboard(memberId: string) {
     ]),
   ].filter((id): id is string => Boolean(id));
   const memberProfiles = await resolveMemberProfiles(profileIds);
+  const managerName = await resolveDirectLeaderName(
+    memberProfiles.get(memberId)?.platformUserId ?? null
+  );
   return {
     ...growthData,
+    managerName,
     // 基盤に居ない人は、教えてもらえそうな人に出さない。
     mentorCandidates: growthData.mentorCandidates.filter(
       (member) => !memberProfiles.get(member.id)?.missingOnPlatform
@@ -38,4 +42,18 @@ export async function getMemberDashboard(memberId: string) {
       levelChanges: badgeData.levelChanges
     })
   };
+}
+
+// 上司は基盤の組織で、本人の所属するノードのリーダー。基盤が応答しなくても画面は出す。
+async function resolveDirectLeaderName(platformUserId: string | null) {
+  if (!platformUserId) return null;
+  try {
+    const leaderIds = await getDirectLeaderIds(platformUserId);
+    const leaderId = leaderIds.find((id) => id !== platformUserId);
+    if (!leaderId) return null;
+    const users = await getUsers([leaderId]);
+    return users.get(leaderId)?.name || null;
+  } catch {
+    return null;
+  }
 }

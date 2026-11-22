@@ -58,8 +58,7 @@ vi.mock("@/modules/members/infrastructure/member-scope-repository", () => ({
 import {
   approveSkillAssessments,
   buildMemberSearchWhere,
-  createSkillAssessments,
-  updateMember
+  createSkillAssessments
 } from "@/modules/members/infrastructure/member-repository";
 
 const transactionClient = {
@@ -98,79 +97,6 @@ const transactionClient = {
     createMany: mocks.auditLogCreateMany
   }
 };
-
-describe("updateMember audit log", () => {
-  const before = {
-    id: "member-1",
-    employeeNo: "E001",
-    name: "変更前",
-    email: "member@example.com",
-    departmentId: "department-1",
-    jobTitle: "Engineer",
-    profile: "変更前プロフィール",
-    status: "ACTIVE"
-  };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mocks.transaction.mockImplementation(async (callback) => callback(transactionClient));
-    mocks.memberFindUniqueOrThrow.mockResolvedValue(before);
-    mocks.userFindFirst.mockResolvedValue(null);
-    mocks.userUpdate.mockResolvedValue({});
-    mocks.userCreate.mockResolvedValue({});
-    mocks.memberCount.mockResolvedValue(0);
-    mocks.auditLogCreate.mockResolvedValue({});
-  });
-
-  it("records changed field names without storing profile values or platform-owned fields", async () => {
-    mocks.memberUpdate.mockResolvedValue({
-      ...before,
-      name: "変更後",
-      profile: "変更後プロフィール"
-    });
-
-    await updateMember("member-1", {
-      employeeNo: "E001",
-      name: "変更後",
-      email: "member@example.com",
-      departmentId: "department-1",
-      jobTitle: "Engineer",
-      profile: "変更後プロフィール",
-      status: "ACTIVE"
-    }, "actor-1");
-
-    expect(mocks.auditLogCreate).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        actorMemberId: "actor-1",
-        action: "member.update",
-        targetType: "Member",
-        targetId: "member-1",
-        before: {},
-        after: {},
-        metadata: { changedFields: ["profile"] }
-      })
-    });
-    expect(mocks.auditLogCreate.mock.calls[0][0].data.before).not.toHaveProperty("profile");
-    expect(mocks.auditLogCreate.mock.calls[0][0].data.after).not.toHaveProperty("profile");
-  });
-
-  it("does not record an audit log when nothing changed", async () => {
-    mocks.memberUpdate.mockResolvedValue(before);
-
-    await updateMember("member-1", {
-      employeeNo: "E001",
-      name: "変更前",
-      email: "member@example.com",
-      departmentId: "department-1",
-      jobTitle: "Engineer",
-      profile: "変更前プロフィール",
-      status: "ACTIVE"
-    }, "actor-1");
-
-    expect(mocks.auditLogCreate).not.toHaveBeenCalled();
-  });
-
-});
 
 describe("createSkillAssessments transaction boundary", () => {
   beforeEach(() => {
@@ -305,7 +231,7 @@ describe("approveSkillAssessments transaction boundary", () => {
         requestedLevel: 3,
         yearsOfExperience: null,
         status: SkillSelfAssessmentStatus.PENDING,
-        member: { name: `申請者${id}`, managerId: "manager-1" },
+        member: { name: `申請者${id}` },
         skill: { name: `スキル${id}` }
       })
     );

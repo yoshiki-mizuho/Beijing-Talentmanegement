@@ -12,15 +12,15 @@ import {
 
 describe("explore and profile rules", () => {
   it("公開、本人、基盤の担当範囲、ADMINだけにプロフィールを見せ、非在籍を制限する", () => {
-    const member = { id: "m1", managerId: "boss", status: "ACTIVE", isProfilePublic: false };
+    const member = { id: "m1", status: "ACTIVE", isProfilePublic: false };
     expect(canViewProfile({ role: "MEMBER", memberId: "m1" }, member)).toBe(true);
     expect(canViewProfile({ role: "MANAGER", memberId: "boss" }, member, true)).toBe(true);
     expect(canViewProfile({ role: "MEMBER", memberId: "other" }, member)).toBe(false);
     expect(
-      canViewProfile({ role: "ADMIN", memberId: "admin" }, { ...member, status: "LEAVE" })
+      canViewProfile({ role: "ADMIN", memberId: "admin" }, { ...member, status: "INACTIVE" })
     ).toBe(true);
     expect(
-      canViewProfile({ role: "MANAGER", memberId: "boss" }, { ...member, status: "LEAVE" }, true)
+      canViewProfile({ role: "MANAGER", memberId: "boss" }, { ...member, status: "INACTIVE" }, true)
     ).toBe(false);
   });
 

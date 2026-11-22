@@ -113,7 +113,7 @@ describe("buildMemberDashboardViewModel", () => {
     const result = buildMemberDashboardViewModel({ ...fixture({
       member: source.member ? { ...source.member, memberSkills: [] } : null,
       assessments: []
-    }), memberProfiles: memberProfiles() });
+    }), memberProfiles: memberProfiles(), managerName: "佐藤 花子" });
 
     expect(result).toMatchObject({
       onboardingState: "empty",

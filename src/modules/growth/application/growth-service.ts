@@ -63,7 +63,7 @@ export async function createLevelUpComment(
   return growthRepository.createLevelUpComment(parsed);
 }
 
-export async function getDepartmentLevelUpFeed(
+export async function getNodeLevelUpFeed(
   viewerMemberId: string,
   limit = 5
 ) {

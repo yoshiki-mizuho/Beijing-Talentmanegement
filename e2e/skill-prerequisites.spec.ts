@@ -6,8 +6,8 @@ import { login } from "./helpers/auth";
 test("ADMINがAI候補と手動追加を登録し削除できる", async ({ page }) => {
   const data = createE2eTestData();
   try {
-  const department = await data.createDepartment("前提スキル部署");
-  const admin = await data.createMember({ label: "前提スキル管理者", departmentId: department.id, role: "ADMIN" });
+  const node = await data.createDepartment("前提スキル部署");
+  const admin = await data.createMember({ label: "前提スキル管理者", nodeId: node.id, role: "ADMIN" });
   const { skill } = await data.createSkill("前提元");
   const { skill: prerequisite } = await data.createSkill("前提先");
   await login(page, admin.credential);

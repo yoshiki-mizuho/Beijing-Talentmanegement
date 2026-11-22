@@ -5,9 +5,9 @@ import { login, openLoggedInContext } from "./helpers/auth";
 
 test("本人が経歴と資格を登録でき、別のMEMBERにはタブが見えない", async ({ browser, page }) => {
   const data = createE2eTestData();
-  const department = await data.createDepartment("経歴部署");
-  const owner = await data.createMember({ label: "経歴本人", departmentId: department.id });
-  const viewer = await data.createMember({ label: "経歴閲覧者", departmentId: department.id });
+  const node = await data.createDepartment("経歴部署");
+  const owner = await data.createMember({ label: "経歴本人", nodeId: node.id });
+  const viewer = await data.createMember({ label: "経歴閲覧者", nodeId: node.id });
   const other = await openLoggedInContext(browser, viewer.credential);
   try {
     await login(page, owner.credential);

@@ -5,14 +5,14 @@ export type E2eDataIds = {
   skillIds: string[];
   categoryIds: string[];
   roleIds: string[];
-  departmentIds: string[];
+  nodeIds: string[];
 };
 
 export async function deleteE2eData(
   prisma: PrismaClient,
   ids: E2eDataIds,
 ) {
-  const { memberIds, skillIds, categoryIds, roleIds, departmentIds } = ids;
+  const { memberIds, skillIds, categoryIds, roleIds, nodeIds } = ids;
   const assessments = await prisma.skillSelfAssessment.findMany({
     where: {
       OR: [
@@ -70,7 +70,7 @@ export async function deleteE2eData(
     ...skillIds,
     ...categoryIds,
     ...roleIds,
-    ...departmentIds,
+    ...nodeIds,
     ...assessmentIds,
     ...levelChangeIds,
     ...cheerIds,
@@ -133,14 +133,11 @@ export async function deleteE2eData(
     await record("skillSheetTemplates", tx.skillSheetTemplate.deleteMany({
       where: { name: { startsWith: "E2E" }, updatedById: { in: memberIds } },
     }));
-    await tx.member.updateMany({ where: { managerId: { in: memberIds } }, data: { managerId: null } });
     await tx.member.updateMany({ where: { targetRoleId: { in: roleIds } }, data: { targetRoleId: null } });
-    await tx.department.updateMany({ where: { parentDepartmentId: { in: departmentIds } }, data: { parentDepartmentId: null } });
     await record("members", tx.member.deleteMany({ where: { id: { in: memberIds } } }));
     await record("skills", tx.skill.deleteMany({ where: { id: { in: skillIds } } }));
     await record("roles", tx.role.deleteMany({ where: { id: { in: roleIds } } }));
     await record("skillCategories", tx.skillCategory.deleteMany({ where: { id: { in: categoryIds } } }));
-    await record("departments", tx.department.deleteMany({ where: { id: { in: departmentIds } } }));
     return counts;
   });
 }

@@ -32,19 +32,9 @@ function actions(query: AuditLogQuery) {
 }
 
 async function loadNameSearchIds(q: string) {
-  const [memberRows, departments, skills, categories, roles] = await Promise.all([
+  const [memberRows, skills, categories, roles] = await Promise.all([
     prisma.member.findMany({
       select: { id: true },
-    }),
-    prisma.department.findMany({
-      where: {
-        OR: [
-          { name: { contains: q, mode: "insensitive" } },
-          { code: { contains: q, mode: "insensitive" } },
-        ],
-      },
-      select: { id: true },
-      take: 100,
     }),
     prisma.skill.findMany({
       where: { name: { contains: q, mode: "insensitive" } },
@@ -72,7 +62,6 @@ async function loadNameSearchIds(q: string) {
     skillIds: skills.map(({ id }) => id),
     targetIds: [
       ...members,
-      ...departments,
       ...skills,
       ...categories,
       ...roles,
@@ -166,7 +155,6 @@ function addString(value: unknown, ids: Set<string>) {
 export async function loadAuditNameMaps(logs: AuditLogRow[]) {
   const ids = {
     members: new Set<string>(),
-    departments: new Set<string>(),
     skills: new Set<string>(),
     categories: new Set<string>(),
     roles: new Set<string>(),
@@ -175,7 +163,6 @@ export async function loadAuditNameMaps(logs: AuditLogRow[]) {
   };
   const referenceFields = {
     categoryId: ids.categories,
-    managerId: ids.members,
     targetRoleId: ids.roles,
     memberId: ids.members,
     skillId: ids.skills,
@@ -184,8 +171,6 @@ export async function loadAuditNameMaps(logs: AuditLogRow[]) {
     if (log.targetId) {
       if (log.targetType === AUDIT_TARGET_TYPE.MEMBER) {
         ids.members.add(log.targetId);
-      } else if (log.targetType === AUDIT_TARGET_TYPE.DEPARTMENT) {
-        ids.departments.add(log.targetId);
       } else if (log.targetType === AUDIT_TARGET_TYPE.SKILL) {
         ids.skills.add(log.targetId);
       } else if (log.targetType === AUDIT_TARGET_TYPE.SKILL_CATEGORY) {
@@ -210,7 +195,6 @@ export async function loadAuditNameMaps(logs: AuditLogRow[]) {
   }
   const [
     members,
-    departments,
     skills,
     categories,
     roles,
@@ -220,10 +204,6 @@ export async function loadAuditNameMaps(logs: AuditLogRow[]) {
     prisma.member.findMany({
       where: { id: { in: [...ids.members] } },
       select: { id: true },
-    }),
-    prisma.department.findMany({
-      where: { id: { in: [...ids.departments] } },
-      select: { id: true, name: true },
     }),
     prisma.skill.findMany({
       where: { id: { in: [...ids.skills] } },
@@ -264,7 +244,7 @@ export async function loadAuditNameMaps(logs: AuditLogRow[]) {
       ...memberSkills.map(({ member }) => member),
       ...assessments.map(({ member }) => member),
     ],
-    departments,
+    nodes: [] as Array<{ id: string; name: string }>,
     skills: [
       ...skills,
       ...memberSkills.map(({ skill }) => skill),

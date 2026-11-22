@@ -8,11 +8,11 @@ test("MANAGERの応援がMEMBERのダッシュボードに表示される", asyn
   let memberSession: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
   let managerSession: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
   try {
-    const department = await data.createDepartment("応援部署");
+    const node = await data.createDepartment("応援部署");
     const { skill } = await data.createSkill("応援スキル");
     const role = await data.createRole("応援目標ロール", [{ skillId: skill.id, requiredLevel: 2 }]);
-    const manager = await data.createMember({ label: "応援管理者", departmentId: department.id, role: "MANAGER" });
-    const member = await data.createMember({ label: "応援部下", departmentId: department.id, managerId: manager.member.id, targetRoleId: role.id });
+    const manager = await data.createMember({ label: "応援管理者", nodeId: node.id, role: "MANAGER" });
+    const member = await data.createMember({ label: "応援部下", nodeId: node.id, leaderMemberId: manager.member.id, targetRoleId: role.id });
     await data.createMemberSkill({ memberId: member.member.id, skillId: skill.id, level: 1, approvedByMemberId: manager.member.id });
 
     memberSession = await openLoggedInContext(browser, member.credential);
@@ -47,9 +47,9 @@ test("MANAGERが1on1メモを追加して話した側へ移せる", async ({ bro
   const data = createE2eTestData();
   let session: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
   try {
-    const department = await data.createDepartment("1on1部署");
-    const manager = await data.createMember({ label: "1on1管理者", departmentId: department.id, role: "MANAGER" });
-    const member = await data.createMember({ label: "1on1部下", departmentId: department.id, managerId: manager.member.id });
+    const node = await data.createDepartment("1on1部署");
+    const manager = await data.createMember({ label: "1on1管理者", nodeId: node.id, role: "MANAGER" });
+    const member = await data.createMember({ label: "1on1部下", nodeId: node.id, leaderMemberId: manager.member.id });
     session = await openLoggedInContext(browser, manager.credential);
     await session.page.goto("/talent/members");
     await session.page.getByRole("button", { name: `${member.displayName}の詳細を開く` }).click();

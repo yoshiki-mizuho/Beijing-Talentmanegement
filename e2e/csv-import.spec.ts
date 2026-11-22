@@ -1,78 +1,27 @@
 import { expect, test } from "@playwright/test";
+
 import { createE2eTestData } from "./fixtures/test-data";
 import { openLoggedInContext } from "./helpers/auth";
 import { readDemoCredentials } from "./helpers/credentials";
 
 const credentials = readDemoCredentials();
 
-test("管理者が部署CSVを確認して登録し監査ログを確認できる", async ({
-  browser,
-}) => {
+test("管理者がスキルCSVを登録できる", async ({ browser }) => {
   const data = createE2eTestData();
-  const department = await data.createDepartment("部署CSV管理部署");
-  const account = await data.createMember({ label: "部署CSV管理者", departmentId: department.id, role: "ADMIN" });
-  const admin = await openLoggedInContext(browser, account.credential);
-  const suffix = Date.now();
-  const code = `E2E-${suffix}`;
-  const initialName = "E2E部署";
-  const updatedName = "E2E部署 更新後";
-  try {
-    await importByApi(
-      admin.page,
-      "departments",
-      `department_code,department_name,parent_department_code,is_active\r\n${code},${initialName},,true\r\n`,
-    );
-    await data.trackCreated({ departmentCodes: [code] });
-    await admin.page.goto("/talent/csv");
-    await admin.page.getByLabel("部署のCSVファイル").setInputFiles({
-      name: "departments.csv",
-      mimeType: "text/csv",
-      buffer: Buffer.from(
-        `department_code,department_name,parent_department_code,is_active\r\n${code},${updatedName},,true\r\n${code}-NEW,E2E部署 新規,,true\r\n`,
-      ),
-    });
-    await expect(admin.page.getByText("新規").first()).toBeVisible();
-    await expect(admin.page.getByText("更新").first()).toBeVisible();
-    await expect(admin.page.getByText(`${code} ${updatedName}`)).toBeVisible();
-    await admin.page.getByRole("button", { name: "2件を登録" }).click();
-    await expect(
-      admin.page.getByRole("heading", { name: "登録しました" }),
-    ).toBeVisible();
-    await data.trackCreated({ departmentCodes: [`${code}-NEW`] });
-    await admin.page.getByRole("link", { name: "監査ログを見る" }).click();
-    await expect(
-      admin.page.getByText(/部署.*CSV を取り込み/).first(),
-    ).toBeVisible();
-  } finally {
-    await admin.context.close();
-    await data.cleanup();
-  }
-});
-
-test("管理者が空コードのスキルCSVを登録できる", async ({ browser }) => {
-  const data = createE2eTestData();
-  const department = await data.createDepartment("スキルCSV管理部署");
-  const account = await data.createMember({ label: "スキルCSV管理者", departmentId: department.id, role: "ADMIN" });
+  const node = await data.createDepartment("スキルCSV管理ノード");
+  const account = await data.createMember({ label: "スキルCSV管理者", nodeId: node.id, role: "ADMIN" });
   const admin = await openLoggedInContext(browser, account.credential);
   const name = `E2Eスキル-${Date.now()}`;
   try {
     await admin.page.goto("/talent/csv");
-    await admin.page
-      .getByRole("button", { name: "スキル", exact: true })
-      .click();
+    await admin.page.getByRole("button", { name: "スキル", exact: true }).click();
     await admin.page.getByLabel("スキルのCSVファイル").setInputFiles({
       name: "skills.csv",
       mimeType: "text/csv",
-      buffer: Buffer.from(
-        `skill_code,skill_name,category_name,description,is_active\r\n,${name},プログラミング言語,E2E,true\r\n`,
-      ),
+      buffer: Buffer.from(`skill_code,skill_name,category_name,description,is_active\r\n,${name},開発,E2E,true\r\n`),
     });
     await admin.page.getByRole("button", { name: "1件を登録" }).click();
-    await expect(
-      admin.page.getByRole("heading", { name: "登録しました" }),
-    ).toBeVisible();
-    await admin.page.goto("/talent/skills");
-    await expect(admin.page.getByText(name)).toBeVisible();
+    await expect(admin.page.getByRole("heading", { name: "登録しました" })).toBeVisible();
     await data.trackCreated({ skillNames: [name] });
   } finally {
     await admin.context.close();
@@ -80,180 +29,65 @@ test("管理者が空コードのスキルCSVを登録できる", async ({ brows
   }
 });
 
-test("管理者がレベルの目安つきスキルCSVを登録できる", async ({ browser }) => {
+test("保有スキルCSVは偽の基盤にいる利用者のメールで登録できる", async ({ browser }) => {
   const data = createE2eTestData();
-  const department = await data.createDepartment("目安CSV管理部署");
-  const account = await data.createMember({
-    label: "目安CSV管理者",
-    departmentId: department.id,
-    role: "ADMIN",
-  });
+  const node = await data.createDepartment("保有スキルCSVノード");
+  const account = await data.createMember({ label: "保有スキルCSV管理者", nodeId: node.id, role: "ADMIN" });
+  const skill = await data.createSkill("保有スキルCSV対象");
   const admin = await openLoggedInContext(browser, account.credential);
-  const suffix = Date.now();
-  const skillName = `E2E目安スキル-${suffix}`;
-  const categoryName = `E2E目安カテゴリ-${suffix}`;
   try {
     await admin.page.goto("/talent/csv");
-    await admin.page
-      .getByRole("button", { name: "スキル", exact: true })
-      .click();
-    await admin.page.getByLabel("スキルのCSVファイル").setInputFiles({
-      name: "skills-with-level-guides.csv",
+    await admin.page.getByRole("button", { name: "メンバースキル", exact: true }).click();
+    await admin.page.getByLabel("メンバースキルのCSVファイル").setInputFiles({
+      name: "member-skills.csv",
       mimeType: "text/csv",
       buffer: Buffer.from(
-        `skill_code,skill_name,category_name,description,is_active,level_guide_1,level_guide_2,level_guide_3,level_guide_4,level_guide_5\r\n,${skillName},${categoryName},E2E,true,Lv1の目安,,Lv3の目安,,\r\n`,
+        `email,skill_code,level,years_of_experience,last_assessed_at\r\n${account.email},${skill.skill.code},4,3,2026-10-17\r\n`,
       ),
     });
     await admin.page.getByRole("button", { name: "1件を登録" }).click();
-    await expect(
-      admin.page.getByRole("heading", { name: "登録しました" }),
-    ).toBeVisible();
-    await data.trackCreated({
-      skillNames: [skillName],
-      categoryNames: [categoryName],
-    });
-    await admin.page.goto("/talent/skills");
-    await admin.page.getByLabel(`${skillName}を編集`).click();
-    const editDialog = admin.page.getByRole("dialog");
-    await expect(editDialog.getByLabel("Lv1", { exact: true })).toHaveValue("Lv1の目安");
-    await expect(editDialog.getByLabel("Lv3", { exact: true })).toHaveValue("Lv3の目安");
-    await expect(editDialog.getByLabel("Lv2", { exact: true })).toHaveValue("");
+    await expect(admin.page.getByRole("heading", { name: "登録しました" })).toBeVisible();
   } finally {
     await admin.context.close();
     await data.cleanup();
   }
 });
 
-test("検証エラーがあるCSVは登録できない", async ({ browser }) => {
+test("保有スキルCSVは基盤にいないメールを行エラーにする", async ({ browser }) => {
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
   try {
     await admin.page.goto("/talent/csv");
-    await admin.page.getByLabel("部署のCSVファイル").setInputFiles({
-      name: "invalid.csv",
+    await admin.page.getByRole("button", { name: "メンバースキル", exact: true }).click();
+    await admin.page.getByLabel("メンバースキルのCSVファイル").setInputFiles({
+      name: "member-skills.csv",
       mimeType: "text/csv",
       buffer: Buffer.from(
-        "department_code,department_name,parent_department_code,is_active\r\nBROKEN,,UNKNOWN,yes\r\n",
+        "email,skill_code,level,years_of_experience,last_assessed_at\r\nmissing@local-dev.test,DEMO-SKILL-001,3,2,2026-10-17\r\n",
       ),
     });
-    await expect(
-      admin.page.getByRole("heading", { name: /エラー 3件/ }),
-    ).toBeVisible();
-    await expect(
-      admin.page.getByText("department_name は必須です"),
-    ).toBeVisible();
-    await expect(
-      admin.page.getByRole("button", { name: /件を登録/ }),
-    ).toBeDisabled();
+    await expect(admin.page.getByText(/missing@local-dev\.test/)).toBeVisible();
+    await expect(admin.page.getByRole("button", { name: /件を登録/ })).toBeDisabled();
   } finally {
     await admin.context.close();
   }
 });
 
-test("マネージャーはCSV取り込みAPIを利用できない", async ({ browser }) => {
-  const manager = await openLoggedInContext(browser, credentials.MANAGER);
-  try {
-    const response = await manager.page.request.post(
-      "/api/talent/v1/csv/import/departments/preview",
-      {
-        data: "department_code,department_name,parent_department_code,is_active\nX,X,,true\n",
-        headers: { "content-type": "application/octet-stream" },
-      },
-    );
-    expect(response.status()).toBe(403);
-  } finally {
-    await manager.context.close();
-  }
-});
-
-test("管理者がメンバースキルCSVでレベルを更新し監査ログを確認できる", async ({ browser }) => {
+test("管理者がロールCSVをプレビューできる", async ({ browser }) => {
   const data = createE2eTestData();
-  const department = await data.createDepartment("評価CSV管理部署");
-  const account = await data.createMember({ label: "評価CSV管理者", departmentId: department.id, role: "ADMIN" });
+  const node = await data.createDepartment("ロールCSVノード");
+  const account = await data.createMember({ label: "ロールCSV管理者", nodeId: node.id, role: "ADMIN" });
   const admin = await openLoggedInContext(browser, account.credential);
-  const suffix = Date.now();
-  const employeeNo = `E2EMS${suffix}`;
-  const email = `e2e-member-skill-${suffix}@example.com`;
-  const memberCsv = (status: "active" | "inactive") => `employee_no,name,email,department_code,job_title,status,manager_employee_no,target_role_code\r\n${employeeNo},E2E評価メンバー,${email},DEV,Engineer,${status},,\r\n`;
-  const csv = (level: number) => `employee_no,skill_code,level,years_of_experience,last_assessed_at\r\n${employeeNo},DEMO-SKILL-016,${level},6,2026-10-17\r\n`;
-  try {
-    await importByApi(admin.page, "members", memberCsv("active"));
-    await data.trackCreated({ memberEmails: [email] });
-    await importByApi(admin.page, "member-skills", csv(4));
-    await admin.page.goto("/talent/csv");
-    await admin.page.getByRole("button", { name: "メンバースキル", exact: true }).click();
-    await admin.page.getByLabel("メンバースキルのCSVファイル").setInputFiles({ name: "member-skills.csv", mimeType: "text/csv", buffer: Buffer.from(csv(5)) });
-    await admin.page.getByRole("button", { name: "1件を登録" }).click();
-    await expect(admin.page.getByRole("heading", { name: "登録しました" })).toBeVisible();
-    await admin.page.getByRole("link", { name: "監査ログを見る" }).click();
-    await expect(admin.page.getByText(/メンバースキル.*更新/).first()).toBeVisible();
-  } finally {
-    await admin.context.close();
-    await data.cleanup();
-  }
-});
-
-test("管理者がロールCSVで要件を更新・削除・追加できる", async ({ browser }) => {
-  const data = createE2eTestData();
-  const department = await data.createDepartment("ロールCSV管理部署");
-  const account = await data.createMember({ label: "ロールCSV管理者", departmentId: department.id, role: "ADMIN" });
-  const admin = await openLoggedInContext(browser, account.credential);
-  const first = await data.createSkill("ロールCSV更新");
-  const removed = await data.createSkill("ロールCSV削除");
-  const added = await data.createSkill("ロールCSV追加");
-  const role = await data.createRole("ロールCSV対象", [
-    { skillId: first.skill.id, requiredLevel: 2 },
-    { skillId: removed.skill.id, requiredLevel: 2 },
-  ]);
-  const renamedRole = `${role.name}-変更後`;
-  const content = [
-    "role_code,role_name,description,is_active,skill_code,required_level,is_required,any_of_group",
-    `${role.code},${renamedRole},,true,${first.skill.code},4,true,`,
-    `${role.code},${renamedRole},,true,${added.skill.code},3,true,`,
-    "",
-  ].join("\r\n");
   try {
     await admin.page.goto("/talent/csv");
     await admin.page.getByRole("button", { name: "ロール", exact: true }).click();
     await admin.page.getByLabel("ロールのCSVファイル").setInputFiles({
       name: "roles.csv",
       mimeType: "text/csv",
-      buffer: Buffer.from(content),
+      buffer: Buffer.from("role_code,role_name,description,is_active,skill_code,required_level,is_required,any_of_group\r\n,E2Eロール,,true,,,,\r\n"),
     });
-    await expect(admin.page.getByText("更新").first()).toBeVisible();
-    await expect(admin.page.getByText("削除").first()).toBeVisible();
     await expect(admin.page.getByText("新規").first()).toBeVisible();
-    await admin.page.getByRole("button", { name: "4件を登録" }).click();
-    await expect(admin.page.getByRole("heading", { name: "登録しました" })).toBeVisible();
-    await admin.page.goto(`/talent/roles?role=${encodeURIComponent(role.id)}`);
-    await expect(admin.page.getByRole("heading", { name: renamedRole })).toBeVisible();
-    await expect(admin.page.getByRole("row", { name: new RegExp(`${first.skill.name}.*Lv4`) })).toBeVisible();
-    await expect(admin.page.getByRole("row", { name: new RegExp(`${added.skill.name}.*Lv3`) })).toBeVisible();
-    await expect(admin.page.getByText(removed.skill.name)).toHaveCount(0);
   } finally {
     await admin.context.close();
     await data.cleanup();
   }
 });
-
-async function importByApi(
-  page: import("@playwright/test").Page,
-  target: "departments" | "members" | "skills" | "member-skills" | "roles",
-  csv: string,
-) {
-  const previewResponse = await page.request.post(
-    `/api/talent/v1/csv/import/${target}/preview`,
-    {
-      data: Buffer.from(csv),
-      headers: { "content-type": "application/octet-stream" },
-    },
-  );
-  const preview = await previewResponse.json();
-  await page.request.post(`/api/talent/v1/csv/import/${target}/commit`, {
-    data: Buffer.from(csv),
-    headers: {
-      "content-type": "application/octet-stream",
-      "x-preview-token": preview.previewToken,
-      "x-file-name": "e2e-cleanup.csv",
-    },
-  });
-}

@@ -24,10 +24,9 @@ describe("proposal sheet AI input", () => {
   it("匿名の入力だけをプロンプトへ入れる", () => {
     const text = JSON.stringify(buildProposalSheetMessages(input));
     expect(text).toContain("TypeScript");
-    expect(text).not.toContain("employeeNo");
     expect(text).not.toContain("email");
     expect(text).not.toContain("displayName");
-    expect(text).not.toContain("department");
+    expect(text).not.toContain("node");
   });
   it("応答を切り詰め、未知のidを捨て、不足分を概要で補う", () => {
     const result = parseProposalSheetResponse(JSON.stringify({

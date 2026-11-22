@@ -329,7 +329,7 @@ export async function listPopularSkillsForMember(memberIds: string[], nodeName: 
     : await countPopularSkills();
 
   return {
-    departmentName: useNode ? nodeName : null,
+    nodeName: useNode ? nodeName : null,
     skillIds: counts
       .sort((left, right) => right.count - left.count || left.name.localeCompare(right.name, "ja"))
       .slice(0, 8)

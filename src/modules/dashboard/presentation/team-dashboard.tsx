@@ -72,7 +72,7 @@ export function TeamDashboard({
           <div>
             <h1 className="text-[26px] font-bold tracking-tight">チームの成長</h1>
             <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-              {viewModel.manager.departmentName}・部下 {viewModel.memberCount}名
+              {viewModel.manager.nodeName}・部下 {viewModel.memberCount}名
             </p>
             <p className="mt-3 text-sm text-[var(--foreground)]">{viewModel.encouragement}</p>
           </div>

@@ -10,12 +10,12 @@
 
 | 区分 | 含めるもの |
 | --- | --- |
-| メンバー管理 | メンバー基本情報、部署、在籍状態、プロフィール、検索 |
+| メンバー管理 | 基盤利用者との対応、プロフィール、検索 |
 | スキル管理 | スキル、カテゴリ、スキルレベル定義 |
 | スキル紐付け | メンバー自身によるスキル申告、managerによる承認・補正、確定済み保有スキル |
 | ロール管理 | ロール、必要スキル、必要レベル、達成判定 |
 | 可視化 | スキル検索、スキルマップ、統計ダッシュボード |
-| CSV | 部署、メンバー、スキル、メンバースキルのimport/export |
+| CSV | スキル、保有スキル、ロールのimport/export |
 | 権限 | `admin`、`manager`、`member` のRBAC |
 | 通知 | スキル申告、承認依頼、承認結果の通知 |
 | 監査 | 作成、更新、削除、承認・差し戻し、CSV import/export、権限変更の記録 |
@@ -42,7 +42,6 @@ AI 呼び出し前に機能ごとのトークン量を利用ログへ予約し�
 
 ```mermaid
 erDiagram
-  Department ||--o{ Member : has
   Member ||--o{ MemberSkill : has
   Member ||--o{ SkillSelfAssessment : submits
   Skill ||--o{ MemberSkill : assigned
@@ -58,22 +57,10 @@ erDiagram
   Member ||--o{ AuditLog : actor
   CsvImportJob ||--o{ AuditLog : records
 
-  Department {
-    string id
-    string name
-    string code
-    string parentDepartmentId
-    boolean isActive
-  }
-
   Member {
     string id
-    string employeeNo
-    string name
-    string email
-    string departmentId
+    string platformUserId
     string status
-    string jobTitle
   }
 
   SkillCategory {
@@ -165,8 +152,7 @@ erDiagram
 
 | エンティティ | 役割 | 主な制約 |
 | --- | --- | --- |
-| `Department` | 部署、部門、チームなどの所属単位 | `code` は一意。無効化しても過去メンバーとの関連は保持する |
-| `Member` | スキル管理対象者 | `employeeNo` と `email` は一意。在籍状態を持つ。メールはログイン ID と同じ値で、変更時は両方を更新する。部下がいるメンバーは無効・休職にできない |
+| `Member` | TalentHub 固有データを持つスキル管理対象者 | `platformUserId` は必須かつテナント内で一意。氏名、メール、社員番号、所属、役職、上司、アバターは保存せず基盤から取得する |
 | `SkillCategory` | スキルの分類 | 表示順を持つ |
 | `Skill` | 管理対象スキル | コードは自動採番し、作成後は変更しない。CSVの照合に使う。名前、カテゴリ、大分類は後から変更できる。同一カテゴリ内で名称重複を避け、カテゴリ内の表示順を持つ |
 | `SkillLevel` | 1から5のレベル定義 | 初期値は固定マスタとして扱う |
@@ -253,7 +239,6 @@ flowchart LR
 
 | ユースケース | 主体 | 概要 |
 | --- | --- | --- |
-| メンバーを登録する | `admin` | 社員番号、氏名、メール、部署、在籍状態を登録する |
 | メンバー情報を更新する | `admin`、`manager` | 基本情報や所属を更新する。`manager` は担当範囲に限定する |
 | スキルを登録する | `admin` | カテゴリ、名称、説明を登録する |
 | 自分のスキルを申告する | `member` | 自身のスキル、レベル、経験年数を申告し、managerへ承認依頼を送る |
@@ -288,7 +273,7 @@ flowchart LR
 
 | 項目 | 決定事項 |
 | --- | --- |
-| 部署階層と通常の閲覧範囲 | `Department.parentDepartmentId`で階層を表す。`MANAGER`は自部署、配下の全階層、直属の部下を閲覧でき、`ADMIN`は全社を閲覧できる。`ADMIN`の部署絞り込みは配下も含む |
+| 組織階層と通常の閲覧範囲 | 基盤の組織ノードとリーダー範囲を使う。`MANAGER`は担当ノード配下、`ADMIN`は全社を閲覧できる |
 | 組織ダッシュボード | `MANAGER`は通常の閲覧範囲に加え、同じ親部署を持つ並列部署そのものの匿名集計を閲覧できる。並列部署の配下と個人名は含めず、URLの部署IDをサーバー側で検証する |
 | ロール要件のOR条件 | 同じ`RoleRequirement.anyOfGroup`の要件は、いずれか1つを満たせば充足とする。達成率ではORの組全体を1要件として数える |
 | 並び順 | `SkillCategory.displayOrder`と`Skill.displayOrder`で表示順を保持する。カテゴリ間のスキル移動も並び替えとして扱う |

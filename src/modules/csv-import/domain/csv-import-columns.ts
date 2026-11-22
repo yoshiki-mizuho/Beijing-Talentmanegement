@@ -2,8 +2,6 @@ import { csvExportDefinitions } from "./csv-export-columns";
 import type { ParsedCsv } from "./csv-parse";
 
 export const csvImportTargets = [
-  "departments",
-  "members",
   "skills",
   "member-skills",
   "roles",

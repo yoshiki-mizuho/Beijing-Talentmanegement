@@ -15,7 +15,6 @@ enum AuthRole {
 enum MemberStatus {
   ACTIVE
   INACTIVE
-  LEAVE
 }
 
 enum SkillSelfAssessmentStatus {
@@ -61,8 +60,6 @@ enum NotificationStatus {
 }
 
 enum CsvImportTargetType {
-  DEPARTMENTS
-  MEMBERS
   SKILLS
   MEMBER_SKILLS
   ROLES
@@ -99,44 +96,15 @@ enum TeamGoalKind {
   SKILL_REACH
 }
 
-model Department {
-  id                 String       @id @default(cuid())
-  tenantId           String       @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
-  code               String
-  name               String
-  parentDepartmentId String?
-  parentDepartment   Department?  @relation("DepartmentHierarchy", fields: [parentDepartmentId], references: [id])
-  childDepartments   Department[] @relation("DepartmentHierarchy")
-  isActive           Boolean      @default(true)
-  members            Member[]
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
-
-  @@unique([tenantId, code])
-  @@index([parentDepartmentId])
-}
-
 model Member {
   id                    String                @id @default(cuid())
   tenantId              String                @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
-  platformUserId        String?
-  employeeNo            String?
-  name                  String?
-  email                 String?
-  departmentId          String?
-  department            Department?           @relation(fields: [departmentId], references: [id])
+  platformUserId        String
   status                MemberStatus          @default(ACTIVE)
-  jobTitle              String?
   profile               String?
   profileMessage        String?
   consultTopics         String[]              @default([])
   isProfilePublic       Boolean               @default(true)
-  avatarImage           Bytes?
-  avatarMimeType        String?
-  avatarUpdatedAt       DateTime?
-  managerId             String?
-  manager               Member?               @relation("MemberManager", fields: [managerId], references: [id])
-  reports               Member[]              @relation("MemberManager")
   targetRoleId          String?
   targetRole            Role?                 @relation("MemberTargetRole", fields: [targetRoleId], references: [id])
   lastRecapSeenMonth    String?
@@ -174,9 +142,7 @@ model Member {
   updatedAt             DateTime              @updatedAt
 
   @@unique([tenantId, platformUserId])
-  @@index([departmentId])
   @@index([status])
-  @@index([managerId])
   @@index([targetRoleId])
 }
 

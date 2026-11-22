@@ -6,16 +6,12 @@ export type NameMaps = Record<string, Record<string, string>>;
 const labels: Record<string, string> = {
   name: "名前",
   email: "メール",
-  departmentCode: "部署コード",
   status: "状態",
   profile: "自己紹介",
-  managerId: "上司",
-  managerEmployeeNo: "上司の社員番号",
   targetRoleId: "目標ロール",
   targetRoleName: "目標ロール",
   level: "レベル",
   code: "コード",
-  parentCode: "親部署コード",
   categoryName: "カテゴリ",
   categoryId: "カテゴリ",
   groupId: "大分類",
@@ -103,7 +99,6 @@ export function displayValue(
         : "無効";
   const mapKey: Record<string, string> = {
     categoryId: "categories",
-    managerId: "members",
     targetRoleId: "roles",
     memberId: "members",
     skillId: "skills",
@@ -337,7 +332,6 @@ export function buildActionDescription(
   const prefix =
     {
       Skill: "スキル ",
-      Department: "部署 ",
       SkillCategory: "カテゴリ ",
       SkillCategoryGroup: "大分類 ",
       Role: "ロール ",
@@ -450,7 +444,7 @@ export function buildAuditSummary(input: AuditDisplayInput) {
 
 function csvTargetLabel(target: string) {
   const labels: Record<string, string> = {
-    departments: "部署",
+    nodes: "部署",
     members: "メンバー",
     skills: "スキル",
     "member-skills": "メンバースキル",
@@ -474,8 +468,6 @@ export function resolveAuditTargetName(input: {
   switch (input.targetType) {
     case "Member":
       return input.names.members?.[input.targetId ?? ""] ?? savedName;
-    case "Department":
-      return input.names.departments?.[input.targetId ?? ""] ?? savedName;
     case "Skill":
       return input.names.skills?.[input.targetId ?? ""] ?? savedName;
     case "SkillCategory":

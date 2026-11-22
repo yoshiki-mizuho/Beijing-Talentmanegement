@@ -13,7 +13,7 @@ export function listTemplates() {
       useCount: true,
       lastUsedAt: true,
       updatedAt: true,
-      updatedBy: { select: { name: true } }
+      updatedById: true
     }
   });
 }

@@ -1,93 +1,87 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  loadDepartments: vi.fn(),
   loadSkills: vi.fn(),
-  loadMembers: vi.fn(),
   loadMemberSkills: vi.fn(),
+  loadRoles: vi.fn(),
   apply: vi.fn(),
   recordFailure: vi.fn(),
 }));
 
 vi.mock("../infrastructure/csv-import-repository", () => ({
-  loadDepartmentImportState: mocks.loadDepartments,
   loadSkillImportState: mocks.loadSkills,
-  loadMemberImportState: mocks.loadMembers,
   loadMemberSkillImportState: mocks.loadMemberSkills,
+  loadRoleImportState: mocks.loadRoles,
   applyCsvImport: mocks.apply,
   recordCsvImportValidationFailure: mocks.recordFailure,
 }));
 
-import { commitCsvImport, previewCsvImport } from "./csv-import-service";
+import { previewCsvImport } from "./csv-import-service";
 
-describe("CSV取り込み失敗の監査", () => {
+const member = { id: "member-1", email: "user@local-dev.test", name: "利用者" };
+const skill = { id: "skill-1", code: "TS", name: "TypeScript", isActive: true };
+
+describe("member skill CSV platform lookup", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.loadDepartments.mockResolvedValue([]);
-  });
-
-  it("previewの検証エラーをセル値なしで記録する", async () => {
-    const preview = await previewCsvImport(
-      "departments",
-      csv("department_code,department_name,parent_department_code,is_active\nSECRET,,,"),
-      "admin-1",
-    );
-    expect(preview.errors.length).toBeGreaterThan(0);
-    expect(mocks.recordFailure).toHaveBeenCalledWith(
-      expect.objectContaining({ stage: "preview", totalRows: 1 }),
-    );
-    expect(JSON.stringify(mocks.recordFailure.mock.calls[0][0])).not.toContain(
-      "SECRET",
-    );
-  });
-
-  it("previewの読み取りエラーを記録して同じエラーを返す", async () => {
-    await expect(
-      previewCsvImport("departments", csv(""), "admin-1"),
-    ).rejects.toThrow("CSVに列名がありません");
-    expect(mocks.recordFailure).toHaveBeenCalledWith(
-      expect.objectContaining({
-        stage: "preview",
-        errors: [{ message: "CSVに列名がありません" }],
-      }),
-    );
-  });
-
-  it("commitの再検証エラーにファイル名とcommit段階を記録する", async () => {
-    const result = await commitCsvImport({
-      target: "departments",
-      bytes: csv("department_code,department_name,parent_department_code,is_active\nSECRET,,,"),
-      previewToken: "token",
-      originalName: "departments.csv",
-      actorMemberId: "admin-1",
+    mocks.loadMemberSkills.mockResolvedValue({
+      members: [member],
+      ambiguousEmails: [],
+      skills: [skill],
+      memberSkills: [],
     });
-    expect(result.status).toBe("invalid");
-    expect(mocks.recordFailure).toHaveBeenCalledWith(
-      expect.objectContaining({
-        stage: "commit",
-        originalName: "departments.csv",
-      }),
-    );
   });
 
-  it("commitのpreviewToken不一致を記録する", async () => {
-    const result = await commitCsvImport({
-      target: "departments",
-      bytes: csv("department_code,department_name,parent_department_code,is_active\nD01,開発部,,true"),
-      previewToken: "different",
-      originalName: "departments.csv",
-      actorMemberId: "admin-1",
+  it("matches a member by platform email", async () => {
+    const result = await previewCsvImport("member-skills", csv("user@local-dev.test"), "actor-1");
+    expect(mocks.loadMemberSkills).toHaveBeenCalledWith("actor-1");
+    expect(result.errors).toEqual([]);
+    expect(result.changes).toEqual([
+      expect.objectContaining({ kind: "new", memberId: "member-1", skillId: "skill-1" }),
+    ]);
+  });
+
+  it("returns a row error when the platform user is missing", async () => {
+    mocks.loadMemberSkills.mockResolvedValue({
+      members: [],
+      ambiguousEmails: [],
+      skills: [skill],
+      memberSkills: [],
     });
-    expect(result.status).toBe("conflict");
-    expect(mocks.recordFailure).toHaveBeenCalledWith(
+    const result = await previewCsvImport("member-skills", csv("missing@local-dev.test"), "actor-1");
+    expect(result.errors).toEqual([
+      expect.objectContaining({ row: 2, column: "email" }),
+    ]);
+  });
+
+  it("returns a row error when the platform is unavailable", async () => {
+    mocks.loadMemberSkills.mockRejectedValue(new Error("unavailable"));
+    const result = await previewCsvImport("member-skills", csv("user@local-dev.test"), "actor-1");
+    expect(result.errors).toEqual([
       expect.objectContaining({
-        stage: "commit",
-        errors: [{ message: "プレビュー時の内容と一致しません" }],
+        row: 2,
+        column: "email",
+        message: "基盤の利用者を確認できませんでした",
       }),
-    );
+    ]);
+  });
+
+  it("returns a row error when an email is ambiguous", async () => {
+    mocks.loadMemberSkills.mockResolvedValue({
+      members: [member],
+      ambiguousEmails: ["user@local-dev.test"],
+      skills: [skill],
+      memberSkills: [],
+    });
+    const result = await previewCsvImport("member-skills", csv("user@local-dev.test"), "actor-1");
+    expect(result.errors).toEqual([
+      expect.objectContaining({ row: 2, column: "email" }),
+    ]);
   });
 });
 
-function csv(value: string) {
-  return new TextEncoder().encode(value);
+function csv(email: string) {
+  return new TextEncoder().encode(
+    `email,skill_code,level,years_of_experience,last_assessed_at\n${email},TS,3,2.5,2026-10-16`,
+  );
 }

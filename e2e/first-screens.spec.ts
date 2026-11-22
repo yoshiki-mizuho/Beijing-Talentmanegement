@@ -5,10 +5,10 @@ import { openLoggedInContext } from "./helpers/auth";
 
 test("スマホ幅でセットアップ進捗と一覧が画面内に収まる", async ({ browser }) => {
   const data = createE2eTestData();
-  const department = await data.createDepartment("スマホヘッダー確認部署");
+  const node = await data.createDepartment("スマホヘッダー確認部署");
   const account = await data.createMember({
     label: "スマホヘッダー確認メンバー",
-    departmentId: department.id
+    nodeId: node.id
   });
   const member = await openLoggedInContext(browser, account.credential);
 

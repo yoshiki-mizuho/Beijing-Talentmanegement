@@ -5,7 +5,7 @@ import {
 } from "./member-skill-import";
 
 const state: MemberSkillImportState = {
-  members: [{ id: "m1", employeeNo: "E001", name: "田中" }],
+  members: [{ id: "m1", email: "tanaka@example.com", name: "田中" }],
   skills: [
     { id: "s1", code: "S001", name: "TypeScript", isActive: true },
     { id: "s2", code: "S002", name: "旧", isActive: false },
@@ -24,7 +24,7 @@ const state: MemberSkillImportState = {
 const record = (row: number, values: Partial<Record<string, string>> = {}) => ({
   row,
   values: {
-    employee_no: "E001",
+    email: "tanaka@example.com",
     skill_code: "S001",
     level: "3",
     years_of_experience: "2.5",
@@ -39,7 +39,7 @@ describe("validateMemberSkillImport", () => {
     expect(result.errors).toEqual([]);
     expect(result.changes[0]).toMatchObject({
       kind: "update",
-      name: "田中（E001） の TypeScript",
+      name: "田中 の TypeScript",
     });
   });
 
@@ -47,7 +47,7 @@ describe("validateMemberSkillImport", () => {
     const result = validateMemberSkillImport(
       [
         record(2, {
-          employee_no: "X",
+          email: "missing@example.com",
           skill_code: "S002",
           level: "6",
           years_of_experience: "100",
@@ -61,7 +61,7 @@ describe("validateMemberSkillImport", () => {
     const columns = result.errors.map((error) => error.column);
     expect(columns).toEqual(
       expect.arrayContaining([
-        "employee_no",
+        "email",
         "skill_code",
         "level",
         "years_of_experience",

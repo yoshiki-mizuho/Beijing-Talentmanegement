@@ -10,12 +10,12 @@ test("目標ロール達成を祝い、次の目標をあとで決めると再�
   let manager: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
   let admin: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
   try {
-    const department = await data.createDepartment("ロール達成部署");
-    const managerAccount = await data.createMember({ label: "ロール達成管理者", departmentId: department.id, role: "MANAGER" });
-    const adminAccount = await data.createMember({ label: "ロール達成ADMIN", departmentId: department.id, role: "ADMIN" });
+    const node = await data.createDepartment("ロール達成部署");
+    const managerAccount = await data.createMember({ label: "ロール達成管理者", nodeId: node.id, role: "MANAGER" });
+    const adminAccount = await data.createMember({ label: "ロール達成ADMIN", nodeId: node.id, role: "ADMIN" });
     const { skill } = await data.createSkill("ロール達成スキル");
     const role = await data.createRole("ロール達成目標", [{ skillId: skill.id, requiredLevel: 2 }]);
-    const memberAccount = await data.createMember({ label: "ロール達成申請者", departmentId: department.id, managerId: managerAccount.member.id });
+    const memberAccount = await data.createMember({ label: "ロール達成申請者", nodeId: node.id, leaderMemberId: managerAccount.member.id });
     await data.createMemberSkill({ memberId: memberAccount.member.id, skillId: skill.id, level: 1, approvedByMemberId: managerAccount.member.id });
     member = await openLoggedInContext(browser, memberAccount.credential);
     // ロールを指定して開く（一覧のリンクを押した直後だと、前に選ばれていた別のロールが目標になることがある）
@@ -28,8 +28,8 @@ test("目標ロール達成を祝い、次の目標をあとで決めると再�
 
     manager = await openLoggedInContext(browser, managerAccount.credential);
     await manager.page.goto("/talent/skill-approvals");
-    const approval = manager.page.getByRole("listitem", { name: `${memberAccount.member.name} / ${skill.name}の承認` });
-    await approval.getByRole("button", { name: `${memberAccount.member.name}の${skill.name}を承認`, exact: true }).click();
+    const approval = manager.page.getByRole("listitem", { name: `${memberAccount.displayName} / ${skill.name}の承認` });
+    await approval.getByRole("button", { name: `${memberAccount.displayName}の${skill.name}を承認`, exact: true }).click();
     await expect(manager.page.getByText("スキル申請を承認しました。")).toBeVisible();
 
     await member.page.goto("/talent/dashboard");

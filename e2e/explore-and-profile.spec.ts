@@ -26,8 +26,8 @@ test("いま伸びている技術から移動すると選択欄にスキル名�
   // 直近 30 日のレベルアップから作る一覧なので、seed の古い履歴に頼らず 1 件作る。
   const data = createE2eTestData();
   try {
-    const department = await data.createDepartment("伸びている技術部署");
-    const member = await data.createMember({ label: "伸びている技術メンバー", departmentId: department.id });
+    const node = await data.createDepartment("伸びている技術部署");
+    const member = await data.createMember({ label: "伸びている技術メンバー", nodeId: node.id });
     const { skill } = await data.createSkill("伸びている技術");
     await data.createLevelChange({ memberId: member.member.id, skillId: skill.id, fromLevel: 1, toLevel: 2 });
     await login(page, credentials.MEMBER);
@@ -60,8 +60,8 @@ test("コンボボックスはキーボードだけでスキルを選べる", as
 test("本人が公開設定を切り替え、最後に公開へ戻す", async ({ page }) => {
   const data = createE2eTestData();
   try {
-    const department = await data.createDepartment("公開設定部署");
-    const member = await data.createMember({ label: "公開設定本人", departmentId: department.id });
+    const node = await data.createDepartment("公開設定部署");
+    const member = await data.createMember({ label: "公開設定本人", nodeId: node.id });
     await login(page, member.credential);
     await page.getByLabel("アカウントメニューを開く").click();
     await page.getByRole("link", { name: "スキルプロフィール" }).click();
@@ -83,8 +83,8 @@ test("本人が公開設定を切り替え、最後に公開へ戻す", async ({
 test("MEMBERがプロフィールのひとことと相談タグを編集し、最後に元へ戻す", async ({ page }) => {
   const data = createE2eTestData();
   try {
-    const department = await data.createDepartment("プロフィール部署");
-    const member = await data.createMember({ label: "プロフィール本人", departmentId: department.id });
+    const node = await data.createDepartment("プロフィール部署");
+    const member = await data.createMember({ label: "プロフィール本人", nodeId: node.id });
     await login(page, member.credential);
     await page.getByLabel("アカウントメニューを開く").click();
     await page.getByRole("link", { name: "スキルプロフィール" }).click();
@@ -108,9 +108,9 @@ test("非公開プロフィールは別のMEMBER相当の閲覧者に氏名を�
   browser
 }) => {
   const data = createE2eTestData();
-  const department = await data.createDepartment("非公開部署");
-  const ownerAccount = await data.createMember({ label: "非公開本人", departmentId: department.id });
-  const viewerAccount = await data.createMember({ label: "非公開閲覧者", departmentId: department.id });
+  const node = await data.createDepartment("非公開部署");
+  const ownerAccount = await data.createMember({ label: "非公開本人", nodeId: node.id });
+  const viewerAccount = await data.createMember({ label: "非公開閲覧者", nodeId: node.id });
   const manager = await openLoggedInContext(browser, ownerAccount.credential);
   const member = await openLoggedInContext(browser, viewerAccount.credential);
   try {

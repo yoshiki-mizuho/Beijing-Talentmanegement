@@ -7,8 +7,8 @@ test("ヘッダーの通知ポップオーバーから通知一覧へ移動で�
   const data = createE2eTestData();
   let session: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
   try {
-  const department = await data.createDepartment("ヘッダー通知部署");
-  const member = await data.createMember({ label: "ヘッダー通知本人", departmentId: department.id });
+  const node = await data.createDepartment("ヘッダー通知部署");
+  const member = await data.createMember({ label: "ヘッダー通知本人", nodeId: node.id });
   await data.createNotification({
     recipientMemberId: member.member.id,
     type: "SKILL_ASSESSMENT_APPROVED",

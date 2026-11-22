@@ -1,16 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildDepartmentMetrics,
-  comparisonDepartmentIds,
+  buildNodeMetrics,
+  comparisonNodeIds,
   completedMonths,
   cumulativeCategories,
-  dashboardMemberDepartmentIds,
-  dashboardVisibleDepartmentIds,
+  dashboardMemberNodeIds,
+  dashboardVisibleNodeIds,
   momentumFor,
   organizationDashboardChangesSince,
   perPersonLevelUps,
   restoreSkillsAt,
-  selectDepartmentId,
+  selectNodeId,
 } from "./organization-dashboard";
 
 describe("organization dashboard", () => {
@@ -28,21 +28,21 @@ describe("organization dashboard", () => {
     expect(organizationDashboardChangesSince(now)).toEqual(expected);
   });
   it("MANAGERが閲覧・比較に使う部署のメンバー範囲を返す", () => {
-    const departments = [
-      { id: "root", name: "本部", parentDepartmentId: null },
-      { id: "dev", name: "開発", parentDepartmentId: "root" },
-      { id: "dev-child", name: "開発一課", parentDepartmentId: "dev" },
-      { id: "sales", name: "営業", parentDepartmentId: "root" },
-      { id: "sales-child", name: "営業一課", parentDepartmentId: "sales" },
-      { id: "other", name: "別本部", parentDepartmentId: null },
+    const nodes = [
+      { id: "root", name: "本部", parentId: null },
+      { id: "dev", name: "開発", parentId: "root" },
+      { id: "dev-child", name: "開発一課", parentId: "dev" },
+      { id: "sales", name: "営業", parentId: "root" },
+      { id: "sales-child", name: "営業一課", parentId: "sales" },
+      { id: "other", name: "別本部", parentId: null },
     ];
-    const visibleIds = dashboardVisibleDepartmentIds(
+    const visibleIds = dashboardVisibleNodeIds(
       "MANAGER",
-      departments,
+      nodes,
       "dev",
     );
     expect(visibleIds).toEqual(["dev", "dev-child", "sales"]);
-    expect(dashboardMemberDepartmentIds(departments, visibleIds)).toEqual([
+    expect(dashboardMemberNodeIds(nodes, visibleIds)).toEqual([
       "dev",
       "dev-child",
       "sales",
@@ -60,18 +60,18 @@ describe("organization dashboard", () => {
     expect(perPersonLevelUps(1, 0)).toBeNull();
   });
   it("範囲外指定を初期値へ戻す", () =>
-    expect(selectDepartmentId("locked", ["dev"], "dev")).toBe("dev"));
+    expect(selectNodeId("locked", ["dev"], "dev")).toBe("dev"));
   it("子があれば子、なければ並列を比較する", () => {
     const d = [
-      { id: "p", name: "P", parentDepartmentId: null },
-      { id: "a", name: "A", parentDepartmentId: "p" },
-      { id: "b", name: "B", parentDepartmentId: "p" },
+      { id: "p", name: "P", parentId: null },
+      { id: "a", name: "A", parentId: "p" },
+      { id: "b", name: "B", parentId: "p" },
     ];
-    expect(comparisonDepartmentIds(d, "p", ["p", "a", "b"])).toEqual([
+    expect(comparisonNodeIds(d, "p", ["p", "a", "b"])).toEqual([
       "a",
       "b",
     ]);
-    expect(comparisonDepartmentIds(d, "a", ["a", "b"])).toEqual(["a", "b"]);
+    expect(comparisonNodeIds(d, "a", ["a", "b"])).toEqual(["a", "b"]);
   });
   it("現在値から過去のスキルを復元する", () => {
     const member = {
@@ -130,7 +130,7 @@ describe("organization dashboard", () => {
       targetRole: { id: "r", name: "R", roleRequirements: requirements },
       memberSkills: levels.map(([skillId, level]) => ({ skillId, level })),
     });
-    const metrics = buildDepartmentMetrics({
+    const metrics = buildNodeMetrics({
       members: [
         {
           ...member("m1", [
@@ -168,8 +168,8 @@ describe("organization dashboard", () => {
       changes: [],
       now,
     };
-    expect(buildDepartmentMetrics({ ...input, changes: [oldChange] })).toEqual(
-      buildDepartmentMetrics(input),
+    expect(buildNodeMetrics({ ...input, changes: [oldChange] })).toEqual(
+      buildNodeMetrics(input),
     );
   });
 });

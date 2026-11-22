@@ -9,11 +9,11 @@ import {
 
 const filterCases: Array<[keyof MemberSearchFilters, string]> = [
   ["q", "佐藤"],
-  ["nodeId", "department-1"],
+  ["nodeId", "node-1"],
   ["skillId", "skill-1"],
   ["minLevel", "3"],
   ["roleId", "role-1"],
-  ["status", "LEAVE"]
+  ["status", "INACTIVE"]
 ];
 
 describe("member search filters", () => {
@@ -31,7 +31,7 @@ describe("member search filters", () => {
   it("serializes all filters for a compound search", () => {
     const filters: MemberSearchFilters = {
       q: "engineer",
-      nodeId: "department-1",
+      nodeId: "node-1",
       skillId: "skill-1",
       minLevel: "4",
       roleId: "role-1",

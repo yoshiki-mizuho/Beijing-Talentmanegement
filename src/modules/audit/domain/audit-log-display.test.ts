@@ -340,7 +340,7 @@ describe("audit log display", () => {
       targetName: "（削除済み）",
       before: null,
       after: null,
-      metadata: { target: "departments", created: 12, updated: 3 },
+      metadata: { target: "nodes", created: 12, updated: 3 },
     };
     expect(buildActionDescription(input)).toEqual({
       prefix: "",

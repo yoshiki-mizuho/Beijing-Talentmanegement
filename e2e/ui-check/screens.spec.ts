@@ -56,12 +56,13 @@ test.describe("UI check", () => {
     await capture(page, "ADMIN", "ai-usage");
     await page.goto("/talent/csv");
     await capture(page, "ADMIN", "csv");
-    // 確認の段階（登録はしない）。新規・更新・エラーを1件ずつ含む部署の CSV を選ぶ
-    await page.getByLabel("部署のCSVファイル").setInputFiles({
-      name: "departments.csv",
+    // 確認の段階（登録はしない）。エラーを含むスキル CSV を選ぶ
+    await page.getByRole("button", { name: "スキル", exact: true }).click();
+    await page.getByLabel("スキルのCSVファイル").setInputFiles({
+      name: "skills.csv",
       mimeType: "text/csv",
       buffer: Buffer.from(
-        "department_code,department_name,parent_department_code,is_active\r\nUI-CHECK,UI確認部,DEV,true\r\nDEV,開発本部,,true\r\nUI-CHECK-2,UI確認部2,,yes\r\n",
+        "skill_code,skill_name,category_name,description,is_active\r\nUI-CHECK,UI確認スキル,開発,,yes\r\n",
       ),
     });
     await page.getByText("エラー").first().waitFor();
@@ -71,17 +72,6 @@ test.describe("UI check", () => {
     await page.screenshot({
       path: "test-results/ui-check/ADMIN-csv-import-preview-bottom.png",
     });
-    await page.goto("/talent/csv");
-    await page.getByRole("button", { name: "メンバー", exact: true }).click();
-    await page.getByLabel("メンバーのCSVファイル").setInputFiles({
-      name: "members.csv",
-      mimeType: "text/csv",
-      buffer: Buffer.from(
-        "employee_no,name,email,department_code,job_title,status,manager_employee_no,target_role_code\r\nTM0001,Admin User,admin@example.com,DEV,UI確認役職,active,,\r\nUI-ERROR,エラー,bad,UNKNOWN,,active,,\r\n",
-      ),
-    });
-    await page.getByText("エラー").first().waitFor();
-    await capture(page, "ADMIN", "csv-import-members-preview");
     await page.goto("/talent/csv?tab=export");
     await capture(page, "ADMIN", "csv-export");
     await page.goto("/talent/roles");

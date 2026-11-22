@@ -5,13 +5,13 @@ import { login } from "./helpers/auth";
 
 test("ADMINがひな形を登録し提案用シートをExcelで出力できる", async ({ page }) => {
   const data = createE2eTestData();
-  const department = await data.createDepartment("ひな形部署");
+  const node = await data.createDepartment("ひな形部署");
   const admin = await data.createMember({
     label: "ひな形管理者",
-    departmentId: department.id,
+    nodeId: node.id,
     role: "ADMIN"
   });
-  const member = await data.createMember({ label: "ひな形対象", departmentId: department.id });
+  const member = await data.createMember({ label: "ひな形対象", nodeId: node.id });
   try {
     await login(page, admin.credential);
     await page.goto(`/talent/people/${member.member.id}?tab=career`);

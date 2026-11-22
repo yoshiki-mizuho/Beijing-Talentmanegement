@@ -29,7 +29,6 @@ describe("validateMemberAvatar", () => {
 describe("canViewMemberAvatar", () => {
   const member = {
     id: "target",
-    managerId: "direct-manager",
     status: "ACTIVE",
     isProfilePublic: false
   };

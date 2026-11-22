@@ -125,7 +125,7 @@ describe("member skill level change recording", () => {
       requestedLevel: 4,
       yearsOfExperience: null,
       status: SkillSelfAssessmentStatus.PENDING,
-      member: { managerId: "manager-1" },
+      member: {},
       skill: { name: "TypeScript" }
     });
     mocks.memberSkillFind.mockResolvedValue({ level: 2 });

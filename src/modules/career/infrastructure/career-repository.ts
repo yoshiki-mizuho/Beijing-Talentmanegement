@@ -10,7 +10,6 @@ export function getMemberCareer(memberId: string) {
     where: { id: memberId },
     select: {
       id: true,
-      name: true,
       itCareerStartMonth: true,
       skillSheetNote: true,
       projectHistories: { orderBy: [{ startMonth: "desc" }, { createdAt: "desc" }] },

@@ -47,7 +47,7 @@ import { useDismissibleDetails } from "@/shared/ui/use-dismissible-details";
 
 type Props = {
   initialData: MemberListData;
-  departments: OrganizationNodeOption[];
+  nodes: OrganizationNodeOption[];
   skills: SkillOption[];
   roles: RoleOption[];
   targetRoles: TargetRoleOption[];
@@ -69,7 +69,7 @@ export function MemberSearchTable(props: Props) {
 
 function MemberSearchTableInner({
   initialData,
-  departments,
+  nodes,
   skills,
   roles,
   targetRoles,
@@ -317,7 +317,7 @@ function MemberSearchTableInner({
           label="組織"
           value={
             filters.nodeId
-              ? departments.find((department) => department.id === filters.nodeId)?.name
+              ? nodes.find((node) => node.id === filters.nodeId)?.name
               : undefined
           }
         >
@@ -327,9 +327,9 @@ function MemberSearchTableInner({
             onChange={(event) => updateFilters({ ...filters, nodeId: event.target.value })}
           >
             <option value="">すべて</option>
-            {departments.map((department) => (
-              <option key={department.id} value={department.id}>
-                {department.name}
+            {nodes.map((node) => (
+              <option key={node.id} value={node.id}>
+                {node.name}
               </option>
             ))}
           </Select>
@@ -566,9 +566,7 @@ function chipClass(active: boolean) {
 function statusDot(status: string) {
   return status === "ACTIVE"
     ? "bg-emerald-500"
-    : status === "LEAVE"
-      ? "bg-amber-500"
-      : "bg-slate-400";
+    : "bg-slate-400";
 }
 
 function MemberSkillsCell({ member }: { member: MemberListItem }) {

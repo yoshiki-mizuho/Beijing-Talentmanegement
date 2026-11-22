@@ -267,10 +267,10 @@ export function MemberDashboard({
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.65fr)]">
-        <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]" aria-labelledby="department-level-ups-heading">
+        <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]" aria-labelledby="node-level-ups-heading">
           <div className="p-5">
             <SectionHeading
-              id="department-level-ups-heading"
+              id="node-level-ups-heading"
               icon={PartyPopper}
               title="チームのレベルアップ"
               description="同じ部署の仲間の、最近の成長をお祝いできます。"
@@ -416,11 +416,11 @@ function FirstDashboard({
       {levelUpFeed.length > 0 ? (
         <section
           className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]"
-          aria-labelledby="department-level-ups-heading"
+          aria-labelledby="node-level-ups-heading"
         >
           <div className="p-5">
             <SectionHeading
-              id="department-level-ups-heading"
+              id="node-level-ups-heading"
               icon={PartyPopper}
               title="チームのレベルアップ"
             />

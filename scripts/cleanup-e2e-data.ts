@@ -1,6 +1,6 @@
 import "dotenv/config";
 
-import { isE2eMember, isLocalDatabaseUrl } from "../e2e/cleanup/cleanup-e2e-policy";
+import { isLocalDatabaseUrl } from "../e2e/cleanup/cleanup-e2e-policy";
 import { deleteE2eData } from "../e2e/cleanup/delete-e2e-data";
 import { prisma, runWithTenant } from "../src/server/db/prisma";
 
@@ -21,26 +21,23 @@ async function main() {
     return;
   }
   try {
-    const [members, skills, categories, roles, departments] = await Promise.all([
-      prisma.member.findMany({ select: { id: true, employeeNo: true, name: true, email: true } }),
+    const [skills, categories, roles] = await Promise.all([
       prisma.skill.findMany({ where: { OR: [{ name: { startsWith: "E2E" } }, { name: { startsWith: "DBG-" } }] }, select: { id: true } }),
       prisma.skillCategory.findMany({ where: { name: { startsWith: "E2E" } }, select: { id: true } }),
       prisma.role.findMany({ where: { name: { startsWith: "E2E" } }, select: { id: true } }),
-      prisma.department.findMany({ where: { name: { startsWith: "E2E" } }, select: { id: true } }),
     ]);
     const ids = {
-      memberIds: members.filter(isE2eMember).map((member) => member.id),
+      memberIds: [],
       skillIds: skills.map((item) => item.id),
       categoryIds: categories.map((item) => item.id),
       roleIds: roles.map((item) => item.id),
-      departmentIds: departments.map((item) => item.id),
+      nodeIds: [],
     };
     printCounts("削除候補", {
       members: ids.memberIds.length,
       skills: ids.skillIds.length,
       skillCategories: ids.categoryIds.length,
       roles: ids.roleIds.length,
-      departments: ids.departmentIds.length,
     });
     if (!process.argv.includes("--yes")) {
       console.log("確認のみです。削除する場合は --yes を付けて再実行してください。");

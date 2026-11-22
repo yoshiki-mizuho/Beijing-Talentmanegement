@@ -5,16 +5,16 @@ import { openLoggedInContext } from "./helpers/auth";
 
 test("マネージャーが決めたチーム目標を部下も確認できる", async ({ browser }) => {
   const data = createE2eTestData();
-  const department = await data.createDepartment("チーム目標部署");
+  const node = await data.createDepartment("チーム目標部署");
   const manager = await data.createMember({
     label: "チーム目標マネージャー",
-    departmentId: department.id,
+    nodeId: node.id,
     role: "MANAGER"
   });
   const member = await data.createMember({
     label: "チーム目標メンバー",
-    departmentId: department.id,
-    managerId: manager.member.id
+    nodeId: node.id,
+    leaderMemberId: manager.member.id
   });
   const { skill } = await data.createSkill("チーム目標スキル");
   await data.createMemberSkill({
@@ -46,16 +46,16 @@ test("マネージャーが決めたチーム目標を部下も確認できる",
 
 test("達成したチーム目標をマネージャーと部下が一度ずつ確認できる", async ({ browser }) => {
   const data = createE2eTestData();
-  const department = await data.createDepartment("チーム目標達成部署");
+  const node = await data.createDepartment("チーム目標達成部署");
   const manager = await data.createMember({
     label: "チーム目標達成マネージャー",
-    departmentId: department.id,
+    nodeId: node.id,
     role: "MANAGER"
   });
   const member = await data.createMember({
     label: "チーム目標達成メンバー",
-    departmentId: department.id,
-    managerId: manager.member.id
+    nodeId: node.id,
+    leaderMemberId: manager.member.id
   });
   const { skill } = await data.createSkill("チーム目標達成スキル");
   await data.createMemberSkill({

@@ -7,16 +7,16 @@ test("MANAGERが育成のヒントを作り1on1メモへ追加できる", async 
   const data = createE2eTestData();
   let session: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
   try {
-  const department = await data.createDepartment("育成ヒント部署");
-  const manager = await data.createMember({ label: "育成ヒント管理者", departmentId: department.id, role: "MANAGER" });
+  const node = await data.createDepartment("育成ヒント部署");
+  const manager = await data.createMember({ label: "育成ヒント管理者", nodeId: node.id, role: "MANAGER" });
   const { skill } = await data.createSkill("育成ヒントスキル");
   const role = await data.createRole("育成ヒント目標", [{ skillId: skill.id, requiredLevel: 2 }]);
-  const member = await data.createMember({ label: "育成ヒント部下", departmentId: department.id, managerId: manager.member.id, targetRoleId: role.id });
+  const member = await data.createMember({ label: "育成ヒント部下", nodeId: node.id, leaderMemberId: manager.member.id, targetRoleId: role.id });
   await data.createMemberSkill({ memberId: member.member.id, skillId: skill.id, level: 1, approvedByMemberId: manager.member.id });
   session = await openLoggedInContext(browser, manager.credential);
   const page = session.page;
   await page.goto("/talent/members");
-  await page.getByRole("button", { name: `${member.member.name}の詳細を開く` }).click();
+  await page.getByRole("button", { name: `${member.displayName}の詳細を開く` }).click();
   await page.getByRole("tab", { name: "育成のヒント" }).click();
   await page.getByRole("button", { name: /ヒントを作る|作り直す/ }).click();
 
@@ -52,8 +52,8 @@ test("MEMBERは育成のヒントを画面とメンバーAPIから利用でき�
   const data = createE2eTestData();
   let session: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
   try {
-  const department = await data.createDepartment("育成ヒント権限部署");
-  const member = await data.createMember({ label: "育成ヒント権限本人", departmentId: department.id });
+  const node = await data.createDepartment("育成ヒント権限部署");
+  const member = await data.createMember({ label: "育成ヒント権限本人", nodeId: node.id });
   session = await openLoggedInContext(browser, member.credential);
   const page = session.page;
   await page.goto("/talent/members");

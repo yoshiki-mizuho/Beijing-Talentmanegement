@@ -71,7 +71,7 @@ describe("buildOrganizationDashboard", () => {
       name: "TypeScript",
       count: 1,
     });
-    expect(summary.departmentSummaries[0]).toMatchObject({
+    expect(summary.nodeSummaries[0]).toMatchObject({
       memberCount: 2,
       achievedRate: 50,
     });

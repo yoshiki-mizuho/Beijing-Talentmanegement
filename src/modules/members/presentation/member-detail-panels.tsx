@@ -99,10 +99,6 @@ export function MemberOverviewPanel({
             <dl className="grid gap-3 sm:grid-cols-2">
               <ReadOnlyField label="所属" value={member.organizationNode?.name ?? "所属なし"} />
               <ReadOnlyField
-                label="上司"
-                value={member.manager?.name ?? "未設定"}
-              />
-              <ReadOnlyField
                 label="状態"
                 value={getMemberStatusLabel(member.status)}
               />

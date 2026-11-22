@@ -30,6 +30,10 @@ TalentHub は、Hub シリーズの製品 `talenthub` として、社内サー�
 
 H-4 は、H-4a（gRPC の呼び出し基盤と偽の基盤）、H-4b（身元と権限）、H-4c（氏名・所属の表示、通知・監査ログの利用者 ID 化）、H-4d（自前の社員・部署列と CSV の整理）に分ける。H-4a では `src/server/platform/` の社員・組織取得、テナント別キャッシュ、エラー分類、standalone イメージへの proto 同梱と、E2E 用の偽の基盤までを用意した。H-4b では `User` を廃止して `Member.platformUserId` に身元をまとめ、基盤のリーダー情報から MANAGER と担当範囲を決め、メンバー登録・役割・上司・在籍の管理入口を外した。
 
+H-4c では、氏名・メール・所属ノード・アバターの表示を、基盤の社員情報の一括取得に切り替えた。通知は操作した人の Member ID、監査ログは Member ID を保存し、氏名は表示のときに解決する。
+
+H-4d では、自前の社員の列（社員番号・氏名・メール・部署・役職・アバター・上司）と `Department` の表を消し、`Member.platformUserId` を必須にした。部署・メンバーの CSV はやめ、保有スキルの CSV のメールは基盤の利用者と一括で突き合わせる。seed は devkit の決まった利用者 9 人に付け替えた。
+
 ## 配布の流れ
 
 1. `main` に merge する。
@@ -54,6 +58,3 @@ H-4 は、H-4a（gRPC の呼び出し基盤と偽の基盤）、H-4b（身元と
 ## 契約の版を上げる
 
 `scripts/update-contract.sh <版>` で、`contract/`・基盤のスクリプト・基盤のスキルを丸ごと置き換える。`contract/CHANGELOG.md` を読み、TalentHub に要る変更を洗い出す。手順はスキル `hub-contract-update`。今の版は `contract/VERSION`。
-# H-4c
-
-氏名・メール・所属ノード・アバターの表示は基盤 directory の一括取得へ切り替えました。通知は actor の Member ID、監査ログは Member ID を保存し、氏名は表示時に解決します。旧社員列と Department 表そのものの削除、CSV の整理は H-4d で行います。

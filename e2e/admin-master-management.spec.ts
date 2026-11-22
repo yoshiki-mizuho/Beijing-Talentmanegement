@@ -388,14 +388,14 @@ test("達成記録があるロールは削除できない", async ({ browser }) 
   const admin = await openLoggedInContext(browser, credentials.ADMIN);
   const data = createE2eTestData();
   try {
-    const department = await data.createDepartment("達成記録部署");
+    const node = await data.createDepartment("達成記録部署");
     const { skill } = await data.createSkill("達成記録スキル");
     const role = await data.createRole("達成記録ロール", [
       { skillId: skill.id, requiredLevel: 2 },
     ]);
     const { member } = await data.createMember({
       label: "達成記録メンバー",
-      departmentId: department.id,
+      nodeId: node.id,
     });
     await data.createMemberSkill({
       memberId: member.id,

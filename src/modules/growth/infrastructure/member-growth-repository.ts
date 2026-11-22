@@ -18,7 +18,6 @@ export const getMemberGrowthData = cache(async function getMemberGrowthData(
           id: true,
           createdAt: true,
           lastRecapSeenMonth: true,
-          manager: { select: { id: true } },
           targetRoleId: true,
           targetRole: {
             select: {

@@ -11,8 +11,6 @@ export type MemberRow = {
     id: string;
     name: string;
   } | null;
-  managerId: string | null;
-  manager: { id: string; name: string } | null;
   targetRoleId: string | null;
   targetRole: { id: string; name: string; isActive: boolean } | null;
   growthHint?: { generatedAt: string } | null;
@@ -40,7 +38,7 @@ export type MemberRow = {
 
 export type MemberListItem = Omit<
   MemberRow,
-  "email" | "profile" | "managerId" | "manager" | "pendingAssessments"
+  "email" | "profile" | "pendingAssessments"
 > & {
   pendingAssessmentCount: number;
 };

@@ -103,8 +103,8 @@ describe("listPopularSkillsForMember", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.memberFindUnique.mockResolvedValue({
-      departmentId: "department-1",
-      department: { name: "開発部" }
+      nodeId: "node-1",
+      node: { name: "開発部" }
     });
   });
 
@@ -115,7 +115,7 @@ describe("listPopularSkillsForMember", () => {
     ]);
 
     await expect(listPopularSkillsForMember(["member-1"], "開発部")).resolves.toEqual({
-      departmentName: "開発部",
+      nodeName: "開発部",
       skillIds: ["skill-b", "skill-a"]
     });
     expect(mocks.skillFindMany).toHaveBeenCalledTimes(1);
@@ -132,7 +132,7 @@ describe("listPopularSkillsForMember", () => {
       ]);
 
     await expect(listPopularSkillsForMember(["member-1"], "開発部")).resolves.toEqual({
-      departmentName: null,
+      nodeName: null,
       skillIds: ["skill-c", "skill-b"]
     });
   });

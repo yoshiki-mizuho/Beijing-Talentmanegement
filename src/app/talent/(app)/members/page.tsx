@@ -1,5 +1,5 @@
 import {
-  listDepartments,
+  listNodes,
   listMemberPage
 } from "@/modules/members/application/member-service";
 import { MemberSearchTable } from "@/modules/members/presentation/member-search-table";
@@ -28,7 +28,7 @@ export default async function MembersPage({
   const initialMemberParams = Object.fromEntries(
     buildMemberSearchParams(initialUrlState.filters)
   );
-  const [memberData, departments, skills, roles] = await Promise.all([
+  const [memberData, nodes, skills, roles] = await Promise.all([
     listMemberPage(
       {
         ...initialMemberParams,
@@ -37,7 +37,7 @@ export default async function MembersPage({
       },
       scope.memberIds
     ),
-    listDepartments(),
+    listNodes(),
     listSkills(),
     listRoles()
   ]);
@@ -72,7 +72,7 @@ export default async function MembersPage({
         <CardContent className="pt-5">
           <MemberSearchTable
             initialData={memberData}
-            departments={departments}
+            nodes={nodes}
             skills={skillOptions}
             roles={roleOptions}
             targetRoles={targetRoleOptions}
