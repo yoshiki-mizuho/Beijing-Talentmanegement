@@ -50,14 +50,18 @@ export function NotificationIndicator({
   return (
     <details ref={detailsRef} className="group relative">
       <summary
-        className="relative inline-flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-md text-[var(--muted-foreground)] hover:bg-[var(--surface-subtle)] hover:text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] [&::-webkit-details-marker]:hidden"
+        className="relative inline-flex h-[var(--hub-header-icon-button)] w-[var(--hub-header-icon-button)] cursor-pointer list-none items-center justify-center rounded-[var(--hub-radius-md)] text-[var(--hub-color-ink-2)] hover:bg-[var(--hub-color-frame-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] [&::-webkit-details-marker]:hidden"
         aria-label={accessibleLabel}
       >
-        <Bell className="h-4 w-4" aria-hidden="true" />
+        <Bell
+          className="h-[var(--hub-icon-size)] w-[var(--hub-icon-size)]"
+          strokeWidth="var(--hub-icon-stroke)"
+          aria-hidden="true"
+        />
         {normalizedCount > 0 ? (
           <span
             aria-hidden="true"
-            className="absolute -right-1.5 -top-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-[var(--surface)] bg-red-600 px-1 text-[10px] font-bold leading-none text-white"
+            className="absolute -right-[var(--hub-space-1)] -top-[var(--hub-space-1)] inline-flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-[var(--hub-color-surface)] bg-[var(--hub-color-badge-dot)] px-[var(--hub-space-1)] text-[length:var(--hub-text-2xs)] font-bold leading-none text-[var(--hub-color-text-on-primary)]"
           >
             {formatUnreadNotificationCount(normalizedCount)}
           </span>

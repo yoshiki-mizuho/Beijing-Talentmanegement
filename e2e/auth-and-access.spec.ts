@@ -25,6 +25,27 @@ for (const { role, label } of roles) {
   });
 }
 
+test("本人のメニューから基盤へログアウトを要求してログイン画面へ移る", async ({ browser }) => {
+  const { context, page } = await openLoggedInContext(browser, credentials.MEMBER);
+
+  try {
+    await page.route("**/api/v1/auth/logout", async (route) => {
+      await route.fulfill({ status: 204 });
+    });
+    await page.locator('summary[aria-label="アカウントメニューを開く"]').click();
+
+    const logoutRequest = page.waitForRequest((request) =>
+      request.url().endsWith("/api/v1/auth/logout") && request.method() === "POST"
+    );
+    await page.getByRole("button", { name: "ログアウト" }).click();
+
+    await expect(logoutRequest).resolves.toBeTruthy();
+    await expect(page).toHaveURL(/\/login$/);
+  } finally {
+    await context.close();
+  }
+});
+
 test("マネージャーはCSV画面へアクセスするとダッシュボードへ戻される", async ({ browser }) => {
   const { context, page } = await openLoggedInContext(browser, credentials.MANAGER);
 

@@ -4,28 +4,28 @@ import type { Notification } from "@prisma/client";
 
 import {
   BarChart3,
+  Bell,
   Bot,
   Check,
   ChevronDown,
   ClipboardCheck,
   Compass,
   FileSpreadsheet,
+  Ellipsis,
   Library,
   Map,
-  Menu,
   Plus,
   ShieldCheck,
   Sparkles,
   Target,
   UserRound,
   Users,
-  X,
   type LucideIcon
 } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 
 import { SignOutButton } from "@/modules/auth/presentation/sign-out-button";
 import {
@@ -65,6 +65,7 @@ const roleLabels: Record<AppRole, string> = {
 type AppShellProps = {
   user: {
     name?: string | null;
+    email: string;
     role: AppRole;
     memberId: string;
     avatarUrl?: string | null;
@@ -107,71 +108,17 @@ function StandardAppShell({
   children
 }: AppShellProps) {
   const pathname = usePathname();
-  const [mobileOpen, setMobileOpen] = useState(false);
   const navigationGroups = getNavigationGroupsForRole(user.role, user.memberId);
-  const drawerRef = useRef<HTMLElement>(null);
-  const menuButtonRef = useRef<HTMLButtonElement>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (!mobileOpen) return;
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    closeButtonRef.current?.focus();
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setMobileOpen(false);
-        menuButtonRef.current?.focus();
-        return;
-      }
-
-      if (event.key !== "Tab" || !drawerRef.current) return;
-      const focusable = Array.from(
-        drawerRef.current.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
-        )
-      );
-      const first = focusable[0];
-      const last = focusable.at(-1);
-
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last?.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first?.focus();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [mobileOpen]);
+  const contentWidth = getContentWidth(pathname);
 
   return (
-    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-      <header className="sticky top-0 z-40 flex h-16 items-center border-b border-[var(--border)] bg-[var(--surface)] px-3 sm:px-4">
-        <button
-          ref={menuButtonRef}
-          type="button"
-          className="mr-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-[var(--muted-foreground)] hover:bg-[var(--surface-subtle)] hover:text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] md:hidden"
-          onClick={() => setMobileOpen(true)}
-          aria-label="ナビゲーションを開く"
-          aria-expanded={mobileOpen}
-          aria-controls="mobile-navigation"
-        >
-          <Menu className="h-5 w-5" aria-hidden="true" />
-        </button>
-
+    <div className="h-[100dvh] overflow-hidden bg-[var(--background)] text-[var(--foreground)]">
+      <header className="hub-header fixed inset-x-0 top-0 z-[var(--hub-z-header)] flex h-[var(--hub-header-height)] items-center gap-[var(--hub-header-gap)] border-b border-[var(--hub-color-line)] bg-[var(--hub-color-surface)] px-[var(--hub-header-padding-x)] sm:px-[var(--hub-header-padding-x-wide)]">
         <Brand />
 
         <div className="min-w-4 flex-1" aria-hidden="true" />
 
-        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+        <div className="flex shrink-0 items-center gap-[var(--hub-header-item-gap)]">
           {setupProgress && !setupProgress.isComplete ? (
             <div>
               <SetupProgressIndicator progress={setupProgress} />
@@ -187,66 +134,40 @@ function StandardAppShell({
         </div>
       </header>
 
-      <div className="md:grid md:grid-cols-[64px_minmax(0,1fr)]">
-        <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-16 flex-col border-r border-[var(--border)] bg-[var(--surface)] md:flex">
-          <DesktopNavigation groups={navigationGroups} pathname={pathname} />
+      <div className="mt-[var(--hub-header-height)] h-[calc(100dvh-var(--hub-header-height))] lg:grid lg:grid-cols-[var(--hub-nav-width)_minmax(0,1fr)]">
+        <aside className="hidden h-full w-[var(--hub-nav-width)] flex-col border-r border-[var(--hub-color-line)] bg-[var(--hub-color-surface)] lg:flex">
+          <DesktopNavigation
+            groups={navigationGroups}
+            pathname={pathname}
+            pendingApprovalCount={pendingApprovalCount}
+          />
         </aside>
 
-        <main className="mx-auto w-full max-w-[1200px] p-4 md:p-6">{children}</main>
+        <main className="h-full overflow-y-auto px-[var(--hub-content-padding-x)] py-[var(--hub-content-padding-y)] pb-[var(--hub-bottom-nav-clearance)] sm:px-[var(--hub-content-padding-x-wide)] lg:pb-[var(--hub-content-padding-y)]">
+          <div className={`mx-auto w-full ${contentWidth}`}>{children}</div>
+        </main>
       </div>
 
-      {mobileOpen ? (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <button
-            type="button"
-            tabIndex={-1}
-            className="absolute inset-0 bg-black/40"
-            aria-label="ナビゲーションを閉じる"
-            onClick={() => setMobileOpen(false)}
-          />
-          <aside
-            ref={drawerRef}
-            id="mobile-navigation"
-            role="dialog"
-            aria-modal="true"
-            aria-label="メインナビゲーション"
-            className="relative flex h-full w-[min(320px,86vw)] flex-col bg-[var(--surface)] shadow-2xl"
-          >
-            <div className="flex h-16 items-center justify-between border-b border-[var(--border)] px-3">
-              <Brand alwaysShowName />
-              <button
-                ref={closeButtonRef}
-                type="button"
-                className="inline-flex h-11 w-11 items-center justify-center rounded-md text-[var(--muted-foreground)] hover:bg-[var(--surface-subtle)] hover:text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
-                onClick={() => setMobileOpen(false)}
-                aria-label="ナビゲーションを閉じる"
-              >
-                <X className="h-5 w-5" aria-hidden="true" />
-              </button>
-            </div>
-            <MobileNavigation
-              groups={navigationGroups}
-              pathname={pathname}
-              onNavigate={() => setMobileOpen(false)}
-            />
-          </aside>
-        </div>
-      ) : null}
+      <BottomNavigation
+        groups={navigationGroups}
+        pathname={pathname}
+        role={user.role}
+      />
     </div>
   );
 }
 
-function Brand({ alwaysShowName = false }: { alwaysShowName?: boolean }) {
+function Brand() {
   return (
     <Link
       href="/talent/dashboard"
       className="flex shrink-0 items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2"
       aria-label="TalentHub ダッシュボード"
     >
-      <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--primary)] text-base font-bold text-[var(--primary-foreground)]">
+      <span className="inline-flex h-[var(--hub-header-mark-size)] w-[var(--hub-header-mark-size)] items-center justify-center rounded-[var(--hub-radius-lg)] bg-gradient-to-br from-[var(--hub-color-primary-600)] to-[var(--hub-color-primary-700)] text-[length:var(--hub-header-mark-text)] font-bold text-[var(--hub-color-text-on-primary)]">
         T
       </span>
-      <span className={`${alwaysShowName ? "inline" : "hidden sm:inline"} text-base font-bold`}>
+      <span className="hidden text-[length:var(--hub-text-lg)] font-bold tracking-[var(--hub-tracking-tight)] text-[var(--hub-color-ink)] sm:inline">
         TalentHub
       </span>
     </Link>
@@ -274,7 +195,7 @@ function PrimaryAction({
       href={(isMember ? "/talent/my/skills" : "/talent/skill-approvals") as Route}
       aria-label={label}
       title={label}
-      className={`inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 ${
+      className={`hidden h-[var(--hub-header-action-height)] items-center justify-center gap-[var(--hub-space-2)] rounded-[var(--hub-radius-header-action)] px-[var(--hub-space-3)] text-[length:var(--hub-text-sm)] font-semibold shadow-[var(--hub-shadow-sm)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 lg:inline-flex ${
         isMember || hasPendingApprovals
           ? "bg-[var(--primary)] !text-[var(--primary-foreground)] hover:bg-[var(--primary-hover)]"
           : "border border-[var(--border-strong)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-subtle)]"
@@ -356,7 +277,7 @@ function AccountMenu({ user }: { user: AppShellProps["user"] }) {
   return (
     <details ref={detailsRef} className="group relative">
       <summary
-        className="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden"
+        className="flex h-[var(--hub-header-icon-button)] w-[var(--hub-header-icon-button)] cursor-pointer list-none items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden"
         aria-label="アカウントメニューを開く"
       >
         <MemberAvatar
@@ -364,13 +285,15 @@ function AccountMenu({ user }: { user: AppShellProps["user"] }) {
           name={name}
           avatarUrl={user.avatarUrl}
           avatarColor={user.avatarColor}
-          className="h-9 w-9"
+          className="h-[var(--hub-header-avatar)] w-[var(--hub-header-avatar)]"
         />
       </summary>
-      <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-60 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-2 shadow-xl">
-        <div className="border-b border-[var(--border)] px-2 py-2">
+      <div className="absolute right-0 top-[calc(100%+var(--hub-space-2))] z-[var(--hub-z-dropdown)] w-[var(--hub-menu-width)] rounded-[var(--hub-radius-md)] border border-[var(--hub-color-border)] bg-[var(--hub-color-surface)] p-[var(--hub-space-2)] shadow-[var(--hub-shadow-lg)]">
+        <div className="border-b border-[var(--hub-color-border-subtle)] px-[var(--hub-space-2)] py-[var(--hub-space-2)]">
           <p className="truncate text-sm font-semibold">{name}</p>
-          <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">{roleLabels[user.role]}</p>
+          <p className="mt-0.5 truncate text-xs text-[var(--muted-foreground)]">
+            {user.email || roleLabels[user.role]}
+          </p>
         </div>
         <Link
           href={`/talent/people/${user.memberId}` as Route}
@@ -387,23 +310,26 @@ function AccountMenu({ user }: { user: AppShellProps["user"] }) {
 
 function DesktopNavigation({
   groups,
-  pathname
+  pathname,
+  pendingApprovalCount
 }: {
   groups: ReturnType<typeof getNavigationGroupsForRole>;
   pathname: string;
+  pendingApprovalCount: number;
 }) {
   return (
-    <nav className="flex flex-1 flex-col items-center py-3" aria-label="メインナビゲーション">
+    <nav className="flex flex-1 flex-col items-center py-[var(--hub-nav-padding-y)]" aria-label="メインナビゲーション">
       {groups.map((group, index) => (
         <div
           key={group.label}
-          className={`grid w-full place-items-center gap-1 px-2 ${index > 0 ? "mt-2 border-t border-[var(--border)] pt-2" : ""}`}
+          className={`grid w-full place-items-center gap-[var(--hub-nav-gap)] px-[var(--hub-nav-padding-x)] ${index > 0 ? "mt-[var(--hub-space-2)] border-t border-[var(--hub-color-line)] pt-[var(--hub-space-2)]" : ""}`}
         >
           {group.items.map((item) => (
             <DesktopNavigationLink
               key={item.href}
               item={item}
               active={isSameOrNestedPath(pathname, item.href)}
+              hasUnread={item.icon === "approvals" && pendingApprovalCount > 0}
             />
           ))}
         </div>
@@ -414,10 +340,12 @@ function DesktopNavigation({
 
 function DesktopNavigationLink({
   item,
-  active
+  active,
+  hasUnread
 }: {
   item: AppNavigationItem;
   active: boolean;
+  hasUnread: boolean;
 }) {
   const Icon = navigationIcons[item.icon];
 
@@ -426,63 +354,154 @@ function DesktopNavigationLink({
       <Link
         href={item.href as Route}
         aria-label={item.label}
+        title={item.label}
         aria-current={active ? "page" : undefined}
-        className={`inline-flex h-11 w-11 items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] ${
+        className={`relative inline-flex h-[var(--hub-nav-item-size)] w-[var(--hub-nav-item-size)] items-center justify-center rounded-[var(--hub-radius-nav-item)] transition-colors duration-[var(--hub-duration)] ease-[var(--hub-ease)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] ${
           active
-            ? "bg-[var(--primary-subtle)] text-[var(--primary)]"
-            : "text-[var(--muted-foreground)] hover:bg-[var(--surface-subtle)] hover:text-[var(--foreground)]"
+            ? "bg-[var(--hub-color-selected-bg)] text-[var(--hub-color-selected-text)]"
+            : "text-[var(--hub-color-ink-2)] hover:bg-[var(--hub-color-frame-hover)]"
         }`}
       >
-        <Icon className="h-5 w-5" aria-hidden="true" />
+        <Icon
+          className="h-[var(--hub-icon-size)] w-[var(--hub-icon-size)]"
+          strokeWidth="var(--hub-icon-stroke)"
+          aria-hidden="true"
+        />
+        {hasUnread ? (
+          <span className="absolute right-[var(--hub-space-1-5)] top-[var(--hub-space-1-5)] h-[var(--hub-nav-dot-size)] w-[var(--hub-nav-dot-size)] rounded-full border-2 border-[var(--hub-color-surface)] bg-[var(--hub-color-badge-dot)]" aria-hidden="true" />
+        ) : null}
       </Link>
     </Tooltip>
   );
 }
 
-function MobileNavigation({
+function BottomNavigation({
   groups,
   pathname,
-  onNavigate
+  role
 }: {
   groups: ReturnType<typeof getNavigationGroupsForRole>;
   pathname: string;
-  onNavigate: () => void;
+  role: AppRole;
 }) {
-  return (
-    <nav className="flex-1 overflow-y-auto p-3" aria-label="モバイルナビゲーション">
-      {groups.map((group, index) => (
-        <div
-          key={group.label}
-          className={index > 0 ? "mt-3 border-t border-[var(--border)] pt-3" : ""}
-        >
-          <p className="mb-1 px-3 text-xs font-semibold text-[var(--muted-foreground)]">
-            {group.label}
-          </p>
-          <div className="grid gap-1">
-            {group.items.map((item) => {
-              const Icon = navigationIcons[item.icon];
-              const active = isSameOrNestedPath(pathname, item.href);
+  const detailsRef = useDismissibleDetails();
+  const items = groups.flatMap((group) => group.items);
+  const preferredHrefs = role === "ADMIN"
+    ? ["/talent/dashboard", "/talent/skills", "/talent/members", "/talent/skill-approvals"]
+    : role === "MANAGER"
+      ? ["/talent/dashboard", "/talent/skill-approvals", "/talent/members", "/talent/skill-map"]
+      : ["/talent/dashboard", "/talent/my/skills", "/talent/explore"];
+  const primaryItems = preferredHrefs.flatMap((href) => {
+    const item = items.find((candidate) => candidate.href === href);
+    return item ? [item] : [];
+  });
+  const remainingItems = items.filter(
+    (item) => !primaryItems.some((primaryItem) => primaryItem.href === item.href)
+  );
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href as Route}
-                  onClick={onNavigate}
-                  aria-current={active ? "page" : undefined}
-                  className={`flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] ${
-                    active
-                      ? "bg-[var(--primary-subtle)] text-[var(--primary)]"
-                      : "text-[var(--muted-foreground)] hover:bg-[var(--surface-subtle)] hover:text-[var(--foreground)]"
-                  }`}
-                >
-                  <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
+  return (
+    <nav
+      className="fixed inset-x-0 bottom-0 z-[var(--hub-z-bottom-nav)] grid h-[var(--hub-bottom-nav-height)] grid-flow-col auto-cols-fr border-t border-[var(--hub-color-border)] bg-[var(--hub-color-surface)] lg:hidden"
+      aria-label="下部ナビゲーション"
+    >
+      {primaryItems.map((item) => (
+        <BottomNavigationLink key={item.href} item={item} pathname={pathname} />
       ))}
+      {role === "MEMBER" ? (
+        <BottomNavigationLink
+          item={{
+            href: "/talent/notifications",
+            label: "通知",
+            icon: "notifications"
+          }}
+          pathname={pathname}
+        />
+      ) : null}
+      <details ref={detailsRef} className="group relative">
+        <summary className="flex h-full cursor-pointer list-none flex-col items-center justify-center gap-[var(--hub-space-0-5)] text-[length:var(--hub-text-2xs)] text-[var(--hub-color-text-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--hub-color-focus)] [&::-webkit-details-marker]:hidden">
+          <Ellipsis
+            className="h-[var(--hub-icon-size)] w-[var(--hub-icon-size)]"
+            strokeWidth="var(--hub-icon-stroke)"
+            aria-hidden="true"
+          />
+          <span>そのほか</span>
+        </summary>
+        <div className="absolute bottom-[calc(100%+var(--hub-space-2))] right-[var(--hub-space-2)] z-[var(--hub-z-dropdown)] max-h-[60dvh] w-[var(--hub-menu-width)] overflow-y-auto rounded-[var(--hub-radius-md)] border border-[var(--hub-color-border)] bg-[var(--hub-color-surface)] p-[var(--hub-space-2)] shadow-[var(--hub-shadow-lg)]">
+          {remainingItems.map((item) => {
+            const Icon = navigationIcons[item.icon];
+            return (
+              <Link
+                key={item.href}
+                href={item.href as Route}
+                className="flex min-h-10 items-center gap-[var(--hub-space-2)] rounded-[var(--hub-radius-md)] px-[var(--hub-space-3)] text-[length:var(--hub-text-sm)] hover:bg-[var(--hub-color-surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--hub-color-focus)]"
+              >
+                <Icon className="h-[var(--hub-icon-size-sm)] w-[var(--hub-icon-size-sm)]" aria-hidden="true" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      </details>
     </nav>
   );
+}
+
+type BottomNavigationItem = Pick<AppNavigationItem, "href" | "label"> & {
+  icon: AppNavigationItem["icon"] | "notifications";
+};
+
+function BottomNavigationLink({
+  item,
+  pathname
+}: {
+  item: BottomNavigationItem;
+  pathname: string;
+}) {
+  const Icon = item.icon === "notifications" ? Bell : navigationIcons[item.icon];
+  const active = isSameOrNestedPath(pathname, item.href);
+
+  return (
+    <Link
+      href={item.href as Route}
+      aria-current={active ? "page" : undefined}
+      className={`flex flex-col items-center justify-center gap-[var(--hub-space-0-5)] text-[length:var(--hub-text-2xs)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--hub-color-focus)] ${
+        active ? "text-[var(--hub-color-selected-text)]" : "text-[var(--hub-color-text-muted)]"
+      }`}
+    >
+      <Icon
+        className="h-[var(--hub-icon-size)] w-[var(--hub-icon-size)]"
+        strokeWidth="var(--hub-icon-stroke)"
+        aria-hidden="true"
+      />
+      <span>{item.label}</span>
+    </Link>
+  );
+}
+
+function getContentWidth(pathname: string) {
+  if (isSameOrNestedPath(pathname, "/talent/dashboard")) {
+    return "max-w-[var(--hub-content-max-full)]";
+  }
+  if (
+    [
+      "/talent/skills",
+      "/talent/roles",
+      "/talent/csv",
+      "/talent/audit-logs",
+      "/talent/ai-usage",
+      "/talent/skill-sheet-templates",
+      "/talent/members",
+      "/talent/skill-map"
+    ].some((href) => isSameOrNestedPath(pathname, href))
+  ) {
+    return "max-w-[var(--hub-content-max-wide)]";
+  }
+  if (
+    ["/talent/my/skills", "/talent/proposal-sheets"].some((href) =>
+      isSameOrNestedPath(pathname, href)
+    )
+  ) {
+    return "max-w-[var(--hub-content-max-form)]";
+  }
+  return "max-w-[var(--hub-content-max-reading)]";
 }

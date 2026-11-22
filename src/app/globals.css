@@ -1,27 +1,41 @@
 @import "tailwindcss";
+@import "../../contract/design/tokens.css";
 
 :root {
-  --background: #f4f6f5;
-  --foreground: #1e2a2a;
-  --surface: #ffffff;
-  --surface-subtle: #eef3f1;
-  --primary-subtle: #e6f4f1;
-  --card: #ffffff;
-  --card-foreground: #1e2a2a;
-  --border: #e3e8e6;
-  --border-strong: #bdcbc6;
-  --muted: #e8efed;
-  --muted-foreground: #5b6b6a;
-  --primary: #0f766e;
-  --primary-hover: #115e59;
-  --primary-foreground: #ffffff;
-  --accent-coral: #d7624f;
-  --accent-amber: #bd7b19;
-  --accent-green: #3f8558;
-  --accent-blue: #397f9b;
-  --destructive: #b5413c;
-  --destructive-foreground: #ffffff;
-  --ring: #0d9488;
+  --hub-color-primary-50: oklch(0.965 0.016 20.7);
+  --hub-color-primary-100: oklch(0.93 0.034 20.7);
+  --hub-color-primary-200: oklch(0.87 0.066 20.7);
+  --hub-color-primary-300: oklch(0.78 0.100 20.7);
+  --hub-color-primary-400: oklch(0.67 0.130 20.7);
+  --hub-color-primary-500: oklch(0.56 0.145 20.7);
+  --hub-color-primary-600: oklch(0.47 0.145 20.7);
+  --hub-color-primary-700: oklch(0.41 0.130 20.7);
+  --hub-color-primary-800: oklch(0.36 0.115 20.7);
+  --hub-color-primary-900: oklch(0.31 0.095 20.7);
+  --hub-color-primary-950: oklch(0.23 0.065 20.7);
+  --hub-color-text-on-primary: #ffffff;
+
+  --background: var(--hub-color-bg);
+  --foreground: var(--hub-color-text);
+  --surface: var(--hub-color-surface);
+  --surface-subtle: var(--hub-color-surface-subtle);
+  --primary-subtle: var(--hub-color-selected-bg);
+  --card: var(--hub-color-surface);
+  --card-foreground: var(--hub-color-text);
+  --border: var(--hub-color-border);
+  --border-strong: var(--hub-color-border-strong);
+  --muted: var(--hub-color-surface-muted);
+  --muted-foreground: var(--hub-color-text-muted);
+  --primary: var(--hub-color-primary);
+  --primary-hover: var(--hub-color-primary-hover);
+  --primary-foreground: var(--hub-color-text-on-primary);
+  --accent-coral: var(--hub-color-danger-text);
+  --accent-amber: var(--hub-color-warning-text);
+  --accent-green: var(--hub-color-success-text);
+  --accent-blue: var(--hub-color-info-text);
+  --destructive: var(--hub-color-danger);
+  --destructive-foreground: var(--hub-color-text-on-primary);
+  --ring: var(--hub-color-focus);
 }
 
 * {
@@ -37,13 +51,7 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family:
-    "Noto Sans JP",
-    Inter,
-    "Hiragino Sans",
-    "Yu Gothic",
-    Meiryo,
-    sans-serif;
+  font-family: var(--hub-font-sans);
 }
 
 @layer base {
@@ -69,6 +77,6 @@ textarea {
 }
 
 ::selection {
-  background: #bde9e3;
+  background: var(--hub-color-primary-200);
   color: var(--foreground);
 }
