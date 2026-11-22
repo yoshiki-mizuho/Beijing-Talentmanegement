@@ -3,9 +3,9 @@ import { headers } from "next/headers";
 import { cache } from "react";
 
 import { getTenantId, prisma } from "@/server/db/prisma";
-import { getLeaderScope, getUser, type PlatformUser } from "@/server/platform/directory";
+import { getLeaderScope, getUser } from "@/server/platform/directory";
 
-async function findOrCreateMember(platformUserId: string, platformUser: PlatformUser | null) {
+async function findOrCreateMember(platformUserId: string) {
   const found = await prisma.member.findUnique({
     where: { tenantId_platformUserId: {
       tenantId: await getTenantId(),
@@ -16,12 +16,7 @@ async function findOrCreateMember(platformUserId: string, platformUser: Platform
 
   try {
     return await prisma.member.create({
-      data: {
-        platformUserId,
-        // H-4c で表示を基盤から引き、H-4d でこの写しの列を削除するまでのつなぎ。
-        name: platformUser?.name || null,
-        email: platformUser?.email || null
-      }
+      data: { platformUserId }
     });
   } catch (error) {
     if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
@@ -69,7 +64,7 @@ export async function resolveCurrentSession(
     return { status: "unregistered", session: null };
   }
 
-  const member = await findOrCreateMember(platformUserId, platformUser);
+  const member = await findOrCreateMember(platformUserId);
 
   const platformRole = requestHeaders.get("x-auth-user-role")?.trim().toUpperCase();
   let role: AuthRole = AuthRole.MEMBER;
@@ -95,7 +90,7 @@ export async function resolveCurrentSession(
         id: member.id,
         platformUserId,
         memberId: member.id,
-        name: platformUser?.name || member.name || "",
+        name: platformUser?.name || "",
         role,
         isActive: true
       }

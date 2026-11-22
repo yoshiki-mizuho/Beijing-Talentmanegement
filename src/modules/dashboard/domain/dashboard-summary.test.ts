@@ -7,7 +7,7 @@ import {
 const members: OrganizationMember[] = [
   {
     id: "m1",
-    department: { id: "d1", name: "開発部" },
+    organizationNode: { id: "d1", name: "開発部" },
     memberSkills: [{ skillId: "s1", level: 4 }],
     roleAchievements: [{ roleId: "r1" }],
     targetRole: {
@@ -25,7 +25,7 @@ const members: OrganizationMember[] = [
   },
   {
     id: "m2",
-    department: { id: "d1", name: "開発部" },
+    organizationNode: { id: "d1", name: "開発部" },
     memberSkills: [],
     targetRole: {
       id: "r1",

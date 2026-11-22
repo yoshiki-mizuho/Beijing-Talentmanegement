@@ -97,9 +97,9 @@ describe("growth insights", () => {
       targetGaps: [{ skillId: "next", skillName: "Next.js" }],
       memberSkills: [],
       candidates: [
-        { id: "self", name: "本人", jobTitle: null, status: "ACTIVE", skills: [{ skillId: "next", skillName: "Next.js", level: 5 }] },
-        { id: "inactive", name: "休職者", jobTitle: null, status: "INACTIVE", skills: [{ skillId: "next", skillName: "Next.js", level: 5 }] },
-        { id: "mentor", name: "先輩", jobTitle: "フロントエンドエンジニア", status: "ACTIVE", skills: [{ skillId: "next", skillName: "Next.js", level: 4 }] }
+        { id: "self", name: "本人", status: "ACTIVE", skills: [{ skillId: "next", skillName: "Next.js", level: 5 }] },
+        { id: "inactive", name: "休職者", status: "INACTIVE", skills: [{ skillId: "next", skillName: "Next.js", level: 5 }] },
+        { id: "mentor", name: "先輩", status: "ACTIVE", skills: [{ skillId: "next", skillName: "Next.js", level: 4 }] }
       ]
     });
     expect(result).toEqual([expect.objectContaining({ memberId: "mentor", skillName: "Next.js", level: 4 })]);
@@ -114,8 +114,8 @@ describe("growth insights", () => {
         { skillId: "b", skillName: "B", level: 1 }
       ],
       candidates: [
-        { id: "one", name: "Aさん", jobTitle: null, status: "ACTIVE", skills: [{ skillId: "a", skillName: "A", level: 5 }] },
-        { id: "two", name: "Bさん", jobTitle: null, status: "ACTIVE", skills: [{ skillId: "b", skillName: "B", level: 4 }] }
+        { id: "one", name: "Aさん", status: "ACTIVE", skills: [{ skillId: "a", skillName: "A", level: 5 }] },
+        { id: "two", name: "Bさん", status: "ACTIVE", skills: [{ skillId: "b", skillName: "B", level: 4 }] }
       ]
     });
     expect(result.map((mentor) => mentor.memberId)).toEqual(["two", "one"]);

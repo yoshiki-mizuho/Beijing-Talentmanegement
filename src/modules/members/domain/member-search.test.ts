@@ -39,12 +39,12 @@ describe("member list URL state", () => {
   it("round-trips filters, page and member", () => {
     const state = parseMemberListSearchParams(
       new URLSearchParams(
-        "q=dev&departmentId=dep-1&skillId=skill-1&minLevel=3&roleId=role-1&status=LEAVE&targetRole=achieved&page=2&member=member-1"
+        "q=dev&nodeId=dep-1&skillId=skill-1&minLevel=3&roleId=role-1&status=LEAVE&targetRole=achieved&page=2&member=member-1"
       )
     );
 
     expect(buildMemberListSearchParams(state).toString()).toBe(
-      "q=dev&departmentId=dep-1&skillId=skill-1&minLevel=3&roleId=role-1&status=LEAVE&targetRole=achieved&page=2&member=member-1"
+      "q=dev&nodeId=dep-1&skillId=skill-1&minLevel=3&roleId=role-1&status=LEAVE&targetRole=achieved&page=2&member=member-1"
     );
   });
 

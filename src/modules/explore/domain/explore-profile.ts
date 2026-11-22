@@ -121,15 +121,15 @@ export function aggregateTrendingSkills(
     .slice(0, limit);
 }
 
-export type RecommendationReason = "target" | "trending" | "department";
+export type RecommendationReason = "target" | "trending" | "node";
 
 export function getRecommendationReasons(input: {
   candidate: {
-    departmentId: string;
+    nodeId: string;
     skills: ReadonlyArray<{ skillId: string; level: number }>;
     recentLevelUp: boolean;
   };
-  viewerDepartmentId: string;
+  viewerNodeId: string;
   targetGapSkillIds: ReadonlySet<string>;
   trendingSkillIds: ReadonlySet<string>;
 }) {
@@ -146,8 +146,8 @@ export function getRecommendationReasons(input: {
     )
   )
     reasons.push("trending");
-  if (input.candidate.departmentId === input.viewerDepartmentId && input.candidate.recentLevelUp)
-    reasons.push("department");
+  if (input.candidate.nodeId === input.viewerNodeId && input.candidate.recentLevelUp)
+    reasons.push("node");
   return reasons;
 }
 

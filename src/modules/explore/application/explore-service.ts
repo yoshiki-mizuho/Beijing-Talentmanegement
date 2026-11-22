@@ -23,7 +23,7 @@ import { badgeDefinitions, badgeRarities, secretBadgeArt } from "@/modules/growt
 import { calculateBadgeAchievements, calculateBadgeProgress } from "@/modules/growth/domain/growth-insights";
 import { getBadgeCalculationData } from "@/modules/growth/infrastructure/badge-calculation-repository";
 import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
-import { displayMemberName } from "@/modules/members/domain/member-display";
+import { fallbackMemberProfile, resolveMemberProfiles } from "@/modules/members/application/member-directory";
 import { getMemberScope, memberIsInScope } from "@/modules/members/application/member-scope";
 import { listMemberRoleAchievements } from "@/modules/roles/application/role-achievement-service";
 
@@ -42,6 +42,16 @@ export async function getExploreData(
     viewer,
     since,
     scope.memberIds
+  );
+  const profiles = await resolveMemberProfiles([
+    viewer.memberId,
+    ...candidates.map((candidate) => candidate.id),
+  ]);
+  const profile = (id: string) => profiles.get(id) ?? fallbackMemberProfile(id);
+  const viewerProfile = profile(viewer.memberId);
+  // 基盤に居ない人は、おすすめと検索の結果に出さない。
+  const visibleCandidates = candidates.filter(
+    (candidate) => !profile(candidate.id).missingOnPlatform
   );
   const normalizedChanges = changes.map((change) => ({
     ...change,
@@ -62,11 +72,11 @@ export async function getExploreData(
     )
   );
   const trendingSkillIds = new Set(trending.map((item) => item.skillId));
-  const recommendations = candidates
+  const recommendations = visibleCandidates
     .flatMap((candidate) => {
       const reasons = getRecommendationReasons({
         candidate: {
-          departmentId: candidate.departmentId ?? "",
+          nodeId: profile(candidate.id).nodeId ?? "",
           skills: candidate.memberSkills,
           recentLevelUp: candidate.skillLevelChanges.some(
             (change) =>
@@ -74,7 +84,7 @@ export async function getExploreData(
               (change.fromLevel === null || change.toLevel > change.fromLevel)
           )
         },
-        viewerDepartmentId: viewerMember?.departmentId ?? "",
+        viewerNodeId: viewerProfile.nodeId ?? "",
         targetGapSkillIds,
         trendingSkillIds
       });
@@ -82,10 +92,10 @@ export async function getExploreData(
         ? [
             {
               id: candidate.id,
-              name: displayMemberName(candidate.name),
-              avatarUpdatedAt: candidate.avatarUpdatedAt?.toISOString() ?? null,
-              departmentName: candidate.department?.name ?? "所属なし",
-              jobTitle: candidate.jobTitle,
+              name: profile(candidate.id).name,
+              avatarUrl: profile(candidate.id).avatarUrl,
+              avatarColor: profile(candidate.id).avatarColor,
+              nodeName: profile(candidate.id).nodeName ?? "所属なし",
               reasons,
               strengths: candidate.memberSkills
                 .filter((item) => item.level >= 4)
@@ -98,7 +108,7 @@ export async function getExploreData(
     })
     .slice(0, 6);
   const results = filters.skillId
-    ? candidates
+    ? visibleCandidates
         .flatMap((candidate) => {
           const skill = candidate.memberSkills.find(
             (item) => item.skillId === filters.skillId && item.level >= filters.level
@@ -107,10 +117,10 @@ export async function getExploreData(
             ? [
                 {
                   id: candidate.id,
-                  name: displayMemberName(candidate.name),
-                  avatarUpdatedAt: candidate.avatarUpdatedAt?.toISOString() ?? null,
-                  departmentName: candidate.department?.name ?? "所属なし",
-                  jobTitle: candidate.jobTitle,
+                  name: profile(candidate.id).name,
+                  avatarUrl: profile(candidate.id).avatarUrl,
+                  avatarColor: profile(candidate.id).avatarColor,
+                  nodeName: profile(candidate.id).nodeName ?? "所属なし",
                   level: skill.level
                 }
               ]
@@ -119,7 +129,7 @@ export async function getExploreData(
         .sort(
           (left, right) =>
             right.level - left.level ||
-            displayMemberName(left.name).localeCompare(displayMemberName(right.name), "ja")
+            left.name.localeCompare(right.name, "ja")
         )
     : [];
 
@@ -139,6 +149,8 @@ export async function getSkillProfile(viewer: ProfileViewer, memberId: string, n
     getBadgeCalculationData(memberId),
     listMemberRoleAchievements(memberId)
   ]);
+  const memberProfile = (await resolveMemberProfiles([memberId])).get(memberId)
+    ?? fallbackMemberProfile(memberId);
   const skills = member.memberSkills
     .map((item) => ({
       skillId: item.skillId,
@@ -215,7 +227,7 @@ export async function getSkillProfile(viewer: ProfileViewer, memberId: string, n
       changedAt: item.changedAt.toISOString()
     }));
   const template = process.env.CHAT_LINK_TEMPLATE;
-  const chatUrl = buildChatUrl(template, member.email ?? "");
+  const chatUrl = buildChatUrl(template, memberProfile.email);
 
   const targetEvaluation = member.targetRole
     ? evaluateRoleAchievement(
@@ -243,11 +255,11 @@ export async function getSkillProfile(viewer: ProfileViewer, memberId: string, n
   const skillGroups = splitTopSkills(skills);
   return {
     id: member.id,
-    name: displayMemberName(member.name),
-    departmentName: member.department?.name ?? "所属なし",
-    jobTitle: member.jobTitle,
+    name: memberProfile.name,
+    nodeName: memberProfile.nodeName ?? "所属なし",
     isProfilePublic: member.isProfilePublic,
-    avatarUpdatedAt: member.avatarUpdatedAt?.toISOString() ?? null,
+    avatarUrl: memberProfile.avatarUrl,
+    avatarColor: memberProfile.avatarColor,
     profileMessage: member.profileMessage,
     consultTopics: member.consultTopics,
     skills,

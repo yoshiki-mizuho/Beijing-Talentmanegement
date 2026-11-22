@@ -9,7 +9,7 @@ import { RolePage } from "@/modules/roles/presentation/role-page";
 import { buildRolePageViewModel } from "@/modules/roles/presentation/role-page-view-model";
 import { listSkills } from "@/modules/skills/application/skill-service";
 import { requirePageRoles } from "@/server/auth/authorization";
-import { displayMemberName } from "@/modules/members/domain/member-display";
+import { fallbackMemberProfile, resolveMemberProfiles } from "@/modules/members/application/member-directory";
 
 export const dynamic = "force-dynamic";
 
@@ -32,19 +32,16 @@ export default async function RolesPage({
     listRoleAchievements(),
     searchParams
   ]);
+  const memberProfiles = await resolveMemberProfiles(activeMembers.map((member) => member.id));
   const roleItems = buildRolePageViewModel({
     viewerRole: session.user.role,
     viewerMemberId: session.user.memberId,
     scopedMemberIds: scope?.memberIds ?? [session.user.memberId],
     roles,
-    activeMembers: activeMembers.map((member) => ({
-      ...member,
-      name: displayMemberName(member.name),
-      department: member.department ?? {
-        id: "",
-        name: "所属なし"
-      }
-    })),
+    activeMembers: activeMembers.map((member) => {
+      const profile = memberProfiles.get(member.id) ?? fallbackMemberProfile(member.id);
+      return { ...member, ...profile };
+    }),
     achievements
   });
 

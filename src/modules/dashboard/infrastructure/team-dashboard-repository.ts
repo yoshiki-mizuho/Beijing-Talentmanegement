@@ -9,8 +9,6 @@ export async function getTeamDashboardData(managerMemberId: string, reportMember
     where: { id: managerMemberId },
     select: {
       id: true,
-      name: true,
-      department: { select: { name: true } },
       sentCheers: {
         select: { toMemberId: true, createdAt: true },
         orderBy: { createdAt: "desc" }
@@ -25,8 +23,6 @@ export async function getTeamDashboardData(managerMemberId: string, reportMember
       where: { id: { in: reportMemberIds }, status: MemberStatus.ACTIVE },
         select: {
           id: true,
-          name: true,
-          avatarUpdatedAt: true,
           createdAt: true,
           targetRole: {
             select: {
@@ -64,18 +60,17 @@ export async function getTeamDashboardData(managerMemberId: string, reportMember
             orderBy: { changedAt: "desc" }
           }
         },
-        orderBy: { name: "asc" }
       })
   ]);
   return manager ? { ...manager, reports } : null;
 }
 
-export function countSkillExperts(skillId: string) {
+export function countSkillExperts(skillId: string, memberIds: string[]) {
   return prisma.memberSkill.count({
     where: {
       skillId,
       level: { gte: 4 },
-      member: { status: MemberStatus.ACTIVE }
+      member: { id: { in: memberIds }, status: MemberStatus.ACTIVE }
     }
   });
 }

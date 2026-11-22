@@ -12,26 +12,26 @@ type Skill = Omit<ReturnType<typeof buildSkillMap>[number], "holders" | "changes
 type SkillHolder = {
   id: string;
   name: string;
-  jobTitle: string | null;
-  avatarUpdatedAt: string | null;
+  avatarUrl: string | null;
+  avatarColor: string | null;
   level: number;
 };
 const colors = ["#CCFBF1", "#99F6E4", "#2DD4BF", "#0D9488", "#115E59"];
 export function SkillMapTiles({
   skills,
   categories,
-  departmentId,
+  nodeId,
 }: {
   skills: Skill[];
   categories: { id: string; name: string }[];
-  departmentId: string | null;
+  nodeId: string | null;
 }) {
   return (
     <QueryProvider>
       <SkillMapTilesInner
         skills={skills}
         categories={categories}
-        departmentId={departmentId}
+        nodeId={nodeId}
       />
     </QueryProvider>
   );
@@ -40,11 +40,11 @@ export function SkillMapTiles({
 function SkillMapTilesInner({
   skills,
   categories,
-  departmentId,
+  nodeId,
 }: {
   skills: Skill[];
   categories: { id: string; name: string }[];
-  departmentId: string | null;
+  nodeId: string | null;
 }) {
   const [query, setQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -182,7 +182,7 @@ function SkillMapTilesInner({
           })}
         </section>
         {selected ? (
-          <SkillDetail skill={selected} departmentId={departmentId} />
+          <SkillDetail skill={selected} nodeId={nodeId} />
         ) : (
           <aside className="rounded-2xl border border-[var(--border)] bg-white p-5">
             表示できるスキルがありません
@@ -192,12 +192,12 @@ function SkillMapTilesInner({
     </>
   );
 }
-function SkillDetail({ skill, departmentId }: { skill: Skill; departmentId: string | null }) {
+function SkillDetail({ skill, nodeId }: { skill: Skill; nodeId: string | null }) {
   const [all, setAll] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const holdersQuery = useQuery({
-    queryKey: ["skill-map-holders", skill.id, departmentId],
-    queryFn: ({ signal }) => fetchSkillHolders(skill.id, departmentId, signal),
+    queryKey: ["skill-map-holders", skill.id, nodeId],
+    queryFn: ({ signal }) => fetchSkillHolders(skill.id, nodeId, signal),
     refetchOnWindowFocus: false
   });
   const holders = (holdersQuery.data ?? [])
@@ -284,14 +284,12 @@ function SkillDetail({ skill, departmentId }: { skill: Skill; departmentId: stri
             <MemberAvatar
               memberId={person.id}
               name={person.name}
-              avatarUpdatedAt={person.avatarUpdatedAt}
+              avatarUrl={person.avatarUrl}
+              avatarColor={person.avatarColor}
               size="sm"
             />
             <span className="min-w-0 flex-1">
               <b>{person.name}</b>
-              <span className="block truncate text-xs text-[var(--muted-foreground)]">
-                {person.jobTitle ?? "役職未設定"}
-              </span>
             </span>
             <b className="text-[var(--primary)]">Lv{person.level}</b>
           </Link>
@@ -312,11 +310,11 @@ function SkillDetail({ skill, departmentId }: { skill: Skill; departmentId: stri
 
 async function fetchSkillHolders(
   skillId: string,
-  departmentId: string | null,
+  nodeId: string | null,
   signal: AbortSignal
 ) {
   const params = new URLSearchParams();
-  if (departmentId) params.set("department", departmentId);
+  if (nodeId) params.set("node", nodeId);
   const query = params.toString();
   const response = await apiClient(
     `/api/talent/v1/skill-map/skills/${encodeURIComponent(skillId)}/holders${query ? `?${query}` : ""}`,

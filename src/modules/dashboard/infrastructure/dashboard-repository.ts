@@ -1,38 +1,14 @@
 import { prisma } from "@/server/db/prisma";
 
-export async function getOrganizationDashboardScope(memberId: string) {
-  const [viewer, departments, memberCounts] = await Promise.all([
-    prisma.member.findUniqueOrThrow({
-      where: { id: memberId },
-      select: { id: true, departmentId: true },
-    }),
-    prisma.department.findMany({
-      where: { isActive: true },
-      select: { id: true, name: true, parentDepartmentId: true },
-    }),
-    prisma.member.groupBy({
-      by: ["departmentId"],
-      where: { status: "ACTIVE" },
-      _count: { _all: true },
-    }),
-  ]);
-  return { viewer, departments, memberCounts };
-}
-
 export async function getOrganizationDashboardSource(input: {
-  departmentIds?: string[];
+  memberIds: string[];
   changesSince: Date;
 }) {
   const members = await prisma.member.findMany({
-    where: {
-      status: "ACTIVE",
-      ...(input.departmentIds
-        ? { departmentId: { in: input.departmentIds } }
-        : {}),
-    },
+    where: { id: { in: input.memberIds }, status: "ACTIVE" },
     select: {
       id: true,
-      departmentId: true,
+      platformUserId: true,
       memberSkills: { select: { skillId: true, level: true } },
       targetRole: {
         select: {

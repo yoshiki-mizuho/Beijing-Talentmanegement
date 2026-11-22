@@ -219,11 +219,17 @@ export async function startFakePlatform(grpcPort = 0, httpPort = 0) {
     } else if (request.url === "/__fake/users") {
       const tenant = tenants.find((candidate) => candidate.id === body.tenantId);
       if (!tenant) response.statusCode = 404;
-      else tenant.users.push(body.user as FakeUser);
+      else {
+        const user = body.user as FakeUser;
+        tenant.users = [...tenant.users.filter((item) => item.id !== user.id), user];
+      }
     } else if (request.url === "/__fake/nodes") {
       const tenant = tenants.find((candidate) => candidate.id === body.tenantId);
       if (!tenant) response.statusCode = 404;
-      else tenant.nodes.push(body.node as FakeNode);
+      else {
+        const node = body.node as FakeNode;
+        tenant.nodes = [...tenant.nodes.filter((item) => item.id !== node.id), node];
+      }
     } else if (request.url === "/__fake/users/delete") {
       const tenant = tenants.find((candidate) => candidate.id === body.tenantId);
       if (!tenant) response.statusCode = 404;

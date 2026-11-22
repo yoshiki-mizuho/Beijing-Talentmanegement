@@ -359,7 +359,8 @@ function MemberStatus({ role, title }: { role: RoleItem; title: string }) {
               <MemberAvatar
                 memberId={member.id}
                 name={member.name}
-                avatarUpdatedAt={member.avatarUpdatedAt}
+                avatarUrl={member.avatarUrl}
+                avatarColor={member.avatarColor}
                 href={`/talent/people/${member.id}`}
               />
               <div className="min-w-0">

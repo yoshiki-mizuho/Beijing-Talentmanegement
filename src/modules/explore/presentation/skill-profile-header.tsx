@@ -1,7 +1,6 @@
 import { AlertTriangle, ExternalLink } from "lucide-react";
 import type { getSkillProfile } from "@/modules/explore/application/explore-service";
 import { MemberAvatar } from "@/shared/ui/member-avatar";
-import { AvatarEditor } from "./avatar-editor";
 import { ProfileEditor } from "./profile-editor";
 import { ProfileVisibility } from "./profile-visibility";
 import { Badge } from "@/shared/ui/badge";
@@ -34,20 +33,17 @@ export function SkillProfileHeader({
             <MemberAvatar
               memberId={profile.id}
               name={profile.name}
-              avatarUpdatedAt={profile.avatarUpdatedAt}
+              avatarUrl={profile.avatarUrl}
+              avatarColor={profile.avatarColor}
               size="lg"
               className="h-28 w-28 border-4 border-white text-4xl shadow-lg"
               href={`/talent/people/${profile.id}`}
             />
-            {isOwner ? (
-              <AvatarEditor hasAvatar={Boolean(profile.avatarUpdatedAt)} />
-            ) : null}
           </div>
           <div className="min-w-0 md:pt-5">
             <h1 className="text-[26px] font-black">{profile.name}</h1>
             <p className="text-sm text-[var(--muted-foreground)]">
-              {profile.departmentName}
-              {profile.jobTitle ? `・${profile.jobTitle}` : ""}
+              {profile.nodeName}
             </p>
             {profile.profileMessage ? (
               <p className="mt-3 text-[15px] leading-7">

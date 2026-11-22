@@ -72,7 +72,7 @@ describe("resolveCurrentSession", () => {
       "authenticated"
     );
     expect(mocks.create).toHaveBeenCalledWith({
-      data: { platformUserId, name: "利用者", email: "user@example.com" }
+      data: { platformUserId }
     });
     expect(mocks.getUser).toHaveBeenCalledTimes(1);
   });

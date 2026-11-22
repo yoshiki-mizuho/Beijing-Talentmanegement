@@ -19,7 +19,7 @@ import {
 import { getBadgeCalculationData } from "@/modules/growth/infrastructure/badge-calculation-repository";
 import { prisma } from "@/server/db/prisma";
 import { getMemberScope, memberIsInScope } from "@/modules/members/application/member-scope";
-import { displayMemberName } from "@/modules/members/domain/member-display";
+import { fallbackMemberProfile, resolveMemberProfiles } from "@/modules/members/application/member-directory";
 import { AuthorizationError } from "@/server/auth/authorization";
 import { listMemberRoleAchievements } from "@/modules/roles/application/role-achievement-service";
 
@@ -35,6 +35,16 @@ const getMonthlyRecapCached = cache(async function getMonthlyRecapCached(
     listMemberRoleAchievements(memberId)
   ]);
   if (!data.member) return null;
+  const profileIds = [
+    data.member.id,
+    ...data.receivedCheers.map((cheer) => cheer.fromMember.id),
+    ...data.levelChanges.flatMap((change) => [
+      ...change.reactions.map((reaction) => reaction.member.id),
+      ...change.comments.map((comment) => comment.authorMember.id),
+    ]),
+  ];
+  const profiles = await resolveMemberProfiles(profileIds);
+  const profile = (id: string) => profiles.get(id) ?? fallbackMemberProfile(id);
   const months = getViewableRecapMonths(data.member.createdAt, now);
   const latestCompletedMonth = shiftMonth(getTokyoMonthKey(now), -1);
   const month = requestedMonth && months.includes(requestedMonth)
@@ -51,7 +61,7 @@ const getMonthlyRecapCached = cache(async function getMonthlyRecapCached(
       kind: "cheer" as const,
       createdAt: cheer.createdAt,
       senderId: cheer.fromMember.id,
-      senderName: displayMemberName(cheer.fromMember.name),
+      senderName: profile(cheer.fromMember.id).name,
       text: cheer.message
     })),
     ...data.levelChanges
@@ -64,7 +74,7 @@ const getMonthlyRecapCached = cache(async function getMonthlyRecapCached(
       kind: "reaction" as const,
       createdAt: reaction.createdAt,
       senderId: reaction.member.id,
-      senderName: displayMemberName(reaction.member.name),
+      senderName: profile(reaction.member.id).name,
       reactionType: reaction.type
       }))),
     ...data.levelChanges
@@ -77,7 +87,7 @@ const getMonthlyRecapCached = cache(async function getMonthlyRecapCached(
       kind: "comment" as const,
       createdAt: comment.createdAt,
       senderId: comment.authorMember.id,
-      senderName: displayMemberName(comment.authorMember.name),
+      senderName: profile(comment.authorMember.id).name,
       text: comment.body
       })))
   ];
@@ -128,7 +138,7 @@ const getMonthlyRecapCached = cache(async function getMonthlyRecapCached(
   return {
     member: {
       id: data.member.id,
-      name: displayMemberName(data.member.name),
+      name: profile(data.member.id).name,
       createdAt: data.member.createdAt.toISOString(),
       lastRecapSeenMonth: data.member.lastRecapSeenMonth
     },

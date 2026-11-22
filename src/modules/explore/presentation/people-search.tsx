@@ -44,13 +44,13 @@ export function PeopleSearch({
                 <MemberAvatar
                   memberId={person.id}
                   name={person.name}
-                  avatarUpdatedAt={person.avatarUpdatedAt}
+                  avatarUrl={person.avatarUrl}
+                  avatarColor={person.avatarColor}
                 />
                 <span className="min-w-0 flex-1">
                   <strong className="block text-sm">{person.name}</strong>
                   <span className="text-xs text-[var(--muted-foreground)]">
-                    {person.departmentName}
-                    {person.jobTitle ? `・${person.jobTitle}` : ""}
+                    {person.nodeName}
                   </span>
                 </span>
                 <strong className="text-[var(--primary)]">Lv{person.level}</strong>

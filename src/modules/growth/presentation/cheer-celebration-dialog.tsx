@@ -11,7 +11,6 @@ import { confirmCheerNotificationAction } from "@/modules/notifications/presenta
 import { Button } from "@/shared/ui/button";
 import { Dialog } from "@/shared/ui/dialog";
 import { MemberAvatar } from "@/shared/ui/member-avatar";
-import { displayMemberName } from "@/modules/members/domain/member-display";
 
 export function CheerCelebrationDialog({ celebrations }: { celebrations: CheerCelebration[] }) {
   const router = useRouter();
@@ -70,7 +69,7 @@ export function CheerCelebrationDialog({ celebrations }: { celebrations: CheerCe
           CHEER
         </span>
       }
-      title={`${displayMemberName(current.sender.name)}さんから応援が届きました`}
+      title={`${current.sender.name}さんから応援が届きました`}
       description={celebrations.length > 1 ? `${index + 1}/${celebrations.length}` : undefined}
       closeOnBackdrop={false}
       className="max-w-xl"
@@ -95,8 +94,9 @@ export function CheerCelebrationDialog({ celebrations }: { celebrations: CheerCe
         <div className="flex items-start gap-3">
           <MemberAvatar
             memberId={current.sender.id}
-            name={displayMemberName(current.sender.name)}
-            avatarUpdatedAt={current.sender.avatarUpdatedAt}
+            name={current.sender.name}
+            avatarUrl={current.sender.avatarUrl}
+            avatarColor={current.sender.avatarColor}
             className="h-11 w-11"
             href={`/talent/people/${current.sender.id}`}
           />

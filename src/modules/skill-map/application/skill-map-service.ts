@@ -1,25 +1,28 @@
 import type { AuthRole } from "@prisma/client";
 import { getMemberScope } from "@/modules/members/application/member-scope";
-import { displayMemberName } from "@/modules/members/domain/member-display";
+import { fallbackMemberProfile, resolveMemberProfiles } from "@/modules/members/application/member-directory";
 import { buildSkillMap } from "@/modules/skill-map/domain/skill-map-matrix";
 import {
   getSkillHolders,
   getSkillMapData
 } from "@/modules/skill-map/infrastructure/skill-map-repository";
 
-export async function getSkillMapPageData(role: AuthRole, memberId: string, departmentId?: string) {
-  const scope = await getMemberScope(role, memberId, departmentId);
+export async function getSkillMapPageData(role: AuthRole, memberId: string, nodeId?: string) {
+  const scope = await getMemberScope(role, memberId, nodeId);
   const now = new Date();
   const source = await getSkillMapData(
     scope.memberIds,
     new Date(now.getTime() - 90 * 86400000)
   );
+  const profiles = await resolveMemberProfiles(source.flatMap((skill) => skill.holders.map((holder) => holder.id)));
   const skills = buildSkillMap({
     skills: source.map((skill) => ({
       ...skill,
       holders: skill.holders.map((holder) => ({
         ...holder,
-        name: displayMemberName(holder.name)
+        name: (profiles.get(holder.id) ?? fallbackMemberProfile(holder.id)).name,
+        avatarUrl: (profiles.get(holder.id) ?? fallbackMemberProfile(holder.id)).avatarUrl,
+        avatarColor: (profiles.get(holder.id) ?? fallbackMemberProfile(holder.id)).avatarColor,
       }))
     })),
     now
@@ -47,12 +50,14 @@ export async function listSkillHolders(
   role: AuthRole,
   memberId: string,
   skillId: string,
-  departmentId?: string
+  nodeId?: string
 ) {
-  const scope = await getMemberScope(role, memberId, departmentId);
-  return (await getSkillHolders(skillId, scope.memberIds)).map((item) => ({
-    ...item.member,
+  const scope = await getMemberScope(role, memberId, nodeId);
+  const holders = await getSkillHolders(skillId, scope.memberIds);
+  const profiles = await resolveMemberProfiles(holders.map((item) => item.member.id));
+  return holders.map((item) => ({
+    ...(profiles.get(item.member.id) ?? fallbackMemberProfile(item.member.id)),
+    id: item.member.id,
     level: item.level,
-    avatarUpdatedAt: item.member.avatarUpdatedAt?.toISOString() ?? null
   }));
 }

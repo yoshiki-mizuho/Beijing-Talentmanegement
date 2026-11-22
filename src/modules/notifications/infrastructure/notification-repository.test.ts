@@ -87,7 +87,12 @@ describe("countUnreadNotifications", () => {
         recipientMemberId: "member-1",
         ...actionableUnreadWhere
       },
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: "desc" },
+      include: {
+        skillLevelChange: {
+          select: { _count: { select: { reactions: true } } }
+        }
+      }
     });
   });
 

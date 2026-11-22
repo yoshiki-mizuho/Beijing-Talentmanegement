@@ -7,8 +7,8 @@ export type SkillMapSource = {
   holders: {
     id: string;
     name: string;
-    jobTitle: string | null;
-    avatarUpdatedAt: Date | string | null;
+    avatarUrl: string | null;
+    avatarColor: string | null;
     level: number;
   }[];
   changes: {

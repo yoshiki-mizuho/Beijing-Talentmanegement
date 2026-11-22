@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   getContext: vi.fn(),
   getScope: vi.fn(),
   mentors: vi.fn(),
+  resolveMemberProfiles: vi.fn(),
 }));
 
 vi.mock(
@@ -49,6 +50,13 @@ vi.mock("@/modules/members/application/member-scope", () => ({
 }));
 vi.mock("@/modules/growth/application/growth-service", () => ({
   listSkillMentorCandidates: mocks.mentors,
+}));
+vi.mock("@/modules/members/application/member-directory", () => ({
+  resolveMemberProfiles: mocks.resolveMemberProfiles,
+  fallbackMemberProfile: (memberId: string) => ({
+    memberId,
+    name: "（名前未設定）",
+  }),
 }));
 
 import { generateGrowthHint, getGrowthHint } from "./growth-hint-service";
@@ -104,6 +112,7 @@ describe("generateGrowthHint", () => {
     mocks.getContext.mockResolvedValue(context);
     mocks.getScope.mockResolvedValue({ memberIds: ["member"] });
     mocks.mentors.mockResolvedValue([]);
+    mocks.resolveMemberProfiles.mockResolvedValue(new Map());
     mocks.findGrowthHint.mockResolvedValue(null);
     mocks.reserveAiUsage.mockResolvedValue({ kind: "reserved", id: "usage" });
     vi.stubEnv("AI_MONTHLY_TOKEN_LIMIT", "");

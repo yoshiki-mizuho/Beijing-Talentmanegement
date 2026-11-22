@@ -64,12 +64,17 @@ test("レベルアップのリアクション、コメント、返信を通知�
       }));
       expect(notifications).toHaveLength(1);
       expect(notifications[0]?.status).toBe("UNREAD");
-      expect(notifications[0]?.body).toMatch(/ほか 1人が/);
+      expect(notifications[0]?.body).toBe(
+        `${skill.name} Lv.2 へのリアクションを確認しましょう。`
+      );
     }).toPass({ timeout: 20_000 });
     await member.page.goto("/talent/notifications?view=unread");
     await expect(
       member.page.getByRole("main").getByText("レベルアップにリアクションが届きました", { exact: true }).first()
     ).toBeVisible();
+    await expect(member.page.getByRole("main").getByText(
+      new RegExp(`${managerAccount.displayName}さん ほか1人が`)
+    )).toBeVisible();
 
     await member.page.goto(href);
 
@@ -80,7 +85,7 @@ test("レベルアップのリアクション、コメント、返信を通知�
     await expect(async () => {
       await managerPage.goto("/talent/notifications?view=unread");
       await expect(
-        managerPage.getByRole("main").getByText(/さんから返信が届きました/).first()
+        managerPage.getByRole("main").getByText(new RegExp(`${memberAccount.displayName}さん: `)).first()
       ).toBeVisible({ timeout: 1_000 });
     }).toPass({ timeout: 20_000 });
   } finally {

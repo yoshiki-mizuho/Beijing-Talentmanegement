@@ -12,6 +12,7 @@ import {
 import { getLevelUpFeed, listSkillMentorCandidates } from "@/modules/growth/application/growth-service";
 import { listRoleAchievements } from "@/modules/roles/application/role-achievement-service";
 import { getMemberScope } from "@/modules/members/application/member-scope";
+import { fallbackMemberProfile, resolveMemberProfiles } from "@/modules/members/application/member-directory";
 
 export async function getTeamDashboard(
   managerMemberId: string,
@@ -28,11 +29,16 @@ export async function getTeamDashboard(
   const roleAchievements = await listRoleAchievements({
     memberIds: data.reports.map((member) => member.id)
   });
+  const profiles = await resolveMemberProfiles([
+    managerMemberId,
+    ...data.reports.map((member) => member.id),
+  ]);
 
   const members: TeamMemberSnapshot[] = data.reports.map((member) => ({
     id: member.id,
-    name: member.name ?? "",
-    avatarUpdatedAt: member.avatarUpdatedAt,
+    name: (profiles.get(member.id) ?? fallbackMemberProfile(member.id)).name,
+    avatarUrl: (profiles.get(member.id) ?? fallbackMemberProfile(member.id)).avatarUrl,
+    avatarColor: (profiles.get(member.id) ?? fallbackMemberProfile(member.id)).avatarColor,
     createdAt: member.createdAt,
     targetRole: member.targetRole
       ? {
@@ -67,15 +73,18 @@ export async function getTeamDashboard(
       end: month.end,
       limit: 10
     }),
-    topMissingSkill ? countSkillExperts(topMissingSkill.skillId) : Promise.resolve(0),
+    topMissingSkill ? countSkillExperts(topMissingSkill.skillId, scope.memberIds) : Promise.resolve(0),
     listSkillMentorCandidates([...new Set(almostThere.map((item) => item.skillId))])
   ]);
+  const mentorProfiles = await resolveMemberProfiles(
+    mentorSkills.map((candidate) => candidate.member.id)
+  );
 
   return {
     manager: {
       id: data.id,
-      name: data.name ?? "",
-      departmentName: data.department?.name ?? "担当範囲"
+      name: (profiles.get(data.id) ?? fallbackMemberProfile(data.id)).name,
+      departmentName: (profiles.get(data.id) ?? fallbackMemberProfile(data.id)).nodeName ?? "所属なし"
     },
     members,
     month,
@@ -91,7 +100,13 @@ export async function getTeamDashboard(
     ),
     feed,
     topMissingSkillExpertCount,
-    mentorSkills,
+    mentorSkills: mentorSkills.map((candidate) => ({
+      ...candidate,
+      member: {
+        ...candidate.member,
+        name: (mentorProfiles.get(candidate.member.id) ?? fallbackMemberProfile(candidate.member.id)).name,
+      },
+    })),
     recentCheers: data.sentCheers.filter((cheer) =>
       cheer.createdAt >= new Date(now.getTime() - 30 * 86_400_000)
     ),

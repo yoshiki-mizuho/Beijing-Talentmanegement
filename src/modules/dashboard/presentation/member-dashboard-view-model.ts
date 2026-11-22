@@ -11,12 +11,13 @@ import {
 import type { MemberGrowthData } from "@/modules/growth/infrastructure/member-growth-repository";
 import type { BadgeCalculationData } from "@/modules/growth/infrastructure/badge-calculation-repository";
 import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
-import { displayMemberName } from "@/modules/members/domain/member-display";
+import { fallbackMemberProfile, type MemberProfile } from "@/modules/members/application/member-directory";
 
 export function buildMemberDashboardViewModel(
   data: MemberGrowthData & {
     badgeData?: BadgeCalculationData;
     roleAchievements?: { roleId: string }[];
+    memberProfiles?: Map<string, MemberProfile>;
   },
   now: Date = new Date()
 ) {
@@ -75,9 +76,9 @@ export function buildMemberDashboardViewModel(
 
   return {
     memberId: data.member.id,
-    memberName: displayMemberName(data.member.name),
+    memberName: (data.memberProfiles?.get(data.member.id) ?? fallbackMemberProfile(data.member.id)).name,
     managerName: data.member.manager
-      ? displayMemberName(data.member.manager.name)
+      ? (data.memberProfiles?.get(data.member.manager.id) ?? fallbackMemberProfile(data.member.manager.id)).name
       : null,
     approvedSkillCount,
     pendingAssessmentCount,
@@ -150,8 +151,7 @@ export function buildMemberDashboardViewModel(
       })),
       candidates: data.mentorCandidates.map((candidate) => ({
         id: candidate.id,
-        name: displayMemberName(candidate.name),
-        jobTitle: candidate.jobTitle,
+        name: (data.memberProfiles?.get(candidate.id) ?? fallbackMemberProfile(candidate.id)).name,
         status: candidate.status,
         skills: candidate.memberSkills.map((skill) => ({
           skillId: skill.skillId,
@@ -161,20 +161,19 @@ export function buildMemberDashboardViewModel(
       }))
     }).map((mentor) => ({
       ...mentor,
-      avatarUpdatedAt:
-        data.mentorCandidates
-          .find((candidate) => candidate.id === mentor.memberId)
-          ?.avatarUpdatedAt?.toISOString() ?? null
+      avatarUrl: (data.memberProfiles?.get(mentor.memberId) ?? fallbackMemberProfile(mentor.memberId)).avatarUrl,
+      avatarColor: (data.memberProfiles?.get(mentor.memberId) ?? fallbackMemberProfile(mentor.memberId)).avatarColor,
     })),
     cheers: data.receivedCheers.slice(0, 3).map((cheer) => ({
       id: cheer.id,
       senderId: cheer.fromMember.id,
-      senderName: displayMemberName(cheer.fromMember.name),
-      senderAvatarUpdatedAt: cheer.fromMember.avatarUpdatedAt?.toISOString() ?? null,
+      senderName: (data.memberProfiles?.get(cheer.fromMember.id) ?? fallbackMemberProfile(cheer.fromMember.id)).name,
+      senderAvatarUrl: (data.memberProfiles?.get(cheer.fromMember.id) ?? fallbackMemberProfile(cheer.fromMember.id)).avatarUrl,
+      senderAvatarColor: (data.memberProfiles?.get(cheer.fromMember.id) ?? fallbackMemberProfile(cheer.fromMember.id)).avatarColor,
       message: cheer.message,
       createdAt: cheer.createdAt.toISOString(),
       mentor: cheer.mentorMember && cheer.targetSkill ? {
-        name: displayMemberName(cheer.mentorMember.name),
+        name: (data.memberProfiles?.get(cheer.mentorMember.id) ?? fallbackMemberProfile(cheer.mentorMember.id)).name,
         skillName: cheer.targetSkill.name,
         level: cheer.mentorMember.memberSkills.find((skill) => skill.skillId === cheer.targetSkill?.id)?.level ?? null
       } : null

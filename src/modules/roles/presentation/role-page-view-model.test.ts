@@ -75,9 +75,9 @@ function member(
   return {
     id,
     name,
-    avatarUpdatedAt: null,
-    department: { name: "開発部" },
-    jobTitle: null,
+    avatarUrl: null,
+    avatarColor: null,
+    nodeName: "開発部",
     targetRoleId,
     memberSkills: [{ skillId: "skill-1", level, skill: { name: "設計" } }],
   };

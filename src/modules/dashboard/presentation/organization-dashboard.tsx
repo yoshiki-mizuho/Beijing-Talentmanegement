@@ -20,22 +20,22 @@ export function OrganizationDashboard({ model }: { model: Model }) {
   return (
     <div className="grid gap-5 lg:grid-cols-[250px_minmax(0,1fr)]">
       <aside className="self-start overflow-x-auto rounded-2xl border border-[var(--border)] bg-white p-3 lg:sticky lg:top-4">
-        <h2 className="px-2 pb-2 text-sm font-bold">部署</h2>
-        <nav aria-label="部署の階層" className="min-w-56 space-y-1">
+        <h2 className="px-2 pb-2 text-sm font-bold">組織</h2>
+        <nav aria-label="組織の階層" className="min-w-56 space-y-1">
           {model.showCompany ? (
             <Link
               href="/talent/dashboard?view=organization"
               aria-current={
-                model.scope.departmentId === null ? "page" : undefined
+                model.scope.nodeId === null ? "page" : undefined
               }
-              className={`flex min-h-11 items-center rounded-lg px-2 text-sm font-semibold ${model.scope.departmentId === null ? "bg-[var(--primary)] text-white" : "hover:bg-[var(--muted)]"}`}
+              className={`flex min-h-11 items-center rounded-lg px-2 text-sm font-semibold ${model.scope.nodeId === null ? "bg-[var(--primary)] text-white" : "hover:bg-[var(--muted)]"}`}
             >
               全社
               <span className="ml-auto text-xs">
-                {model.scope.departmentId === null
+                {model.scope.nodeId === null
                   ? model.scope.memberCount
                   : ""}
-                {model.scope.departmentId === null ? "名" : ""}
+                {model.scope.nodeId === null ? "名" : ""}
               </span>
             </Link>
           ) : null}
@@ -44,12 +44,12 @@ export function OrganizationDashboard({ model }: { model: Model }) {
               <Link
                 key={item.id}
                 href={
-                  `/talent/dashboard?view=organization&department=${item.id}` as Route
+                  `/talent/dashboard?view=organization&node=${item.id}` as Route
                 }
                 aria-current={
-                  item.id === model.scope.departmentId ? "page" : undefined
+                  item.id === model.scope.nodeId ? "page" : undefined
                 }
-                className={`flex min-h-11 items-center gap-2 rounded-lg px-2 text-sm ${item.id === model.scope.departmentId ? "bg-[var(--primary)] font-semibold text-white" : "hover:bg-[var(--muted)]"}`}
+                className={`flex min-h-11 items-center gap-2 rounded-lg px-2 text-sm ${item.id === model.scope.nodeId ? "bg-[var(--primary)] font-semibold text-white" : "hover:bg-[var(--muted)]"}`}
                 style={{ paddingLeft: `${8 + item.depth * 16}px` }}
               >
                 <span className="truncate">{item.name}</span>
@@ -313,8 +313,8 @@ function Comparisons({ model }: { model: Model }) {
     <Panel
       title={
         model.comparisonMode === "children"
-          ? "配下の部署を比べる"
-          : "並列の部署と比べる"
+          ? "配下の組織を比べる"
+          : "並列の組織と比べる"
       }
     >
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--muted-foreground)]">
@@ -329,9 +329,9 @@ function Comparisons({ model }: { model: Model }) {
             <Link
               key={item.id}
               href={
-                `/talent/dashboard?view=organization&department=${item.id}` as Route
+                `/talent/dashboard?view=organization&node=${item.id}` as Route
               }
-              className={`rounded-xl border bg-white p-4 ${item.id === model.scope.departmentId ? "border-2 border-[var(--primary)]" : "border-[var(--border)]"}`}
+              className={`rounded-xl border bg-white p-4 ${item.id === model.scope.nodeId ? "border-2 border-[var(--primary)]" : "border-[var(--border)]"}`}
             >
               <div className="flex justify-between">
                 <b>{item.name}</b>

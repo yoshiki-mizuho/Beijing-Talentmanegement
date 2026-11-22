@@ -108,6 +108,11 @@ export default async function NotificationsPage({
                   </div>
                   {notification.body && (
                     <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+                      {notification.actorName
+                        ? notification.type === "LEVEL_UP_REACTED" && notification.reactorCount
+                          ? `${notification.actorName}さん${notification.reactorCount > 1 ? ` ほか${notification.reactorCount - 1}人が` : "が"} `
+                          : `${notification.actorName}さん: `
+                        : ""}
                       {notification.body}
                     </p>
                   )}

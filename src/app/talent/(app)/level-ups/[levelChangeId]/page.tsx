@@ -4,7 +4,6 @@ import type { Route } from "next";
 
 import { getLevelUpThread } from "@/modules/growth/application/growth-service";
 import { LevelUpFeed } from "@/modules/growth/presentation/level-up-feed";
-import { displayMemberName } from "@/modules/members/domain/member-display";
 import { getCurrentSession } from "@/server/auth/session";
 import { MemberAvatar } from "@/shared/ui/member-avatar";
 import { PageHeader } from "@/shared/ui/page-header";
@@ -33,7 +32,7 @@ export default async function LevelUpThreadPage({
       type,
       count: matches.length,
       reactedByViewer: matches.some((reaction) => reaction.memberId === session.user.memberId),
-      memberNames: matches.map((reaction) => displayMemberName(reaction.member.name))
+      memberNames: matches.map((reaction) => reaction.member.name)
     };
   });
   const changedAt = thread.changedAt.toISOString();
@@ -45,8 +44,9 @@ export default async function LevelUpThreadPage({
         <div className="flex flex-wrap items-center gap-3 border-b border-[var(--border)] p-5">
           <MemberAvatar
             memberId={thread.member.id}
-            name={displayMemberName(thread.member.name)}
-            avatarUpdatedAt={thread.member.avatarUpdatedAt?.toISOString() ?? null}
+            name={thread.member.name}
+            avatarUrl={thread.member.avatarUrl}
+            avatarColor={thread.member.avatarColor}
             href={`/talent/people/${thread.member.id}`}
           />
           <div className="min-w-0">
@@ -54,7 +54,7 @@ export default async function LevelUpThreadPage({
               href={`/talent/people/${thread.member.id}` as Route}
               className="font-semibold hover:text-[var(--primary)] hover:underline"
             >
-              {displayMemberName(thread.member.name)}さん
+              {thread.member.name}さん
             </Link>
             <p className="text-sm text-[var(--muted-foreground)]">
               {thread.skill.name}・{thread.skill.category.name}・
@@ -72,8 +72,9 @@ export default async function LevelUpThreadPage({
           items={[{
             id: thread.id,
             memberId: thread.memberId,
-            memberName: displayMemberName(thread.member.name),
-            avatarUpdatedAt: thread.member.avatarUpdatedAt?.toISOString() ?? null,
+            memberName: thread.member.name,
+            avatarUrl: thread.member.avatarUrl,
+            avatarColor: thread.member.avatarColor,
             skillName: thread.skill.name,
             toLevel: thread.toLevel,
             changedAt,
@@ -82,8 +83,9 @@ export default async function LevelUpThreadPage({
             comments: thread.comments.map((comment) => ({
               id: comment.id,
               authorMemberId: comment.authorMemberId,
-              authorName: displayMemberName(comment.authorMember.name),
-              authorAvatarUpdatedAt: comment.authorMember.avatarUpdatedAt?.toISOString() ?? null,
+              authorName: comment.authorMember.name,
+              authorAvatarUrl: comment.authorMember.avatarUrl,
+              authorAvatarColor: comment.authorMember.avatarColor,
               body: comment.body,
               createdAt: comment.createdAt.toISOString()
             }))

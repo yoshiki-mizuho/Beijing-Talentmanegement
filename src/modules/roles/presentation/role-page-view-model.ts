@@ -23,9 +23,9 @@ type RoleSource = {
 type MemberSource = {
   id: string;
   name: string;
-  avatarUpdatedAt: Date | null;
-  department: { name: string } | null;
-  jobTitle: string | null;
+  avatarUrl: string | null;
+  avatarColor: string | null;
+  nodeName: string | null;
   targetRoleId: string | null;
   memberSkills: { skillId: string; level: number; skill: { name: string } }[];
 };
@@ -79,9 +79,9 @@ export function buildRolePageViewModel(input: {
               .map(({ member, result, recorded }) => ({
                 id: member.id,
                 name: member.name,
-                avatarUpdatedAt: member.avatarUpdatedAt?.toISOString() ?? null,
-                departmentName: member.department?.name ?? "所属なし",
-                jobTitle: member.jobTitle,
+                avatarUrl: member.avatarUrl,
+                avatarColor: member.avatarColor,
+                nodeName: member.nodeName ?? "所属なし",
                 isTarget: member.targetRoleId === role.id,
                 achieved: recorded,
                 requirementsUpdated: recorded && !result.achieved,

@@ -9,26 +9,35 @@ export type MemberScope = {
   memberIds: string[];
   activeMemberCount: number;
   name: string;
-  departmentId: string | null;
+  nodeId: string | null;
+  nodes: Array<{ id: string; name: string; parentId: string | null }>;
 };
 
 async function platformScope(role: AuthRole, platformUserId: string) {
   if (role === "ADMIN") {
     const organization = await getOrganization(platformUserId);
-    return { members: organization.members, name: "全社" };
+    return { members: organization.members, nodes: organization.nodes, name: "全社" };
   }
   if (role === "MANAGER") {
-    const leaderScope = await getLeaderScope(platformUserId);
+    const [leaderScope, organization] = await Promise.all([
+      getLeaderScope(platformUserId),
+      getOrganization(platformUserId),
+    ]);
     const members = new Map(leaderScope.members);
     if (!members.has(platformUserId)) {
       members.set(platformUserId, await memberScopeRepository.platformUserFallback(platformUserId));
     }
-    return { members, name: "担当範囲" };
+    return {
+      members,
+      nodes: organization.nodes.filter((node) => leaderScope.nodeIds.includes(node.id)),
+      name: "担当範囲",
+    };
   }
   return {
     members: new Map<string, PlatformUser>([
       [platformUserId, await memberScopeRepository.platformUserFallback(platformUserId)]
     ]),
+    nodes: [],
     name: "本人"
   };
 }
@@ -36,21 +45,42 @@ async function platformScope(role: AuthRole, platformUserId: string) {
 export const getMemberScope = cache(async function getMemberScope(
   role: AuthRole,
   memberId: string,
-  _requestedDepartmentId?: string
+  requestedNodeId?: string
 ): Promise<MemberScope> {
-  void _requestedDepartmentId;
   const viewer = await memberScopeRepository.getScopeViewer(memberId);
   if (!viewer.platformUserId) {
-    return { memberIds: [viewer.id], activeMemberCount: 1, name: "本人", departmentId: null };
+    return { memberIds: [viewer.id], activeMemberCount: 1, name: "本人", nodeId: null, nodes: [] };
   }
 
   const scope = await platformScope(role, viewer.platformUserId);
-  const members = await memberScopeRepository.ensureScopeMembers(scope.members);
+  const selectedNode = requestedNodeId
+    ? scope.nodes.find((node) => node.id === requestedNodeId)
+    : null;
+  const descendantIds = selectedNode ? new Set([selectedNode.id]) : null;
+  if (descendantIds) {
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const node of scope.nodes) {
+        if (node.parentId && descendantIds.has(node.parentId) && !descendantIds.has(node.id)) {
+          descendantIds.add(node.id);
+          changed = true;
+        }
+      }
+    }
+  }
+  const scopedPlatformMembers = descendantIds
+    ? new Map([...scope.members].filter(([, member]) =>
+        member.organizationNodeId !== null && descendantIds.has(member.organizationNodeId)
+      ))
+    : scope.members;
+  const members = await memberScopeRepository.ensureScopeMembers(scopedPlatformMembers);
   return {
     memberIds: members.map((member) => member.id),
-    activeMemberCount: [...scope.members.values()].filter((member) => member.status === "ACTIVE").length,
-    name: scope.name,
-    departmentId: null
+    activeMemberCount: [...scopedPlatformMembers.values()].filter((member) => member.status === "ACTIVE").length,
+    name: selectedNode?.name ?? scope.name,
+    nodeId: selectedNode?.id ?? null,
+    nodes: scope.nodes.map((node) => ({ id: node.id, name: node.name, parentId: node.parentId })),
   };
 });
 

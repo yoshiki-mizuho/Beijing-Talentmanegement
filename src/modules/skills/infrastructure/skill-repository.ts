@@ -318,24 +318,18 @@ export async function listActiveSkillsForSkillSheet() {
   });
 }
 
-export async function listPopularSkillsForMember(memberId: string) {
-  const member = await prisma.member.findUnique({
-    where: { id: memberId },
-    select: { departmentId: true, department: { select: { name: true } } }
-  });
-  const departmentCounts = member?.departmentId
-    ? await countPopularSkills({ departmentId: member.departmentId })
-    : [];
-  const useDepartment = departmentCounts.reduce(
+export async function listPopularSkillsForMember(memberIds: string[], nodeName: string | null) {
+  const nodeCounts = await countPopularSkills(memberIds);
+  const useNode = nodeCounts.reduce(
     (total, item) => total + item.count,
     0
   ) >= 3;
-  const counts = useDepartment
-    ? departmentCounts
-    : await countPopularSkills({});
+  const counts = useNode
+    ? nodeCounts
+    : await countPopularSkills();
 
   return {
-    departmentName: useDepartment ? member?.department?.name ?? null : null,
+    departmentName: useNode ? nodeName : null,
     skillIds: counts
       .sort((left, right) => right.count - left.count || left.name.localeCompare(right.name, "ja"))
       .slice(0, 8)
@@ -343,7 +337,7 @@ export async function listPopularSkillsForMember(memberId: string) {
   };
 }
 
-async function countPopularSkills({ departmentId }: { departmentId?: string }) {
+async function countPopularSkills(memberIds?: string[]) {
   const skills = await prisma.skill.findMany({
     where: {
       isActive: true,
@@ -351,7 +345,7 @@ async function countPopularSkills({ departmentId }: { departmentId?: string }) {
         some: {
           member: {
             status: MemberStatus.ACTIVE,
-            ...(departmentId ? { departmentId } : {})
+            ...(memberIds ? { id: { in: memberIds } } : {})
           }
         }
       }
@@ -365,7 +359,7 @@ async function countPopularSkills({ departmentId }: { departmentId?: string }) {
             where: {
               member: {
                 status: MemberStatus.ACTIVE,
-                ...(departmentId ? { departmentId } : {})
+                ...(memberIds ? { id: { in: memberIds } } : {})
               }
             }
           }

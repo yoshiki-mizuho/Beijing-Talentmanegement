@@ -108,7 +108,8 @@ export function MemberTeamGoalCard({ goal }: { goal: TeamGoalCardData }) {
           <MemberAvatar
             memberId={goal.manager.id}
             name={goal.manager.name}
-            avatarUpdatedAt={goal.manager.avatarUpdatedAt}
+            avatarUrl={goal.manager.avatarUrl}
+            avatarColor={goal.manager.avatarColor}
           />
           <p className="text-sm text-[var(--muted-foreground)]">{goal.note}</p>
         </div>

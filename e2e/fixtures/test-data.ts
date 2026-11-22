@@ -41,6 +41,12 @@ export function createE2eTestData() {
   const platformNodeIds: string[] = [];
   const platformRootNodeId = crypto.randomUUID();
   let platformRootCreated = false;
+  const platformNodesByDepartment = new Map<string, {
+    id: string;
+    name: string;
+    parentId: string;
+    leaderUserIds: string[];
+  }>();
   const platformPost = (path: string, body: object) => fetch(`http://127.0.0.1:50052${path}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -61,6 +67,9 @@ export function createE2eTestData() {
       appendUnique(ids.categoryIds, input.categoryIds ?? []);
       appendUnique(ids.roleIds, input.roleIds ?? []);
       appendUnique(ids.departmentIds, input.departmentIds ?? []);
+    },
+    platformNodeId(departmentId: string) {
+      return platformNodesByDepartment.get(departmentId)?.id ?? null;
     },
     async trackCreated(input: {
       memberEmails?: string[];
@@ -88,23 +97,6 @@ export function createE2eTestData() {
         data: { code: value, name: value, parentDepartmentId },
       });
       ids.departmentIds.push(department.id);
-      return department;
-    },
-    async createMember(input: {
-      label: string;
-      departmentId: string;
-      role?: AuthRole;
-      managerId?: string;
-      targetRoleId?: string;
-      createdAt?: Date;
-      lastRecapSeenMonth?: string | null;
-      platformStatus?: "ACTIVE" | "INACTIVE";
-    }): Promise<{ member: Member; credential: DemoCredential }> {
-      const value = unique(input.label);
-      // ラベルは日本語のことがあるので、メールアドレスは接頭辞と連番だけで作る（形式チェックを通すため）
-      const email = `e2e-${prefix.toLowerCase()}-${sequence}@example.com`;
-      const platformUserId = crypto.randomUUID();
-      const nodeId = crypto.randomUUID();
       if (!platformRootCreated) {
         await platformPost("/__fake/nodes", {
           tenantId,
@@ -120,27 +112,55 @@ export function createE2eTestData() {
         platformNodeIds.push(platformRootNodeId);
         platformRootCreated = true;
       }
+      const node = {
+        id: crypto.randomUUID(),
+        name: value,
+        parentId: parentDepartmentId
+          ? platformNodesByDepartment.get(parentDepartmentId)?.id ?? platformRootNodeId
+          : platformRootNodeId,
+        leaderUserIds: [] as string[]
+      };
+      await platformPost("/__fake/nodes", {
+        tenantId,
+        node: { ...node, levelNumber: 1, levelName: "E2E" }
+      });
+      platformNodesByDepartment.set(department.id, node);
+      platformNodeIds.push(node.id);
+      return department;
+    },
+    async createMember(input: {
+      label: string;
+      departmentId: string;
+      role?: AuthRole;
+      managerId?: string;
+      targetRoleId?: string;
+      createdAt?: Date;
+      lastRecapSeenMonth?: string | null;
+      platformStatus?: "ACTIVE" | "INACTIVE";
+      avatarUrl?: string | null;
+      avatarColor?: string | null;
+    }): Promise<{ member: Member; credential: DemoCredential; displayName: string }> {
+      const value = unique(input.label);
+      // ラベルは日本語のことがあるので、メールアドレスは接頭辞と連番だけで作る（形式チェックを通すため）
+      const email = `e2e-${prefix.toLowerCase()}-${sequence}@example.com`;
+      const platformUserId = crypto.randomUUID();
+      const platformNode = platformNodesByDepartment.get(input.departmentId);
+      if (!platformNode) throw new Error("基盤の組織ノードが登録されていません。");
       const manager = input.managerId
         ? await prisma.member.findUnique({
             where: { id: input.managerId },
             select: { platformUserId: true }
           })
         : null;
-      const leaderUserIds = input.role === "MANAGER"
-        ? [platformUserId]
-        : manager?.platformUserId
-          ? [manager.platformUserId]
-          : [];
+      const leaderUserIds = [...new Set([
+        ...platformNode.leaderUserIds,
+        ...(input.role === "MANAGER" ? [platformUserId] : []),
+        ...(manager?.platformUserId ? [manager.platformUserId] : [])
+      ])];
+      platformNode.leaderUserIds = leaderUserIds;
       await platformPost("/__fake/nodes", {
         tenantId,
-        node: {
-          id: nodeId,
-          name: value,
-          levelNumber: 1,
-          levelName: "E2E",
-          parentId: platformRootNodeId,
-          leaderUserIds
-        }
+        node: { ...platformNode, levelNumber: 1, levelName: "E2E" }
       });
       await platformPost("/__fake/users", {
         tenantId,
@@ -150,12 +170,11 @@ export function createE2eTestData() {
           email,
           role: input.role === "ADMIN" ? "ADMIN" : "MEMBER",
           status: input.platformStatus ?? "ACTIVE",
-          organizationNodeId: nodeId,
-          avatarColor: null,
-          avatarUrl: null
+          organizationNodeId: platformNode.id,
+          avatarColor: input.avatarColor ?? null,
+          avatarUrl: input.avatarUrl ?? null
         }
       });
-      platformNodeIds.push(nodeId);
       platformUserIds.push(platformUserId);
       const member = await prisma.member.create({
         data: {
@@ -175,6 +194,7 @@ export function createE2eTestData() {
       ids.memberIds.push(member.id);
       return {
         member,
+        displayName: value,
         credential: {
           platformUserId,
           platformRole: input.role === "ADMIN" ? "ADMIN" : "MEMBER"

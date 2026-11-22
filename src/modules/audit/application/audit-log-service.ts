@@ -1,5 +1,8 @@
 import type { Prisma } from "@prisma/client";
-import { displayMemberName } from "@/modules/members/domain/member-display";
+import {
+  fallbackMemberProfile,
+  resolveMemberProfiles
+} from "@/modules/members/application/member-directory";
 import { AUDIT_ACTION } from "../domain/audit-action";
 import {
   buildActionDescription,
@@ -49,10 +52,18 @@ export async function listAuditLogs(
     loadAuditLogs(query),
     loadAuditActors(),
   ]);
-  const items = await buildListItems(logs);
+  const memberIds = [
+    ...actors.map((actor) => actor.id),
+    ...logs.flatMap((log) => log.actorMemberId ? [log.actorMemberId] : [])
+  ];
+  const profiles = await resolveMemberProfiles(memberIds);
+  const items = await buildListItems(logs, profiles);
   return {
     query: serializeQuery(query),
-    actors,
+    actors: actors.map((actor) => ({
+      id: actor.id,
+      name: (profiles.get(actor.id) ?? fallbackMemberProfile(actor.id)).name
+    })),
     total,
     page,
     pageCount,
@@ -62,11 +73,16 @@ export async function listAuditLogs(
 
 async function buildListItems(
   logs: Awaited<ReturnType<typeof loadAuditLogs>>["logs"],
+  actorProfiles: Awaited<ReturnType<typeof resolveMemberProfiles>>
 ) {
   const lookup = await loadAuditNameMaps(logs);
+  const memberProfiles = await resolveMemberProfiles(lookup.members.map((member) => member.id));
   const names: NameMaps = {
     members: Object.fromEntries(
-      lookup.members.map((x) => [x.id, displayMemberName(x.name)])
+      lookup.members.map((x) => [
+        x.id,
+        (memberProfiles.get(x.id) ?? fallbackMemberProfile(x.id)).name
+      ])
     ),
     departments: Object.fromEntries(
       lookup.departments.map((x) => [x.id, x.name]),
@@ -139,9 +155,11 @@ async function buildListItems(
       occurredAt: log.occurredAt.toISOString(),
       actor: log.actorMember
         ? {
-            ...log.actorMember,
-            avatarUpdatedAt:
-              log.actorMember.avatarUpdatedAt?.toISOString() ?? null,
+            id: log.actorMember.id,
+            name: (actorProfiles.get(log.actorMember.id) ??
+              fallbackMemberProfile(log.actorMember.id)).name,
+            avatarUrl: actorProfiles.get(log.actorMember.id)?.avatarUrl ?? null,
+            avatarColor: actorProfiles.get(log.actorMember.id)?.avatarColor ?? null
           }
         : null,
       action: log.action,

@@ -78,10 +78,10 @@ function DashboardViewSwitch({ current }: { current: DashboardView }) {
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; month?: string; department?: string }>;
+  searchParams: Promise<{ view?: string; month?: string; node?: string }>;
 }) {
   const session = await getCurrentSession();
-  const { view, month, department } = await searchParams;
+  const { view, month, node } = await searchParams;
   const management =
     session?.user.role === "ADMIN" || session?.user.role === "MANAGER";
   const personal =
@@ -108,7 +108,6 @@ export default async function DashboardPage({
           teamGoalCelebration={teamGoalCelebration}
           levelUpFeed={feed.map((item) => ({
             ...item,
-            avatarUpdatedAt: item.avatarUpdatedAt?.toISOString() ?? null,
             changedAt: item.changedAt.toISOString(),
             comments: item.comments.map((comment) => ({
               ...comment,
@@ -139,7 +138,7 @@ export default async function DashboardPage({
       );
   }
   if (!session?.user.memberId || !management) redirect("/talent/unregistered");
-  const organization = await getDashboardSummary(session.user.role, session.user.memberId, department);
+  const organization = await getDashboardSummary(session.user.role, session.user.memberId, node);
   return (
     <div className="space-y-5">
       <DashboardViewSwitch current="organization" />

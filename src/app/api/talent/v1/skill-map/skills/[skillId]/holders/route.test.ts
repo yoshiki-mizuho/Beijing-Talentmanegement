@@ -35,7 +35,7 @@ describe("GET /api/talent/v1/skill-map/skills/[skillId]/holders", () => {
     expect(mocks.listSkillHolders).not.toHaveBeenCalled();
   });
 
-  it("uses an ADMIN-selected department when loading holders", async () => {
+  it("uses an ADMIN-selected organization node when loading holders", async () => {
     mocks.authorizeApi.mockResolvedValue({
       session: { user: { role: "ADMIN", memberId: "admin-1" } }
     });
@@ -43,7 +43,7 @@ describe("GET /api/talent/v1/skill-map/skills/[skillId]/holders", () => {
 
     await GET(
       new NextRequest(
-        "http://localhost/api/talent/v1/skill-map/skills/skill-1/holders?department=department-1"
+        "http://localhost/api/talent/v1/skill-map/skills/skill-1/holders?node=node-1"
       ),
       { params: Promise.resolve({ skillId: "skill-1" }) }
     );
@@ -52,7 +52,7 @@ describe("GET /api/talent/v1/skill-map/skills/[skillId]/holders", () => {
       "ADMIN",
       "admin-1",
       "skill-1",
-      "department-1"
+      "node-1"
     );
   });
 });

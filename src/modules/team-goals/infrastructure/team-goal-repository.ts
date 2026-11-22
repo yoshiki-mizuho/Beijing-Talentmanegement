@@ -80,7 +80,7 @@ export function findLatestGoals(managerId: string) {
     orderBy: { createdAt: "desc" },
     include: {
       skill: { select: { name: true } },
-      manager: { select: { id: true, name: true, avatarUpdatedAt: true } }
+      manager: { select: { id: true } }
     }
   });
 }

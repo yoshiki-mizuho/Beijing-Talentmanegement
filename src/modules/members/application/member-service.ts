@@ -17,8 +17,11 @@ import {
   skillAssessmentReviewInputSchema
 } from "@/modules/members/domain/skill-assessment-schema";
 import * as memberRepository from "@/modules/members/infrastructure/member-repository";
-import { buildDepartmentTree } from "@/modules/members/domain/department-hierarchy";
-import { displayMemberName } from "@/modules/members/domain/member-display";
+import {
+  fallbackMemberProfile,
+  resolveMemberProfiles,
+  type MemberProfile
+} from "@/modules/members/application/member-directory";
 import { getMemberScope } from "@/modules/members/application/member-scope";
 import { paginateItems } from "@/modules/members/domain/member-page";
 import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
@@ -27,17 +30,26 @@ import type {
   MemberListItem,
   MemberRow
 } from "@/modules/members/presentation/member-presentation-types";
+import { getCurrentSession } from "@/server/auth/session";
+import { getLeaderScope, getOrganization } from "@/server/platform/directory";
 
 export const MEMBER_PAGE_SIZE = 20;
 
 export async function listDepartments() {
-  return buildDepartmentTree(await memberRepository.listDepartments()).map(
-    ({ pathLabel, ...department }) => ({ ...department, name: pathLabel })
-  );
-}
-
-export function listManagerCandidates() {
-  return memberRepository.listManagerCandidates();
+  const session = await getCurrentSession();
+  if (!session) return [];
+  try {
+    const organization = await getOrganization(session.user.platformUserId);
+    const allowedNodeIds = session.user.role === "ADMIN"
+      ? null
+      : new Set((await getLeaderScope(session.user.platformUserId)).nodeIds);
+    return organization.nodes
+      .filter((node) => !allowedNodeIds || allowedNodeIds.has(node.id))
+      .map((node) => ({ id: node.id, name: node.name }))
+      .sort((left, right) => left.name.localeCompare(right.name, "ja"));
+  } catch {
+    return [];
+  }
 }
 
 export function listMembers(input?: MemberSearchInput, memberIds?: string[]) {
@@ -53,14 +65,58 @@ export async function listMemberPage(
 ): Promise<MemberListData> {
   const parsed = input ? memberSearchSchema.parse(input) : memberSearchSchema.parse({});
   const members = await memberRepository.listMembers(parsed, memberIds);
-  const filtered = members.filter((member) => matchesTargetRole(member, parsed.targetRole));
+  const profiles = await resolveMemberProfiles(members.map((member) => member.id));
+  const selectedNodeIds = await organizationNodeAndDescendants(parsed.nodeId);
+  const query = parsed.q?.toLocaleLowerCase("ja") ?? "";
+  const filtered = members
+    .filter((member) => matchesTargetRole(member, parsed.targetRole))
+    .filter((member) => {
+      const profile = profiles.get(member.id) ?? fallbackMemberProfile(member.id);
+      return (!query || profile.name.toLocaleLowerCase("ja").includes(query)) &&
+        (!selectedNodeIds || (profile.nodeId !== null && selectedNodeIds.has(profile.nodeId)));
+    })
+    .sort((left, right) => {
+      const leftName = profiles.get(left.id)?.name ?? "";
+      const rightName = profiles.get(right.id)?.name ?? "";
+      return leftName.localeCompare(rightName, "ja") || left.id.localeCompare(right.id);
+    });
   const result = paginateItems(filtered, parsed.page ?? 1, MEMBER_PAGE_SIZE);
-  return { ...result, items: result.items.map(toMemberListItem) };
+  return {
+    ...result,
+    items: result.items.map((member) =>
+      toMemberListItem(member, profiles.get(member.id) ?? fallbackMemberProfile(member.id))
+    )
+  };
+}
+
+async function organizationNodeAndDescendants(nodeId?: string) {
+  if (!nodeId) return null;
+  const session = await getCurrentSession();
+  if (!session) return new Set<string>();
+  try {
+    const organization = await getOrganization(session.user.platformUserId);
+    const selected = new Set([nodeId]);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const node of organization.nodes) {
+        if (node.parentId && selected.has(node.parentId) && !selected.has(node.id)) {
+          selected.add(node.id);
+          changed = true;
+        }
+      }
+    }
+    return selected;
+  } catch {
+    return new Set<string>();
+  }
 }
 
 export async function getMemberDetail(memberId: string): Promise<MemberRow | null> {
   const member = await memberRepository.getMemberById(memberId);
-  return member ? toMemberRow(member) : null;
+  if (!member) return null;
+  const profiles = await resolveMemberProfiles([member.id]);
+  return toMemberRow(member, profiles.get(member.id) ?? fallbackMemberProfile(member.id));
 }
 
 type TargetRoleFilterMember = {
@@ -93,9 +149,10 @@ export function matchesTargetRole(
 }
 
 function toMemberListItem(
-  member: Awaited<ReturnType<typeof memberRepository.listMembers>>[number]
+  member: Awaited<ReturnType<typeof memberRepository.listMembers>>[number],
+  profile: MemberProfile
 ): MemberListItem {
-  return omitMemberDetailFields(toMemberRow(member));
+  return omitMemberDetailFields(toMemberRow(member, profile));
 }
 
 export function omitMemberDetailFields(member: MemberRow): MemberListItem {
@@ -112,19 +169,21 @@ export function omitMemberDetailFields(member: MemberRow): MemberListItem {
 }
 
 function toMemberRow(
-  member: Awaited<ReturnType<typeof memberRepository.listMembers>>[number]
+  member: Awaited<ReturnType<typeof memberRepository.listMembers>>[number],
+  profile: MemberProfile
 ): MemberRow {
   return {
     id: member.id,
-    employeeNo: member.employeeNo ?? "",
-    name: displayMemberName(member.name),
-    avatarUpdatedAt: member.avatarUpdatedAt?.toISOString() ?? null,
-    email: member.email ?? "",
+    name: profile.name,
+    avatarUrl: profile.avatarUrl,
+    avatarColor: profile.avatarColor,
+    email: profile.email,
     profile: member.profile,
     status: member.status,
-    jobTitle: member.jobTitle,
-    departmentId: member.departmentId ?? "",
-    department: member.department ?? { id: "", name: "", code: "", tenantId: "", parentDepartmentId: null, isActive: true, createdAt: new Date(0), updatedAt: new Date(0) },
+    nodeId: profile.nodeId,
+    organizationNode: profile.nodeId
+      ? { id: profile.nodeId, name: profile.nodeName ?? "所属未設定" }
+      : null,
     managerId: null,
     manager: null,
     targetRoleId: member.targetRoleId,

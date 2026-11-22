@@ -2,10 +2,10 @@ export type SkillApprovalRow = {
   id: string;
   memberId: string;
   memberName: string;
-  avatarUpdatedAt: string | null;
-  departmentName: string;
+  avatarUrl: string | null;
+  avatarColor: string | null;
+  nodeName: string;
   targetRoleName: string | null;
-  jobTitle: string | null;
   skillName: string;
   categoryName: string;
   currentLevel: number | null;
@@ -21,7 +21,7 @@ export type SkillApprovalRow = {
     label: string;
     detail: string;
   }>;
-  departmentDistribution: SkillApprovalDistribution;
+  nodeDistribution: SkillApprovalDistribution;
   targetRoleDistribution: SkillApprovalDistribution | null;
   history: Array<{
     id: string;

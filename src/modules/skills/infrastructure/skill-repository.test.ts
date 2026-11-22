@@ -114,7 +114,7 @@ describe("listPopularSkillsForMember", () => {
       { id: "skill-a", name: "React", _count: { memberSkills: 1 } }
     ]);
 
-    await expect(listPopularSkillsForMember("member-1")).resolves.toEqual({
+    await expect(listPopularSkillsForMember(["member-1"], "開発部")).resolves.toEqual({
       departmentName: "開発部",
       skillIds: ["skill-b", "skill-a"]
     });
@@ -131,7 +131,7 @@ describe("listPopularSkillsForMember", () => {
         { id: "skill-b", name: "設計", _count: { memberSkills: 4 } }
       ]);
 
-    await expect(listPopularSkillsForMember("member-1")).resolves.toEqual({
+    await expect(listPopularSkillsForMember(["member-1"], "開発部")).resolves.toEqual({
       departmentName: null,
       skillIds: ["skill-c", "skill-b"]
     });

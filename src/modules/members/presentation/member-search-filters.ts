@@ -1,6 +1,6 @@
 export type MemberSearchFilters = {
   q: string;
-  departmentId: string;
+  nodeId: string;
   skillId: string;
   minLevel: string;
   roleId: string;
@@ -9,7 +9,7 @@ export type MemberSearchFilters = {
 
 export const emptyMemberSearchFilters: MemberSearchFilters = {
   q: "",
-  departmentId: "",
+  nodeId: "",
   skillId: "",
   minLevel: "",
   roleId: "",

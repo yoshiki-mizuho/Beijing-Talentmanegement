@@ -323,3 +323,6 @@ flowchart TD
 | 提案用スキルシートの Excel 出力 | 可 | 担当範囲のみ可 | 不可 | `proposal_sheet.export` |
 
 ひな形の監査対象は `SkillSheetTemplate`、出力の監査対象は `ProposalSheetDraft` とします。ファイルの内容は監査ログへ保存しません。
+# H-4c の監査表示
+
+メンバーに関する監査ログの before / after には氏名・メール・社員番号を保存しません。操作した人と対象者は Member ID を保存し、表示時に基盤の利用者情報から氏名を解決します。氏名検索も基盤の表示プロフィールから Member ID を求めて絞り込みます。

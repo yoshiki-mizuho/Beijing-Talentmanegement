@@ -372,7 +372,6 @@ export function calculateCategoryAverages(
 export type MentorCandidate = {
   id: string;
   name: string;
-  jobTitle: string | null;
   status: string;
   skills: ReadonlyArray<{ skillId: string; skillName: string; level: number }>;
 };
@@ -407,7 +406,6 @@ export function findPotentialMentors(input: {
         ? [{
             memberId: candidate.id,
             name: candidate.name,
-            jobTitle: candidate.jobTitle,
             skillId: match.skillId,
             skillName: match.skillName,
             level: match.level,
@@ -425,7 +423,6 @@ export function findPotentialMentors(input: {
     .map((mentor) => ({
       memberId: mentor.memberId,
       name: mentor.name,
-      jobTitle: mentor.jobTitle,
       skillId: mentor.skillId,
       skillName: mentor.skillName,
       level: mentor.level

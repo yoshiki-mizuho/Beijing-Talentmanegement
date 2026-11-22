@@ -37,9 +37,8 @@ const reactionDefinitions = [
 
 export type SerializableFeedItem = Omit<
   LevelUpFeedItem,
-  "avatarUpdatedAt" | "changedAt" | "comments"
+  "changedAt" | "comments"
 > & {
-  avatarUpdatedAt: string | null;
   changedAt: string;
   comments: Array<Omit<LevelUpFeedItem["comments"][number], "createdAt"> & { createdAt: string }>;
   reactions: Array<LevelUpFeedItem["reactions"][number] & { memberNames?: string[] }>;
@@ -138,7 +137,8 @@ function FeedItem({
         id: `optimistic-${Date.now()}`,
         authorMemberId: viewer.memberId,
         authorName: viewer.memberName,
-        authorAvatarUpdatedAt: null,
+        authorAvatarUrl: null,
+        authorAvatarColor: null,
         body: body.trim(),
         createdAt: new Date().toISOString()
       }]);
@@ -159,7 +159,8 @@ function FeedItem({
           <MemberAvatar
             memberId={initialItem.memberId}
             name={initialItem.memberName}
-            avatarUpdatedAt={initialItem.avatarUpdatedAt}
+            avatarUrl={initialItem.avatarUrl}
+            avatarColor={initialItem.avatarColor}
             href={`/talent/people/${initialItem.memberId}`}
           />
         ) : null}

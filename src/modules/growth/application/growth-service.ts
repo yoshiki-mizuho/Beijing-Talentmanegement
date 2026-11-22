@@ -30,6 +30,11 @@ import { resolveSkillLevelDescription } from "@/modules/skills/domain/skill-leve
 import { AuthorizationError } from "@/server/auth/authorization";
 import { UserFacingError } from "@/shared/lib/user-facing-error";
 import { getMemberScope, memberIsInScope } from "@/modules/members/application/member-scope";
+import {
+  fallbackMemberProfile,
+  listSameNodeMemberIds,
+  resolveMemberProfiles,
+} from "@/modules/members/application/member-directory";
 
 export async function addLevelUpReaction(
   input: unknown,
@@ -62,12 +67,12 @@ export async function getDepartmentLevelUpFeed(
   viewerMemberId: string,
   limit = 5
 ) {
-  const memberIds = await growthRepository.listDepartmentMemberIds(viewerMemberId);
-  return addFirstMoverFlags(await growthRepository.listLevelUpFeed({
+  const memberIds = await listSameNodeMemberIds(viewerMemberId);
+  return addFirstMoverFlags(await enrichLevelUpFeed(await growthRepository.listLevelUpFeed({
     memberIds,
     viewerMemberId,
     limit
-  }));
+  })));
 }
 
 export async function getLevelUpFeed(input: {
@@ -77,7 +82,9 @@ export async function getLevelUpFeed(input: {
   end: Date;
   limit?: number;
 }) {
-  return addFirstMoverFlags(await growthRepository.listLevelUpFeed({ ...input, limit: input.limit ?? 10 }));
+  return addFirstMoverFlags(await enrichLevelUpFeed(
+    await growthRepository.listLevelUpFeed({ ...input, limit: input.limit ?? 10 })
+  ));
 }
 
 export async function getLevelUpThread(
@@ -91,8 +98,46 @@ export async function getLevelUpThread(
   if (!access || !memberIsInScope(scope, access.memberId)) return null;
   const thread = await growthRepository.getLevelUpThread(levelChangeId);
   if (!thread) return null;
+  const profiles = await resolveMemberProfiles([
+    thread.member.id,
+    ...thread.reactions.map((reaction) => reaction.memberId),
+    ...thread.comments.map((comment) => comment.authorMemberId),
+  ]);
+  const profile = (id: string) => profiles.get(id) ?? fallbackMemberProfile(id);
   const ids = await listFirstMoverLevelChangeIds({ levelChangeIds: [levelChangeId] });
-  return { ...thread, isFirstMover: ids.includes(levelChangeId) };
+  return {
+    ...thread,
+    member: { ...thread.member, ...profile(thread.member.id) },
+    reactions: thread.reactions.map((reaction) => ({
+      ...reaction,
+      member: profile(reaction.memberId),
+    })),
+    comments: thread.comments.map((comment) => ({
+      ...comment,
+      authorMember: profile(comment.authorMemberId),
+    })),
+    isFirstMover: ids.includes(levelChangeId),
+  };
+}
+
+async function enrichLevelUpFeed<T extends Awaited<ReturnType<typeof growthRepository.listLevelUpFeed>>>(items: T) {
+  const profiles = await resolveMemberProfiles([
+    ...items.map((item) => item.memberId),
+    ...items.flatMap((item) => item.comments.map((comment) => comment.authorMemberId)),
+  ]);
+  const profile = (id: string) => profiles.get(id) ?? fallbackMemberProfile(id);
+  return items.map((item) => ({
+    ...item,
+    memberName: profile(item.memberId).name,
+    avatarUrl: profile(item.memberId).avatarUrl,
+    avatarColor: profile(item.memberId).avatarColor,
+    comments: item.comments.map((comment) => ({
+      ...comment,
+      authorName: profile(comment.authorMemberId).name,
+      authorAvatarUrl: profile(comment.authorMemberId).avatarUrl,
+      authorAvatarColor: profile(comment.authorMemberId).avatarColor,
+    })),
+  }));
 }
 
 async function addFirstMoverFlags<T extends { id: string }>(items: T[]) {
@@ -173,6 +218,13 @@ export async function getLevelUpCelebrations(memberId: string) {
     listMemberRoleAchievements(memberId)
   ]);
   if (!growthData.member) return [];
+  const reviewerIds = notifications.flatMap((notification) => {
+    const assessment = notification.skillSelfAssessment;
+    const levelChange = notification.skillLevelChange ?? assessment?.skillLevelChanges[0];
+    return [levelChange?.changedByMember?.id, assessment?.reviewedByMember?.id]
+      .filter((id): id is string => Boolean(id));
+  });
+  const reviewerProfiles = await resolveMemberProfiles(reviewerIds);
 
   const achievements = calculateBadgeAchievements({
     ...badgeData,
@@ -216,9 +268,11 @@ export async function getLevelUpCelebrations(memberId: string) {
         ) ??
         "新しいレベルの定義はまだ登録されていません。",
       managerName:
-        levelChange.changedByMember?.name ??
-        assessment?.reviewedByMember?.name ??
-        null,
+        (levelChange.changedByMember
+          ? (reviewerProfiles.get(levelChange.changedByMember.id) ?? fallbackMemberProfile(levelChange.changedByMember.id)).name
+          : assessment?.reviewedByMember
+            ? (reviewerProfiles.get(assessment.reviewedByMember.id) ?? fallbackMemberProfile(assessment.reviewedByMember.id)).name
+            : null),
       managerComment:
         levelChange.skillSelfAssessment?.managerComment ??
         assessment?.managerComment ??
@@ -349,10 +403,17 @@ export type RoleAchievementCelebration = NonNullable<Awaited<
 export async function getCheerCelebrations(memberId: string) {
   if (!await hasUnreadCheerNotifications(memberId)) return [];
   const notifications = await listUnreadCheerNotifications(memberId);
-  return notifications.flatMap(toCheerCelebration);
+  const profiles = await resolveMemberProfiles(notifications.flatMap((notification) => [
+    notification.cheer?.fromMember.id,
+    notification.cheer?.mentorMember?.id,
+  ].filter((id): id is string => Boolean(id))));
+  return notifications.flatMap((notification) => toCheerCelebration(notification, profiles));
 }
 
-export function toCheerCelebration(notification: UnreadCheerNotification) {
+export function toCheerCelebration(
+  notification: UnreadCheerNotification,
+  profiles: Awaited<ReturnType<typeof resolveMemberProfiles>> = new Map(),
+) {
   if (!notification.cheer) return [];
 
   return [
@@ -360,9 +421,15 @@ export function toCheerCelebration(notification: UnreadCheerNotification) {
       notificationId: notification.id,
       createdAt: notification.createdAt,
       message: notification.cheer.message,
-      sender: notification.cheer.fromMember,
+      sender: {
+        ...notification.cheer.fromMember,
+        ...(profiles.get(notification.cheer.fromMember.id) ?? fallbackMemberProfile(notification.cheer.fromMember.id)),
+      },
       targetSkillName: notification.cheer.targetSkill?.name ?? null,
-      mentorMember: notification.cheer.mentorMember
+      mentorMember: notification.cheer.mentorMember ? {
+        ...notification.cheer.mentorMember,
+        ...(profiles.get(notification.cheer.mentorMember.id) ?? fallbackMemberProfile(notification.cheer.mentorMember.id)),
+      } : null,
     }
   ];
 }

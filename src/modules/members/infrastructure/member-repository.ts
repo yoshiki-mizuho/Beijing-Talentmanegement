@@ -25,70 +25,24 @@ import type {
   SkillAssessmentReviewInput
 } from "@/modules/members/domain/skill-assessment-schema";
 import { recordRoleAchievements } from "@/modules/roles/application/role-achievement-service";
-import { collectDescendantIds } from "@/modules/members/domain/department-hierarchy";
 import { prisma } from "@/server/db/prisma";
 import { UserFacingError } from "@/shared/lib/user-facing-error";
 import { getActiveReportError } from "@/modules/members/domain/member-role-policy";
 import { getDirectLeaderIds, getOrganization, getUsers } from "@/server/platform/directory";
 import { ensureScopeMembers } from "@/modules/members/infrastructure/member-scope-repository";
 
-function memberAuditFields(member: {
-  employeeNo: string | null;
-  name: string | null;
-  email: string | null;
-  departmentId: string | null;
-  jobTitle: string | null;
-  status: string;
-}) {
+function memberAuditFields(member: { status: string }) {
   return {
-    employeeNo: member.employeeNo,
-    name: member.name,
-    email: member.email,
-    departmentId: member.departmentId,
-    jobTitle: member.jobTitle,
     status: member.status
   };
 }
 
-export async function listDepartments() {
-  return prisma.department.findMany({
-    where: { isActive: true },
-    select: { id: true, name: true, parentDepartmentId: true },
-    orderBy: { name: "asc" }
-  });
-}
-
-export async function listManagerCandidates() {
-  return prisma.member.findMany({
-    where: {
-      status: "ACTIVE",
-      platformUserId: { not: null }
-    },
-    select: { id: true, name: true, employeeNo: true },
-    orderBy: { employeeNo: "asc" }
-  });
-}
-
 export function buildMemberSearchWhere(
   input?: MemberSearchInput,
-  departmentIds?: string[]
+  _organizationNodeIds?: string[]
 ): Prisma.MemberWhereInput {
+  void _organizationNodeIds;
   return {
-    ...(input?.q
-      ? {
-          OR: [
-            { employeeNo: { contains: input.q, mode: "insensitive" as const } },
-            { name: { contains: input.q, mode: "insensitive" as const } },
-            { email: { contains: input.q, mode: "insensitive" as const } },
-            { jobTitle: { contains: input.q, mode: "insensitive" as const } }
-          ]
-        }
-      : {}),
-    ...(input?.departmentId
-      ? departmentIds
-        ? { departmentId: { in: departmentIds } }
-        : { departmentId: input.departmentId }
-      : {}),
     ...(input?.status ? { status: input.status } : {}),
     ...(input?.skillId || input?.minLevel
       ? {
@@ -104,25 +58,14 @@ export function buildMemberSearchWhere(
 }
 
 export async function listMembers(input?: MemberSearchInput, memberIds?: string[]) {
-  // 部署で絞り込むときは、配下の部署のメンバーも含める
-  const departmentIds = input?.departmentId
-    ? collectDescendantIds(
-        await prisma.department.findMany({
-          select: { id: true, name: true, parentDepartmentId: true }
-        }),
-        input.departmentId
-      )
-    : undefined;
   const members = await prisma.member.findMany({
     where: {
       AND: [
-        buildMemberSearchWhere(input, departmentIds),
+        buildMemberSearchWhere(input),
         ...(memberIds ? [{ id: { in: memberIds } }] : [])
       ]
     },
     include: {
-      department: true,
-      manager: { select: { id: true, name: true } },
       targetRole: {
         select: {
           id: true,
@@ -163,7 +106,7 @@ export async function listMembers(input?: MemberSearchInput, memberIds?: string[
         }
       }
     },
-    orderBy: { employeeNo: "asc" }
+    orderBy: { id: "asc" }
   });
 
   if (!input?.roleId) {
@@ -564,8 +507,8 @@ export async function listPendingSkillAssessments(
     where: pendingSkillAssessmentWhere(reviewerRole, scopedMemberIds),
     include: {
       member: {
-        include: {
-          department: true,
+        select: {
+          id: true,
           memberSkills: {
             select: {
               skillId: true,
@@ -612,7 +555,6 @@ export async function getSkillApprovalInsightContext(
     memberId: string;
     skillId: string;
     member: {
-      departmentId: string;
       targetRole: { id: string } | null;
     };
   }>
@@ -623,9 +565,6 @@ export async function getSkillApprovalInsightContext(
 
   const memberIds = [...new Set(assessments.map((item) => item.memberId))];
   const skillIds = [...new Set(assessments.map((item) => item.skillId))];
-  const departmentIds = [
-    ...new Set(assessments.map((item) => item.member.departmentId))
-  ];
   const targetRoleIds = [
     ...new Set(
       assessments.flatMap((item) => item.member.targetRole?.id ?? [])
@@ -655,16 +594,12 @@ export async function getSkillApprovalInsightContext(
     prisma.member.findMany({
       where: {
         status: "ACTIVE",
-        OR: [
-          { departmentId: { in: departmentIds } },
-          ...(targetRoleIds.length > 0
-            ? [{ targetRoleId: { in: targetRoleIds } }]
-            : [])
-        ]
+        ...(targetRoleIds.length > 0
+          ? { OR: [{ targetRoleId: { in: targetRoleIds } }, { targetRoleId: null }] }
+          : {})
       },
       select: {
         id: true,
-        departmentId: true,
         targetRoleId: true,
         memberSkills: {
           where: { skillId: { in: skillIds } },
@@ -738,10 +673,6 @@ export async function createSkillAssessments(
   }
   return prisma.$transaction(async (tx) => {
     const skillIds = input.assessments.map((assessment) => assessment.skillId);
-    const member = await tx.member.findUniqueOrThrow({
-      where: { id: input.memberId },
-      select: { name: true }
-    });
     const [skills, pendingAssessments] = await Promise.all([
       tx.skill.findMany({
         where: { id: { in: skillIds }, isActive: true },
@@ -787,10 +718,11 @@ export async function createSkillAssessments(
       (assessment) => `${skillNames.get(assessment.skillId)} Lv${assessment.requestedLevel}`
     );
     const notificationBody = assessments.length === 1
-      ? `${member.name}さんが ${assessmentLabels[0]} を申請しました。`
-      : `${member.name}さんから ${assessments.length}件の申請が届きました（${assessmentLabels.slice(0, 2).join("・")}${assessments.length >= 3 ? " ほか" : ""}）。`;
+      ? `${assessmentLabels[0]} の申請が届きました。`
+      : `${assessments.length}件の申請が届きました（${assessmentLabels.slice(0, 2).join("・")}${assessments.length >= 3 ? " ほか" : ""}）。`;
     const notifications = reviewerMemberIds.map((recipientMemberId) => ({
       recipientMemberId,
+      actorMemberId: input.memberId,
       type: NotificationType.SKILL_ASSESSMENT_REQUESTED,
       skillSelfAssessmentId: assessments[0].id,
       title: "スキル申請の承認依頼",
@@ -839,7 +771,7 @@ async function reviewSkillAssessmentInTransaction(
       );
     }
 
-    const assessmentLabel = `${assessment.member.name} / ${assessment.skill.name}（申請ID: ${assessment.id}）`;
+    const assessmentLabel = `${assessment.skill.name}の申請（申請ID: ${assessment.id}）`;
 
     if (assessment.status !== SkillSelfAssessmentStatus.PENDING) {
       throw new UserFacingError(
@@ -952,6 +884,7 @@ async function reviewSkillAssessmentInTransaction(
     await tx.notification.create({
       data: {
         recipientMemberId: assessment.memberId,
+        actorMemberId: input.reviewerMemberId,
         type: notificationType,
         skillSelfAssessmentId: assessment.id,
         title: "スキル申請の承認結果",
