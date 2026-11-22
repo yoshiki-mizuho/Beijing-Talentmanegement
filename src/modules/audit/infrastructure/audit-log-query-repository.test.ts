@@ -8,8 +8,14 @@ const db = vi.hoisted(() => ({
   skillCategory: { findMany: vi.fn() },
   role: { findMany: vi.fn() },
 }));
+const mocks = vi.hoisted(() => ({
+  resolveMemberProfiles: vi.fn(),
+}));
 
 vi.mock("@/server/db/prisma", () => ({ prisma: db }));
+vi.mock("@/modules/members/application/member-directory", () => ({
+  resolveMemberProfiles: mocks.resolveMemberProfiles,
+}));
 
 import { buildAuditLogWhere } from "./audit-log-query-repository";
 
@@ -36,6 +42,7 @@ describe("buildAuditLogWhere", () => {
     db.skill.findMany.mockResolvedValue([]);
     db.skillCategory.findMany.mockResolvedValue([]);
     db.role.findMany.mockResolvedValue([]);
+    mocks.resolveMemberProfiles.mockResolvedValue(new Map());
   });
 
   it("期間と操作した人を条件にする", async () => {
@@ -95,12 +102,13 @@ describe("buildAuditLogWhere", () => {
     db.skill.findMany.mockResolvedValue([{ id: "skill-1" }]);
     db.skillCategory.findMany.mockResolvedValue([{ id: "category-1" }]);
     db.role.findMany.mockResolvedValue([{ id: "role-1" }]);
+    mocks.resolveMemberProfiles.mockResolvedValue(new Map([
+      ["member-1", { name: "検索対象" }],
+    ]));
 
     const where = await buildAuditLogWhere(query({ q: "検索" }));
 
-    expect(db.member.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ take: 100 }),
-    );
+    expect(db.member.findMany).toHaveBeenCalledWith({ select: { id: true } });
     expect(db.skill.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ take: 100 }),
     );
@@ -127,7 +135,6 @@ describe("buildAuditLogWhere", () => {
       },
       { metadata: { path: ["memberId"], equals: "member-1" } },
       { metadata: { path: ["skillId"], equals: "skill-1" } },
-      { before: { path: ["name"], string_contains: "検索" } },
     ]);
   });
 });

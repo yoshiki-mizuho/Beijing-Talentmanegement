@@ -4,7 +4,7 @@ import { isGrowthLevelChange } from "@/modules/growth/domain/level-change-source
 export type OrganizationMember = {
   id: string;
   // H-4b で自動作成した行は部署が無い（H-4c で基盤の組織に替える）。
-  department: { id: string; name: string } | null;
+  organizationNode: { id: string; name: string } | null;
   targetRole: null | {
     id: string;
     name: string;
@@ -82,10 +82,10 @@ export function buildOrganizationDashboard(input: {
   const staleBoundary = new Date(input.now.getTime() - 7 * 86400000);
   const membersByDepartment = new Map<string, OrganizationMember[]>();
   for (const member of input.members) {
-    if (!member.department) continue;
-    const members = membersByDepartment.get(member.department.id) ?? [];
+    if (!member.organizationNode) continue;
+    const members = membersByDepartment.get(member.organizationNode.id) ?? [];
     members.push(member);
-    membersByDepartment.set(member.department.id, members);
+    membersByDepartment.set(member.organizationNode.id, members);
   }
   const changesByMember = new Map<string, typeof changes>();
   for (const change of changes) {
@@ -106,7 +106,7 @@ export function buildOrganizationDashboard(input: {
     const departmentTargets = members.filter((member) => member.targetRole);
     return {
       id,
-      name: members[0]?.department?.name ?? "",
+      name: members[0]?.organizationNode?.name ?? "",
       memberCount: members.length,
       achievedRate: departmentTargets.length
         ? Math.round(

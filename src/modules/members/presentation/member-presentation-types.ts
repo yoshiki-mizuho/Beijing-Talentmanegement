@@ -1,14 +1,13 @@
 export type MemberRow = {
   id: string;
-  employeeNo: string;
   name: string;
-  avatarUpdatedAt: string | null;
+  avatarUrl?: string | null;
+  avatarColor?: string | null;
   email: string;
   profile: string | null;
   status: string;
-  jobTitle: string | null;
-  departmentId: string | null;
-  department: {
+  nodeId: string | null;
+  organizationNode: {
     id: string;
     name: string;
   } | null;
@@ -53,18 +52,12 @@ export type MemberListData = {
   pageSize: number;
 };
 
-export type ManagerOption = {
-  id: string;
-  employeeNo: string;
-  name: string;
-};
-
 export type TargetRoleOption = {
   id: string;
   name: string;
 };
 
-export type DepartmentOption = {
+export type OrganizationNodeOption = {
   id: string;
   name: string;
 };

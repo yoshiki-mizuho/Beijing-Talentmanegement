@@ -7,15 +7,12 @@ describe("omitMemberDetailFields", () => {
   it("keeps list fields and removes detail-only fields", () => {
     const member: MemberRow = {
       id: "member-1",
-      employeeNo: "TM0001",
       name: "テスト太郎",
-      avatarUpdatedAt: null,
       email: "test@example.com",
       profile: "詳細プロフィール",
       status: "ACTIVE",
-      jobTitle: "エンジニア",
-      departmentId: "department-1",
-      department: { id: "department-1", name: "開発部" },
+      nodeId: "department-1",
+      organizationNode: { id: "department-1", name: "開発部" },
       managerId: "manager-1",
       manager: { id: "manager-1", name: "管理者" },
       targetRoleId: null,

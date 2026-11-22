@@ -16,10 +16,9 @@ export const getMemberGrowthData = cache(async function getMemberGrowthData(
         where: { id: memberId },
         select: {
           id: true,
-          name: true,
           createdAt: true,
           lastRecapSeenMonth: true,
-          manager: { select: { name: true } },
+          manager: { select: { id: true } },
           targetRoleId: true,
           targetRole: {
             select: {
@@ -99,14 +98,14 @@ export const getMemberGrowthData = cache(async function getMemberGrowthData(
             select: {
               type: true,
               createdAt: true,
-              member: { select: { id: true, name: true } }
+              member: { select: { id: true } }
             }
           },
           comments: {
             select: {
               body: true,
               createdAt: true,
-              authorMember: { select: { id: true, name: true } }
+              authorMember: { select: { id: true } }
             }
           },
           _count: { select: { reactions: true, comments: true } },
@@ -130,11 +129,11 @@ export const getMemberGrowthData = cache(async function getMemberGrowthData(
           id: true,
           message: true,
           createdAt: true,
-          fromMember: { select: { id: true, name: true, avatarUpdatedAt: true } },
+          fromMember: { select: { id: true } },
           targetSkill: { select: { id: true, name: true } },
           mentorMember: {
             select: {
-              name: true,
+              id: true,
               memberSkills: { select: { skillId: true, level: true } }
             }
           }
@@ -145,9 +144,6 @@ export const getMemberGrowthData = cache(async function getMemberGrowthData(
         where: { status: MemberStatus.ACTIVE, id: { not: memberId } },
         select: {
           id: true,
-          name: true,
-          avatarUpdatedAt: true,
-          jobTitle: true,
           status: true,
           memberSkills: {
             where: { level: { gte: 4 } },
@@ -158,7 +154,6 @@ export const getMemberGrowthData = cache(async function getMemberGrowthData(
             }
           }
         },
-        orderBy: { name: "asc" }
       }),
       prisma.skillLevel.findMany({
         select: { level: true, description: true },
@@ -258,14 +253,14 @@ export function listUnreadLevelUpNotifications(memberId: string) {
               levelGuides: { select: { level: true, description: true } }
             }
           },
-          changedByMember: { select: { name: true } },
+          changedByMember: { select: { id: true } },
           skillSelfAssessment: { select: { managerComment: true } }
         }
       },
       skillSelfAssessment: {
         select: {
           managerComment: true,
-          reviewedByMember: { select: { name: true } },
+          reviewedByMember: { select: { id: true } },
           skillLevelChanges: {
             select: {
               id: true,
@@ -279,7 +274,7 @@ export function listUnreadLevelUpNotifications(memberId: string) {
                   levelGuides: { select: { level: true, description: true } }
                 }
               },
-              changedByMember: { select: { name: true } },
+              changedByMember: { select: { id: true } },
               skillSelfAssessment: { select: { managerComment: true } }
             },
             orderBy: { changedAt: "desc" },
@@ -326,9 +321,9 @@ export function listUnreadCheerNotifications(memberId: string) {
       cheer: {
         select: {
           message: true,
-          fromMember: { select: { id: true, name: true, avatarUpdatedAt: true } },
+          fromMember: { select: { id: true } },
           targetSkill: { select: { name: true } },
-          mentorMember: { select: { id: true, name: true, avatarUpdatedAt: true } }
+          mentorMember: { select: { id: true } }
         }
       }
     },

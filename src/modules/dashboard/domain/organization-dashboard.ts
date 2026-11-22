@@ -18,7 +18,7 @@ export type OrganizationLevelChange = {
 };
 export type OrganizationDashboardMember = {
   id: string;
-  departmentId: string;
+  nodeId: string | null;
   memberSkills: { skillId: string; level: number }[];
   targetRole: null | {
     id: string;
@@ -286,6 +286,6 @@ export function departmentMemberIds(
   if (!id) return members.map((member) => member.id);
   const ids = new Set(collectDescendantIds(departments, id));
   return members
-    .filter((member) => ids.has(member.departmentId))
+    .filter((member) => member.nodeId !== null && ids.has(member.nodeId))
     .map((member) => member.id);
 }

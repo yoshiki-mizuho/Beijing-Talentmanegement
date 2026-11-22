@@ -17,7 +17,6 @@ export async function getExploreSourceData(
     prisma.member.findUnique({
       where: { id: viewer.memberId },
       select: {
-        departmentId: true,
         targetRole: {
           select: {
             roleRequirements: {
@@ -53,18 +52,12 @@ export async function getExploreSourceData(
       },
       select: {
         id: true,
-        name: true,
-        avatarUpdatedAt: true,
-        departmentId: true,
-        department: { select: { name: true } },
-        jobTitle: true,
         memberSkills: { select: { skillId: true, level: true, skill: { select: { name: true } } } },
         skillLevelChanges: {
           where: { changedAt: { gte: since }, source: { notIn: [...nonGrowthLevelChangeSources] } },
           select: { fromLevel: true, toLevel: true }
         }
       },
-      orderBy: { name: "asc" }
     })
   ]);
   return { viewerMember, skills, changes, candidates };
@@ -83,15 +76,10 @@ export async function getSkillProfileSourceData(memberId: string) {
       where: { id: memberId },
       select: {
         id: true,
-        name: true,
-        email: true,
-        department: { select: { name: true } },
-        jobTitle: true,
         createdAt: true,
         profileMessage: true,
         consultTopics: true,
         isProfilePublic: true,
-        avatarUpdatedAt: true,
         memberSkills: {
           select: {
             skillId: true,

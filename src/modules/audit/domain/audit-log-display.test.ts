@@ -10,7 +10,6 @@ import {
 
 describe("audit log display", () => {
   it("項目と値を日本語化する", () => {
-    expect(fieldLabel("employeeNo")).toBe("社員番号");
     expect(displayValue("status", "ACTIVE")).toBe("在籍中");
     expect(displayValue("isRequired", false)).toBe("任意");
     expect(fieldLabel("anyOfGroup")).toBe("いずれかの組");
@@ -18,9 +17,6 @@ describe("audit log display", () => {
     expect(displayValue("anyOfGroup", null)).toBe("なし");
     expect(fieldLabel("role")).toBe("権限");
     expect(displayValue("role", "MANAGER")).toBe("マネージャー");
-    expect(
-      displayValue("departmentId", "d1", { departments: { d1: "開発部" } }),
-    ).toBe("開発部");
   });
 
   it("権限変更の文と要約を組み立てる", () => {

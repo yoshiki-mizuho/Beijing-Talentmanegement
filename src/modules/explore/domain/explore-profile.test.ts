@@ -56,12 +56,12 @@ describe("explore and profile rules", () => {
   it("おすすめの理由を複数返す", () => {
     expect(
       getRecommendationReasons({
-        candidate: { departmentId: "d", recentLevelUp: true, skills: [{ skillId: "s", level: 4 }] },
-        viewerDepartmentId: "d",
+        candidate: { nodeId: "d", recentLevelUp: true, skills: [{ skillId: "s", level: 4 }] },
+        viewerNodeId: "d",
         targetGapSkillIds: new Set(["s"]),
         trendingSkillIds: new Set(["s"])
       })
-    ).toEqual(["target", "trending", "department"]);
+    ).toEqual(["target", "trending", "node"]);
   });
 
   it("時点以前の最後のレベルを復元し、新規と上昇を示す", () => {

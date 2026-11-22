@@ -8,7 +8,7 @@ function fixture(overrides: Partial<MemberGrowthData> = {}): MemberGrowthData {
     member: {
       id: "member-1",
       name: "山田 太郎",
-      manager: { name: "佐藤 花子" },
+      manager: { id: "manager-1" },
       targetRoleId: "role-1",
       targetRole: {
         id: "role-1",
@@ -35,10 +35,39 @@ function fixture(overrides: Partial<MemberGrowthData> = {}): MemberGrowthData {
   } as MemberGrowthData;
 }
 
+function memberProfiles() {
+  return new Map([
+    ["member-1", {
+      memberId: "member-1",
+      platformUserId: "platform-member-1",
+      name: "山田 太郎",
+      email: "yamada@example.com",
+      nodeId: "node-1",
+      nodeName: "開発",
+      avatarUrl: null,
+      avatarColor: null,
+
+      missingOnPlatform: false
+    }],
+    ["manager-1", {
+      memberId: "manager-1",
+      platformUserId: "platform-manager-1",
+      name: "佐藤 花子",
+      email: "sato@example.com",
+      nodeId: "node-1",
+      nodeName: "開発",
+      avatarUrl: null,
+      avatarColor: null,
+
+      missingOnPlatform: false
+    }]
+  ]);
+}
+
 describe("buildMemberDashboardViewModel", () => {
   it("設定した目標ロールの進捗と不足スキルを算出する", () => {
     const result = buildMemberDashboardViewModel(
-      fixture(),
+      { ...fixture(), memberProfiles: memberProfiles() },
       new Date("2026-10-10T00:00:00Z")
     );
     expect(result).toMatchObject({
@@ -81,10 +110,10 @@ describe("buildMemberDashboardViewModel", () => {
 
   it("承認済みも承認待ちもなければ初回の空状態にする", () => {
     const source = fixture();
-    const result = buildMemberDashboardViewModel(fixture({
+    const result = buildMemberDashboardViewModel({ ...fixture({
       member: source.member ? { ...source.member, memberSkills: [] } : null,
       assessments: []
-    }));
+    }), memberProfiles: memberProfiles() });
 
     expect(result).toMatchObject({
       onboardingState: "empty",

@@ -182,7 +182,8 @@ export function MemberDashboard({
                 <MemberAvatar
                   memberId={cheer.senderId}
                   name={cheer.senderName}
-                  avatarUpdatedAt={cheer.senderAvatarUpdatedAt}
+                  avatarUrl={cheer.senderAvatarUrl}
+                  avatarColor={cheer.senderAvatarColor}
                   href={`/talent/people/${cheer.senderId}` as Route}
                 />
                 <div className="min-w-0 flex-1">
@@ -291,12 +292,13 @@ export function MemberDashboard({
                   <MemberAvatar
                     memberId={mentor.memberId}
                     name={mentor.name}
-                    avatarUpdatedAt={mentor.avatarUpdatedAt}
+                    avatarUrl={mentor.avatarUrl}
+                    avatarColor={mentor.avatarColor}
                     href={`/talent/people/${mentor.memberId}` as Route}
                   />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold">{mentor.name}</p>
-                    <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">{mentor.skillName} Lv{mentor.level}{mentor.jobTitle ? `・${mentor.jobTitle}` : ""}</p>
+                    <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">{mentor.skillName} Lv{mentor.level}</p>
                   </div>
                 </li>
               ))}

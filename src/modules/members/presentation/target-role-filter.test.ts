@@ -28,15 +28,12 @@ const roles: RoleOption[] = [
 function member(targetRoleId: string | null, level?: number): MemberRow {
   return {
     id: "member-1",
-    employeeNo: "TM0001",
     name: "テスト太郎",
-    avatarUpdatedAt: null,
     email: "test@example.com",
     profile: null,
     status: "ACTIVE",
-    jobTitle: null,
-    departmentId: "department-1",
-    department: { id: "department-1", name: "開発部" },
+    nodeId: "department-1",
+    organizationNode: { id: "department-1", name: "開発部" },
     managerId: null,
     manager: null,
     targetRoleId,

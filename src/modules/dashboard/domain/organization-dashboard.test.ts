@@ -76,7 +76,7 @@ describe("organization dashboard", () => {
   it("現在値から過去のスキルを復元する", () => {
     const member = {
       id: "m",
-      departmentId: "d",
+      nodeId: "d",
       targetRole: null,
       memberSkills: [{ skillId: "s", level: 3 }],
     };
@@ -126,7 +126,7 @@ describe("organization dashboard", () => {
     ];
     const member = (id: string, levels: [string, number][]) => ({
       id,
-      departmentId: "d",
+      nodeId: "d",
       targetRole: { id: "r", name: "R", roleRequirements: requirements },
       memberSkills: levels.map(([skillId, level]) => ({ skillId, level })),
     });
@@ -161,7 +161,7 @@ describe("organization dashboard", () => {
     const input = {
       members: [{
         id: "m",
-        departmentId: "d",
+        nodeId: "d",
         targetRole: null,
         memberSkills: [{ skillId: "s", level: 2 }],
       }],

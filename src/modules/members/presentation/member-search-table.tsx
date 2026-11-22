@@ -21,7 +21,7 @@ import {
   type MemberSearchFilters
 } from "@/modules/members/presentation/member-search-filters";
 import type {
-  DepartmentOption,
+  OrganizationNodeOption,
   MemberListData,
   MemberListItem,
   MemberRow,
@@ -47,7 +47,7 @@ import { useDismissibleDetails } from "@/shared/ui/use-dismissible-details";
 
 type Props = {
   initialData: MemberListData;
-  departments: DepartmentOption[];
+  departments: OrganizationNodeOption[];
   skills: SkillOption[];
   roles: RoleOption[];
   targetRoles: TargetRoleOption[];
@@ -259,7 +259,7 @@ function MemberSearchTableInner({
             aria-label="キーワード"
             value={filters.q}
             onChange={(event) => updateFilters({ ...filters, q: event.target.value })}
-            placeholder="氏名・社員番号"
+            placeholder="氏名"
             className="rounded-full pl-9"
           />
         </div>
@@ -314,17 +314,17 @@ function MemberSearchTableInner({
           </Select>
         </FilterChip>
         <FilterChip
-          label="部署"
+          label="組織"
           value={
-            filters.departmentId
-              ? departments.find((department) => department.id === filters.departmentId)?.name
+            filters.nodeId
+              ? departments.find((department) => department.id === filters.nodeId)?.name
               : undefined
           }
         >
           <Select
-            aria-label="部署"
-            value={filters.departmentId}
-            onChange={(event) => updateFilters({ ...filters, departmentId: event.target.value })}
+            aria-label="組織"
+            value={filters.nodeId}
+            onChange={(event) => updateFilters({ ...filters, nodeId: event.target.value })}
           >
             <option value="">すべて</option>
             {departments.map((department) => (
@@ -337,7 +337,6 @@ function MemberSearchTableInner({
         <div className="flex flex-wrap gap-1" aria-label="在籍状態">
           {[
             ["ACTIVE", "在籍中"],
-            ["LEAVE", "休職中"],
             ["INACTIVE", "退職・無効"]
           ].map(([status, label]) => (
             <button
@@ -441,7 +440,8 @@ function MemberSearchTableInner({
                       <MemberAvatar
                         memberId={member.id}
                         name={member.name}
-                        avatarUpdatedAt={member.avatarUpdatedAt}
+                        avatarUrl={member.avatarUrl}
+                        avatarColor={member.avatarColor}
                         href={`/talent/people/${member.id}`}
                       />
                       <div>
@@ -467,7 +467,7 @@ function MemberSearchTableInner({
                           </Tooltip>
                         ) : null}
                         <p className="text-xs text-[var(--muted-foreground)]">
-                          {member.jobTitle ?? "役職未設定"}・{member.employeeNo}
+                          {member.organizationNode?.name ?? "所属未設定"}
                         </p>
                       </div>
                     </div>

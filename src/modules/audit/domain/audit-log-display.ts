@@ -4,12 +4,9 @@ export type JsonMap = Record<string, unknown>;
 export type NameMaps = Record<string, Record<string, string>>;
 
 const labels: Record<string, string> = {
-  employeeNo: "社員番号",
   name: "名前",
   email: "メール",
-  departmentId: "部署",
   departmentCode: "部署コード",
-  jobTitle: "役職",
   status: "状態",
   profile: "自己紹介",
   managerId: "上司",
@@ -105,7 +102,6 @@ export function displayValue(
         ? "有効"
         : "無効";
   const mapKey: Record<string, string> = {
-    departmentId: "departments",
     categoryId: "categories",
     managerId: "members",
     targetRoleId: "roles",

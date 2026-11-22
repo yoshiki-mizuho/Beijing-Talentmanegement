@@ -2,21 +2,21 @@ import Link from "next/link";
 import type { Route } from "next";
 import { getSkillMapPageData } from "@/modules/skill-map/application/skill-map-service";
 import { SkillMapTiles } from "@/modules/skill-map/presentation/skill-map-tiles";
-import { listDepartments } from "@/modules/members/application/member-service";
 import { requirePageRoles, managerOrAdmin } from "@/server/auth/authorization";
 
 export const dynamic = "force-dynamic";
 export default async function SkillMapPage({
   searchParams,
 }: {
-  searchParams: Promise<{ department?: string }>;
+  searchParams: Promise<{ node?: string }>;
 }) {
   const session = await requirePageRoles(managerOrAdmin);
-  const { department } = await searchParams;
-  const [{ scope, skills, categories }, departments] = await Promise.all([
-    getSkillMapPageData(session.user.role, session.user.memberId, department),
-    session.user.role === "ADMIN" ? listDepartments() : Promise.resolve([]),
-  ]);
+  const { node } = await searchParams;
+  const { scope, skills, categories } = await getSkillMapPageData(
+    session.user.role,
+    session.user.memberId,
+    node,
+  );
   return (
     <div className="space-y-5">
       <header>
@@ -27,14 +27,14 @@ export default async function SkillMapPage({
       </header>
       {session.user.role === "ADMIN" ? (
         <nav aria-label="組織の範囲" className="flex flex-wrap gap-2">
-          <Link href="/talent/skill-map" className={chip(!scope.departmentId)}>
+          <Link href="/talent/skill-map" className={chip(!scope.nodeId)}>
             全社
           </Link>
-          {departments.map((item) => (
+          {scope.nodes.map((item) => (
             <Link
               key={item.id}
-              href={`/talent/skill-map?department=${item.id}` as Route}
-              className={chip(scope.departmentId === item.id)}
+              href={`/talent/skill-map?node=${item.id}` as Route}
+              className={chip(scope.nodeId === item.id)}
             >
               {item.name}
             </Link>
@@ -44,7 +44,7 @@ export default async function SkillMapPage({
       <SkillMapTiles
         skills={skills}
         categories={categories}
-        departmentId={scope.departmentId}
+        nodeId={scope.nodeId}
       />
     </div>
   );

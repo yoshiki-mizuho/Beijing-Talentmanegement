@@ -145,6 +145,7 @@ model Member {
   selfAssessments       SkillSelfAssessment[] @relation("AssessmentMember")
   reviewedAssessments   SkillSelfAssessment[] @relation("AssessmentReviewer")
   notifications         Notification[]        @relation("NotificationRecipient")
+  actedNotifications    Notification[]        @relation("NotificationActor")
   auditLogs             AuditLog[]            @relation("AuditActor")
   skillLevelChanges     SkillLevelChange[]    @relation("SkillLevelChangeMember")
   changedSkillLevels    SkillLevelChange[]    @relation("SkillLevelChangeActor")
@@ -397,6 +398,8 @@ model Notification {
   tenantId              String               @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
   recipientMemberId     String
   recipientMember       Member               @relation("NotificationRecipient", fields: [recipientMemberId], references: [id])
+  actorMemberId          String?
+  actorMember            Member?              @relation("NotificationActor", fields: [actorMemberId], references: [id])
   type                  NotificationType
   status                NotificationStatus   @default(UNREAD)
   skillSelfAssessmentId String?
@@ -412,6 +415,7 @@ model Notification {
 
   @@index([tenantId])
   @@index([recipientMemberId, status])
+  @@index([actorMemberId])
   @@index([skillSelfAssessmentId])
   @@index([skillLevelChangeId])
   @@index([cheerId])

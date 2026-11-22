@@ -24,7 +24,10 @@ import {
 import { isGrowthLevelChange } from "@/modules/growth/domain/level-change-source";
 import { listSkillMentorCandidates } from "@/modules/growth/application/growth-service";
 import { getGrowthHintMemberContext } from "@/modules/members/application/member-service";
-import { displayMemberName } from "@/modules/members/domain/member-display";
+import {
+  fallbackMemberProfile,
+  resolveMemberProfiles,
+} from "@/modules/members/application/member-directory";
 import {
   getMemberScope,
   memberIsInScope,
@@ -335,13 +338,18 @@ async function buildComputedContent(memberId: string, input: GrowthHintInput) {
   const candidates = firstGap
     ? await listSkillMentorCandidates([firstGap.skillId])
     : [];
+  const candidateProfiles = await resolveMemberProfiles(
+    candidates.map((candidate) => candidate.member.id),
+  );
+  const candidateName = (id: string) =>
+    (candidateProfiles.get(id) ?? fallbackMemberProfile(id)).name;
   const mentor = candidates
     .filter((item) => item.member.id !== memberId)
     .sort(
       (left, right) =>
         right.level - left.level ||
-        displayMemberName(left.member.name).localeCompare(
-          displayMemberName(right.member.name),
+        candidateName(left.member.id).localeCompare(
+          candidateName(right.member.id),
           "ja"
         ),
     )[0];
@@ -353,7 +361,7 @@ async function buildComputedContent(memberId: string, input: GrowthHintInput) {
       mentor && firstGap
         ? {
             memberId: mentor.member.id,
-            name: displayMemberName(mentor.member.name),
+            name: candidateName(mentor.member.id),
             skillName: firstGap.name,
           }
         : null,

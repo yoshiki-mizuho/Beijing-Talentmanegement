@@ -3,7 +3,8 @@ import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement
 export type TeamMemberSnapshot = {
   id: string;
   name: string;
-  avatarUpdatedAt: Date | null;
+  avatarUrl: string | null;
+  avatarColor: string | null;
   createdAt: Date;
   targetRole: {
     id?: string;
@@ -96,7 +97,8 @@ export function findAlmostThereMembers(members: TeamMemberSnapshot[]) {
     return [{
       memberId: member.id,
       memberName: member.name,
-      avatarUpdatedAt: member.avatarUpdatedAt,
+      avatarUrl: member.avatarUrl,
+      avatarColor: member.avatarColor,
       roleName: member.targetRole.name,
       skillId: gap.skillId,
       skillName: gap.skillName ?? gap.skillId,
@@ -128,7 +130,8 @@ export function findInactiveMembers(
       ? [{
           memberId: member.id,
           memberName: member.name,
-          avatarUpdatedAt: member.avatarUpdatedAt,
+          avatarUrl: member.avatarUrl,
+          avatarColor: member.avatarColor,
           lastUpdatedAt,
           daysAgo,
           targetRoleUnset: member.targetRole === null

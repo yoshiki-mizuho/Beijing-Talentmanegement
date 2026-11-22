@@ -83,8 +83,18 @@ export function listActiveSkillsForSkillSheet() {
   return skillRepository.listActiveSkillsForSkillSheet();
 }
 
-export function listPopularSkillsForMember(memberId: string) {
-  return skillRepository.listPopularSkillsForMember(memberId);
+export async function listPopularSkillsForMember(memberId: string) {
+  const { listSameNodeMemberIds, resolveMemberProfiles } = await import(
+    "@/modules/members/application/member-directory"
+  );
+  const [memberIds, profiles] = await Promise.all([
+    listSameNodeMemberIds(memberId),
+    resolveMemberProfiles([memberId]),
+  ]);
+  return skillRepository.listPopularSkillsForMember(
+    memberIds,
+    profiles.get(memberId)?.nodeName ?? null,
+  );
 }
 
 export function createSkillCategory(input: unknown, actorMemberId: string | null) {

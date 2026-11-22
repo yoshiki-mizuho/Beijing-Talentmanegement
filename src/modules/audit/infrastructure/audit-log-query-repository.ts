@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/server/db/prisma";
+import { resolveMemberProfiles } from "@/modules/members/application/member-directory";
 import { AUDIT_ACTION, AUDIT_TARGET_TYPE } from "../domain/audit-action";
 import {
   AUDIT_PAGE_SIZE,
@@ -10,9 +11,7 @@ import {
 
 type AuditLogRow = Prisma.AuditLogGetPayload<{
   include: {
-    actorMember: {
-      select: { id: true; name: true; avatarUpdatedAt: true };
-    };
+    actorMember: { select: { id: true } };
   };
 }>;
 
@@ -33,16 +32,9 @@ function actions(query: AuditLogQuery) {
 }
 
 async function loadNameSearchIds(q: string) {
-  const [members, departments, skills, categories, roles] = await Promise.all([
+  const [memberRows, departments, skills, categories, roles] = await Promise.all([
     prisma.member.findMany({
-      where: {
-        OR: [
-          { name: { contains: q, mode: "insensitive" } },
-          { employeeNo: { contains: q, mode: "insensitive" } },
-        ],
-      },
       select: { id: true },
-      take: 100,
     }),
     prisma.department.findMany({
       where: {
@@ -70,6 +62,11 @@ async function loadNameSearchIds(q: string) {
       take: 100,
     }),
   ]);
+  const profiles = await resolveMemberProfiles(memberRows.map(({ id }) => id));
+  const normalizedQuery = q.toLocaleLowerCase("ja");
+  const members = memberRows.filter(({ id }) =>
+    profiles.get(id)?.name.toLocaleLowerCase("ja").includes(normalizedQuery)
+  );
   return {
     memberIds: members.map(({ id }) => id),
     skillIds: skills.map(({ id }) => id),
@@ -108,14 +105,13 @@ export async function buildAuditLogWhere(
       ...skillIds.map((id) => ({
         metadata: { path: ["skillId"], equals: id },
       })),
-      { before: { path: ["name"], string_contains: query.q } },
     ];
   }
   return where;
 }
 
 const auditLogInclude = {
-  actorMember: { select: { id: true, name: true, avatarUpdatedAt: true } },
+  actorMember: { select: { id: true } },
 } satisfies Prisma.AuditLogInclude;
 
 export async function loadAuditLogs(query: AuditLogQuery) {
@@ -149,7 +145,7 @@ export async function loadAuditActors() {
   const rows = await prisma.auditLog.findMany({
     where: { actorMemberId: { not: null } },
     distinct: ["actorMemberId"],
-    select: { actorMember: { select: { id: true, name: true } } },
+    select: { actorMember: { select: { id: true } } },
     orderBy: { actorMemberId: "asc" },
   });
   return rows.flatMap((row) => (row.actorMember ? [row.actorMember] : []));
@@ -178,7 +174,6 @@ export async function loadAuditNameMaps(logs: AuditLogRow[]) {
     assessments: new Set<string>(),
   };
   const referenceFields = {
-    departmentId: ids.departments,
     categoryId: ids.categories,
     managerId: ids.members,
     targetRoleId: ids.roles,
@@ -224,7 +219,7 @@ export async function loadAuditNameMaps(logs: AuditLogRow[]) {
   ] = await Promise.all([
     prisma.member.findMany({
       where: { id: { in: [...ids.members] } },
-      select: { id: true, name: true },
+      select: { id: true },
     }),
     prisma.department.findMany({
       where: { id: { in: [...ids.departments] } },
@@ -248,7 +243,7 @@ export async function loadAuditNameMaps(logs: AuditLogRow[]) {
         id: true,
         memberId: true,
         skillId: true,
-        member: { select: { id: true, name: true } },
+        member: { select: { id: true } },
         skill: { select: { id: true, name: true } },
       },
     }),
@@ -258,7 +253,7 @@ export async function loadAuditNameMaps(logs: AuditLogRow[]) {
         id: true,
         memberId: true,
         skillId: true,
-        member: { select: { id: true, name: true } },
+        member: { select: { id: true } },
         skill: { select: { id: true, name: true } },
       },
     }),

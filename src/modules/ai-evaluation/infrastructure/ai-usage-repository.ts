@@ -171,11 +171,3 @@ export async function getRecentAiUsage(start: Date, end: Date) {
     take: 50,
   });
 }
-
-export async function getAiUsageMemberNames(ids: string[]) {
-  if (ids.length === 0) return [];
-  return prisma.member.findMany({
-    where: { id: { in: ids } },
-    select: { id: true, name: true },
-  });
-}

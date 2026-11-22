@@ -15,15 +15,15 @@ export async function GET(request: NextRequest, context: SkillContext) {
   }
 
   const { skillId } = await context.params;
-  const departmentId = auth.session.user.role === "ADMIN"
-    ? request.nextUrl.searchParams.get("department") ?? undefined
+  const nodeId = auth.session.user.role === "ADMIN"
+    ? request.nextUrl.searchParams.get("node") ?? undefined
     : undefined;
   return NextResponse.json(
     await listSkillHolders(
       auth.session.user.role,
       auth.session.user.memberId,
       skillId,
-      departmentId
+      nodeId
     )
   );
 }

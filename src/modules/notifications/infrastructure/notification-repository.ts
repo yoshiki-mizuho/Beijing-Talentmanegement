@@ -33,7 +33,12 @@ export async function listNotifications(
       recipientMemberId: memberId,
       ...(options.unreadOnly ? actionableUnreadNotificationWhere : {})
     },
-    orderBy: { createdAt: "desc" }
+    orderBy: { createdAt: "desc" },
+    include: {
+      skillLevelChange: {
+        select: { _count: { select: { reactions: true } } }
+      }
+    }
   });
 }
 

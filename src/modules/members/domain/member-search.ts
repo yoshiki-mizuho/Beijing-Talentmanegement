@@ -8,7 +8,7 @@ const optionalSkillLevelQuerySchema = z.preprocess(
 
 export const memberSearchSchema = z.object({
   q: z.string().trim().optional(),
-  departmentId: z.string().trim().optional(),
+  nodeId: z.string().trim().optional(),
   skillId: z.string().trim().optional(),
   minLevel: optionalSkillLevelQuerySchema,
   roleId: z.string().trim().optional(),
@@ -22,7 +22,7 @@ export type MemberSearchInput = z.infer<typeof memberSearchSchema>;
 export type MemberListUrlState = {
   filters: {
     q: string;
-    departmentId: string;
+    nodeId: string;
     skillId: string;
     minLevel: string;
     roleId: string;
@@ -36,7 +36,7 @@ export type MemberListUrlState = {
 export const initialMemberListUrlState: MemberListUrlState = {
   filters: {
     q: "",
-    departmentId: "",
+    nodeId: "",
     skillId: "",
     minLevel: "",
     roleId: "",
@@ -63,7 +63,7 @@ export function parseMemberListSearchParams(source: SearchParamSource): MemberLi
   return {
     filters: {
       q: getValue("q"),
-      departmentId: getValue("departmentId"),
+      nodeId: getValue("nodeId"),
       skillId: getValue("skillId"),
       minLevel: /^[1-5]$/.test(minLevel) ? minLevel : "",
       roleId: getValue("roleId"),
@@ -85,7 +85,7 @@ export function buildMemberListSearchParams(state: MemberListUrlState) {
   const { filters } = state;
 
   if (filters.q.trim()) searchParams.set("q", filters.q.trim());
-  if (filters.departmentId) searchParams.set("departmentId", filters.departmentId);
+  if (filters.nodeId) searchParams.set("nodeId", filters.nodeId);
   if (filters.skillId) searchParams.set("skillId", filters.skillId);
   if (filters.minLevel) searchParams.set("minLevel", filters.minLevel);
   if (filters.roleId) searchParams.set("roleId", filters.roleId);

@@ -67,7 +67,8 @@ type AppShellProps = {
     name?: string | null;
     role: AppRole;
     memberId: string;
-    avatarUpdatedAt: string | null;
+    avatarUrl?: string | null;
+    avatarColor?: string | null;
   };
   unreadNotificationCount: number;
   latestUnreadNotifications: Notification[];
@@ -361,7 +362,8 @@ function AccountMenu({ user }: { user: AppShellProps["user"] }) {
         <MemberAvatar
           memberId={user.memberId}
           name={name}
-          avatarUpdatedAt={user.avatarUpdatedAt}
+          avatarUrl={user.avatarUrl}
+          avatarColor={user.avatarColor}
           className="h-9 w-9"
         />
       </summary>

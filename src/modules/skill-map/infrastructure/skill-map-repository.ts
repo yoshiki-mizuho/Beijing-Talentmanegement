@@ -13,7 +13,7 @@ export async function getSkillMapData(memberIds: string[], since: Date) {
         select: {
           level: true,
           member: {
-            select: { id: true, name: true, jobTitle: true, avatarUpdatedAt: true },
+            select: { id: true },
           },
         },
       },
@@ -54,12 +54,9 @@ export function getSkillHolders(skillId: string, memberIds: string[]) {
       member: {
         select: {
           id: true,
-          name: true,
-          jobTitle: true,
-          avatarUpdatedAt: true
         }
       }
     },
-    orderBy: [{ level: "desc" }, { member: { employeeNo: "asc" } }]
+    orderBy: [{ level: "desc" }, { memberId: "asc" }]
   });
 }

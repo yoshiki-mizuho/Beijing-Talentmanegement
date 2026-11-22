@@ -251,12 +251,13 @@ function SkillApprovalItem({
           <MemberAvatar
             memberId={row.memberId}
             name={row.memberName}
-            avatarUpdatedAt={row.avatarUpdatedAt}
+            avatarUrl={row.avatarUrl}
+            avatarColor={row.avatarColor}
             href={`/talent/people/${row.memberId}`}
           />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">{row.memberName}</p>
-            <p className="truncate text-xs text-[var(--muted-foreground)]">{row.departmentName}</p>
+            <p className="truncate text-xs text-[var(--muted-foreground)]">{row.nodeName}</p>
           </div>
         </div>
         <div className="min-w-0">
@@ -391,11 +392,11 @@ function SkillApprovalItem({
 }
 
 function SkillApprovalDetails({ row }: { row: SkillApprovalRow }) {
-  const [distributionType, setDistributionType] = useState<"department" | "role">(
-    "department"
+  const [distributionType, setDistributionType] = useState<"node" | "role">(
+    "node"
   );
-  const distribution = distributionType === "department"
-    ? row.departmentDistribution
+  const distribution = distributionType === "node"
+    ? row.nodeDistribution
     : row.targetRoleDistribution;
 
   return (
@@ -421,9 +422,9 @@ function SkillApprovalDetails({ row }: { row: SkillApprovalRow }) {
           <Button
             type="button"
             size="small"
-            variant={distributionType === "department" ? "primary" : "secondary"}
-            aria-pressed={distributionType === "department"}
-            onClick={() => setDistributionType("department")}
+            variant={distributionType === "node" ? "primary" : "secondary"}
+            aria-pressed={distributionType === "node"}
+            onClick={() => setDistributionType("node")}
           >
             同じ部署
           </Button>
@@ -442,8 +443,8 @@ function SkillApprovalDetails({ row }: { row: SkillApprovalRow }) {
         {distribution?.counts ? (
           <>
             <p className="mt-3 text-sm font-medium">
-              {distributionType === "department"
-                ? `${row.departmentName}の ${distribution.groupSize}人`
+              {distributionType === "node"
+                ? `${row.nodeName}の ${distribution.groupSize}人`
                 : `${row.targetRoleName}を目標にしている ${distribution.groupSize}人`}
             </p>
             <LevelDistributionChart

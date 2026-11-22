@@ -19,7 +19,7 @@ test("MANAGERの応援がMEMBERのダッシュボードに表示される", asyn
     await dismissExistingLevelUpDialogs(memberSession.page);
     managerSession = await openLoggedInContext(browser, manager.credential);
     const cheerButton = managerSession.page.getByRole("button", {
-      name: `${member.member.name}を応援する`
+      name: `${member.displayName}を応援する`
     });
     await expect(cheerButton).toBeVisible();
     await cheerButton.click();
@@ -52,7 +52,7 @@ test("MANAGERが1on1メモを追加して話した側へ移せる", async ({ bro
     const member = await data.createMember({ label: "1on1部下", departmentId: department.id, managerId: manager.member.id });
     session = await openLoggedInContext(browser, manager.credential);
     await session.page.goto("/talent/members");
-    await session.page.getByRole("button", { name: `${member.member.name}の詳細を開く` }).click();
+    await session.page.getByRole("button", { name: `${member.displayName}の詳細を開く` }).click();
     await session.page.getByRole("tab", { name: "1on1 メモ" }).click();
     const body = `${data.prefix} 1on1`;
     await session.page.getByLabel("メモを追加").fill(body);

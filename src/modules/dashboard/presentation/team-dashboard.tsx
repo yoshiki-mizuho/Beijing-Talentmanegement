@@ -144,7 +144,8 @@ export function TeamDashboard({
                     <MemberAvatar
                       memberId={item.memberId}
                       name={item.memberName}
-                      avatarUpdatedAt={item.avatarUpdatedAt}
+                      avatarUrl={item.avatarUrl}
+                      avatarColor={item.avatarColor}
                       href={`/talent/people/${item.memberId}`}
                     />
                     <div className="min-w-0">
@@ -177,7 +178,8 @@ export function TeamDashboard({
                     <MemberAvatar
                       memberId={item.memberId}
                       name={item.memberName}
-                      avatarUpdatedAt={item.avatarUpdatedAt}
+                      avatarUrl={item.avatarUrl}
+                      avatarColor={item.avatarColor}
                       href={`/talent/people/${item.memberId}`}
                     />
                     <div>

@@ -9,7 +9,10 @@ import {
   countPendingSkillAssessments,
   hasMemberTargetRole
 } from "@/modules/members/application/member-service";
-import { getMyAvatarUpdatedAt } from "@/modules/members/application/member-avatar-service";
+import {
+  fallbackMemberProfile,
+  resolveMemberProfiles
+} from "@/modules/members/application/member-directory";
 import {
   getCheerCelebrations,
   getLevelUpCelebrations,
@@ -54,7 +57,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     roleAchievementCelebration,
     cheerCelebrations,
     monthlyRecapCelebration,
-    avatarUpdatedAt,
+    memberProfiles,
     hasTargetRole
   ] = await Promise.all([
     session.user.memberId
@@ -79,13 +82,13 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     getRoleAchievementCelebration(session.user.memberId),
     getCheerCelebrations(session.user.memberId),
     getMonthlyRecapCelebration(session.user.memberId),
-    session.user.memberId
-      ? getMyAvatarUpdatedAt(session.user.memberId)
-      : Promise.resolve(null),
+    resolveMemberProfiles([session.user.memberId]),
     session.user.memberId
       ? hasMemberTargetRole(session.user.memberId)
       : Promise.resolve(false)
   ]);
+  const memberProfile = memberProfiles.get(session.user.memberId) ??
+    fallbackMemberProfile(session.user.memberId);
   const setupProgress = session.user.memberId
     ? buildSetupProgress({
         hasTargetRole,
@@ -100,7 +103,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         name: session.user.name,
         role: session.user.role,
         memberId: session.user.memberId!,
-        avatarUpdatedAt: avatarUpdatedAt?.toISOString() ?? null
+        avatarUrl: memberProfile.avatarUrl,
+        avatarColor: memberProfile.avatarColor
       }}
       unreadNotificationCount={unreadNotificationCount}
       latestUnreadNotifications={latestUnreadNotifications}

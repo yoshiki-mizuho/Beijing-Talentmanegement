@@ -30,7 +30,6 @@ import {
   markGoalAchieved,
   saveTeamGoal
 } from "@/modules/team-goals/infrastructure/team-goal-repository";
-import { displayMemberName } from "@/modules/members/domain/member-display";
 import { getMemberScope, memberIsInScope } from "@/modules/members/application/member-scope";
 import { getDirectLeaderIds } from "@/server/platform/directory";
 import { AuthorizationError } from "@/server/auth/authorization";
@@ -143,20 +142,22 @@ export async function upsertTeamGoal(input: unknown, actor: {
 async function resolveCurrentGoal(managerId: string, now: Date) {
   const goals = await findLatestGoals(managerId);
   const goal = goals.find((item) => isDateInTeamGoalPeriod(now, item.startMonth, item.months));
+  const { fallbackMemberProfile, resolveMemberProfiles } = await import(
+    "@/modules/members/application/member-directory"
+  );
+  const profiles = await resolveMemberProfiles([managerId]);
+  const profile = profiles.get(managerId) ?? fallbackMemberProfile(managerId);
   return goal
     ? resolveGoal({
         ...goal,
-        manager: {
-          ...goal.manager,
-          name: displayMemberName(goal.manager.name)
-        }
+        manager: { ...goal.manager, ...profile }
       }, now)
     : null;
 }
 
 async function resolveGoal(goal: TeamGoal & {
   skill?: { name: string } | null;
-  manager?: { id: string; name: string; avatarUpdatedAt: Date | null };
+  manager?: { id: string; name: string; avatarUrl: string | null; avatarColor: string | null };
 }, now: Date) {
   const period = getTeamGoalPeriod(goal.startMonth, goal.months);
   const scope = await getMemberScope("MANAGER", goal.managerId);
@@ -181,10 +182,7 @@ async function resolveGoal(goal: TeamGoal & {
     text: formatTeamGoalText({ ...goal, skillName: goal.skill?.name ?? null }),
     unit: teamGoalUnit(goal.kind),
     remainingDays: getRemainingDays(now, period.end),
-    manager: goal.manager ? {
-      ...goal.manager,
-      avatarUpdatedAt: goal.manager.avatarUpdatedAt?.toISOString() ?? null
-    } : null
+    manager: goal.manager ?? null
   };
 }
 

@@ -54,3 +54,6 @@ H-4 は、H-4a（gRPC の呼び出し基盤と偽の基盤）、H-4b（身元と
 ## 契約の版を上げる
 
 `scripts/update-contract.sh <版>` で、`contract/`・基盤のスクリプト・基盤のスキルを丸ごと置き換える。`contract/CHANGELOG.md` を読み、TalentHub に要る変更を洗い出す。手順はスキル `hub-contract-update`。今の版は `contract/VERSION`。
+# H-4c
+
+氏名・メール・所属ノード・アバターの表示は基盤 directory の一括取得へ切り替えました。通知は actor の Member ID、監査ログは Member ID を保存し、氏名は表示時に解決します。旧社員列と Department 表そのものの削除、CSV の整理は H-4d で行います。

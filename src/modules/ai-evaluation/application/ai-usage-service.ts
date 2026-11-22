@@ -5,6 +5,7 @@ import {
   translateAiErrorCode,
 } from "@/modules/ai-evaluation/domain/ai-usage-summary";
 import * as repository from "@/modules/ai-evaluation/infrastructure/ai-usage-repository";
+import { resolveMemberProfiles } from "@/modules/members/application/member-directory";
 
 export async function getAiUsageSummary(monthValue?: string, now = new Date()) {
   const month = getAiUsageMonth(monthValue, now);
@@ -23,11 +24,9 @@ export async function getAiUsageSummary(monthValue?: string, now = new Date()) {
         .filter((id): id is string => Boolean(id)),
     ),
   ];
+  const profiles = await resolveMemberProfiles(memberIds);
   const names = new Map(
-    (await repository.getAiUsageMemberNames(memberIds)).map((member) => [
-      member.id,
-      member.name,
-    ]),
+    [...profiles.values()].map((profile) => [profile.memberId, profile.name]),
   );
   const days = Array.from(
     { length: new Date(month.end.getTime() - 1).getUTCDate() },

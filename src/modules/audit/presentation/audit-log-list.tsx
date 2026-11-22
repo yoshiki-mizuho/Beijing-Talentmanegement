@@ -87,7 +87,8 @@ function AuditRow({ item }: { item: AuditLogListItem }) {
           <MemberAvatar
             memberId={item.actor.id}
             name={displayMemberName(item.actor.name)}
-            avatarUpdatedAt={item.actor.avatarUpdatedAt}
+            avatarUrl={item.actor.avatarUrl}
+            avatarColor={item.actor.avatarColor}
             size="sm"
           />
         ) : (

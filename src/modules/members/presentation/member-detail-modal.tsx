@@ -90,7 +90,6 @@ export function MemberDetailModal({
     <Dialog
       open
       onClose={onClose}
-      eyebrow={member.employeeNo}
       title={`${member.name}の詳細`}
       className="max-w-4xl"
       headerActions={(

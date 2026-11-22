@@ -122,7 +122,7 @@ describe("updateMember audit log", () => {
     mocks.auditLogCreate.mockResolvedValue({});
   });
 
-  it("records only changed fields and redacts the profile value", async () => {
+  it("records changed field names without storing profile values or platform-owned fields", async () => {
     mocks.memberUpdate.mockResolvedValue({
       ...before,
       name: "変更後",
@@ -145,8 +145,9 @@ describe("updateMember audit log", () => {
         action: "member.update",
         targetType: "Member",
         targetId: "member-1",
-        before: { name: "変更前" },
-        after: { name: "変更後" }
+        before: {},
+        after: {},
+        metadata: { changedFields: ["profile"] }
       })
     });
     expect(mocks.auditLogCreate.mock.calls[0][0].data.before).not.toHaveProperty("profile");
@@ -230,9 +231,10 @@ describe("createSkillAssessments transaction boundary", () => {
         {
           skillSelfAssessmentId: "assessment-1",
           recipientMemberId: "manager-1",
+          actorMemberId: "member-1",
           type: NotificationType.SKILL_ASSESSMENT_REQUESTED,
           title: "スキル申請の承認依頼",
-          body: "テスト太郎さんから 3件の申請が届きました（React Lv3・TypeScript Lv4 ほか）。"
+          body: "3件の申請が届きました（React Lv3・TypeScript Lv4 ほか）。"
         }
       ]
     });
@@ -261,11 +263,13 @@ describe("createSkillAssessments transaction boundary", () => {
       data: [
         expect.objectContaining({
           recipientMemberId: "admin-1",
-          body: "テスト太郎さんが React Lv3 を申請しました。"
+          actorMemberId: "member-1",
+          body: "React Lv3 の申請が届きました。"
         }),
         expect.objectContaining({
           recipientMemberId: "admin-2",
-          body: "テスト太郎さんが React Lv3 を申請しました。"
+          actorMemberId: "member-1",
+          body: "React Lv3 の申請が届きました。"
         })
       ]
     });
@@ -377,26 +381,6 @@ describe("approveSkillAssessments transaction boundary", () => {
 });
 
 describe("buildMemberSearchWhere", () => {
-  it("builds keyword and department conditions together", () => {
-    expect(
-      buildMemberSearchWhere({ q: "佐藤", departmentId: "department-1" })
-    ).toEqual({
-      OR: [
-        { employeeNo: { contains: "佐藤", mode: "insensitive" } },
-        { name: { contains: "佐藤", mode: "insensitive" } },
-        { email: { contains: "佐藤", mode: "insensitive" } },
-        { jobTitle: { contains: "佐藤", mode: "insensitive" } }
-      ],
-      departmentId: "department-1"
-    });
-  });
-
-  it("配下の部署を渡したときは、それらの部署のメンバーを対象にする", () => {
-    expect(
-      buildMemberSearchWhere({ departmentId: "hq" }, ["hq", "dev", "infra"])
-    ).toEqual({ departmentId: { in: ["hq", "dev", "infra"] } });
-  });
-
   it("combines skill and minimum level in the same relation condition", () => {
     expect(
       buildMemberSearchWhere({

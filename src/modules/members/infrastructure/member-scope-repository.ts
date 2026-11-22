@@ -35,15 +35,7 @@ export async function ensureScopeMembers(platformMembers: Map<string, PlatformUs
   if (platformUserIds.length === 0) return [];
 
   await prisma.member.createMany({
-    data: platformUserIds.map((platformUserId) => {
-      const user = platformMembers.get(platformUserId);
-      return {
-        platformUserId,
-        // H-4c/H-4d までの表示用の写し。
-        name: user?.name || null,
-        email: user?.email || null
-      };
-    }),
+    data: platformUserIds.map((platformUserId) => ({ platformUserId })),
     skipDuplicates: true
   });
 
