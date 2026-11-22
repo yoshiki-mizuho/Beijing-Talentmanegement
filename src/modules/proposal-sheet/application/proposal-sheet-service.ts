@@ -1,7 +1,8 @@
 import type { AuthRole } from "@prisma/client";
 import { getCareerForProposalSheet } from "@/modules/career/application/career-service";
 import { calculateExperienceLabel, formatCareerMonth } from "@/modules/career/domain/career-display";
-import { generateProposalSheetText } from "@/modules/ai-evaluation/application/proposal-sheet-service";
+import { createFallbackProposalSheet } from "@/modules/ai-evaluation/domain/proposal-sheet";
+import * as jobs from "@/modules/ai-evaluation/application/proposal-sheet-service";
 import {
   hashProposalSheetInput,
   type ProposalSheetPromptInput,
@@ -61,7 +62,8 @@ export async function getProposalSheet(actor: ProposalSheetActor, memberId: stri
       generatedAt: draft.generatedAt?.toISOString() ?? null,
       isStale: draft.inputHash !== hashProposalSheetInput(input)
     } : null,
-    initialDisplayName: initialProposalDisplayName(displayMemberName(profiles.get(memberId)?.name))
+    initialDisplayName: initialProposalDisplayName(displayMemberName(profiles.get(memberId)?.name)),
+    aiJob: toJobView(await jobs.findLatestProposalSheetJob(memberId))
   };
 }
 
@@ -76,27 +78,44 @@ export async function generateProposalSheet(
   ]);
   if (!context || !career) throw new Error("member_not_found");
   const input = sanitizeSettings(proposalSheetSettingsSchema.parse(raw), context, career);
-  const promptInput = buildPromptInput(context, career, input.projectHistoryIds, input.excludedSkillIds, input.customerRequest);
-  const previous = context.proposalSheetDraft
-    ? toPrevious(context.proposalSheetDraft.selfPr, context.proposalSheetDraft.strengths, context.proposalSheetDraft.projectDescriptions)
-    : undefined;
-  const result = await generateProposalSheetText(actor.memberId, input.memberId, promptInput, previous);
-  if (result.keptPrevious) return { ...result, draft: null };
-  const generatedAt = new Date().toISOString();
+  const previous = context.proposalSheetDraft;
   const saved: ProposalSheetDraftData = {
     ...input,
-    selfPr: result.content.selfPr,
-    strengths: result.content.strengths,
-    projectDescriptions: Object.fromEntries(
-      result.content.projects.map((item) => [item.id, item.description])
-    ),
-    source: result.source,
-    inputHash: hashProposalSheetInput(promptInput),
-    model: result.model,
-    generatedAt
+    selfPr: previous?.selfPr ?? "",
+    strengths: previous?.strengths ?? "",
+    projectDescriptions: parseDescriptions(previous?.projectDescriptions),
+    source: previous?.source ?? "MANUAL",
+    inputHash: previous?.inputHash ?? null,
+    model: previous?.model ?? null,
+    generatedAt: previous?.generatedAt?.toISOString() ?? null
   };
   await repository.saveProposalSheetDraft(actor.memberId, saved, "generate");
-  return { ...result, draft: { ...saved, isStale: false } };
+  const reservation = await jobs.reserveProposalSheetJob({
+    targetMemberId: input.memberId,
+    requestedByMemberId: actor.memberId,
+  });
+  if (reservation.kind === "daily_limit") {
+    return { message: "今日の上限に達しました。", jobStatus: null };
+  }
+  return {
+    message: "作成を受け付けました。数分後にできます。",
+    jobStatus: reservation.job.status,
+  };
+}
+
+export async function buildProposalSheetJobInput(memberId: string) {
+  const [context, career] = await Promise.all([
+    repository.getProposalSheetContext(memberId),
+    getCareerForProposalSheet(memberId)
+  ]);
+  if (!context || !career || !context.proposalSheetDraft) throw new Error("proposal_sheet_draft_not_found");
+  const draft = context.proposalSheetDraft;
+  return buildPromptInput(context, career, draft.projectHistoryIds, draft.excludedSkillIds, draft.customerRequest);
+}
+
+export async function createFallbackProposalSheetForEditor(actor: ProposalSheetActor, memberId: string) {
+  await assertProposalSheetAccess(actor, memberId);
+  return createFallbackProposalSheet(await buildProposalSheetJobInput(memberId));
 }
 
 export async function saveProposalSheet(actor: ProposalSheetActor, raw: ProposalSheetEditInput) {
@@ -109,7 +128,12 @@ export async function saveProposalSheet(actor: ProposalSheetActor, raw: Proposal
   const parsed = proposalSheetEditSchema.parse(raw);
   const settings = sanitizeSettings(parsed, context, career);
   const existing = context.proposalSheetDraft;
-  // 出どころ・入力のハッシュ・作成日時は、保存済みの下書きの値を引き継ぐ（画面から受け取らない）
+  const appliedJob = parsed.aiJobId
+    ? await jobs.findLatestProposalSheetJob(raw.memberId)
+    : null;
+  const appliedResult = appliedJob && appliedJob.id === parsed.aiJobId && appliedJob.status === "SUCCEEDED"
+    ? parseProposalJobResult(appliedJob.result)
+    : null;
   return repository.saveProposalSheetDraft(
     actor.memberId,
     {
@@ -118,10 +142,10 @@ export async function saveProposalSheet(actor: ProposalSheetActor, raw: Proposal
         parsed.projectDescriptions,
         settings.projectHistoryIds
       ),
-      source: existing?.source ?? "MANUAL",
-      inputHash: existing?.inputHash ?? null,
-      model: existing?.model ?? null,
-      generatedAt: existing?.generatedAt?.toISOString() ?? null
+      source: appliedResult ? "AI" : existing?.source ?? "MANUAL",
+      inputHash: appliedResult?.inputHash ?? existing?.inputHash ?? null,
+      model: appliedResult && appliedJob ? appliedJob.model : existing?.model ?? null,
+      generatedAt: appliedResult && appliedJob ? appliedJob.finishedAt?.toISOString() ?? null : existing?.generatedAt?.toISOString() ?? null
     },
     "update"
   );
@@ -183,10 +207,14 @@ function parseDescriptions(value: unknown) {
   return Object.fromEntries(Object.entries(value).filter((item): item is [string, string] => typeof item[1] === "string"));
 }
 
-function toPrevious(selfPr: string, strengths: string, descriptions: unknown): ProposalSheetText {
-  return {
-    selfPr,
-    strengths,
-    projects: Object.entries(parseDescriptions(descriptions)).map(([id, description]) => ({ id, description }))
-  };
+function parseProposalJobResult(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const result = value as { content?: ProposalSheetText; inputHash?: unknown };
+  return result.content && typeof result.inputHash === "string" ? { ...result, inputHash: result.inputHash } : null;
+}
+
+function toJobView(job: Awaited<ReturnType<typeof jobs.findLatestProposalSheetJob>>) {
+  if (!job) return null;
+  const result = job.status === "SUCCEEDED" ? parseProposalJobResult(job.result) : null;
+  return { id: job.id, status: job.status, result: result?.content ?? null };
 }

@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { createE2eTestData } from "./fixtures/test-data";
 import { login, openLoggedInContext } from "./helpers/auth";
+import { runAiJobsOnce } from "./helpers/ai-jobs";
 
 test("ADMINが提案用シートを作成して保存でき、本人は開けない", async ({ browser, page }) => {
   const data = createE2eTestData();
@@ -33,6 +34,11 @@ test("ADMINが提案用シートを作成して保存でき、本人は開けな
 
     await page.goto(`/talent/proposal-sheets/${member.member.id}`);
     await page.getByRole("button", { name: "AI で下書きを作る" }).click();
+    await expect(page.getByRole("main").getByText("作成を受け付けました。数分後にできます。")).toBeVisible();
+    await runAiJobsOnce();
+    await page.reload();
+    await expect(page.getByText("AI の下書きができました。")).toBeVisible();
+    await page.getByRole("button", { name: "反映する" }).click();
     await expect(page.getByLabel("自己 PR")).toHaveValue(/【テスト用の下書き】/);
     await expect(page.getByLabel("E2E提案案件の説明文")).toHaveValue(/【テスト用】/);
     await page.getByLabel("自己 PR").fill("E2Eで修正した自己 PR");

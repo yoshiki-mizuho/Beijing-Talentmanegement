@@ -1,66 +1,44 @@
-import {
-  calculatePercentage,
-  getAiMonthlyTokenLimit,
-  getAiUsageMonth,
-  translateAiErrorCode,
-} from "@/modules/ai-evaluation/domain/ai-usage-summary";
-import * as repository from "@/modules/ai-evaluation/infrastructure/ai-usage-repository";
-import { resolveMemberProfiles } from "@/modules/members/application/member-directory";
+import { AI_JOB_DAILY_LIMIT, startOfJstDay } from "@/modules/ai-evaluation/domain/ai-job-policy";
+import * as repository from "@/modules/ai-evaluation/infrastructure/ai-job-repository";
 
-export async function getAiUsageSummary(monthValue?: string, now = new Date()) {
-  const month = getAiUsageMonth(monthValue, now);
-  const [aggregates, dailyRows, recentRows] = await Promise.all([
-    repository.getAiUsageAggregates(month.start, month.end),
-    repository.getDailyAiUsage(month.start, month.end),
-    repository.getRecentAiUsage(month.start, month.end),
-  ]);
-  const counts = { SUCCESS: 0, FALLBACK: 0, FAILED: 0 };
-  for (const row of aggregates.statuses) counts[row.status] = row._count._all;
-  const total = counts.SUCCESS + counts.FALLBACK + counts.FAILED;
-  const memberIds = [
-    ...new Set(
-      recentRows
-        .flatMap((row) => [row.actorMemberId, row.targetMemberId])
-        .filter((id): id is string => Boolean(id)),
-    ),
-  ];
-  const profiles = await resolveMemberProfiles(memberIds);
-  const names = new Map(
-    [...profiles.values()].map((profile) => [profile.memberId, profile.name]),
-  );
-  const days = Array.from(
-    { length: new Date(month.end.getTime() - 1).getUTCDate() },
-    (_, index) => ({ day: index + 1, SUCCESS: 0, FALLBACK: 0, FAILED: 0 }),
-  );
-  for (const row of dailyRows) {
-    const day = row.day.getUTCDate();
-    days[day - 1][row.status] = Number(row.count);
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export async function getAiUsageSummary(now = new Date()) {
+  const today = startOfJstDay(now);
+  const since = new Date(today.getTime() - 29 * DAY_MS);
+  const rows = await repository.getAiJobUsageRows(since);
+  const days = Array.from({ length: 30 }, (_, index) => ({
+    date: new Date(since.getTime() + index * DAY_MS),
+    SUCCEEDED: 0,
+    FAILED: 0,
+    QUEUED: 0,
+    RUNNING: 0,
+    GROWTH_HINT: 0,
+    PROPOSAL_SHEET: 0,
+    SKILL_PREREQUISITE: 0,
+  }));
+  for (const row of rows) {
+    const index = Math.floor((startOfJstDay(row.createdAt).getTime() - since.getTime()) / DAY_MS);
+    if (!days[index]) continue;
+    days[index][row.status] += 1;
+    days[index][row.kind] += 1;
   }
+  const todayCount = rows.filter((row) => row.createdAt >= today).length;
   return {
-    month,
-    counts,
-    total,
-    failurePercentage: calculatePercentage(counts.FAILED, total),
-    totalTokens: aggregates.totalTokens,
-    tokenLimit: getAiMonthlyTokenLimit(),
-    averageSuccessLatencyMs: aggregates.averageSuccessLatencyMs,
     days,
-    recent: recentRows.map((row) => ({
-      ...row,
-      featureName: getAiFeatureName(row.feature),
-      actorName: row.actorMemberId
-        ? (names.get(row.actorMemberId) ?? "不明")
-        : "システム",
-      targetName: row.targetMemberId
-        ? (names.get(row.targetMemberId) ?? "不明")
-        : "—",
-      reason: translateAiErrorCode(row.errorCode),
+    todayCount,
+    dailyLimit: AI_JOB_DAILY_LIMIT,
+    recentFailures: rows.filter((row) => row.status === "FAILED").slice(-20).reverse().map((row) => ({
+      id: row.id,
+      createdAt: row.createdAt,
+      kind: row.kind,
+      errorCode: row.errorCode ?? "UNKNOWN",
     })),
   };
 }
 
-export function getAiFeatureName(feature: string) {
-  if (feature === "skill_prerequisite_suggestion") return "前提スキルの候補";
-  if (feature === "proposal_sheet") return "提案用スキルシート";
+export function getAiFeatureName(kind: string) {
+  if (kind === "SKILL_PREREQUISITE") return "前提スキルの候補";
+  if (kind === "PROPOSAL_SHEET") return "提案用スキルシート";
   return "育成のヒント";
 }

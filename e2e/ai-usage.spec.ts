@@ -12,12 +12,11 @@ test("ADMINがAIの利用状況を確認できる", async ({ page }) => {
   const node = await data.createDepartment("AI利用部署");
   const admin = await data.createMember({ label: "AI利用管理者", nodeId: node.id, role: "ADMIN" });
   await login(page, admin.credential);
-  // 育成のヒントは H-5a で予約の形になり、利用の記録（AiUsageLog）には残らない。
-  // 予約の回数を出す画面への作り替えは H-5b で行う。
   await page.goto("/talent/ai-usage");
   await expect(
     page.getByRole("heading", { name: "AI の利用状況" }),
   ).toBeVisible();
+  await expect(page.getByText(/\d+ \/ 50件/)).toBeVisible();
   } finally {
     await data.cleanup();
   }

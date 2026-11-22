@@ -22,17 +22,7 @@
 
 3. `.env.example` を `.env` にコピーする。`DATABASE_URL` は `talent_app` のアプリ用 URL、`MIGRATE_DATABASE_URL` は `talent` の migration 用 URL にする。`.env` はGit管理外であり、コミットしない。
 
-AIを通信なしで確認する場合は、`.env`の`AI_API_BASE_URL`を`fake`にする。
-
-OpenAI互換APIを使う場合は、`AI_API_BASE_URL`、`AI_API_KEY`、`AI_MODEL`を設定する。
-
-必要に応じて`AI_TIMEOUT_MS`へミリ秒単位の上限を設定する。
-
-`AI_MONTHLY_TOKEN_LIMIT`へ正の整数を設定すると、日本時間の暦月ごとにトークン数を制限できる。
-
-未設定の場合は上限なしになる。
-
-APIキーはサーバー専用であり、`NEXT_PUBLIC_`を付けない。
+AI機能は画面で予約し、`npm.cmd run jobs:ai`で定期実行を1回動かす。hub-devkit または E2E では偽の Hub 基盤 LLM を使う。
 
 4. 依存関係をインストールし、migrationとseedを実行する。
 

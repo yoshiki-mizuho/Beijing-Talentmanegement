@@ -99,17 +99,6 @@ export function createFallbackProposalSheet(input: ProposalSheetPromptInput): Pr
   };
 }
 
-export function createFakeProposalSheetResponse(input: ProposalSheetPromptInput) {
-  return JSON.stringify({
-    selfPr: `【テスト用の下書き】${input.note || "登録された経験とスキルを活かして取り組みます。"}`,
-    strengths: createFallbackProposalSheet(input).strengths,
-    projects: input.projects.map((project) => ({
-      id: project.id,
-      description: `【テスト用】${project.summary}`
-    }))
-  });
-}
-
 export function hashProposalSheetInput(input: ProposalSheetPromptInput) {
   return createHash("sha256").update(JSON.stringify(input)).digest("hex");
 }

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAuthenticatedMember } from "@/server/auth/authorization";
 import { runActionWithData } from "@/shared/lib/action-result";
-import { generateProposalSheet, saveProposalSheet } from "../application/proposal-sheet-service";
+import { createFallbackProposalSheetForEditor, generateProposalSheet, saveProposalSheet } from "../application/proposal-sheet-service";
 import type {
   ProposalSheetEditInput,
   ProposalSheetSettingsInput
@@ -28,4 +28,11 @@ export async function saveProposalSheetAction(input: ProposalSheetEditInput) {
     await saveProposalSheet(actor(session), input);
     revalidatePath(`/talent/proposal-sheets/${input.memberId}`);
   }, "提案用スキルシートを保存しました。");
+}
+
+export async function createFallbackProposalSheetAction(memberId: string) {
+  return runActionWithData(async () => {
+    const session = await requireAuthenticatedMember();
+    return createFallbackProposalSheetForEditor(actor(session), memberId);
+  }, "簡易版を作りました。");
 }

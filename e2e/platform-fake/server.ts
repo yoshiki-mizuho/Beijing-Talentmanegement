@@ -197,6 +197,74 @@ Object.assign(implementations, {
   })
 });
 
+type FakeLlmRequest = { userPrompt?: string; jsonSchemaHint?: string };
+
+// 依頼の種類は json_schema_hint の形で見分け、その形に合う決まった JSON を返す。
+function createFakeLlmText(request: FakeLlmRequest) {
+  const hint = request.jsonSchemaHint ?? "";
+  const input = parseFakeLlmInput(request.userPrompt);
+  if (hint.includes("selfPr")) {
+    const projects = Array.isArray(input.projects) ? input.projects : [];
+    return JSON.stringify({
+      selfPr: `【テスト用の下書き】${typeof input.note === "string" && input.note ? input.note : "登録された経験とスキルを活かして取り組みます。"}`,
+      strengths: "設計／実装／運用",
+      projects: projects.map((project: { id?: unknown; summary?: unknown }) => ({
+        id: String(project.id ?? ""),
+        description: `【テスト用】${typeof project.summary === "string" ? project.summary : ""}`,
+      })),
+    });
+  }
+  if (hint.includes("suggestions")) {
+    return JSON.stringify({ suggestions: createFakePrerequisiteSuggestions(input) });
+  }
+  return JSON.stringify({
+    strengthsSummary: "承認済みのスキルを強みに、次の成長へつなげられます。",
+    nextSteps: ["目標スキルを実務で試す機会を作る。"],
+    oneOnOneTopics: ["次に挑戦する仕事について"],
+  });
+}
+
+function parseFakeLlmInput(value: string | undefined): Record<string, unknown> {
+  try {
+    const parsed: unknown = JSON.parse(value ?? "{}");
+    return parsed && typeof parsed === "object" ? parsed as Record<string, unknown> : {};
+  } catch {
+    return {};
+  }
+}
+
+function createFakePrerequisiteSuggestions(input: Record<string, unknown>) {
+  type Skill = { number: number; name: string };
+  const targets = (Array.isArray(input.targets) ? input.targets : []) as Skill[];
+  const candidates = (Array.isArray(input.candidates) ? input.candidates : []) as Skill[];
+  const pairs: Array<[string, string]> = [
+    ["Kubernetes", "Docker"],
+    ["Node.js", "JavaScript"],
+    ["Spring Boot", "Java"],
+    ["React", "JavaScript"],
+    ["TypeScript", "JavaScript"],
+  ];
+  const byName = new Map(candidates.map((skill) => [skill.name, skill.number]));
+  const targetNumbers = new Set(targets.map((skill) => skill.number));
+  const suggestions = pairs.flatMap(([skillName, prerequisiteName]) => {
+    const skill = byName.get(skillName);
+    const prerequisite = byName.get(prerequisiteName);
+    return skill && prerequisite && targetNumbers.has(skill)
+      ? [{ skill, prerequisite, reason: `${prerequisiteName}の理解が実務でほぼ必須です`, confidence: "high" }]
+      : [];
+  });
+  const fallbackPrerequisite = candidates.find((skill) => skill.number !== targets[0]?.number);
+  if (suggestions.length === 0 && targets[0] && fallbackPrerequisite) {
+    suggestions.push({
+      skill: targets[0].number,
+      prerequisite: fallbackPrerequisite.number,
+      reason: "基礎となる知識の理解が実務でほぼ必須です",
+      confidence: "low",
+    });
+  }
+  return suggestions.slice(0, 5);
+}
+
 const llmImplementations: grpc.UntypedServiceImplementation = {
   generate: withTenant((call, callback, tenant) => {
     if (tenant.slug === "no-hub") {
@@ -208,11 +276,7 @@ const llmImplementations: grpc.UntypedServiceImplementation = {
       return;
     }
     callback(null, {
-      text: JSON.stringify({
-        strengthsSummary: "承認済みのスキルを強みに、次の成長へつなげられます。",
-        nextSteps: ["目標スキルを実務で試す機会を作る。"],
-        oneOnOneTopics: ["次に挑戦する仕事について"],
-      }),
+      text: createFakeLlmText(call.request as FakeLlmRequest),
       modelUsed: "fake-internal",
     });
   }),

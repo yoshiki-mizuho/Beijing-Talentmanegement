@@ -21,31 +21,3 @@ export function buildSkillPrerequisiteMessages(input: SkillPrerequisitePromptInp
     { role: "user" as const, content: JSON.stringify(input) }
   ];
 }
-
-export function createFakeSkillPrerequisiteResponse(input: SkillPrerequisitePromptInput) {
-  const pairs: Array<[string, string]> = [
-    ["Kubernetes", "Docker"],
-    ["Node.js", "JavaScript"],
-    ["Spring Boot", "Java"],
-    ["React", "JavaScript"],
-    ["TypeScript", "JavaScript"]
-  ];
-  const byName = new Map(input.candidates.map((skill) => [skill.name, skill.number]));
-  const targetNumbers = new Set(input.targets.map((skill) => skill.number));
-  const suggestions = pairs.flatMap(([skillName, prerequisiteName]) => {
-    const skill = byName.get(skillName);
-    const prerequisite = byName.get(prerequisiteName);
-    return skill && prerequisite && targetNumbers.has(skill)
-      ? [{ skill, prerequisite, reason: `${prerequisiteName}の理解が実務でほぼ必須です`, confidence: "high" }]
-      : [];
-  });
-  if (suggestions.length === 0 && input.targets[0] && input.candidates[1]) {
-    suggestions.push({
-      skill: input.targets[0].number,
-      prerequisite: input.candidates[1].number,
-      reason: "基礎となる知識の理解が実務でほぼ必須です",
-      confidence: "low"
-    });
-  }
-  return JSON.stringify({ suggestions: suggestions.slice(0, 5) });
-}

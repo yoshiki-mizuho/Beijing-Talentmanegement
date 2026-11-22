@@ -9,7 +9,8 @@ export const proposalSheetEditSchema = z.object({
   excludedSkillIds: z.array(z.string()),
   selfPr: z.string().max(800),
   strengths: z.string().max(200),
-  projectDescriptions: z.record(z.string(), z.string().max(500))
+  projectDescriptions: z.record(z.string(), z.string().max(500)),
+  aiJobId: z.string().optional()
 });
 
 export const proposalSheetSettingsSchema = proposalSheetEditSchema.pick({
