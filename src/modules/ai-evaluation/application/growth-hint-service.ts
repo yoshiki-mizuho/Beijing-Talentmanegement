@@ -1,11 +1,6 @@
 import type { AuthRole, GrowthHintSource } from "@prisma/client";
 
-import {
-  createChatCompletion,
-  getAiConfig,
-  AiClientError,
-} from "@/modules/ai-evaluation/infrastructure/ai-client";
-import * as usageRepository from "@/modules/ai-evaluation/infrastructure/ai-usage-repository";
+import * as jobRepository from "@/modules/ai-evaluation/infrastructure/ai-job-repository";
 import * as hintRepository from "@/modules/ai-evaluation/infrastructure/growth-hint-repository";
 import {
   growthHintContentSchema,
@@ -19,7 +14,7 @@ import {
 } from "@/modules/ai-evaluation/domain/growth-hint-input";
 import {
   buildGrowthHintMessages,
-  createFakeGrowthHintResponse,
+  GROWTH_HINT_JSON_SCHEMA_HINT,
 } from "@/modules/ai-evaluation/domain/growth-hint-prompt";
 import { isGrowthLevelChange } from "@/modules/growth/domain/level-change-source";
 import { listSkillMentorCandidates } from "@/modules/growth/application/growth-service";
@@ -33,12 +28,12 @@ import {
   memberIsInScope,
 } from "@/modules/members/application/member-scope";
 import { AuthorizationError } from "@/server/auth/authorization";
+import { getTenantId } from "@/server/db/prisma";
+import { generatePlatformText } from "@/server/platform/llm";
 import {
-  getAiMonthlyTokenLimit,
-} from "@/modules/ai-evaluation/domain/ai-usage-summary";
-
-// 通常の入力と出力を十分に含み、usage 欠落時にも過少計上しない予約量。
-const RESERVED_TOKENS = 4_000;
+  AI_JOB_DAILY_LIMIT,
+  startOfJstDay,
+} from "@/modules/ai-evaluation/domain/ai-job-policy";
 
 export type GrowthHintViewer = { memberId: string; role: AuthRole };
 
@@ -53,6 +48,11 @@ export type GrowthHintView = {
   generatedAt: string;
   isStale: boolean;
   canAddOneOnOneNotes: boolean;
+};
+
+export type GrowthHintState = {
+  hint: GrowthHintView | null;
+  jobStatus: "QUEUED" | "RUNNING" | "FAILED" | null;
 };
 
 export async function assertGrowthHintAccess(
@@ -74,202 +74,118 @@ async function prepare(memberId: string, viewer: GrowthHintViewer) {
   const scope = await getMemberScope(viewer.role, viewer.memberId);
   const canAddOneOnOneNotes =
     viewer.role === "MANAGER" && memberIsInScope(scope, memberId);
-  const since = new Date();
-  since.setDate(since.getDate() - 180);
-  const context = await getGrowthHintMemberContext(memberId, since);
-  if (!context) throw new Error("member_not_found");
-  const input = buildInput(context);
+  const { input } = await prepareInput(memberId);
   return {
-    context,
     input,
     inputHash: hashGrowthHintInput(input),
     canAddOneOnOneNotes
   };
 }
 
+async function prepareInput(memberId: string) {
+  const since = new Date();
+  since.setDate(since.getDate() - 180);
+  const context = await getGrowthHintMemberContext(memberId, since);
+  if (!context) throw new Error("member_not_found");
+  return { input: buildInput(context) };
+}
+
 export async function getGrowthHint(
   memberId: string,
   viewer: GrowthHintViewer,
 ) {
-  const [{ inputHash, canAddOneOnOneNotes }, saved] = await Promise.all([
+  const [{ inputHash, canAddOneOnOneNotes }, saved, job] = await Promise.all([
     prepare(memberId, viewer),
     hintRepository.findGrowthHint(memberId),
+    jobRepository.findLatestGrowthHintJob(memberId),
   ]);
-  return saved
-    ? toView(saved, inputHash, canAddOneOnOneNotes)
-    : null;
+  return {
+    hint: saved ? toView(saved, inputHash, canAddOneOnOneNotes) : null,
+    jobStatus: job && ["QUEUED", "RUNNING", "FAILED"].includes(job.status)
+      ? job.status as GrowthHintState["jobStatus"]
+      : null,
+  } satisfies GrowthHintState;
 }
 
 export async function generateGrowthHint(
   memberId: string,
   viewer: GrowthHintViewer,
 ) {
-  const startedAt = Date.now();
   const { input, inputHash, canAddOneOnOneNotes } = await prepare(memberId, viewer);
   const previous = await hintRepository.findGrowthHint(memberId);
-  const base = await buildComputedContent(memberId, input);
-  const config = getAiConfig();
-  if (config.kind === "none") {
-    const saved = await saveContent(
-      "FALLBACK",
-      createFallbackGrowthHint(input),
-      null,
-    );
-    await log("FALLBACK", Date.now() - startedAt, "not_configured");
-    return {
-      hint: toView(saved, inputHash, canAddOneOnOneNotes),
-      keptPrevious: false,
-      message: null,
-    };
-  }
-
-  const reservation = await usageRepository.reserveAiUsage({
-    feature: "growth_hint",
-    actorMemberId: viewer.memberId,
+  const tenantId = await getTenantId();
+  const reservation = await jobRepository.reserveGrowthHintJob({
+    tenantId,
     targetMemberId: memberId,
-    reservedTokens: RESERVED_TOKENS,
-    monthlyTokenLimit: getAiMonthlyTokenLimit(),
+    requestedByMemberId: viewer.memberId,
+    dayStartedAt: startOfJstDay(new Date()),
+    dailyLimit: AI_JOB_DAILY_LIMIT,
   });
-  if (reservation.kind === "monthly_limit") {
-    const saved = await saveContent(
-      "FALLBACK",
-      createFallbackGrowthHint(input),
-      null,
-    );
-    await log("FALLBACK", Date.now() - startedAt, "monthly_limit");
+  const displayed = previous ?? await saveGrowthHintContent(
+    memberId,
+    viewer.memberId,
+    input,
+    "FALLBACK",
+    null,
+  );
+  if (reservation.kind === "active") {
     return {
-      hint: toView(saved, inputHash, canAddOneOnOneNotes),
-      keptPrevious: false,
-      message: "今月の AI の利用上限に達したため、簡易版で作りました。",
+      hint: toView(displayed, inputHash, canAddOneOnOneNotes),
+      message: "作成を受け付けました。数分後にできます。",
+      jobStatus: reservation.job.status as "QUEUED" | "RUNNING",
     };
   }
-  if (reservation.kind === "rate_limited_user") {
-    await log("FAILED", Date.now() - startedAt, "rate_limited_user");
-    const message = "短い時間に何度も作り直したため、少し待ってからもう一度お試しください。";
-    if (previous) {
-      return {
-        hint: toView(previous, inputHash, canAddOneOnOneNotes),
-        keptPrevious: true,
-        message,
-      };
-    }
-    const saved = await saveContent(
-      "FALLBACK",
-      createFallbackGrowthHint(input),
-      null,
-    );
+  if (reservation.kind === "daily_limit") {
     return {
-      hint: toView(saved, inputHash, canAddOneOnOneNotes),
-      keptPrevious: false,
-      message,
+      hint: toView(displayed, inputHash, canAddOneOnOneNotes),
+      message: "今日の上限に達したため、簡易版を表示しています。",
+      jobStatus: null,
     };
   }
-
-  try {
-    const result = await createChatCompletion({
-      messages: buildGrowthHintMessages(input),
-      fakeResponse: () => createFakeGrowthHintResponse(input),
-    });
-    const saved = await saveContent(
-      "AI",
-      parseAiGrowthHint(result.content),
-      result.model,
-    );
-    await usageRepository.completeAiUsageReservation(reservation.id, {
-      model: result.model,
-      status: "SUCCESS",
-      promptTokens: result.usage?.promptTokens,
-      completionTokens: result.usage?.completionTokens,
-      totalTokens: result.usage?.totalTokens,
-      latencyMs: result.latencyMs,
-    });
-    return {
-      hint: toView(saved, inputHash, canAddOneOnOneNotes),
-      keptPrevious: false,
-      message: null,
-    };
-  } catch (error) {
-    const errorCode = getErrorCode(error);
-    await usageRepository.completeAiUsageReservation(reservation.id, {
-      status: "FAILED",
-      latencyMs: Date.now() - startedAt,
-      errorCode,
-    });
-    if (previous) {
-      return {
-        hint: toView(
-          previous,
-          inputHash,
-          canAddOneOnOneNotes,
-        ),
-        keptPrevious: true,
-        message: "作り直しに失敗しました。前回のヒントを表示しています。",
-      };
-    }
-    const saved = await saveContent(
-      "FALLBACK",
-      createFallbackGrowthHint(input),
-      null,
-    );
-    return {
-      hint: toView(saved, inputHash, canAddOneOnOneNotes),
-      keptPrevious: false,
-      message: getFallbackMessage(errorCode),
-    };
-  }
-
-  async function saveContent(
-    source: GrowthHintSource,
-    written: ReturnType<typeof createFallbackGrowthHint>,
-    model: string | null,
-  ) {
-    const content = growthHintContentSchema.parse({ ...base, ...written });
-    return hintRepository.saveGrowthHint({
-      memberId,
-      source,
-      inputHash,
-      content,
-      model,
-      generatedById: viewer.memberId,
-    });
-  }
-
-  function log(
-    status: "FAILED" | "FALLBACK",
-    latencyMs: number,
-    errorCode: string,
-  ) {
-    return usageRepository.recordAiUsage({
-      feature: "growth_hint",
-      actorMemberId: viewer.memberId,
-      targetMemberId: memberId,
-      status,
-      latencyMs,
-      errorCode,
-    });
-  }
+  return {
+    hint: toView(displayed, inputHash, canAddOneOnOneNotes),
+    message: "作成を受け付けました。数分後にできます。",
+    jobStatus: reservation.job.status as "QUEUED",
+  };
 }
 
-function getErrorCode(error: unknown) {
-  if (!(error instanceof AiClientError)) return "invalid_response";
-  if (
-    error.status !== undefined &&
-    (error.code === "http_error" || error.code === "rate_limited")
-  ) {
-    return `${error.code}:${error.status}`;
-  }
-  return error.code;
+export async function executeGrowthHintJob(input: {
+  targetMemberId: string;
+  requestedByMemberId: string;
+  requestId: string;
+}) {
+  const context = await prepareInput(input.targetMemberId);
+  const messages = buildGrowthHintMessages(limitGrowthHintInput(context.input));
+  const startedAt = Date.now();
+  const result = await generatePlatformText({
+    systemPrompt: messages[0].content,
+    userPrompt: messages[1].content,
+    jsonSchemaHint: GROWTH_HINT_JSON_SCHEMA_HINT,
+    requestId: input.requestId,
+  });
+  await saveGrowthHintContent(
+    input.targetMemberId,
+    input.requestedByMemberId,
+    context.input,
+    "AI",
+    result.model,
+    result.text,
+  );
+  return { model: result.model, durationMs: Date.now() - startedAt };
 }
 
-function getFallbackMessage(errorCode: string) {
-  const reason = errorCode.split(":", 1)[0];
-  if (["timeout", "rate_limited", "http_error", "network"].includes(reason)) {
-    return "AI が混み合っていたため、簡易版で作りました。時間をおいて作り直してください。";
-  }
-  if (reason === "invalid_response") {
-    return "AI の応答を読み取れなかったため、簡易版で作りました。";
-  }
-  return "AI で作れなかったため、簡易版で作りました。";
+export async function saveGrowthHintFallbackForJob(input: {
+  targetMemberId: string;
+  requestedByMemberId: string;
+}) {
+  const context = await prepareInput(input.targetMemberId);
+  return saveGrowthHintContent(
+    input.targetMemberId,
+    input.requestedByMemberId,
+    context.input,
+    "FALLBACK",
+    null,
+  );
 }
 
 function buildInput(context: Context): GrowthHintInput {
@@ -319,6 +235,57 @@ function buildInput(context: Context): GrowthHintInput {
         toLevel: item.toLevel,
       })),
   };
+}
+
+export function limitGrowthHintInput(input: GrowthHintInput) {
+  const limited: GrowthHintInput = {
+    approvedSkills: input.approvedSkills.slice(0, 20),
+    targetRole: input.targetRole
+      ? {
+          ...input.targetRole,
+          requirements: input.targetRole.requirements.slice(0, 20),
+        }
+      : null,
+    skillGaps: input.skillGaps.slice(0, 20),
+    recentGrowth: input.recentGrowth.slice(0, 20),
+  };
+  while (JSON.stringify(limited).length > 2_600) {
+    const candidates = [
+      limited.recentGrowth,
+      limited.approvedSkills,
+      limited.skillGaps,
+      limited.targetRole?.requirements ?? [],
+    ];
+    const longest = candidates.sort(
+      (left, right) => right.length - left.length,
+    )[0];
+    if (longest.length === 0) break;
+    longest.pop();
+  }
+  return limited;
+}
+
+async function saveGrowthHintContent(
+  memberId: string,
+  generatedById: string,
+  input: GrowthHintInput,
+  source: GrowthHintSource,
+  model: string | null,
+  generatedText?: string,
+) {
+  const base = await buildComputedContent(memberId, input);
+  const written = source === "AI" && generatedText
+    ? parseAiGrowthHint(generatedText)
+    : createFallbackGrowthHint(input);
+  const content = growthHintContentSchema.parse({ ...base, ...written });
+  return hintRepository.saveGrowthHint({
+    memberId,
+    source,
+    inputHash: hashGrowthHintInput(input),
+    content,
+    model,
+    generatedById,
+  });
 }
 
 async function buildComputedContent(memberId: string, input: GrowthHintInput) {

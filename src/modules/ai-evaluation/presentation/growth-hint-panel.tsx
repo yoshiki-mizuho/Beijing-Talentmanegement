@@ -36,6 +36,7 @@ export function GrowthHintPanel({
   onGenerated: () => void;
 }) {
   const [hint, setHint] = useState<GrowthHintView | null>(null);
+  const [jobStatus, setJobStatus] = useState<"QUEUED" | "RUNNING" | "FAILED" | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [addedTopics, setAddedTopics] = useState<Set<string>>(new Set());
@@ -45,9 +46,13 @@ export function GrowthHintPanel({
     let active = true;
     void getGrowthHintAction(memberId).then(async (value) => {
       if (!active) return;
-      setHint(value);
+      setHint(value.hint);
+      setJobStatus(value.jobStatus);
+      if (value.jobStatus === "FAILED") {
+        setMessage("AI で作れなかったため、簡易版を表示しています。");
+      }
       setLoading(false);
-      if (value?.canAddOneOnOneNotes) {
+      if (value.hint?.canAddOneOnOneNotes) {
         const notes = await listOneOnOneNotesAction(memberId);
         if (active) setAddedTopics(new Set(notes.map((note) => note.body)));
       }
@@ -57,21 +62,29 @@ export function GrowthHintPanel({
     };
   }, [memberId]);
 
+  function refresh() {
+    startTransition(async () => {
+      const value = await getGrowthHintAction(memberId);
+      setHint(value.hint);
+      setJobStatus(value.jobStatus);
+      if (value.jobStatus === "FAILED") {
+        setMessage("AI で作れなかったため、簡易版を表示しています。");
+      } else if (!value.jobStatus) {
+        setMessage(null);
+      }
+    });
+  }
+
   function generate() {
     setMessage(null);
     startTransition(async () => {
       try {
         const result = await generateGrowthHintAction(memberId);
         setHint(result.hint);
+        setJobStatus(result.jobStatus);
         setMessage(result.message);
         onGenerated();
-        if (!result.keptPrevious) {
-          toast.success(
-            result.message
-              ? "簡易版のヒントを作りました。"
-              : "育成のヒントを作りました。",
-          );
-        }
+        toast.success(result.message);
       } catch {
         setMessage("育成のヒントを作れませんでした。");
         toast.error("育成のヒントを作れませんでした。");
@@ -111,14 +124,18 @@ export function GrowthHintPanel({
           <p className="mt-2 text-sm text-[var(--muted-foreground)]">
             承認済みのスキルと目標ロールをもとに整理します。
           </p>
-          <Button
-            type="button"
-            className="mt-5"
-            onClick={generate}
-            disabled={pending}
-          >
-            ヒントを作る
-          </Button>
+          {jobStatus === "QUEUED" || jobStatus === "RUNNING" ? (
+            <div className="mt-5 space-y-3">
+              <p className="text-sm">作成を受け付けました。数分後にできます。</p>
+              <Button type="button" variant="secondary" onClick={refresh} disabled={pending}>
+                最新を確かめる
+              </Button>
+            </div>
+          ) : (
+            <Button type="button" className="mt-5" onClick={generate} disabled={pending}>
+              ヒントを作る
+            </Button>
+          )}
         </div>
       ) : (
         <HintContent
@@ -127,18 +144,17 @@ export function GrowthHintPanel({
           pending={pending}
           addedTopics={addedTopics}
           onGenerate={generate}
+          onRefresh={refresh}
+          jobStatus={jobStatus}
           onAddTopic={addTopic}
         />
       )}
-      {pending ? (
+      {pending && jobStatus !== "QUEUED" && jobStatus !== "RUNNING" ? (
         <div
           aria-busy="true"
           className="rounded-lg bg-[var(--surface-subtle)] p-4 text-center text-sm"
         >
-          <p className="font-semibold">育成のヒントを作っています</p>
-          <p className="text-[var(--muted-foreground)]">
-            数秒〜30秒ほどかかります。
-          </p>
+          <p className="font-semibold">処理しています</p>
         </div>
       ) : null}
     </section>
@@ -151,6 +167,8 @@ function HintContent({
   pending,
   addedTopics,
   onGenerate,
+  onRefresh,
+  jobStatus,
   onAddTopic,
 }: {
   hint: GrowthHintView;
@@ -158,6 +176,8 @@ function HintContent({
   pending: boolean;
   addedTopics: Set<string>;
   onGenerate: () => void;
+  onRefresh: () => void;
+  jobStatus: "QUEUED" | "RUNNING" | "FAILED" | null;
   onAddTopic: (topic: string) => Promise<void>;
 }) {
   const fallback = hint.source === "FALLBACK";
@@ -175,21 +195,27 @@ function HintContent({
             {formatDateTime(hint.generatedAt)}作成
           </span>
         </div>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={onGenerate}
-          disabled={pending}
-        >
-          作り直す
-        </Button>
+        {jobStatus === "QUEUED" || jobStatus === "RUNNING" ? (
+          <Button type="button" variant="secondary" onClick={onRefresh} disabled={pending}>
+            最新を確かめる
+          </Button>
+        ) : (
+          <Button type="button" variant="secondary" onClick={onGenerate} disabled={pending}>
+            作り直す
+          </Button>
+        )}
       </div>
+      {jobStatus === "QUEUED" || jobStatus === "RUNNING" ? (
+        <p className="rounded-lg bg-[var(--surface-subtle)] px-4 py-3 text-sm">
+          作成を受け付けました。数分後にできます。
+        </p>
+      ) : null}
       {hint.isStale ? (
         <p className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">
           スキルや目標ロールが変わりました。 作り直せます。
         </p>
       ) : null}
-      {message ? (
+      {message && jobStatus !== "QUEUED" && jobStatus !== "RUNNING" ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           <span>{message}</span>
           <Button

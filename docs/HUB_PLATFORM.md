@@ -11,7 +11,7 @@ TalentHub は、Hub シリーズの製品 `talenthub` として、社内サー�
 | 基盤 | `contract/`、`scripts/update-contract.sh`・`hub-contracts.sh`・`devkit.sh`、`devkit.version`、`.claude/skills/hub-*/` | 書き換えない。版を上げるときに `scripts/update-contract.sh <版>` で丸ごと置き換える |
 | 基盤（手元だけ） | `.devkit/` | `scripts/devkit.sh` が取り込む。git に入れない |
 | TalentHub | `deploy/values.yaml`・`values-dev.yaml`・`values-prod.yaml` | 配布の設定。書ける項目は `contract/deploy-values.md` |
-| TalentHub | `Dockerfile`（画面と API の `web`）、`Dockerfile.migrate`（`prisma migrate deploy` を流す `migrate`） | 基盤の CI はビルドの段（target）を選べないので、イメージごとにファイルを分ける |
+| TalentHub | `Dockerfile`（画面と API の `web`）、`Dockerfile.migrate`（`prisma migrate deploy` を流す `migrate`）、`Dockerfile.job`（AI の予約を処理する `job`） | 基盤の CI はビルドの段（target）を選べないので、イメージごとにファイルを分ける |
 | TalentHub | `dev/devkit.yaml`（Docker 版）、`dev/devkit.local.yaml`（Docker なし）、`docker-compose.yml` | 手元の devkit の設定 |
 | TalentHub（基盤へ写す） | `deploy/platform/talenthub-dev.yaml`・`talenthub-prod.yaml` | 基盤のリポジトリの一覧ファイル（`deploy/applications/hubs/`）の下書き。H-7 で基盤への MR に写す。このリポジトリでは使わない |
 
@@ -24,7 +24,7 @@ TalentHub は、Hub シリーズの製品 `talenthub` として、社内サー�
 - 画面と API は 1 つのサービスで受ける（基盤に確認済み。hub-platform#4）。
 - 画面は `src/app/talent/`、API は `src/app/api/talent/v1/` に置き、静的アセットには `assetPrefix: "/talent"` を使う。API を `/talent` の外に置くため、`basePath` は使わない。死活の確認は `/talent/health`。
 - テーブルは `migrate` のジョブ（移行用のロール）が作る。アプリ用のロールはテーブルを作れない。
-- `SkillLevel` を除く全テーブルは `tenant_id` と RLS を持つ。アプリはリクエストごとに `X-Auth-Tenant-Id` をトランザクション内の `app.tenant_id` へ設定し、別テナントの行を DB 層で読み書きできない。migration 用の所有者 role は RLS の外、アプリ用 role は RLS の対象として動く。
+- `SkillLevel` と `HubTenant` を除く全テーブルは `tenant_id` と RLS を持つ。`HubTenant` は定期実行が回るテナントの ID だけを持つ。アプリはリクエストごとに `X-Auth-Tenant-Id` をトランザクション内の `app.tenant_id` へ設定し、別テナントの行を DB 層で読み書きできない。migration 用の所有者 role は RLS の外、アプリ用 role は RLS の対象として動く。
 
 ## H-4 社員・組織の載せ替え
 
@@ -37,12 +37,14 @@ H-4d では、自前の社員の列（社員番号・氏名・メール・部署
 ## 配布の流れ
 
 1. `main` に merge する。
-2. CI の `build:web`・`build:migrate` がイメージを作り、このリポジトリのレジストリに置く（タグはコミットの短い SHA）。
+2. CI の `build:web`・`build:migrate`・`build:job` がイメージを作り、このリポジトリのレジストリに置く（タグはコミットの短い SHA）。
 3. CI の `deploy:dev` が `deploy/values-dev.yaml` のタグを書き換えて `main` にコミットする。
 4. 基盤の ArgoCD が dev（`talenthub-dev`）に配る。`migrate` のジョブが先に流れ、失敗するとサービスは前の版のまま残る。
 5. prod は `production` ブランチで同じ流れ（`deploy:prod`）になり、人が ArgoCD で sync する。
 
 イメージの作成とタグの書き換えは、基盤の CI のひな形（`ci/hub/deploy.gitlab-ci.yml` の `.hub_build_image`・`.hub_update_tag`）を使う。サービスを足したら、ジョブと `TAG_KEYS` にも足す。
+
+AI の予約は `cronJobs.talenthub-ai-jobs` が 5 分ごとに `job` イメージを起動して処理する。DB は `talenthub-web` と同じものを使い、基盤の LLM 接続先は共通 chart が環境変数で入れる。
 
 ### CI の変数
 

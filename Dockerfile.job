@@ -1,0 +1,27 @@
+# syntax=docker/dockerfile:1
+
+FROM node:24-bookworm-slim
+WORKDIR /app
+ARG GIT_SHA=dev
+ENV GIT_SHA=${GIT_SHA}
+ENV NODE_ENV=production
+
+RUN apt-get update -y \
+  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/* \
+  && groupadd --system --gid 1001 nodejs \
+  && useradd --system --uid 1001 --gid nodejs nextjs
+
+COPY package.json package-lock.json ./
+RUN npm ci \
+  && npm cache clean --force
+COPY prisma.config.ts tsconfig.json ./
+COPY prisma ./prisma
+RUN ./node_modules/.bin/prisma generate
+COPY src ./src
+COPY scripts ./scripts
+COPY contract/proto ./contract/proto
+RUN chown -R nextjs:nodejs /app
+
+USER nextjs
+CMD ["./node_modules/.bin/tsx", "scripts/run-ai-jobs.ts"]

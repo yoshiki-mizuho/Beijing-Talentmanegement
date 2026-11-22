@@ -66,7 +66,10 @@ function setTenant(tenantId: string) {
 const extended = base.$extends({
   query: {
     $allModels: {
-      async $allOperations({ args, query }) {
+      async $allOperations({ model, args, query }) {
+        if (model === "HubTenant") {
+          return query(args);
+        }
         const tenantId = await getTenantId();
         const [, result] = await base.$transaction([
           setTenant(tenantId),

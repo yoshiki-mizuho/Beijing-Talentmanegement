@@ -176,13 +176,24 @@ build:migrate:
     - if: '$HUB_DEPLOY_ENABLED == "true" && ($CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "production")'
     - if: '$CI_PIPELINE_SOURCE == "web" && $HUB_BUILD_CHECK == "true"'
 
+build:job:
+  extends: .hub_build_image
+  stage: build
+  variables:
+    IMAGE_NAME: job
+    CONTEXT: .
+    DOCKERFILE: Dockerfile.job
+  rules:
+    - if: '$HUB_DEPLOY_ENABLED == "true" && ($CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "production")'
+    - if: '$CI_PIPELINE_SOURCE == "web" && $HUB_BUILD_CHECK == "true"'
+
 deploy:dev:
   extends: .hub_update_tag
   stage: deploy
-  needs: ["build:web", "build:migrate"]
+  needs: ["build:web", "build:migrate", "build:job"]
   variables:
     VALUES_FILE: deploy/values-dev.yaml
-    TAG_KEYS: "services.talenthub-web migrate"
+    TAG_KEYS: "services.talenthub-web migrate cronJobs.talenthub-ai-jobs"
     TARGET_BRANCH: main
   rules:
     - if: '$HUB_DEPLOY_ENABLED == "true" && $CI_COMMIT_BRANCH == "main"'
@@ -190,10 +201,10 @@ deploy:dev:
 deploy:prod:
   extends: .hub_update_tag
   stage: deploy
-  needs: ["build:web", "build:migrate"]
+  needs: ["build:web", "build:migrate", "build:job"]
   variables:
     VALUES_FILE: deploy/values-prod.yaml
-    TAG_KEYS: "services.talenthub-web migrate"
+    TAG_KEYS: "services.talenthub-web migrate cronJobs.talenthub-ai-jobs"
     TARGET_BRANCH: production
   rules:
     - if: '$HUB_DEPLOY_ENABLED == "true" && $CI_COMMIT_BRANCH == "production"'

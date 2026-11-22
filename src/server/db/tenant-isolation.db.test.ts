@@ -6,6 +6,8 @@ const tenantA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const tenantB = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const prefix = `DB-RLS-${Date.now()}`;
 let categoryId = "";
+let aiJobId = "";
+let memberId = "";
 
 describe("tenant row-level isolation", () => {
   it("hides tenant A rows from tenant B for list, ID, and count queries", async () => {
@@ -56,6 +58,37 @@ describe("tenant row-level isolation", () => {
       prisma.skillCategory.delete({ where: { id: category.id } }),
     );
   });
+
+  it("hides AiJob rows from another tenant", async () => {
+    const created = await runWithTenant(tenantA, async () => {
+      const member = await prisma.member.create({
+        data: { platformUserId: "aaaaaaaa-aaaa-4aaa-8aaa-000000000001" },
+      });
+      memberId = member.id;
+      return prisma.aiJob.create({
+        data: {
+          kind: "GROWTH_HINT",
+          targetMemberId: member.id,
+          requestedByMemberId: member.id,
+          params: {},
+        },
+      });
+    });
+    aiJobId = created.id;
+    await runWithTenant(tenantB, async () => {
+      await expect(prisma.aiJob.findUnique({ where: { id: aiJobId } })).resolves.toBeNull();
+    });
+  });
+
+  it("reads HubTenant without tenant context because it has no RLS", async () => {
+    await prisma.hubTenant.upsert({
+      where: { id: tenantA },
+      create: { id: tenantA },
+      update: { lastSeenAt: new Date() },
+    });
+    await expect(prisma.hubTenant.findUnique({ where: { id: tenantA } }))
+      .resolves.toMatchObject({ id: tenantA });
+  });
 });
 
 afterAll(async () => {
@@ -64,5 +97,11 @@ afterAll(async () => {
       prisma.skillCategory.deleteMany({ where: { id: categoryId } }),
     );
   }
+  if (memberId) {
+    await runWithTenant(tenantA, () =>
+      prisma.member.deleteMany({ where: { id: memberId } }),
+    );
+  }
+  await prisma.hubTenant.deleteMany({ where: { id: tenantA } });
   await prisma.$disconnect();
 });

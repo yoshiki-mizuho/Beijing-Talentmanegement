@@ -11,19 +11,13 @@ test("ADMINがAIの利用状況を確認できる", async ({ page }) => {
   try {
   const node = await data.createDepartment("AI利用部署");
   const admin = await data.createMember({ label: "AI利用管理者", nodeId: node.id, role: "ADMIN" });
-  const target = await data.createMember({ label: "AI利用対象", nodeId: node.id });
   await login(page, admin.credential);
-  await page.goto("/talent/members");
-  await page.getByLabel("キーワード").fill(target.displayName);
-  await page.getByRole("button", { name: `${target.displayName}の詳細を開く` }).click();
-  await page.getByRole("tab", { name: "育成のヒント" }).click();
-  await page.getByRole("button", { name: /ヒントを作る|作り直す/ }).click();
-  await expect(page.getByText("AI", { exact: true })).toBeVisible();
+  // 育成のヒントは H-5a で予約の形になり、利用の記録（AiUsageLog）には残らない。
+  // 予約の回数を出す画面への作り替えは H-5b で行う。
   await page.goto("/talent/ai-usage");
   await expect(
     page.getByRole("heading", { name: "AI の利用状況" }),
   ).toBeVisible();
-  await expect(page.getByText("AI", { exact: true }).first()).toBeVisible();
   } finally {
     await data.cleanup();
   }
