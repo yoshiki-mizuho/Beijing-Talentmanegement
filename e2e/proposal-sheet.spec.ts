@@ -5,13 +5,13 @@ import { login, openLoggedInContext } from "./helpers/auth";
 
 test("ADMINが提案用シートを作成して保存でき、本人は開けない", async ({ browser, page }) => {
   const data = createE2eTestData();
-  const department = await data.createDepartment("提案用シート部署");
+  const node = await data.createDepartment("提案用シート部署");
   const admin = await data.createMember({
     label: "提案管理者",
-    departmentId: department.id,
+    nodeId: node.id,
     role: "ADMIN"
   });
-  const member = await data.createMember({ label: "提案対象", departmentId: department.id });
+  const member = await data.createMember({ label: "提案対象", nodeId: node.id });
   const memberContext = await openLoggedInContext(browser, member.credential);
   try {
     await login(page, admin.credential);
@@ -51,16 +51,16 @@ test("ADMINが提案用シートを作成して保存でき、本人は開けな
 
 test("担当のMANAGERは部下の提案用シートを開ける", async ({ page }) => {
   const data = createE2eTestData();
-  const department = await data.createDepartment("提案用シート上司部署");
+  const node = await data.createDepartment("提案用シート上司部署");
   const manager = await data.createMember({
     label: "提案上司",
-    departmentId: department.id,
+    nodeId: node.id,
     role: "MANAGER"
   });
   const member = await data.createMember({
     label: "提案部下",
-    departmentId: department.id,
-    managerId: manager.member.id
+    nodeId: node.id,
+    leaderMemberId: manager.member.id
   });
   try {
     await login(page, manager.credential);

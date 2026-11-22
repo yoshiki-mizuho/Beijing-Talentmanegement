@@ -135,8 +135,8 @@ export default async function MySkillsPage({
                 id: group.id,
                 name: group.name
               }))}
-              popularHeading={popularSkills.departmentName
-                ? `${popularSkills.departmentName}でよく登録されているスキル`
+              popularHeading={popularSkills.nodeName
+                ? `${popularSkills.nodeName}でよく登録されているスキル`
                 : "よく登録されているスキル"}
             />
           </CardContent>

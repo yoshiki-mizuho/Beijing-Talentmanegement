@@ -31,8 +31,6 @@ type Preview = {
 };
 
 const labels: Record<CsvImportTarget, string> = {
-  departments: "部署",
-  members: "メンバー",
   skills: "スキル",
   "member-skills": "メンバースキル",
   roles: "ロール",
@@ -41,7 +39,7 @@ const labels: Record<CsvImportTarget, string> = {
 export function CsvImportPanel() {
   const input = useRef<HTMLInputElement>(null);
   const errorTable = useRef<HTMLElement>(null);
-  const [target, setTarget] = useState<CsvImportTarget>("departments");
+  const [target, setTarget] = useState<CsvImportTarget>("skills");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [filter, setFilter] = useState<"all" | Change["kind"]>("all");
@@ -135,11 +133,6 @@ export function CsvImportPanel() {
         <p className="mt-2">
           新規 {result.created}件・更新 {result.updated}件
         </p>
-        {target === "members" && result.created > 0 ? (
-          <p className="mt-3 text-sm text-[var(--muted-foreground)]">
-            新しく登録したメンバーには、メンバー詳細から初回ログイン用のパスワードを発行してください。
-          </p>
-        ) : null}
         <div className="mt-6 flex justify-center gap-3">
           <Link
             className="inline-flex h-10 items-center rounded-lg border border-[var(--border-strong)] px-4 text-sm font-semibold"
@@ -178,7 +171,7 @@ export function CsvImportPanel() {
         ))}
       </ol>
       <div className="flex gap-2">
-        {(["departments", "members", "skills", "member-skills", "roles"] as const).map((value) => (
+        {(["skills", "member-skills", "roles"] as const).map((value) => (
           <button
             key={value}
             type="button"

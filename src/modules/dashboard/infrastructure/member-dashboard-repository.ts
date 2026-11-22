@@ -9,7 +9,6 @@ export async function getMemberDashboardData(memberId: string) {
         where: { id: memberId },
         select: {
           id: true,
-          name: true,
           memberSkills: {
             select: {
               skillId: true,

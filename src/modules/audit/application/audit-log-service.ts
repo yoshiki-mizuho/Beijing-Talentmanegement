@@ -32,7 +32,6 @@ const targetTypeLabels: Record<string, string> = {
   SkillSelfAssessment: "申請・承認",
   AuditLog: "監査ログ",
   Csv: "CSV",
-  Department: "部署",
   TeamGoal: "チーム目標",
 };
 const mapJson = (value: Prisma.JsonValue | null): JsonMap | null =>
@@ -84,8 +83,8 @@ async function buildListItems(
         (memberProfiles.get(x.id) ?? fallbackMemberProfile(x.id)).name
       ])
     ),
-    departments: Object.fromEntries(
-      lookup.departments.map((x) => [x.id, x.name]),
+    nodes: Object.fromEntries(
+      lookup.nodes.map((x) => [x.id, x.name]),
     ),
     skills: Object.fromEntries(lookup.skills.map((x) => [x.id, x.name])),
     categories: Object.fromEntries(
@@ -196,9 +195,6 @@ function hasTarget(
   const id = targetId ?? "";
   if (targetType === "Member") {
     return Boolean(names.members[id]);
-  }
-  if (targetType === "Department") {
-    return Boolean(names.departments[id]);
   }
   if (targetType === "Skill") {
     return Boolean(names.skills[id]);

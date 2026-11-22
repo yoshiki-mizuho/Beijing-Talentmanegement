@@ -6,11 +6,11 @@ import { login } from "./helpers/auth";
 test("基盤のアバターがあれば画像、なければ頭文字を表示する", async ({ page }) => {
   const data = createE2eTestData();
   try {
-    const department = await data.createDepartment("アイコン部署");
+    const node = await data.createDepartment("アイコン部署");
     const avatarUrl = "/api/v1/users/e2e-avatar/avatar";
     const imageMember = await data.createMember({
       label: "画像本人",
-      departmentId: department.id,
+      nodeId: node.id,
       avatarUrl
     });
     await page.route(`**${avatarUrl}`, (route) => route.fulfill({
@@ -26,7 +26,7 @@ test("基盤のアバターがあれば画像、なければ頭文字を表示�
 
     const initialMember = await data.createMember({
       label: "頭文字本人",
-      departmentId: department.id
+      nodeId: node.id
     });
     await login(page, initialMember.credential);
     await expect(page.getByLabel("アカウントメニューを開く"))

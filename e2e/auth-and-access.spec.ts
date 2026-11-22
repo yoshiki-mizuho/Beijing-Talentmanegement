@@ -82,10 +82,10 @@ test("基盤に見つからない利用者も Hub 固有の行を自動作成し
 
 test("基盤で INACTIVE の利用者は画面とAPIを利用できない", async ({ browser }) => {
   const data = createE2eTestData();
-  const department = await data.createDepartment("非在籍");
+  const node = await data.createDepartment("非在籍");
   const account = await data.createMember({
     label: "非在籍利用者",
-    departmentId: department.id,
+    nodeId: node.id,
     platformStatus: "INACTIVE"
   });
   const context = await browser.newContext({
@@ -108,10 +108,10 @@ test("基盤で INACTIVE の利用者は画面とAPIを利用できない", asyn
 
 test("DB の ADMIN は基盤が MEMBER なら管理画面を利用できない", async ({ browser }) => {
   const data = createE2eTestData();
-  const department = await data.createDepartment("権限偽装");
+  const node = await data.createDepartment("権限偽装");
   const account = await data.createMember({
     label: "DB管理者",
-    departmentId: department.id,
+    nodeId: node.id,
     role: "ADMIN"
   });
   const context = await browser.newContext({

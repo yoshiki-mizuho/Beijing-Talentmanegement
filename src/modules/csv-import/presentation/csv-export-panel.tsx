@@ -1,9 +1,7 @@
 import {
-  Building2,
   Download,
   ListChecks,
   Target,
-  Users,
   WandSparkles,
   type LucideIcon,
 } from "lucide-react";
@@ -18,8 +16,6 @@ import { cn } from "@/shared/lib/utils";
 import { ApiDownloadButton } from "@/shared/ui/api-download-button";
 
 const icons: Record<CsvExportTarget, LucideIcon> = {
-  departments: Building2,
-  members: Users,
   skills: WandSparkles,
   "member-skills": ListChecks,
   roles: Target,
@@ -44,7 +40,7 @@ export function CsvExportPanel({
           在籍中
         </ScopeLink>
         <ScopeLink scope="all" current={scope}>
-          すべて（休職・退職を含む）
+          すべて（無効な利用者を含む）
         </ScopeLink>
       </div>
       <div className="divide-y divide-[var(--border)] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]">

@@ -8,10 +8,10 @@ test("チームフィードのおめでとうリアクションを付け外し�
   let manager: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
 
   try {
-    const department = await data.createDepartment("リアクション部署");
+    const node = await data.createDepartment("リアクション部署");
     const { skill } = await data.createSkill("リアクションスキル");
-    const managerMember = await data.createMember({ label: "リアクション管理者", departmentId: department.id, role: "MANAGER" });
-    const member = await data.createMember({ label: "リアクション部下", departmentId: department.id, managerId: managerMember.member.id });
+    const managerMember = await data.createMember({ label: "リアクション管理者", nodeId: node.id, role: "MANAGER" });
+    const member = await data.createMember({ label: "リアクション部下", nodeId: node.id, leaderMemberId: managerMember.member.id });
     await data.createMemberSkill({ memberId: member.member.id, skillId: skill.id, level: 2, approvedByMemberId: managerMember.member.id });
     await data.createLevelChange({ memberId: member.member.id, skillId: skill.id, fromLevel: 1, toLevel: 2, changedByMemberId: managerMember.member.id });
     manager = await openLoggedInContext(browser, managerMember.credential);

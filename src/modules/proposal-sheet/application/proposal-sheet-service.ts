@@ -9,6 +9,7 @@ import {
 } from "@/modules/ai-evaluation/domain/proposal-sheet";
 import { getMemberScope, memberIsInScope } from "@/modules/members/application/member-scope";
 import { displayMemberName } from "@/modules/members/domain/member-display";
+import { resolveMemberProfiles } from "@/modules/members/application/member-directory";
 import { AuthorizationError } from "@/server/auth/authorization";
 import { canAccessProposalSheet, initialProposalDisplayName } from "../domain/proposal-sheet-access";
 import {
@@ -33,9 +34,10 @@ export async function assertProposalSheetAccess(actor: ProposalSheetActor, targe
 
 export async function getProposalSheet(actor: ProposalSheetActor, memberId: string) {
   await assertProposalSheetAccess(actor, memberId);
-  const [context, career] = await Promise.all([
+  const [context, career, profiles] = await Promise.all([
     repository.getProposalSheetContext(memberId),
-    getCareerForProposalSheet(memberId)
+    getCareerForProposalSheet(memberId),
+    resolveMemberProfiles([memberId])
   ]);
   if (!context || !career) throw new Error("member_not_found");
   const draft = context.proposalSheetDraft;
@@ -43,7 +45,7 @@ export async function getProposalSheet(actor: ProposalSheetActor, memberId: stri
   const excludedSkillIds = draft?.excludedSkillIds ?? [];
   const input = buildPromptInput(context, career, selectedProjectIds, excludedSkillIds, draft?.customerRequest ?? "");
   return {
-    member: { id: context.id, name: displayMemberName(context.name) },
+    member: { id: context.id, name: displayMemberName(profiles.get(memberId)?.name) },
     experienceLabel: calculateExperienceLabel(career.itCareerStartMonth),
     projects: career.projectHistories,
     certifications: career.certifications,
@@ -59,7 +61,7 @@ export async function getProposalSheet(actor: ProposalSheetActor, memberId: stri
       generatedAt: draft.generatedAt?.toISOString() ?? null,
       isStale: draft.inputHash !== hashProposalSheetInput(input)
     } : null,
-    initialDisplayName: initialProposalDisplayName(displayMemberName(context.name))
+    initialDisplayName: initialProposalDisplayName(displayMemberName(profiles.get(memberId)?.name))
   };
 }
 

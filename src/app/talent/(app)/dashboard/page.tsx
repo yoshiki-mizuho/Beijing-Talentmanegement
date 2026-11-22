@@ -12,7 +12,7 @@ import { TeamDashboard } from "@/modules/dashboard/presentation/team-dashboard";
 import { buildTeamDashboardViewModel } from "@/modules/dashboard/presentation/team-dashboard-view-model";
 import {
   getCheerCelebrations,
-  getDepartmentLevelUpFeed,
+  getNodeLevelUpFeed,
   getLevelUpCelebrations,
   getRoleAchievementCelebration
 } from "@/modules/growth/application/growth-service";
@@ -90,7 +90,7 @@ export default async function DashboardPage({
     const now = new Date();
     const [data, feed, monthlyRecap, teamGoal] = await Promise.all([
       getMemberDashboard(session.user.memberId),
-      getDepartmentLevelUpFeed(session.user.memberId, 5),
+      getNodeLevelUpFeed(session.user.memberId, 5),
       getMonthlyRecap(session.user.memberId, undefined, now),
       getMemberTeamGoal(session.user.memberId, now)
     ]);

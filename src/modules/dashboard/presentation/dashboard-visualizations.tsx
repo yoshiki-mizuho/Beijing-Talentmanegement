@@ -4,11 +4,11 @@ import type { buildOrganizationDashboard } from "@/modules/dashboard/domain/dash
 type Summary = ReturnType<typeof buildOrganizationDashboard>;
 export function DashboardVisualizations({
   summary,
-  showDepartments,
+  showNodes,
   compact = false,
 }: {
   summary: Summary;
-  showDepartments: boolean;
+  showNodes: boolean;
   compact?: boolean;
 }) {
   const metrics = [
@@ -108,7 +108,7 @@ export function DashboardVisualizations({
           </Link>
         </Panel>
       </div>
-      {showDepartments ? (
+      {showNodes ? (
         <Panel title="部署ごとの状況">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -122,7 +122,7 @@ export function DashboardVisualizations({
                 </tr>
               </thead>
               <tbody>
-                {summary.departmentSummaries.map((item) => (
+                {summary.nodeSummaries.map((item) => (
                   <tr key={item.id} className="border-t border-[var(--border)]">
                     <td className="py-3 font-semibold">{item.name}</td>
                     <td>{item.memberCount}名</td>

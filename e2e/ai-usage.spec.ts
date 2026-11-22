@@ -9,13 +9,13 @@ const credentials = readDemoCredentials();
 test("ADMINがAIの利用状況を確認できる", async ({ page }) => {
   const data = createE2eTestData();
   try {
-  const department = await data.createDepartment("AI利用部署");
-  const admin = await data.createMember({ label: "AI利用管理者", departmentId: department.id, role: "ADMIN" });
-  const target = await data.createMember({ label: "AI利用対象", departmentId: department.id });
+  const node = await data.createDepartment("AI利用部署");
+  const admin = await data.createMember({ label: "AI利用管理者", nodeId: node.id, role: "ADMIN" });
+  const target = await data.createMember({ label: "AI利用対象", nodeId: node.id });
   await login(page, admin.credential);
   await page.goto("/talent/members");
-  await page.getByLabel("キーワード").fill(target.member.employeeNo ?? "");
-  await page.getByRole("button", { name: `${target.member.name ?? ""}の詳細を開く` }).click();
+  await page.getByLabel("キーワード").fill(target.displayName);
+  await page.getByRole("button", { name: `${target.displayName}の詳細を開く` }).click();
   await page.getByRole("tab", { name: "育成のヒント" }).click();
   await page.getByRole("button", { name: /ヒントを作る|作り直す/ }).click();
   await expect(page.getByText("AI", { exact: true })).toBeVisible();

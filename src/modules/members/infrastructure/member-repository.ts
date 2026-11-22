@@ -11,8 +11,6 @@ import { AUDIT_ACTION, AUDIT_TARGET_TYPE } from "@/modules/audit/domain/audit-ac
 import { diffForAudit } from "@/modules/audit/domain/audit-diff";
 import { recordAuditLog, recordAuditLogs } from "@/modules/audit/infrastructure/audit-repository";
 import type {
-  MemberInput,
-  MemberManagerInput,
   MemberSkillInput,
   MemberTargetRoleInput
 } from "@/modules/members/domain/member-schema";
@@ -27,15 +25,8 @@ import type {
 import { recordRoleAchievements } from "@/modules/roles/application/role-achievement-service";
 import { prisma } from "@/server/db/prisma";
 import { UserFacingError } from "@/shared/lib/user-facing-error";
-import { getActiveReportError } from "@/modules/members/domain/member-role-policy";
 import { getDirectLeaderIds, getOrganization, getUsers } from "@/server/platform/directory";
 import { ensureScopeMembers } from "@/modules/members/infrastructure/member-scope-repository";
-
-function memberAuditFields(member: { status: string }) {
-  return {
-    status: member.status
-  };
-}
 
 export function buildMemberSearchWhere(
   input?: MemberSearchInput,
@@ -162,110 +153,6 @@ export function getGrowthHintMemberContext(memberId: string, since: Date) {
         }
       }
     }
-  });
-}
-
-export async function updateMemberRole(
-  memberId: string,
-  nextRole: AuthRole,
-  actorMemberId: string
-) {
-  void memberId;
-  void nextRole;
-  void actorMemberId;
-  throw new UserFacingError("権限は基盤の組織から自動で決まります");
-}
-
-export async function createMember(input: MemberInput, actorMemberId: string | null) {
-  return prisma.$transaction(async (tx) => {
-    const member = await createMemberWithUser(tx, input);
-    await recordAuditLog(tx, {
-      actorMemberId,
-      action: AUDIT_ACTION.MEMBER_CREATE,
-      targetType: AUDIT_TARGET_TYPE.MEMBER,
-      targetId: member.id,
-      after: memberAuditFields(member)
-    });
-    return member;
-  });
-}
-
-export async function createMemberWithUser(
-  tx: Prisma.TransactionClient,
-  input: Omit<MemberInput, "jobTitle"> & {
-    jobTitle?: string | null;
-    managerId?: string | null;
-    targetRoleId?: string | null;
-  },
-) {
-  return tx.member.create({ data: input });
-}
-
-export async function updateMember(
-  id: string,
-  input: MemberInput,
-  actorMemberId: string | null
-) {
-  return prisma.$transaction(async (tx) => {
-    const before = await tx.member.findUniqueOrThrow({ where: { id } });
-    if (before.status === "ACTIVE" && input.status !== "ACTIVE") {
-      const reportCount = await tx.member.count({
-        where: { managerId: id, status: "ACTIVE" }
-      });
-      const error = getActiveReportError(reportCount, "無効にできません");
-      if (error) throw new UserFacingError(error);
-    }
-    const member = await tx.member.update({
-      where: { id },
-      data: {
-        employeeNo: input.employeeNo,
-        name: input.name,
-        email: input.email.toLowerCase(),
-        departmentId: input.departmentId,
-        jobTitle: input.jobTitle,
-        profile: input.profile,
-        status: input.status,
-        platformUserId: input.platformUserId || null
-      }
-    });
-    const diff = diffForAudit(
-      { ...memberAuditFields(before), profile: before.profile },
-      { ...memberAuditFields(member), profile: member.profile },
-      { redactedFields: ["profile"] }
-    );
-    if (diff) {
-      await recordAuditLog(tx, {
-        actorMemberId,
-        action: AUDIT_ACTION.MEMBER_UPDATE,
-        targetType: AUDIT_TARGET_TYPE.MEMBER,
-        targetId: id,
-        ...diff
-      });
-    }
-    return member;
-  });
-}
-
-export async function deactivateMember(id: string, actorMemberId: string | null) {
-  return prisma.$transaction(async (tx) => {
-    const before = await tx.member.findUniqueOrThrow({ where: { id }, select: { status: true } });
-    const reportCount = await tx.member.count({
-      where: { managerId: id, status: "ACTIVE" }
-    });
-    const error = getActiveReportError(reportCount, "無効にできません");
-    if (error) throw new UserFacingError(error);
-    const member = await tx.member.update({ where: { id }, data: { status: "INACTIVE" } });
-    const diff = diffForAudit(before, { status: member.status });
-    if (diff) {
-      await recordAuditLog(tx, {
-        actorMemberId,
-        action: AUDIT_ACTION.MEMBER_DEACTIVATE,
-        targetType: AUDIT_TARGET_TYPE.MEMBER,
-        targetId: id,
-        ...diff
-      });
-    }
-    return member;
   });
 }
 
@@ -950,54 +837,6 @@ export async function approveSkillAssessments(
 
     return approvedAssessments;
   });
-}
-
-export async function updateMemberManager(
-  input: MemberManagerInput,
-  actorMemberId: string | null
-) {
-  void input;
-  void actorMemberId;
-  throw new UserFacingError("上司は基盤の組織から自動で決まります");
-  /* return prisma.$transaction(async (tx) => {
-    const before = await tx.member.findUniqueOrThrow({ where: { id: input.memberId } });
-    if (input.managerId) {
-      const manager = await tx.member.findFirst({
-        where: {
-          id: input.managerId,
-          status: "ACTIVE",
-          users: {
-            some: { role: { in: [AuthRole.ADMIN, AuthRole.MANAGER] } }
-          }
-        },
-        select: { id: true }
-      });
-      if (!manager) {
-        throw new UserFacingError("上司には在籍中のマネージャーまたは管理者を指定してください。");
-      }
-    }
-    const assignments = await tx.member.findMany({
-      select: { id: true, managerId: true }
-    });
-    if (createsManagerCycle(input.memberId, input.managerId, assignments)) {
-      throw new UserFacingError("自分自身または循環する上司関係は設定できません。");
-    }
-    const member = await tx.member.update({
-      where: { id: input.memberId },
-      data: { managerId: input.managerId }
-    });
-    const diff = diffForAudit({ managerId: before.managerId }, { managerId: member.managerId });
-    if (diff) {
-      await recordAuditLog(tx, {
-        actorMemberId,
-        action: AUDIT_ACTION.MEMBER_MANAGER_UPDATE,
-        targetType: AUDIT_TARGET_TYPE.MEMBER,
-        targetId: input.memberId,
-        ...diff
-      });
-    }
-    return member;
-  }); */
 }
 
 export async function updateMemberTargetRole(

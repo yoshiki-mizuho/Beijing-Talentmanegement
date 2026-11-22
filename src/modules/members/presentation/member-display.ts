@@ -29,7 +29,6 @@ export function summarizeMemberSkills<T extends DisplayMemberSkill>(
 
 export function getMemberStatusLabel(status: string) {
   if (status === "ACTIVE") return "在籍中";
-  if (status === "LEAVE") return "休職中";
   if (status === "INACTIVE") return "退職・無効";
   return "不明";
 }

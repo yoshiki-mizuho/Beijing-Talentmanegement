@@ -131,7 +131,7 @@ export function OrganizationDashboard({ model }: { model: Model }) {
         {model.comparisons.length > 1 ? <Comparisons model={model} /> : null}
         <DashboardVisualizations
           summary={model.summary}
-          showDepartments={false}
+          showNodes={false}
           compact
         />
       </main>

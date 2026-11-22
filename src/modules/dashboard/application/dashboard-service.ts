@@ -1,10 +1,10 @@
 import type { AuthRole } from "@prisma/client";
 
 import {
-  buildDepartmentMetrics,
+  buildNodeMetrics,
   groupLevelChangesByMember,
   organizationDashboardChangesSince,
-  selectDepartmentId,
+  selectNodeId,
 } from "@/modules/dashboard/domain/organization-dashboard";
 import { buildOrganizationDashboard } from "@/modules/dashboard/domain/dashboard-summary";
 import { getOrganizationDashboardSource } from "@/modules/dashboard/infrastructure/dashboard-repository";
@@ -104,7 +104,7 @@ export async function getDashboardSummary(
   const fallback = role === "ADMIN"
     ? roots.length === 1 ? roots[0].id : null
     : visibleIds.includes(viewerNodeId ?? "") ? viewerNodeId : roots[0]?.id ?? null;
-  const selectedId = selectDepartmentId(nodeId, visibleIds, fallback);
+  const selectedId = selectNodeId(nodeId, visibleIds, fallback);
   const selectedNodeIds = selectedId ? descendantIds(visibleNodes, selectedId) : visibleIds;
   const memberIds = new Set(enrichedMembers
     .filter((member) => member.nodeId && selectedNodeIds.includes(member.nodeId))
@@ -120,7 +120,7 @@ export async function getDashboardSummary(
     return {
       id,
       name: visibleNodes.find((node) => node.id === id)?.name ?? "",
-      ...buildDepartmentMetrics({
+      ...buildNodeMetrics({
         members: comparisonMembers,
         changes: comparisonMembers.flatMap((member) => changesByMember.get(member.id) ?? []),
         changesByMember,
@@ -159,7 +159,7 @@ export async function getDashboardSummary(
       memberCount: counts.get(item.id) ?? 0,
       own: item.id === viewerNodeId,
     })),
-    metrics: buildDepartmentMetrics({ members, changes, changesByMember, now }),
+    metrics: buildNodeMetrics({ members, changes, changesByMember, now }),
     comparisons,
     comparisonMode: childIds.length ? ("children" as const) : ("siblings" as const),
     summary,

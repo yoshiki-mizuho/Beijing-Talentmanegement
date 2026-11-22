@@ -153,8 +153,7 @@ export function targetGroup(type: string): AuditTargetGroup | null {
     type === "MemberSkill" ||
     type === "MemberProjectHistory" ||
     type === "MemberCertification" ||
-    type === "ProposalSheetDraft" ||
-    type === "Department"
+    type === "ProposalSheetDraft"
   )
     return "member";
   if (type === "Skill" || type === "SkillCategory" || type === "SkillSheetTemplate") return "skill";

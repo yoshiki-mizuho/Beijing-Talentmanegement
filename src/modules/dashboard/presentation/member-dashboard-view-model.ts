@@ -18,6 +18,7 @@ export function buildMemberDashboardViewModel(
     badgeData?: BadgeCalculationData;
     roleAchievements?: { roleId: string }[];
     memberProfiles?: Map<string, MemberProfile>;
+    managerName?: string | null;
   },
   now: Date = new Date()
 ) {
@@ -77,9 +78,7 @@ export function buildMemberDashboardViewModel(
   return {
     memberId: data.member.id,
     memberName: (data.memberProfiles?.get(data.member.id) ?? fallbackMemberProfile(data.member.id)).name,
-    managerName: data.member.manager
-      ? (data.memberProfiles?.get(data.member.manager.id) ?? fallbackMemberProfile(data.member.manager.id)).name
-      : null,
+    managerName: data.managerName ?? null,
     approvedSkillCount,
     pendingAssessmentCount,
     onboardingState,

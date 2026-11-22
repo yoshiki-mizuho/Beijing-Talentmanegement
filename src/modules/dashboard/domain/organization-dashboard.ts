@@ -1,10 +1,10 @@
 import { evaluateRoleAchievement } from "@/modules/roles/domain/role-achievement";
 import { isGrowthLevelChange } from "@/modules/growth/domain/level-change-source";
 import {
-  collectDescendantIds,
-  collectManagerVisibleDepartmentIds,
-  type DepartmentHierarchyItem,
-} from "@/modules/members/domain/department-hierarchy";
+  collectDescendantNodeIds,
+  collectManagerVisibleNodeIds,
+  type NodeHierarchyItem,
+} from "@/modules/members/domain/node-hierarchy";
 
 export type Momentum = "accelerating" | "steady" | "slowing";
 export type OrganizationLevelChange = {
@@ -50,23 +50,23 @@ export function organizationDashboardChangesSince(now: Date) {
   return completedMonths(now)[0].date;
 }
 
-export function dashboardVisibleDepartmentIds(
+export function dashboardVisibleNodeIds(
   role: "ADMIN" | "MANAGER" | "MEMBER",
-  departments: DepartmentHierarchyItem[],
-  ownDepartmentId: string,
+  nodes: NodeHierarchyItem[],
+  ownNodeId: string,
 ) {
   return role === "ADMIN"
-    ? departments.map((department) => department.id)
-    : collectManagerVisibleDepartmentIds(departments, ownDepartmentId);
+    ? nodes.map((node) => node.id)
+    : collectManagerVisibleNodeIds(nodes, ownNodeId);
 }
 
-export function dashboardMemberDepartmentIds(
-  departments: DepartmentHierarchyItem[],
-  visibleDepartmentIds: string[],
+export function dashboardMemberNodeIds(
+  nodes: NodeHierarchyItem[],
+  visibleNodeIds: string[],
 ) {
   return [
     ...new Set(
-      visibleDepartmentIds.flatMap((id) => collectDescendantIds(departments, id)),
+      visibleNodeIds.flatMap((id) => collectDescendantNodeIds(nodes, id)),
     ),
   ];
 }
@@ -101,7 +101,7 @@ export function perPersonLevelUps(total: number, memberCount: number) {
   return memberCount ? Math.round((total / 3 / memberCount) * 100) / 100 : null;
 }
 
-export function selectDepartmentId(
+export function selectNodeId(
   requested: string | undefined,
   visibleIds: string[],
   fallback: string | null,
@@ -109,21 +109,21 @@ export function selectDepartmentId(
   return requested && visibleIds.includes(requested) ? requested : fallback;
 }
 
-export function comparisonDepartmentIds(
-  departments: DepartmentHierarchyItem[],
+export function comparisonNodeIds(
+  nodes: NodeHierarchyItem[],
   selectedId: string,
   visibleIds: string[],
 ) {
   const visible = new Set(visibleIds);
-  const children = departments.filter(
-    (item) => item.parentDepartmentId === selectedId && visible.has(item.id),
+  const children = nodes.filter(
+    (item) => item.parentId === selectedId && visible.has(item.id),
   );
   if (children.length) return children.map((item) => item.id);
-  const selected = departments.find((item) => item.id === selectedId);
-  return departments
+  const selected = nodes.find((item) => item.id === selectedId);
+  return nodes
     .filter(
       (item) =>
-        item.parentDepartmentId === selected?.parentDepartmentId &&
+        item.parentId === selected?.parentId &&
         visible.has(item.id),
     )
     .map((item) => item.id);
@@ -181,7 +181,7 @@ export function cumulativeCategories(
   };
 }
 
-export function buildDepartmentMetrics(input: {
+export function buildNodeMetrics(input: {
   members: OrganizationDashboardMember[];
   changes: OrganizationLevelChange[];
   changesByMember?: Map<string, OrganizationLevelChange[]>;
@@ -278,13 +278,13 @@ export function buildDepartmentMetrics(input: {
   };
 }
 
-export function departmentMemberIds(
-  departments: DepartmentHierarchyItem[],
+export function nodeMemberIds(
+  nodes: NodeHierarchyItem[],
   members: OrganizationDashboardMember[],
   id: string | null,
 ) {
   if (!id) return members.map((member) => member.id);
-  const ids = new Set(collectDescendantIds(departments, id));
+  const ids = new Set(collectDescendantNodeIds(nodes, id));
   return members
     .filter((member) => member.nodeId !== null && ids.has(member.nodeId))
     .map((member) => member.id);

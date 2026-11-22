@@ -108,7 +108,7 @@ export function SkillSheetTemplatePage({ templates }: { templates: Templates }) 
                       <p className="font-bold">{template.name}</p>
                       <p className="mt-1 text-xs text-[var(--muted-foreground)]">
                         最終更新 {formatDate(template.updatedAt)}・
-                        {template.updatedBy?.name ?? "不明"}・使用 {template.useCount}回
+                        更新者 {template.updatedById ? "登録済み" : "不明"}・使用 {template.useCount}回
                       </p>
                     </div>
                     <DownloadLink id={template.id} />

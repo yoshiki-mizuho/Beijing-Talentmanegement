@@ -2,7 +2,8 @@ import type { CsvImportError, CsvRecord } from "./csv-import-columns";
 import { requireValue } from "./csv-import-columns";
 
 export type MemberSkillImportState = {
-  members: Array<{ id: string; employeeNo: string; name: string }>;
+  members: Array<{ id: string; email: string; name: string }>;
+  ambiguousEmails?: string[];
   skills: Array<{ id: string; code: string; name: string; isActive: boolean }>;
   memberSkills: Array<{
     id: string;
@@ -32,7 +33,12 @@ export function validateMemberSkillImport(
   state: MemberSkillImportState,
 ) {
   const errors: CsvImportError[] = [];
-  const members = new Map(state.members.map((item) => [item.employeeNo, item]));
+  const members = new Map(
+    state.members.map((item) => [item.email.toLowerCase(), item]),
+  );
+  const ambiguousEmails = new Set(
+    (state.ambiguousEmails ?? []).map((email) => email.toLowerCase()),
+  );
   const skills = new Map(state.skills.map((item) => [item.code, item]));
   const existing = new Map(
     state.memberSkills.map((item) => [
@@ -43,17 +49,25 @@ export function validateMemberSkillImport(
   const seen = new Set<string>();
   const changes: MemberSkillChange[] = [];
   for (const record of records) {
-    for (const field of ["employee_no", "skill_code", "level"])
+    for (const field of ["email", "skill_code", "level"])
       requireValue(record, field, errors);
-    const member = members.get(record.values.employee_no);
+    const email = record.values.email.toLowerCase();
+    const member = members.get(email);
     const skill = skills.get(record.values.skill_code);
-    const key = `${record.values.employee_no}\0${record.values.skill_code}`;
-    if (!member)
+    const key = `${email}\0${record.values.skill_code}`;
+    if (ambiguousEmails.has(email))
       add(
         errors,
         record,
-        "employee_no",
-        `社員番号 ${record.values.employee_no} が見つかりません`,
+        "email",
+        `メールアドレス ${record.values.email} に一致する基盤利用者が複数います`,
+      );
+    else if (!member)
+      add(
+        errors,
+        record,
+        "email",
+        `メールアドレス ${record.values.email} が基盤の利用者に見つかりません`,
       );
     if (!skill)
       add(
@@ -102,7 +116,7 @@ export function validateMemberSkillImport(
     const value = {
       row: record.row,
       code: key,
-      name: `${member.name}（${member.employeeNo}） の ${skill.name}`,
+      name: `${member.name} の ${skill.name}`,
       memberId: member.id,
       skillId: skill.id,
       level,

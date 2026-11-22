@@ -10,9 +10,9 @@ test("本人にはバッジの進み具合を表示し、他の人には表示�
   let owner: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
   let manager: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
   try {
-    const department = await data.createDepartment("バッジ部署");
-    const managerAccount = await data.createMember({ label: "バッジ管理者", departmentId: department.id, role: "MANAGER" });
-    const member = await data.createMember({ label: "バッジ本人", departmentId: department.id, managerId: managerAccount.member.id });
+    const node = await data.createDepartment("バッジ部署");
+    const managerAccount = await data.createMember({ label: "バッジ管理者", nodeId: node.id, role: "MANAGER" });
+    const member = await data.createMember({ label: "バッジ本人", nodeId: node.id, leaderMemberId: managerAccount.member.id });
     owner = await openLoggedInContext(browser, member.credential);
     manager = await openLoggedInContext(browser, managerAccount.credential);
     await owner.page.goto(`/talent/people/${member.member.id}`);

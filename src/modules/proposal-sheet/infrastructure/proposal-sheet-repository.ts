@@ -9,7 +9,6 @@ export function getProposalSheetContext(memberId: string) {
     where: { id: memberId },
     select: {
       id: true,
-      name: true,
       memberSkills: {
         orderBy: [{ level: "desc" }, { skill: { displayOrder: "asc" } }],
         select: {

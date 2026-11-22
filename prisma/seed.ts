@@ -2,48 +2,38 @@ import "dotenv/config";
 
 import {
   Prisma,
-  AuthRole,
   LevelUpReactionType,
   MemberStatus,
-  NotificationType,
-  SkillPrerequisiteSource,
+  ProposalSheetDraftSource,
   SkillLevelChangeSource,
+  SkillPrerequisiteSource,
   SkillSelfAssessmentStatus,
-  TeamGoalKind
+  TeamGoalKind,
 } from "@prisma/client";
 
-import { generateNextRoleCodeFromExistingCodes } from "../src/modules/roles/domain/role-code";
 import { prisma, runWithTenant } from "../src/server/db/prisma";
+import { generateNextRoleCodeFromExistingCodes } from "../src/modules/roles/domain/role-code";
 import { assertDemoSeedAllowed } from "./seed-config";
 import {
-  buildSkillAssessmentRequestNotificationBody,
-  demoDepartments,
-  demoDepartmentParents,
-  demoMembers,
-  demoMemberProfiles,
-  demoManagerAssignments,
-  demoMemberSkills,
   demoLevelUpComments,
   demoLevelUpReactions,
+  demoMemberProfiles,
+  demoMembers,
+  demoMemberSkills,
   demoRoles,
-  demoSkillLevelChanges,
   demoSkillAssessments,
   demoSkillCategoryGroups,
   demoSkillCategories,
+  demoSkillLevelChanges,
   demoSkillPrerequisites,
   demoSkills,
   demoTargetRoleAssignments,
-  existingDemoMemberEmployeeNos
 } from "./seed-demo-data";
 
-assertDemoSeedAllowed(
-  process.env.DATABASE_URL,
-  process.env.ALLOW_DEMO_SEED
-);
+assertDemoSeedAllowed(process.env.DATABASE_URL, process.env.ALLOW_DEMO_SEED);
 
 const seedTenantId =
   process.env.SEED_TENANT_ID ?? "11111111-1111-4111-8111-111111111111";
-
 const skillLevels = [
   {
     level: 1,
@@ -94,117 +84,6 @@ async function main() {
       });
     }
 
-    const existingDepartment = await tx.department.findFirst({
-      where: { code: "DEV" }
-    });
-    const department = existingDepartment
-      ? await tx.department.update({
-          where: { id: existingDepartment.id },
-          data: { name: "開発部", isActive: true }
-        })
-      : await tx.department.create({
-          data: { code: "DEV", name: "開発部", isActive: true }
-        });
-
-    const members = [
-      {
-        employeeNo: "TM0001",
-        name: "Admin User",
-        email: "admin@example.com",
-        jobTitle: "System Admin",
-        role: AuthRole.ADMIN,
-        platformUserId: "22222222-2222-4222-8222-222222222222"
-      },
-      {
-        employeeNo: "TM0002",
-        name: "Manager User",
-        email: "manager@example.com",
-        jobTitle: "Engineering Manager",
-        role: AuthRole.MANAGER,
-        platformUserId: "22222222-2222-4222-8222-000000000004"
-      },
-      {
-        employeeNo: "TM0003",
-        name: "Member User",
-        email: "member@example.com",
-        jobTitle: "Engineer",
-        role: AuthRole.MEMBER,
-        platformUserId: "22222222-2222-4222-8222-000000000005"
-      }
-    ];
-
-    for (const memberInput of members) {
-      const existingMember = await tx.member.findFirst({
-        where: { employeeNo: memberInput.employeeNo }
-      });
-      const member = existingMember
-        ? await tx.member.update({
-            where: { id: existingMember.id },
-            data: {
-              name: memberInput.name,
-              email: memberInput.email,
-              departmentId: department.id,
-              jobTitle: memberInput.jobTitle,
-              status: MemberStatus.ACTIVE,
-              platformUserId: memberInput.platformUserId
-            }
-          })
-        : await tx.member.create({
-            data: {
-              employeeNo: memberInput.employeeNo,
-              name: memberInput.name,
-              email: memberInput.email,
-              departmentId: department.id,
-              jobTitle: memberInput.jobTitle,
-              status: MemberStatus.ACTIVE,
-              platformUserId: memberInput.platformUserId
-            }
-          });
-      void member;
-    }
-  });
-
-  await prisma.$transaction(async (tx) => {
-    for (const department of demoDepartments) {
-      const existing = await tx.department.findFirst({
-        where: { code: department.code },
-        select: { id: true }
-      });
-      if (!existing) {
-        await tx.department.create({
-          data: {
-          code: department.code,
-          name: department.name,
-          isActive: true
-          }
-        });
-      }
-    }
-
-    const hierarchyDepartmentCodes = [
-      "DEV",
-      ...demoDepartments.map((department) => department.code)
-    ];
-    const hierarchyDepartments = await tx.department.findMany({
-      where: { code: { in: hierarchyDepartmentCodes } },
-      select: { id: true, code: true }
-    });
-    const hierarchyDepartmentIds = new Map(
-      hierarchyDepartments.map((department) => [department.code, department.id])
-    );
-    for (const relation of demoDepartmentParents) {
-      await tx.department.updateMany({
-        where: { code: relation.code, parentDepartmentId: null },
-        data: {
-          parentDepartmentId: requireId(
-            hierarchyDepartmentIds,
-            relation.parentCode,
-            "Department"
-          )
-        }
-      });
-    }
-
     for (const category of demoSkillCategories) {
       const existing = await tx.skillCategory.findFirst({
         where: { name: category.name },
@@ -248,15 +127,15 @@ async function main() {
       if (!existing) {
         await tx.skill.create({
           data: {
-          code: skill.code,
-          name: skill.name,
-          description: skill.description,
-          categoryId: requireId(
-            categoryIdsByName,
-            skill.categoryName,
-            "SkillCategory"
-          ),
-          isActive: true
+            code: skill.code,
+            name: skill.name,
+            description: skill.description,
+            categoryId: requireId(
+              categoryIdsByName,
+              skill.categoryName,
+              "SkillCategory"
+            ),
+            isActive: true
           }
         });
       }
@@ -283,62 +162,34 @@ async function main() {
       }
     }
 
-    const departmentCodes = [
-      "DEV",
-      ...demoDepartments.map((department) => department.code)
-    ];
-    const departments = await tx.department.findMany({
-      where: { code: { in: departmentCodes } },
-      select: { id: true, code: true }
-    });
-    const departmentIdsByCode = new Map(
-      departments.map((department) => [department.code, department.id])
-    );
-
     for (const member of demoMembers) {
-      const existing = await tx.member.findFirst({
-        where: { employeeNo: member.employeeNo },
-        select: { id: true }
-      });
-      if (!existing) {
-        await tx.member.create({
-          data: {
-          employeeNo: member.employeeNo,
-          name: member.name,
-          email: member.email,
-          departmentId: requireId(
-            departmentIdsByCode,
-            member.departmentCode,
-            "Department"
-          ),
-          status: member.status,
-          jobTitle: member.jobTitle
+      await tx.member.upsert({
+        where: {
+          tenantId_platformUserId: {
+            tenantId: seedTenantId,
+            platformUserId: member.platformUserId
           }
-        });
-      }
+        },
+        update: { status: member.status as MemberStatus },
+        create: {
+          platformUserId: member.platformUserId,
+          status: member.status as MemberStatus
+        }
+      });
     }
 
     const skills = await tx.skill.findMany({
       where: { code: { in: demoSkills.map((skill) => skill.code) } },
       select: { id: true, code: true, name: true }
     });
-    const skillIdsByCode = new Map(
-      skills.map((skill) => [skill.code, skill.id])
-    );
-    const skillNamesByCode = new Map(
-      skills.map((skill) => [skill.code, skill.name])
-    );
+    const skillIds = new Map(skills.map((skill) => [skill.code, skill.id]));
     const skillIdsByName = new Map(
       skills.map((skill) => [skill.name, skill.id])
     );
 
     await tx.skillPrerequisite.createMany({
       data: demoSkillPrerequisites.map((prerequisite) => ({
-        skillId: requireId(
-          skillIdsByName,
-          prerequisite.skillName,
-          "Skill"
-        ),
+        skillId: requireId(skillIdsByName, prerequisite.skillName, "Skill"),
         prerequisiteSkillId: requireId(
           skillIdsByName,
           prerequisite.prerequisiteSkillName,
@@ -353,16 +204,12 @@ async function main() {
       where: { name: { in: demoRoles.map((role) => role.name) } },
       select: { id: true, name: true }
     });
-    const roleIdsByName = new Map(roles.map((role) => [role.name, role.id]));
+    const roleIds = new Map(roles.map((role) => [role.name, role.id]));
 
     for (const role of demoRoles) {
-      const roleId = requireId(roleIdsByName, role.name, "Role");
+      const roleId = requireId(roleIds, role.name, "Role");
       for (const requirement of role.requirements) {
-        const skillId = requireId(
-          skillIdsByCode,
-          requirement.skillCode,
-          "Skill"
-        );
+        const skillId = requireId(skillIds, requirement.skillCode, "Skill");
         const existing = await tx.roleRequirement.findFirst({
           where: { roleId, skillId },
           select: { id: true }
@@ -370,38 +217,30 @@ async function main() {
         if (!existing) {
           await tx.roleRequirement.create({
             data: {
-            roleId,
-            skillId,
-            requiredLevel: requirement.requiredLevel,
-            isRequired: requirement.isRequired,
-            anyOfGroup: "anyOfGroup" in requirement ? requirement.anyOfGroup : null
+              roleId,
+              skillId,
+              requiredLevel: requirement.requiredLevel,
+              isRequired: requirement.isRequired,
+              anyOfGroup:
+                "anyOfGroup" in requirement ? requirement.anyOfGroup : null
             }
           });
         }
       }
     }
 
-    const allDemoEmployeeNos = [
-      ...existingDemoMemberEmployeeNos,
-      ...demoMembers.map((member) => member.employeeNo)
-    ];
     const members = await tx.member.findMany({
-      where: { employeeNo: { in: allDemoEmployeeNos } },
-      select: { id: true, employeeNo: true, name: true }
+      where: {
+        platformUserId: {
+          in: demoMembers.map((member) => member.platformUserId)
+        }
+      },
+      select: { id: true, platformUserId: true }
     });
-    const memberIdsByEmployeeNo = new Map(
-      members.flatMap((member) => member.employeeNo
-        ? [[member.employeeNo, member.id] as const]
-        : [])
-    );
-    const memberNamesByEmployeeNo = new Map(
-      members.flatMap((member) => member.employeeNo && member.name
-        ? [[member.employeeNo, member.name] as const]
-        : [])
-    );
+    const memberIds = new Map(members.map((item) => [item.platformUserId, item.id]));
 
     for (const profile of demoMemberProfiles) {
-      const memberId = requireId(memberIdsByEmployeeNo, profile.employeeNo, "Member");
+      const memberId = requireId(memberIds, profile.platformUserId, "Member");
       await tx.member.updateMany({
         where: { id: memberId, profileMessage: null },
         data: { profileMessage: profile.profileMessage }
@@ -412,53 +251,17 @@ async function main() {
       });
     }
 
-    for (const assignment of demoManagerAssignments) {
-      await tx.member.updateMany({
-        where: {
-          id: requireId(memberIdsByEmployeeNo, assignment.employeeNo, "Member"),
-          managerId: null
-        },
-        data: {
-          managerId: requireId(
-            memberIdsByEmployeeNo,
-            assignment.managerEmployeeNo,
-            "Manager member"
-          )
-        }
-      });
-    }
-
-    for (const assignment of demoTargetRoleAssignments) {
-      await tx.member.updateMany({
-        where: {
-          id: requireId(memberIdsByEmployeeNo, assignment.employeeNo, "Member"),
-          targetRoleId: null
-        },
-        data: {
-          targetRoleId: requireId(roleIdsByName, assignment.roleName, "Role")
-        }
-      });
-    }
-
     const approvingMemberId = requireId(
-      memberIdsByEmployeeNo,
-      "TM0002",
-      "Member"
+      memberIds,
+      "22222222-2222-4222-8222-000000000004",
+      "Approving member"
     );
     const approvedAt = new Date("2026-09-15T00:00:00.000Z");
     const lastAssessedAt = new Date("2026-09-15T00:00:00.000Z");
 
-    for (const memberSkill of demoMemberSkills) {
-      const memberId = requireId(
-        memberIdsByEmployeeNo,
-        memberSkill.employeeNo,
-        "Member"
-      );
-      const skillId = requireId(
-        skillIdsByCode,
-        memberSkill.skillCode,
-        "Skill"
-      );
+    for (const item of demoMemberSkills) {
+      const memberId = requireId(memberIds, item.platformUserId, "Member");
+      const skillId = requireId(skillIds, item.skillCode, "Skill");
       const existing = await tx.memberSkill.findFirst({
         where: { memberId, skillId },
         select: { id: true }
@@ -466,135 +269,102 @@ async function main() {
       if (!existing) {
         await tx.memberSkill.create({
           data: {
-          memberId,
-          skillId,
-          level: memberSkill.level,
-          yearsOfExperience: new Prisma.Decimal(
-            memberSkill.yearsOfExperience
-          ),
-          approvedByMemberId: approvingMemberId,
-          approvedAt,
-          lastAssessedAt
+            memberId,
+            skillId,
+            level: item.level,
+            yearsOfExperience: new Prisma.Decimal(item.yearsOfExperience),
+            approvedByMemberId: approvingMemberId,
+            approvedAt,
+            lastAssessedAt
           }
         });
       }
     }
 
-    const levelChangeEmployeeNos = [
-      ...new Set(demoSkillLevelChanges.map((change) => change.employeeNo))
-    ];
-    const membersWithDemoHistoryCreated = new Set<string>();
-    for (const employeeNo of levelChangeEmployeeNos) {
-      const memberId = requireId(memberIdsByEmployeeNo, employeeNo, "Member");
-      const demoChanges = demoSkillLevelChanges.filter(
-        (candidate) => candidate.employeeNo === employeeNo
-      );
+    for (const item of demoTargetRoleAssignments) {
+      await tx.member.updateMany({
+        where: {
+          id: requireId(memberIds, item.platformUserId, "Member"),
+          targetRoleId: null
+        },
+        data: { targetRoleId: requireId(roleIds, item.roleName, "Role") }
+      });
+    }
 
-      const managerEmployeeNo = demoManagerAssignments.find(
-        (assignment) => assignment.employeeNo === employeeNo
-      )?.managerEmployeeNo;
-      if (!managerEmployeeNo) {
-        throw new Error(`Manager not found for demo level changes: ${employeeNo}`);
-      }
-      const changedByMemberId = requireId(
-        memberIdsByEmployeeNo,
-        managerEmployeeNo,
-        "Manager member"
-      );
-
-      for (const change of demoChanges) {
-        const skillId = requireId(skillIdsByCode, change.skillCode, "Skill");
-        const changedAt = new Date(change.changedAt);
-        const existing = await tx.skillLevelChange.findFirst({
-          where: { memberId, skillId, changedAt },
-          select: { id: true }
-        });
-        if (existing) continue;
+    for (const item of demoSkillLevelChanges) {
+      const memberId = requireId(memberIds, item.platformUserId, "Member");
+      const skillId = requireId(skillIds, item.skillCode, "Skill");
+      const changedAt = new Date(item.changedAt);
+      const existing = await tx.skillLevelChange.findFirst({
+        where: { memberId, skillId, changedAt },
+        select: { id: true }
+      });
+      if (!existing) {
         await tx.skillLevelChange.create({
           data: {
             memberId,
             skillId,
-            fromLevel: change.fromLevel,
-            toLevel: change.toLevel,
+            fromLevel: item.fromLevel,
+            toLevel: item.toLevel,
             source: SkillLevelChangeSource.ASSESSMENT_APPROVED,
-            changedByMemberId,
+            changedByMemberId: approvingMemberId,
             changedAt
           }
         });
-        membersWithDemoHistoryCreated.add(memberId);
       }
     }
 
     for (const reaction of demoLevelUpReactions) {
-      const levelChangeMemberId = requireId(
-        memberIdsByEmployeeNo,
-        reaction.levelChangeEmployeeNo,
-        "Member"
-      );
-      if (!membersWithDemoHistoryCreated.has(levelChangeMemberId)) {
-        continue;
-      }
       const levelChange = await tx.skillLevelChange.findFirst({
         where: {
-          memberId: levelChangeMemberId,
-          skillId: requireId(skillIdsByCode, reaction.skillCode, "Skill")
+          memberId: requireId(
+            memberIds,
+            reaction.levelChangePlatformUserId,
+            "Member"
+          ),
+          skillId: requireId(skillIds, reaction.skillCode, "Skill")
         },
         orderBy: { changedAt: "desc" },
         select: { id: true }
       });
-      if (!levelChange) {
-        continue;
-      }
-      const reactionMemberId = requireId(
-        memberIdsByEmployeeNo,
-        reaction.memberEmployeeNo,
+      if (!levelChange) continue;
+      const memberId = requireId(
+        memberIds,
+        reaction.memberPlatformUserId,
         "Reaction member"
       );
+      const type = reaction.type as LevelUpReactionType;
       const existing = await tx.levelUpReaction.findFirst({
-        where: {
-          levelChangeId: levelChange.id,
-          memberId: reactionMemberId,
-          type: reaction.type as LevelUpReactionType
-        },
+        where: { levelChangeId: levelChange.id, memberId, type },
         select: { id: true }
       });
       if (!existing) {
         await tx.levelUpReaction.create({
-          data: {
-            levelChangeId: levelChange.id,
-            memberId: reactionMemberId,
-            type: reaction.type as LevelUpReactionType
-          }
+          data: { levelChangeId: levelChange.id, memberId, type }
         });
       }
     }
 
     for (const comment of demoLevelUpComments) {
-      const levelChangeMemberId = requireId(
-        memberIdsByEmployeeNo,
-        comment.levelChangeEmployeeNo,
-        "Member"
-      );
-      if (!membersWithDemoHistoryCreated.has(levelChangeMemberId)) {
-        continue;
-      }
       const levelChange = await tx.skillLevelChange.findFirst({
         where: {
-          memberId: levelChangeMemberId,
-          skillId: requireId(skillIdsByCode, comment.skillCode, "Skill")
+          memberId: requireId(
+            memberIds,
+            comment.levelChangePlatformUserId,
+            "Member"
+          ),
+          skillId: requireId(skillIds, comment.skillCode, "Skill")
         },
         orderBy: { changedAt: "desc" },
         select: { id: true }
       });
-      if (!levelChange) {
-        continue;
-      }
+      if (!levelChange) continue;
       const authorMemberId = requireId(
-        memberIdsByEmployeeNo,
-        comment.authorEmployeeNo,
+        memberIds,
+        comment.authorPlatformUserId,
         "Comment author"
       );
-      const existingComment = await tx.levelUpComment.findFirst({
+      const existing = await tx.levelUpComment.findFirst({
         where: {
           levelChangeId: levelChange.id,
           authorMemberId,
@@ -602,7 +372,7 @@ async function main() {
         },
         select: { id: true }
       });
-      if (!existingComment) {
+      if (!existing) {
         await tx.levelUpComment.create({
           data: {
             levelChangeId: levelChange.id,
@@ -613,35 +383,17 @@ async function main() {
       }
     }
 
-    const assessmentMemberId = requireId(
-      memberIdsByEmployeeNo,
-      "TM0003",
-      "Member"
-    );
-    const existingAssessment = await tx.skillSelfAssessment.findFirst({
-      where: { memberId: assessmentMemberId },
-      select: { id: true }
-    });
-
-    if (!existingAssessment) {
-      const recipientMemberIds = [
-        requireId(memberIdsByEmployeeNo, "TM0002", "Manager")
-      ];
-      const assessmentMemberName = requireId(
-        memberNamesByEmployeeNo,
-        "TM0003",
-        "Member name"
-      );
-
-      for (const assessment of demoSkillAssessments) {
-        const skillId = requireId(
-          skillIdsByCode,
-          assessment.skillCode,
-          "Skill"
-        );
-        const createdAssessment = await tx.skillSelfAssessment.create({
+    for (const assessment of demoSkillAssessments) {
+      const memberId = requireId(memberIds, assessment.platformUserId, "Member");
+      const skillId = requireId(skillIds, assessment.skillCode, "Skill");
+      const existing = await tx.skillSelfAssessment.findFirst({
+        where: { memberId, skillId },
+        select: { id: true }
+      });
+      if (!existing) {
+        await tx.skillSelfAssessment.create({
           data: {
-            memberId: assessmentMemberId,
+            memberId,
             skillId,
             requestedLevel: assessment.requestedLevel,
             yearsOfExperience: new Prisma.Decimal(
@@ -650,55 +402,192 @@ async function main() {
             status: SkillSelfAssessmentStatus.PENDING
           }
         });
-        const skillName = requireId(
-          skillNamesByCode,
-          assessment.skillCode,
-          "Skill name"
-        );
-
-        if (recipientMemberIds.length > 0) {
-          await tx.notification.createMany({
-            data: recipientMemberIds.map((recipientMemberId) => ({
-              recipientMemberId,
-              type: NotificationType.SKILL_ASSESSMENT_REQUESTED,
-              skillSelfAssessmentId: createdAssessment.id,
-              title: "スキル申告の承認依頼",
-              body: buildSkillAssessmentRequestNotificationBody(
-                assessmentMemberName,
-                skillName,
-                assessment.requestedLevel
-              )
-            }))
-          });
-        }
       }
     }
 
-    const demoManager = await tx.member.findFirst({
-      where: { email: "manager@example.com" },
-      select: { id: true, teamGoals: { select: { id: true }, take: 1 } }
-    });
-    if (demoManager && demoManager.teamGoals.length === 0) {
-      const now = new Date();
-      const tokyo = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    const leaderId = requireId(
+      memberIds,
+      "22222222-2222-4222-8222-000000000004",
+      "Team leader"
+    );
+    if (await tx.teamGoal.count({ where: { managerId: leaderId } }) === 0) {
       await tx.teamGoal.create({
         data: {
-          managerId: demoManager.id,
+          managerId: leaderId,
           kind: TeamGoalKind.LEVEL_UP_COUNT,
-          targetCount: 6,
-          note: "チームで一歩ずつ成長を重ねよう",
-          startMonth: `${tokyo.getUTCFullYear()}-${String(tokyo.getUTCMonth() + 1).padStart(2, "0")}`,
+          targetCount: 4,
+          note: "チームで成長を重ねる",
+          startMonth: "2026-11",
           months: 3
         }
+      });
+    }
+
+    const uiLeaderId = memberIds.get(demoMembers[3].platformUserId);
+    const uiMemberId = memberIds.get(demoMembers[4].platformUserId);
+    const platformLeaderId = memberIds.get(demoMembers[5].platformUserId);
+    const platformMemberId = memberIds.get(demoMembers[6].platformUserId);
+    const salesLeaderId = memberIds.get(demoMembers[7].platformUserId);
+    const salesMemberId = memberIds.get(demoMembers[8].platformUserId);
+    const reactSkillId = skillIds.get("DEMO-SKILL-001");
+    const platformSkillId = skillIds.get("DEMO-SKILL-003");
+
+    if (uiMemberId) {
+      const projectTitle = "顧客ポータル刷新";
+      if (!await tx.memberProjectHistory.findFirst({ where: { memberId: uiMemberId, title: projectTitle } })) {
+        await tx.memberProjectHistory.create({
+          data: {
+            memberId: uiMemberId,
+            title: projectTitle,
+            startMonth: "2025-04",
+            endMonth: "2026-03",
+            industry: "情報通信",
+            summary: "顧客向けポータルの画面設計と実装を担当",
+            role: "フロントエンドエンジニア",
+            teamSize: "6名",
+            businessArea: "顧客接点",
+            phases: ["設計", "実装", "テスト"],
+            technologies: ["TypeScript", "React"],
+          },
+        });
+      }
+      const certificationName = "応用情報技術者";
+      if (!await tx.memberCertification.findFirst({ where: { memberId: uiMemberId, name: certificationName } })) {
+        await tx.memberCertification.create({
+          data: { memberId: uiMemberId, name: certificationName, acquiredMonth: "2025-10" },
+        });
+      }
+    }
+
+    if (platformMemberId && platformSkillId &&
+        !await tx.skillSelfAssessment.findFirst({ where: { memberId: platformMemberId, skillId: platformSkillId } })) {
+      await tx.skillSelfAssessment.create({
+        data: {
+          memberId: platformMemberId,
+          skillId: platformSkillId,
+          requestedLevel: 4,
+          yearsOfExperience: 3,
+          status: SkillSelfAssessmentStatus.PENDING,
+          applicantComment: "運用改善を主導できるレベルを目指しています",
+        },
+      });
+    }
+
+    const uiLevelChange = uiMemberId && reactSkillId
+      ? await tx.skillLevelChange.findFirst({
+          where: { memberId: uiMemberId, skillId: reactSkillId, fromLevel: 2, toLevel: 3 },
+        })
+      : null;
+    if (uiLevelChange && uiLeaderId) {
+      await tx.levelUpReaction.upsert({
+        where: {
+          tenantId_levelChangeId_memberId_type: {
+            tenantId: seedTenantId,
+            levelChangeId: uiLevelChange.id,
+            memberId: uiLeaderId,
+            type: LevelUpReactionType.CONGRATS,
+          },
+        },
+        update: {},
+        create: {
+          levelChangeId: uiLevelChange.id,
+          memberId: uiLeaderId,
+          type: LevelUpReactionType.CONGRATS,
+        },
+      });
+      const body = "実務での成長が成果につながっています";
+      if (!await tx.levelUpComment.findFirst({
+        where: { levelChangeId: uiLevelChange.id, authorMemberId: uiLeaderId, body },
+      })) {
+        await tx.levelUpComment.create({
+          data: { levelChangeId: uiLevelChange.id, authorMemberId: uiLeaderId, body },
+        });
+      }
+    }
+
+    if (uiLeaderId && uiMemberId) {
+      const message = "次の画面改善も一緒に進めましょう";
+      if (!await tx.cheer.findFirst({ where: { fromMemberId: uiLeaderId, toMemberId: uiMemberId, message } })) {
+        await tx.cheer.create({
+          data: { fromMemberId: uiLeaderId, toMemberId: uiMemberId, message, targetSkillId: reactSkillId },
+        });
+      }
+      const body = "次期案件では設計レビューを任せる。React の設計判断を言語化する。";
+      if (!await tx.oneOnOneNote.findFirst({
+        where: { managerMemberId: uiLeaderId, memberId: uiMemberId, body },
+      })) {
+        await tx.oneOnOneNote.create({
+          data: {
+            managerMemberId: uiLeaderId,
+            memberId: uiMemberId,
+            body,
+            discussedAt: new Date("2026-11-01T00:00:00.000Z"),
+          },
+        });
+      }
+    }
+    if (platformLeaderId && platformMemberId) {
+      const message = "データベース改善の共有がチームの助けになりました";
+      if (!await tx.cheer.findFirst({
+        where: { fromMemberId: platformLeaderId, toMemberId: platformMemberId, message },
+      })) {
+        await tx.cheer.create({
+          data: { fromMemberId: platformLeaderId, toMemberId: platformMemberId, message, targetSkillId: platformSkillId },
+        });
+      }
+    }
+    if (salesLeaderId && salesMemberId &&
+        !await tx.oneOnOneNote.findFirst({ where: { managerMemberId: salesLeaderId, memberId: salesMemberId } })) {
+      await tx.oneOnOneNote.create({
+        data: {
+          managerMemberId: salesLeaderId,
+          memberId: salesMemberId,
+          body: "復帰時に確認する営業ナレッジを整理する。",
+        },
+      });
+    }
+
+    const frontendRoleId = roleIds.get("フロントエンドエンジニア");
+    if (uiLeaderId && frontendRoleId &&
+        !await tx.roleAchievement.findFirst({ where: { memberId: uiLeaderId, roleId: frontendRoleId } })) {
+      await tx.roleAchievement.create({
+        data: {
+          memberId: uiLeaderId,
+          roleId: frontendRoleId,
+          achievedAt: new Date("2026-10-01T00:00:00.000Z"),
+          achievedAsTarget: true,
+          requirements: [{ skillCode: "DEMO-SKILL-002", requiredLevel: 4, achievedLevel: 5 }],
+        },
+      });
+    }
+
+    if (uiMemberId) {
+      const project = await tx.memberProjectHistory.findFirst({
+        where: { memberId: uiMemberId, title: "顧客ポータル刷新" },
+        select: { id: true },
+      });
+      await tx.proposalSheetDraft.upsert({
+        where: { memberId: uiMemberId },
+        update: {},
+        create: {
+          memberId: uiMemberId,
+          displayName: "フロントエンドエンジニア",
+          customerRequest: "React を使った画面開発経験",
+          projectHistoryIds: project ? [project.id] : [],
+          excludedSkillIds: [],
+          selfPr: "利用者視点で画面の改善を進めます。",
+          strengths: "TypeScript と React の実装力",
+          projectDescriptions: {},
+          source: ProposalSheetDraftSource.MANUAL,
+          updatedById: uiMemberId,
+        },
       });
     }
   }, { timeout: 60_000 });
 }
 
 runWithTenant(seedTenantId, main)
-  .then(async () => {
-    await prisma.$disconnect();
-  })
+  .then(() => prisma.$disconnect())
   .catch(async (error) => {
     console.error(error);
     await prisma.$disconnect();

@@ -2,8 +2,6 @@ import {
   mapCsvRecords,
   type CsvImportTarget,
 } from "../domain/csv-import-columns";
-import { validateDepartmentImport } from "../domain/department-import";
-import type { DepartmentChange } from "../domain/department-import";
 import {
   CsvParseError,
   parseCsvBytes,
@@ -12,14 +10,11 @@ import {
 import { createPreviewToken } from "../domain/preview-token";
 import { validateSkillImport } from "../domain/skill-import";
 import type { SkillChange } from "../domain/skill-import";
-import { validateMemberImport, type MemberChange } from "../domain/member-import";
 import { validateMemberSkillImport, type MemberSkillChange } from "../domain/member-skill-import";
 import { validateRoleImport, type RoleImportChange } from "../domain/role-import";
 import {
   applyCsvImport,
-  loadDepartmentImportState,
   loadSkillImportState,
-  loadMemberImportState,
   loadMemberSkillImportState,
   loadRoleImportState,
   recordCsvImportValidationFailure,
@@ -53,18 +48,20 @@ export async function previewCsvImport(
     await recordInvalidPreview(preview);
     return preview;
   }
-  if (target === "departments") {
-    const state = await loadDepartmentImportState();
-    const result = validateDepartmentImport(mapped.records, state);
-    return finish(result.changes, result.errors);
-  }
-  if (target === "members") {
-    const state = await loadMemberImportState();
-    const result = validateMemberImport(mapped.records, state);
-    return finish(result.changes, result.errors);
-  }
   if (target === "member-skills") {
-    const state = await loadMemberSkillImportState();
+    let state;
+    try {
+      state = await loadMemberSkillImportState(actorMemberId);
+    } catch {
+      return finish(
+        [],
+        mapped.records.map((record) => ({
+          row: record.row,
+          column: "email",
+          message: "基盤の利用者を確認できませんでした",
+        })),
+      );
+    }
     const result = validateMemberSkillImport(mapped.records, state);
     return finish(result.changes, result.errors);
   }
@@ -144,15 +141,6 @@ export async function commitCsvImport(input: {
   };
   let result;
   switch (input.target) {
-    case "departments":
-      result = await applyCsvImport({
-          ...common,
-          departmentChanges: preview.changes as DepartmentChange[],
-        });
-      break;
-    case "members":
-      result = await applyCsvImport({ ...common, memberChanges: preview.changes as MemberChange[] });
-      break;
     case "member-skills":
       result = await applyCsvImport({ ...common, memberSkillChanges: preview.changes as MemberSkillChange[] });
       break;

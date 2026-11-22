@@ -14,10 +14,10 @@ test("レベルアップのリアクション、コメント、返信を通知�
   let member: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
   let admin: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
   try {
-    const department = await data.createDepartment("スレッド部署");
-    const managerAccount = await data.createMember({ label: "スレッド管理者", departmentId: department.id, role: "MANAGER" });
-    const memberAccount = await data.createMember({ label: "スレッド本人", departmentId: department.id, managerId: managerAccount.member.id });
-    const adminAccount = await data.createMember({ label: "スレッド管理者外", departmentId: department.id, role: "ADMIN" });
+    const node = await data.createDepartment("スレッド部署");
+    const managerAccount = await data.createMember({ label: "スレッド管理者", nodeId: node.id, role: "MANAGER" });
+    const memberAccount = await data.createMember({ label: "スレッド本人", nodeId: node.id, leaderMemberId: managerAccount.member.id });
+    const adminAccount = await data.createMember({ label: "スレッド管理者外", nodeId: node.id, role: "ADMIN" });
     const { skill } = await data.createSkill("スレッドスキル");
     await data.createMemberSkill({ memberId: memberAccount.member.id, skillId: skill.id, level: 2, approvedByMemberId: managerAccount.member.id });
     const levelChange = await data.createLevelChange({ memberId: memberAccount.member.id, skillId: skill.id, fromLevel: 1, toLevel: 2, changedByMemberId: managerAccount.member.id });

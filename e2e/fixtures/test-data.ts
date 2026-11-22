@@ -2,7 +2,6 @@ import { randomBytes } from "node:crypto";
 
 import type {
   AuthRole,
-  Department,
   LevelUpReactionType,
   Member,
   NotificationStatus,
@@ -34,14 +33,14 @@ export function createE2eTestData() {
   const tenantId = E2E_TENANT_ID;
   const prefix = createE2ePrefix();
   const ids: E2eDataIds = {
-    memberIds: [], skillIds: [], categoryIds: [], roleIds: [], departmentIds: [],
+    memberIds: [], skillIds: [], categoryIds: [], roleIds: [], nodeIds: [],
   };
   let sequence = 0;
   const platformUserIds: string[] = [];
   const platformNodeIds: string[] = [];
   const platformRootNodeId = crypto.randomUUID();
   let platformRootCreated = false;
-  const platformNodesByDepartment = new Map<string, {
+  const platformNodesById = new Map<string, {
     id: string;
     name: string;
     parentId: string;
@@ -66,37 +65,31 @@ export function createE2eTestData() {
       appendUnique(ids.skillIds, input.skillIds ?? []);
       appendUnique(ids.categoryIds, input.categoryIds ?? []);
       appendUnique(ids.roleIds, input.roleIds ?? []);
-      appendUnique(ids.departmentIds, input.departmentIds ?? []);
+      appendUnique(ids.nodeIds, input.nodeIds ?? []);
     },
-    platformNodeId(departmentId: string) {
-      return platformNodesByDepartment.get(departmentId)?.id ?? null;
+    platformNodeId(nodeId: string) {
+      return platformNodesById.get(nodeId)?.id ?? null;
     },
     async trackCreated(input: {
       memberEmails?: string[];
       skillNames?: string[];
       categoryNames?: string[];
       roleNames?: string[];
-      departmentCodes?: string[];
     }) {
-      const [members, skills, categories, roles, departments] = await Promise.all([
-        prisma.member.findMany({ where: { email: { in: input.memberEmails ?? [] } }, select: { id: true } }),
+      const [members, skills, categories, roles] = await Promise.all([
+        prisma.member.findMany({ where: { platformUserId: { in: platformUserIds } }, select: { id: true } }),
         prisma.skill.findMany({ where: { name: { in: input.skillNames ?? [] } }, select: { id: true } }),
         prisma.skillCategory.findMany({ where: { name: { in: input.categoryNames ?? [] } }, select: { id: true } }),
         prisma.role.findMany({ where: { name: { in: input.roleNames ?? [] } }, select: { id: true } }),
-        prisma.department.findMany({ where: { code: { in: input.departmentCodes ?? [] } }, select: { id: true } }),
       ]);
       appendUnique(ids.memberIds, members.map((item) => item.id));
       appendUnique(ids.skillIds, skills.map((item) => item.id));
       appendUnique(ids.categoryIds, categories.map((item) => item.id));
       appendUnique(ids.roleIds, roles.map((item) => item.id));
-      appendUnique(ids.departmentIds, departments.map((item) => item.id));
     },
-    async createDepartment(label: string, parentDepartmentId?: string): Promise<Department> {
+    async createDepartment(label: string, parentNodeId?: string) {
       const value = unique(label);
-      const department = await prisma.department.create({
-        data: { code: value, name: value, parentDepartmentId },
-      });
-      ids.departmentIds.push(department.id);
+      const nodeId = crypto.randomUUID();
       if (!platformRootCreated) {
         await platformPost("/__fake/nodes", {
           tenantId,
@@ -113,10 +106,10 @@ export function createE2eTestData() {
         platformRootCreated = true;
       }
       const node = {
-        id: crypto.randomUUID(),
+        id: nodeId,
         name: value,
-        parentId: parentDepartmentId
-          ? platformNodesByDepartment.get(parentDepartmentId)?.id ?? platformRootNodeId
+        parentId: parentNodeId
+          ? platformNodesById.get(parentNodeId)?.id ?? platformRootNodeId
           : platformRootNodeId,
         leaderUserIds: [] as string[]
       };
@@ -124,31 +117,31 @@ export function createE2eTestData() {
         tenantId,
         node: { ...node, levelNumber: 1, levelName: "E2E" }
       });
-      platformNodesByDepartment.set(department.id, node);
+      platformNodesById.set(node.id, node);
       platformNodeIds.push(node.id);
-      return department;
+      return node;
     },
     async createMember(input: {
       label: string;
-      departmentId: string;
+      nodeId: string;
       role?: AuthRole;
-      managerId?: string;
+      leaderMemberId?: string;
       targetRoleId?: string;
       createdAt?: Date;
       lastRecapSeenMonth?: string | null;
       platformStatus?: "ACTIVE" | "INACTIVE";
       avatarUrl?: string | null;
       avatarColor?: string | null;
-    }): Promise<{ member: Member; credential: DemoCredential; displayName: string }> {
+    }): Promise<{ member: Member; credential: DemoCredential; displayName: string; email: string }> {
       const value = unique(input.label);
       // ラベルは日本語のことがあるので、メールアドレスは接頭辞と連番だけで作る（形式チェックを通すため）
       const email = `e2e-${prefix.toLowerCase()}-${sequence}@example.com`;
       const platformUserId = crypto.randomUUID();
-      const platformNode = platformNodesByDepartment.get(input.departmentId);
+      const platformNode = platformNodesById.get(input.nodeId);
       if (!platformNode) throw new Error("基盤の組織ノードが登録されていません。");
-      const manager = input.managerId
+      const manager = input.leaderMemberId
         ? await prisma.member.findUnique({
-            where: { id: input.managerId },
+            where: { id: input.leaderMemberId },
             select: { platformUserId: true }
           })
         : null;
@@ -178,11 +171,6 @@ export function createE2eTestData() {
       platformUserIds.push(platformUserId);
       const member = await prisma.member.create({
         data: {
-          employeeNo: value,
-          name: value,
-          email,
-          departmentId: input.departmentId,
-          managerId: input.managerId,
           targetRoleId: input.targetRoleId,
           createdAt: input.createdAt,
           lastRecapSeenMonth: input.lastRecapSeenMonth === undefined
@@ -195,6 +183,7 @@ export function createE2eTestData() {
       return {
         member,
         displayName: value,
+        email,
         credential: {
           platformUserId,
           platformRole: input.role === "ADMIN" ? "ADMIN" : "MEMBER"

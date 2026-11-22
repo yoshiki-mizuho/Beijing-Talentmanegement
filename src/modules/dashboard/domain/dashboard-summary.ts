@@ -80,12 +80,12 @@ export function buildOrganizationDashboard(input: {
     }
   }
   const staleBoundary = new Date(input.now.getTime() - 7 * 86400000);
-  const membersByDepartment = new Map<string, OrganizationMember[]>();
+  const membersByNode = new Map<string, OrganizationMember[]>();
   for (const member of input.members) {
     if (!member.organizationNode) continue;
-    const members = membersByDepartment.get(member.organizationNode.id) ?? [];
+    const members = membersByNode.get(member.organizationNode.id) ?? [];
     members.push(member);
-    membersByDepartment.set(member.organizationNode.id, members);
+    membersByNode.set(member.organizationNode.id, members);
   }
   const changesByMember = new Map<string, typeof changes>();
   for (const change of changes) {
@@ -99,19 +99,19 @@ export function buildOrganizationDashboard(input: {
     assessments.push(assessment);
     pendingByMember.set(assessment.memberId, assessments);
   }
-  const departmentSummaries = [
-    ...membersByDepartment.keys(),
+  const nodeSummaries = [
+    ...membersByNode.keys(),
   ].map((id) => {
-    const members = membersByDepartment.get(id) ?? [];
-    const departmentTargets = members.filter((member) => member.targetRole);
+    const members = membersByNode.get(id) ?? [];
+    const nodeTargets = members.filter((member) => member.targetRole);
     return {
       id,
       name: members[0]?.organizationNode?.name ?? "",
       memberCount: members.length,
-      achievedRate: departmentTargets.length
+      achievedRate: nodeTargets.length
         ? Math.round(
-            (departmentTargets.filter(isAchieved).length /
-              departmentTargets.length) *
+            (nodeTargets.filter(isAchieved).length /
+              nodeTargets.length) *
               100,
           )
         : 0,
@@ -167,7 +167,7 @@ export function buildOrganizationDashboard(input: {
     missingSkills: [...missing.values()]
       .sort((a, b) => b.count - a.count)
       .slice(0, 5),
-    departmentSummaries,
+    nodeSummaries,
     roleSummaries,
   };
 }

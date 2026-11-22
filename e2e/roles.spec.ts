@@ -8,8 +8,8 @@ const credentials = readDemoCredentials();
 
 test("MEMBERがロールを確認して目標を変更し元に戻せる", async ({ browser }) => {
   const data = createE2eTestData();
-  const department = await data.createDepartment("目標ロール部署");
-  const account = await data.createMember({ label: "目標ロール本人", departmentId: department.id });
+  const node = await data.createDepartment("目標ロール部署");
+  const account = await data.createMember({ label: "目標ロール本人", nodeId: node.id });
   // 要件のないロールは「達成」扱いで「目標にする」が出ないので、まだ持っていないスキルを要件にする
   const { skill } = await data.createSkill("目標ロール要件");
   const roleA = await data.createRole("目標ロールA", [{ skillId: skill.id, requiredLevel: 3 }]);

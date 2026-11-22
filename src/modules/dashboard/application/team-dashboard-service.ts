@@ -84,7 +84,7 @@ export async function getTeamDashboard(
     manager: {
       id: data.id,
       name: (profiles.get(data.id) ?? fallbackMemberProfile(data.id)).name,
-      departmentName: (profiles.get(data.id) ?? fallbackMemberProfile(data.id)).nodeName ?? "所属なし"
+      nodeName: (profiles.get(data.id) ?? fallbackMemberProfile(data.id)).nodeName ?? "所属なし"
     },
     members,
     month,

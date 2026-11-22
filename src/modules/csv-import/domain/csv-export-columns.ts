@@ -1,6 +1,4 @@
 export const csvExportTargets = [
-  "departments",
-  "members",
   "skills",
   "member-skills",
   "roles",
@@ -10,28 +8,6 @@ export type CsvExportTarget = (typeof csvExportTargets)[number];
 export type CsvExportScope = "active" | "all";
 
 export const csvExportDefinitions = {
-  departments: {
-    label: "部署",
-    columns: [
-      "department_code",
-      "department_name",
-      "parent_department_code",
-      "is_active",
-    ],
-  },
-  members: {
-    label: "メンバー",
-    columns: [
-      "employee_no",
-      "name",
-      "email",
-      "department_code",
-      "job_title",
-      "status",
-      "manager_employee_no",
-      "target_role_code",
-    ],
-  },
   skills: {
     label: "スキル",
     columns: [
@@ -50,7 +26,7 @@ export const csvExportDefinitions = {
   "member-skills": {
     label: "メンバースキル",
     columns: [
-      "employee_no",
+      "email",
       "skill_code",
       "level",
       "years_of_experience",
@@ -75,27 +51,7 @@ export const csvExportDefinitions = {
   { label: string; columns: readonly string[] }
 >;
 
-type RelatedCode = { code: string } | null;
-type RelatedEmployee = { employeeNo: string } | null;
-
 export type CsvExportRows = {
-  departments: Array<{
-    code: string;
-    name: string;
-    parentDepartment: RelatedCode;
-    isActive: boolean;
-  }>;
-  members: Array<{
-    // H-4b で自動作成した行は空のことがある（H-4d でメンバーの CSV ごと外す）。
-    employeeNo: string | null;
-    name: string | null;
-    email: string | null;
-    department: { code: string } | null;
-    jobTitle: string | null;
-    status: string;
-    manager: RelatedEmployee;
-    targetRole: RelatedCode;
-  }>;
   skills: Array<{
     code: string;
     name: string;
@@ -105,7 +61,8 @@ export type CsvExportRows = {
     levelGuides: Array<{ level: number; description: string }>;
   }>;
   "member-skills": Array<{
-    member: { employeeNo: string };
+    member: { id: string };
+    email: string;
     skill: { code: string };
     level: number;
     yearsOfExperience: { toString(): string } | null;
@@ -134,24 +91,6 @@ export function toCsvExportRows<T extends CsvExportTarget>(
   rows: CsvExportRows[T],
 ): unknown[][] {
   switch (target) {
-    case "departments":
-      return (rows as CsvExportRows["departments"]).map((row) => [
-        row.code,
-        row.name,
-        row.parentDepartment?.code ?? "",
-        row.isActive,
-      ]);
-    case "members":
-      return (rows as CsvExportRows["members"]).map((row) => [
-        row.employeeNo ?? "",
-        row.name ?? "",
-        row.email ?? "",
-        row.department?.code ?? "",
-        row.jobTitle ?? "",
-        row.status.toLowerCase(),
-        row.manager?.employeeNo ?? "",
-        row.targetRole?.code ?? "",
-      ]);
     case "skills":
       return (rows as CsvExportRows["skills"]).map((row) => [
         row.code,
@@ -166,7 +105,7 @@ export function toCsvExportRows<T extends CsvExportTarget>(
       ]);
     case "member-skills":
       return (rows as CsvExportRows["member-skills"]).map((row) => [
-        row.member.employeeNo,
+        row.email,
         row.skill.code,
         row.level,
         row.yearsOfExperience?.toString() ?? "",

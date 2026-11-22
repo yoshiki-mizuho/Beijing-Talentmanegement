@@ -12,7 +12,7 @@ test("マネージャーは自分の範囲のノードを見られ、範囲外�
     const own = await data.createDepartment("自部署", parent.id);
     const sibling = await data.createDepartment("並列部署", parent.id);
     const outside = await data.createDepartment("範囲外部署");
-    const manager = await data.createMember({ label: "組織管理者", departmentId: own.id, role: "MANAGER" });
+    const manager = await data.createMember({ label: "組織管理者", nodeId: own.id, role: "MANAGER" });
     const ownNodeId = data.platformNodeId(own.id);
     const outsideNodeId = data.platformNodeId(outside.id);
     expect(ownNodeId).toBeTruthy();

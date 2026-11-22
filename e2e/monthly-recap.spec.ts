@@ -30,7 +30,7 @@ test("マネージャーが振り返りから1on1メモを追加できる", asyn
   try {
     session = await openLoggedInContext(browser, fixture.manager.credential);
     await session.page.goto("/talent/members");
-    await session.page.getByRole("button", { name: `${fixture.member.member.name}の詳細を開く` }).click();
+    await session.page.getByRole("button", { name: `${fixture.member.displayName}の詳細を開く` }).click();
     const dialog = session.page.getByRole("dialog");
     await dialog.getByRole("tab", { name: "振り返り" }).click();
     await dialog.getByRole("combobox").selectOption(fixture.monthKey);
@@ -52,9 +52,9 @@ test("マネージャーが振り返りから1on1メモを追加できる", asyn
 async function preparePreviousMonthRecap(label: string) {
   const data = createE2eTestData();
   const previous = getPreviousTokyoMonth();
-  const department = await data.createDepartment(`${label}振り返り部署`);
-  const manager = await data.createMember({ label: `${label}振り返り管理者`, departmentId: department.id, role: "MANAGER", createdAt: previous.memberCreatedAt });
-  const member = await data.createMember({ label: `${label}振り返り本人`, departmentId: department.id, managerId: manager.member.id, createdAt: previous.memberCreatedAt, lastRecapSeenMonth: null });
+  const node = await data.createDepartment(`${label}振り返り部署`);
+  const manager = await data.createMember({ label: `${label}振り返り管理者`, nodeId: node.id, role: "MANAGER", createdAt: previous.memberCreatedAt });
+  const member = await data.createMember({ label: `${label}振り返り本人`, nodeId: node.id, leaderMemberId: manager.member.id, createdAt: previous.memberCreatedAt, lastRecapSeenMonth: null });
   const { skill } = await data.createSkill(`${label}振り返りスキル`);
   await data.createMemberSkill({ memberId: member.member.id, skillId: skill.id, level: 2, approvedByMemberId: manager.member.id });
   const change = await data.createLevelChange({ memberId: member.member.id, skillId: skill.id, fromLevel: 1, toLevel: 2, changedByMemberId: manager.member.id, changedAt: previous.eventAt, createdAt: previous.eventAt });
