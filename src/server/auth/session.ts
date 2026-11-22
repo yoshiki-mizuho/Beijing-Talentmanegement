@@ -35,6 +35,7 @@ export type CurrentSession = {
     platformUserId: string;
     memberId: string;
     name: string;
+    email: string;
     role: AuthRole;
     isActive: true;
   };
@@ -91,6 +92,7 @@ export async function resolveCurrentSession(
         platformUserId,
         memberId: member.id,
         name: platformUser?.name || "",
+        email: platformUser?.email || "",
         role,
         isActive: true
       }
