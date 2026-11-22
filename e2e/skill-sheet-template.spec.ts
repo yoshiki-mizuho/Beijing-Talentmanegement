@@ -2,6 +2,7 @@ import ExcelJS from "exceljs";
 import { expect, test, type Download } from "@playwright/test";
 import { createE2eTestData } from "./fixtures/test-data";
 import { login } from "./helpers/auth";
+import { runAiJobsOnce } from "./helpers/ai-jobs";
 
 test("ADMINがひな形を登録し提案用シートをExcelで出力できる", async ({ page }) => {
   const data = createE2eTestData();
@@ -53,6 +54,10 @@ test("ADMINがひな形を登録し提案用シートをExcelで出力できる"
 
     await page.goto(`/talent/proposal-sheets/${member.member.id}`);
     await page.getByRole("button", { name: "AI で下書きを作る" }).click();
+    await expect(page.getByRole("main").getByText("作成を受け付けました。数分後にできます。")).toBeVisible();
+    await runAiJobsOnce();
+    await page.reload();
+    await page.getByRole("button", { name: "反映する" }).click();
     await page.getByLabel("表示名").fill("E2E表示名");
     await page.getByLabel("自己 PR").fill("E2E自己PR");
     await page.getByRole("combobox", { name: "ひな形" }).selectOption({ label: templateName });

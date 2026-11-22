@@ -1,107 +1,70 @@
-import {
-  buildProposalSheetMessages,
-  createFakeProposalSheetResponse,
-  createFallbackProposalSheet,
-  parseProposalSheetResponse,
-  type ProposalSheetPromptInput,
-  type ProposalSheetText
-} from "../domain/proposal-sheet";
-import {
-  AiClientError,
-  createChatCompletion,
-  getAiConfig
-} from "../infrastructure/ai-client";
-import * as usageRepository from "../infrastructure/ai-usage-repository";
-import { getAiMonthlyTokenLimit } from "../domain/ai-usage-summary";
+import { randomUUID } from "node:crypto";
 
-const RESERVED_TOKENS = 6_000;
+import { buildProposalSheetMessages, hashProposalSheetInput, parseProposalSheetResponse, type ProposalSheetPromptInput } from "@/modules/ai-evaluation/domain/proposal-sheet";
+import { AI_JOB_DAILY_LIMIT, startOfJstDay } from "@/modules/ai-evaluation/domain/ai-job-policy";
+import * as jobs from "@/modules/ai-evaluation/infrastructure/ai-job-repository";
+import { getTenantId } from "@/server/db/prisma";
+import { generatePlatformText } from "@/server/platform/llm";
 
-export type ProposalSheetGeneration = {
-  source: "AI" | "FALLBACK";
-  content: ProposalSheetText;
-  model: string | null;
-  message: string | null;
-  keptPrevious: boolean;
-};
-
-export async function generateProposalSheetText(
-  actorMemberId: string,
-  targetMemberId: string,
-  input: ProposalSheetPromptInput,
-  previous?: ProposalSheetText
-): Promise<ProposalSheetGeneration> {
-  const startedAt = Date.now();
-  const config = getAiConfig();
-  if (config.kind === "none") {
-    await record("FALLBACK", "not_configured");
-    return fallback("AI が未設定のため、簡易版で作りました。");
-  }
-  const reservation = await usageRepository.reserveAiUsage({
-    feature: "proposal_sheet",
-    actorMemberId,
-    targetMemberId,
-    reservedTokens: RESERVED_TOKENS,
-    monthlyTokenLimit: getAiMonthlyTokenLimit()
-  });
-  if (reservation.kind === "monthly_limit") {
-    await record("FALLBACK", "monthly_limit");
-    return fallback("今月の AI の利用上限に達したため、簡易版で作りました。");
-  }
-  if (reservation.kind === "rate_limited_user") {
-    await record("FAILED", "rate_limited_user");
-    return failedPrevious("短い時間に何度も作り直したため、少し待ってからもう一度お試しください。");
-  }
-  try {
-    const result = await createChatCompletion({
-      messages: buildProposalSheetMessages(input),
-      fakeResponse: () => createFakeProposalSheetResponse(input)
-    });
-    const content = parseProposalSheetResponse(result.content, input);
-    await usageRepository.completeAiUsageReservation(reservation.id, {
-      model: result.model,
-      status: "SUCCESS",
-      promptTokens: result.usage?.promptTokens,
-      completionTokens: result.usage?.completionTokens,
-      totalTokens: result.usage?.totalTokens,
-      latencyMs: result.latencyMs
-    });
-    return { source: "AI", content, model: result.model, message: null, keptPrevious: false };
-  } catch (error) {
-    const errorCode = getErrorCode(error);
-    await usageRepository.completeAiUsageReservation(reservation.id, {
-      status: "FAILED",
-      latencyMs: Date.now() - startedAt,
-      errorCode
-    });
-    return failedPrevious("作り直しに失敗しました。前回の下書きを表示しています。");
-  }
-
-  function fallback(message: string): ProposalSheetGeneration {
-    return {
-      source: "FALLBACK",
-      content: createFallbackProposalSheet(input),
-      model: null,
-      message,
-      keptPrevious: false
-    };
-  }
-  function failedPrevious(message: string): ProposalSheetGeneration {
-    if (previous) return { source: "AI", content: previous, model: null, message, keptPrevious: true };
-    return fallback(message.replace("前回の下書きを表示しています。", "簡易版で作りました。"));
-  }
-  function record(status: "FAILED" | "FALLBACK", errorCode: string) {
-    return usageRepository.recordAiUsage({
-      feature: "proposal_sheet",
-      actorMemberId,
-      targetMemberId,
-      status,
-      latencyMs: Date.now() - startedAt,
-      errorCode
-    });
-  }
+// 提案用スキルシートのモジュールが使う予約の口（他モジュールの infrastructure に直接依存させないため）。
+export function findLatestProposalSheetJob(targetMemberId: string) {
+  return jobs.findLatestProposalSheetJob(targetMemberId);
 }
 
-function getErrorCode(error: unknown) {
-  if (!(error instanceof AiClientError)) return "invalid_response";
-  return error.status === undefined ? error.code : `${error.code}:${error.status}`;
+export async function reserveProposalSheetJob(input: {
+  targetMemberId: string;
+  requestedByMemberId: string;
+}) {
+  return jobs.reserveAiJob({
+    tenantId: await getTenantId(),
+    kind: "PROPOSAL_SHEET",
+    targetMemberId: input.targetMemberId,
+    requestedByMemberId: input.requestedByMemberId,
+    params: {},
+    dayStartedAt: startOfJstDay(new Date()),
+    dailyLimit: AI_JOB_DAILY_LIMIT,
+  });
+}
+
+export const PROPOSAL_SHEET_JSON_SCHEMA_HINT = '{"selfPr":"string","strengths":"string","projects":[{"id":"string","description":"string"}]}';
+
+export function limitProposalSheetInput(input: ProposalSheetPromptInput) {
+  const limited: ProposalSheetPromptInput = {
+    ...input,
+    note: input.note.slice(0, 500),
+    customerRequest: input.customerRequest.slice(0, 500),
+    skills: input.skills.slice(0, 30),
+    projects: input.projects.slice(0, 15).map((project) => ({
+      ...project,
+      summary: project.summary.slice(0, 300),
+      technologies: project.technologies.slice(0, 10),
+      phases: project.phases.slice(0, 8),
+    })),
+    certifications: input.certifications.slice(0, 20),
+  };
+  while (JSON.stringify(limited).length > 3_000) {
+    const project = limited.projects.at(-1);
+    if (project && project.summary.length > 80) project.summary = project.summary.slice(0, -50);
+    else if (limited.projects.length > 1) limited.projects.pop();
+    else if (limited.skills.length > 1) limited.skills.pop();
+    else break;
+  }
+  return limited;
+}
+
+export async function executeProposalSheetJob(input: ProposalSheetPromptInput) {
+  const limited = limitProposalSheetInput(input);
+  const messages = buildProposalSheetMessages(limited);
+  const startedAt = Date.now();
+  const generated = await generatePlatformText({
+    systemPrompt: messages[0].content,
+    userPrompt: messages[1].content,
+    jsonSchemaHint: PROPOSAL_SHEET_JSON_SCHEMA_HINT,
+    requestId: randomUUID(),
+  });
+  return {
+    model: generated.model,
+    durationMs: Date.now() - startedAt,
+    result: { content: parseProposalSheetResponse(generated.text, limited), inputHash: hashProposalSheetInput(input) },
+  };
 }

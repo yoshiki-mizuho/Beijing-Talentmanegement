@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type { Prisma } from "@prisma/client";
 
 import {
   AI_JOB_RUN_LIMIT,
@@ -11,6 +12,9 @@ import {
   saveGrowthHintFallbackForJob,
 } from "@/modules/ai-evaluation/application/growth-hint-service";
 import { runWithTenant } from "@/server/db/prisma";
+import { executeProposalSheetJob } from "@/modules/ai-evaluation/application/proposal-sheet-service";
+import { executeSkillPrerequisiteJob } from "@/modules/ai-evaluation/application/skill-prerequisite-suggestion-service";
+import { buildProposalSheetJobInput } from "@/modules/proposal-sheet/application/proposal-sheet-service";
 
 type ResultCounts = Record<string, number>;
 
@@ -40,21 +44,14 @@ export async function runAiJobs() {
         processed += 1;
         const startedAt = Date.now();
         try {
-          if (
-            claimed.kind !== "GROWTH_HINT" ||
-            !claimed.targetMemberId
-          ) {
-            throw new Error("unsupported_ai_job");
-          }
-          const result = await executeGrowthHintJob({
-            targetMemberId: claimed.targetMemberId,
-            requestedByMemberId: claimed.requestedByMemberId,
-            requestId: randomUUID(),
-          });
+          const result = await executeJob(claimed);
           await jobs.completeJob({
             id: claimed.id,
             model: result.model,
             durationMs: result.durationMs,
+            result: "result" in result
+              ? result.result as Prisma.InputJsonValue
+              : undefined,
           });
           increment(counts, "SUCCEEDED");
         } catch (error) {
@@ -101,4 +98,25 @@ export async function runAiJobs() {
 
   console.info("AI jobs run complete", { processed, counts });
   return { processed, counts };
+}
+
+async function executeJob(claimed: NonNullable<Awaited<ReturnType<typeof jobs.claimJob>>>) {
+  if (claimed.kind === "GROWTH_HINT" && claimed.targetMemberId) {
+    return executeGrowthHintJob({
+      targetMemberId: claimed.targetMemberId,
+      requestedByMemberId: claimed.requestedByMemberId,
+      requestId: randomUUID(),
+    });
+  }
+  if (claimed.kind === "PROPOSAL_SHEET" && claimed.targetMemberId) {
+    return executeProposalSheetJob(
+      await buildProposalSheetJobInput(claimed.targetMemberId),
+    );
+  }
+  if (claimed.kind === "SKILL_PREREQUISITE") {
+    const params = claimed.params as { scope?: unknown };
+    const scope = params.scope === "all" ? "all" : "unrelated";
+    return executeSkillPrerequisiteJob(scope);
+  }
+  throw new Error("unsupported_ai_job");
 }

@@ -112,9 +112,6 @@ export async function deleteE2eData(
     await record("growthHints", tx.growthHint.deleteMany({ where: { OR: [
       { memberId: { in: memberIds } }, { generatedById: { in: memberIds } },
     ] } }));
-    await record("aiUsageLogs", tx.aiUsageLog.deleteMany({ where: { OR: [
-      { actorMemberId: { in: memberIds } }, { targetMemberId: { in: memberIds } },
-    ] } }));
     await record("skillPrerequisites", tx.skillPrerequisite.deleteMany({ where: { OR: [
       { skillId: { in: skillIds } }, { prerequisiteSkillId: { in: skillIds } },
       { createdById: { in: memberIds } },

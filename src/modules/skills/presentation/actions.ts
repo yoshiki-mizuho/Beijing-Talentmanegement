@@ -22,7 +22,7 @@ import {
   createSkillPrerequisites,
   deleteSkillPrerequisite
 } from "@/modules/skills/application/skill-service";
-import { generateSkillPrerequisiteSuggestions } from "@/modules/ai-evaluation/application/skill-prerequisite-suggestion-service";
+import { getSkillPrerequisiteSuggestionState, reserveSkillPrerequisiteSuggestions } from "@/modules/ai-evaluation/application/skill-prerequisite-suggestion-service";
 import { adminOnly, requireRoles } from "@/server/auth/authorization";
 import { runAction, runActionWithData, type ActionResult } from "@/shared/lib/action-result";
 import { getOptionalString, getString } from "@/shared/lib/form-data";
@@ -222,8 +222,15 @@ export async function generateSkillPrerequisiteSuggestionsAction(
 ) {
   return runActionWithData(async () => {
     const session = await requireRoles(adminOnly);
-    return generateSkillPrerequisiteSuggestions(scope, session.user.memberId);
-  }, "候補を作りました。");
+    return reserveSkillPrerequisiteSuggestions(scope, session.user.memberId);
+  }, "作成を受け付けました。数分後にできます。");
+}
+
+export async function getSkillPrerequisiteSuggestionsAction() {
+  return runActionWithData(async () => {
+    await requireRoles(adminOnly);
+    return getSkillPrerequisiteSuggestionState();
+  }, "最新の状態を確かめました。");
 }
 
 export async function createSuggestedSkillPrerequisitesAction(input: unknown) {

@@ -10,11 +10,10 @@ import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import { EmptyState } from "@/shared/ui/empty-state";
-import { generateProposalSheetAction, saveProposalSheetAction } from "./actions";
+import { createFallbackProposalSheetAction, generateProposalSheetAction, saveProposalSheetAction } from "./actions";
 import type { getProposalSheet } from "../application/proposal-sheet-service";
 
 type Data = Awaited<ReturnType<typeof getProposalSheet>>;
-type Draft = NonNullable<Data["draft"]>;
 type Project = Data["projects"][number];
 
 const SKILL_PREVIEW_COUNT = 10;
@@ -39,7 +38,9 @@ export function ProposalSheetEditor({
   const [excludedSkills, setExcludedSkills] = useState(
     () => new Set(initial?.excludedSkillIds ?? [])
   );
-  const [draft, setDraft] = useState<Draft | null>(initial);
+  const draft = initial;
+  const [aiJob, setAiJob] = useState(data.aiJob);
+  const [appliedJobId, setAppliedJobId] = useState<string | undefined>();
   const [selfPr, setSelfPr] = useState(initial?.selfPr ?? "");
   const [strengths, setStrengths] = useState(initial?.strengths ?? "");
   const [descriptions, setDescriptions] = useState<Record<string, string>>(
@@ -66,12 +67,8 @@ export function ProposalSheetEditor({
       });
       if (result.status === "success") toast.success(result.message);
       else toast.error(result.message);
-      if (result.status !== "success" || !result.data?.draft) return;
-      const next = result.data.draft as Draft;
-      setDraft(next);
-      setSelfPr(next.selfPr);
-      setStrengths(next.strengths);
-      setDescriptions(next.projectDescriptions);
+      if (result.status !== "success") return;
+      setAiJob(result.data ? { id: "pending", status: result.data.jobStatus ?? "FAILED", result: null } : null);
     });
   }
 
@@ -85,10 +82,34 @@ export function ProposalSheetEditor({
         excludedSkillIds: [...excludedSkills],
         selfPr,
         strengths,
-        projectDescriptions: descriptions
+        projectDescriptions: descriptions,
+        aiJobId: appliedJobId
       });
       if (result.status === "success") toast.success(result.message);
       else toast.error(result.message);
+    });
+  }
+
+  function applyAiResult() {
+    if (!aiJob?.result) return;
+    setSelfPr(aiJob.result.selfPr);
+    setStrengths(aiJob.result.strengths);
+    setDescriptions(Object.fromEntries(aiJob.result.projects.map((item) => [item.id, item.description])));
+    setAppliedJobId(aiJob.id);
+  }
+
+  function makeFallback() {
+    startTransition(async () => {
+      const result = await createFallbackProposalSheetAction(data.member.id);
+      if (result.status === "error" || !result.data) {
+        toast.error(result.message);
+        return;
+      }
+      setSelfPr(result.data.selfPr);
+      setStrengths(result.data.strengths);
+      setDescriptions(Object.fromEntries(result.data.projects.map((item) => [item.id, item.description])));
+      setAppliedJobId(undefined);
+      toast.success(result.message);
     });
   }
 
@@ -102,7 +123,8 @@ export function ProposalSheetEditor({
         excludedSkillIds: [...excludedSkills],
         selfPr,
         strengths,
-        projectDescriptions: descriptions
+        projectDescriptions: descriptions,
+        aiJobId: appliedJobId
       });
       if (result.status === "error") {
         toast.error(result.message);
@@ -115,9 +137,10 @@ export function ProposalSheetEditor({
     });
   }
 
-  function requestGenerate() {
-    if (draft) setConfirmOpen(true);
-    else generate();
+  // 予約しただけでは下書きは変わらない。置き換わるのは「反映する」を押したときなので、そこで確かめる。
+  function requestApply() {
+    if (selfPr || strengths || Object.values(descriptions).some(Boolean)) setConfirmOpen(true);
+    else applyAiResult();
   }
 
   return (
@@ -231,11 +254,29 @@ export function ProposalSheetEditor({
             type="button"
             className="min-h-12 w-full"
             disabled={pending}
-            onClick={requestGenerate}
+            onClick={generate}
           >
             <Sparkles className="h-4 w-4" aria-hidden="true" />
             {pending ? "作成中…" : draft ? "AI で下書きを作り直す" : "AI で下書きを作る"}
           </Button>
+          {aiJob?.status === "QUEUED" || aiJob?.status === "RUNNING" ? (
+            <div className="rounded-md border border-[var(--border)] p-3 text-sm">
+              <p>作成を受け付けました。数分後にできます。</p>
+              <Button variant="secondary" className="mt-2" onClick={() => location.reload()}>最新を確かめる</Button>
+            </div>
+          ) : null}
+          {aiJob?.status === "SUCCEEDED" && aiJob.result ? (
+            <div className="rounded-md border border-[var(--border)] p-3 text-sm">
+              <p>AI の下書きができました。</p>
+              <Button className="mt-2" onClick={requestApply}>反映する</Button>
+            </div>
+          ) : null}
+          {aiJob?.status === "FAILED" ? (
+            <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+              <p>AI の下書きを作れませんでした。</p>
+              <Button variant="secondary" className="mt-2" onClick={makeFallback}>簡易版で作る</Button>
+            </div>
+          ) : null}
         </div>
         <Card>
           <CardContent className="pt-5">
@@ -380,10 +421,10 @@ export function ProposalSheetEditor({
         onClose={() => setConfirmOpen(false)}
         onConfirm={() => {
           setConfirmOpen(false);
-          generate();
+          applyAiResult();
         }}
-        title="下書きを作り直しますか"
-        description="今の下書きを AI の下書きで置き換えますか"
+        title="AI の下書きを反映しますか"
+        description="編集欄の自己 PR・得意分野・案件の説明文を AI の下書きで置き換えます。保存するまで、保存済みの下書きは変わりません。"
         confirmLabel="置き換える"
       />
     </div>

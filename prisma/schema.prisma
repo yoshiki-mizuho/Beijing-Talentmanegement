@@ -84,12 +84,6 @@ enum ProposalSheetDraftSource {
   MANUAL
 }
 
-enum AiUsageStatus {
-  SUCCESS
-  FAILED
-  FALLBACK
-}
-
 enum AiJobKind {
   GROWTH_HINT
   PROPOSAL_SHEET
@@ -139,7 +133,6 @@ model Member {
   receivedOneOnOneNotes OneOnOneNote[]        @relation("OneOnOneNoteMember")
   growthHint            GrowthHint?           @relation("GrowthHintMember")
   generatedGrowthHints  GrowthHint[]          @relation("GrowthHintGeneratedBy")
-  aiUsageLogs           AiUsageLog[]          @relation("AiUsageActor")
   createdSkillPrerequisites SkillPrerequisite[] @relation("SkillPrerequisiteCreatedBy")
   teamGoals             TeamGoal[]             @relation("TeamGoalManager")
   teamGoalAcknowledgements TeamGoalAcknowledgement[]
@@ -643,27 +636,6 @@ model SkillSheetTemplate {
 
   @@unique([tenantId, name])
   @@index([updatedById])
-}
-
-model AiUsageLog {
-  id               String        @id @default(cuid())
-  tenantId         String        @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
-  feature          String
-  actorMemberId    String?
-  actorMember      Member?       @relation("AiUsageActor", fields: [actorMemberId], references: [id])
-  targetMemberId   String?
-  model            String?
-  status           AiUsageStatus
-  promptTokens     Int?
-  completionTokens Int?
-  totalTokens      Int?
-  latencyMs        Int
-  errorCode        String?
-  createdAt        DateTime      @default(now())
-
-  @@index([tenantId])
-  @@index([createdAt])
-  @@index([feature, createdAt])
 }
 
 model AiJob {

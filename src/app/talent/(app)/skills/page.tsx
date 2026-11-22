@@ -14,6 +14,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import { SkillCategoryGroupsPanel } from "@/modules/skills/presentation/skill-category-groups-panel";
 import { SkillPrerequisitesPanel } from "@/modules/skills/presentation/skill-prerequisites-panel";
+import { getSkillPrerequisiteSuggestionState } from "@/modules/ai-evaluation/application/skill-prerequisite-suggestion-service";
 
 export const dynamic = "force-dynamic";
 
@@ -28,12 +29,13 @@ export default async function SkillsPage({
     : "skills";
   const session = await requirePageRoles(adminOnly);
   const canManageSkills = canManageSkillMaster(session.user.role);
-  const [categories, skills, levels, groups, prerequisites] = await Promise.all([
+  const [categories, skills, levels, groups, prerequisites, suggestionState] = await Promise.all([
     listSkillCategories(),
     listSkills(),
     listSkillLevels(),
     listSkillCategoryGroups(),
-    listSkillPrerequisites()
+    listSkillPrerequisites(),
+    activeTab === "prerequisites" ? getSkillPrerequisiteSuggestionState() : Promise.resolve(null)
   ]);
   return (
     <div className="space-y-6">
@@ -74,7 +76,7 @@ export default async function SkillsPage({
         <SkillCategoryGroupsPanel initialGroups={groups} categories={categories} />
       ) : null}
       {activeTab === "prerequisites" ? (
-        <SkillPrerequisitesPanel skills={skills} prerequisites={prerequisites} />
+        <SkillPrerequisitesPanel skills={skills} prerequisites={prerequisites} initialState={suggestionState} />
       ) : null}
     </div>
   );

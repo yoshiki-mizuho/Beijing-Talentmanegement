@@ -91,7 +91,6 @@ e2e:
       when: manual
       allow_failure: true
   variables:
-    AI_API_BASE_URL: fake
   script:
     - npx playwright install --with-deps chromium
     - node scripts/create-ci-app-role.mjs

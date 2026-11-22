@@ -17,21 +17,3 @@ export const GROWTH_HINT_JSON_SCHEMA_HINT = JSON.stringify({
   nextSteps: ["次の一歩（80字以内、1〜3件）"],
   oneOnOneTopics: ["1on1 で話すとよい話題（50字以内、1〜3件）"],
 });
-
-export function createFakeGrowthHintResponse(input: GrowthHintInput) {
-  const strength = input.approvedSkills[0];
-  const gap = input.skillGaps[0];
-  return JSON.stringify({
-    strengthsSummary: strength
-      ? `${strength.name}のLv${strength.level}を強みに、次の成長へつなげられます。`
-      : "承認済みスキルを増やすことから始められます。",
-    nextSteps: [
-      gap
-        ? `${gap.name}をLv${gap.requiredLevel}に近づける実務機会をつくる。`
-        : "現在の強みを実務で活かす機会を振り返る。",
-    ],
-    oneOnOneTopics: [
-      gap ? `${gap.name}を伸ばす機会について` : "強みを活かせた場面について",
-    ],
-  });
-}

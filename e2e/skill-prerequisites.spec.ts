@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { createE2eTestData } from "./fixtures/test-data";
 import { login } from "./helpers/auth";
+import { runAiJobsOnce } from "./helpers/ai-jobs";
 
 test("ADMINがAI候補と手動追加を登録し削除できる", async ({ page }) => {
   const data = createE2eTestData();
@@ -14,6 +15,9 @@ test("ADMINがAI候補と手動追加を登録し削除できる", async ({ page
   await page.goto("/talent/skills?tab=prerequisites");
   const existingAiRows = await page.getByRole("row").filter({ hasText: "AI の候補から" }).count();
   await page.getByRole("button", { name: "候補を作る" }).click();
+  await expect(page.getByText("作成を受け付けました。数分後にできます。").first()).toBeVisible();
+  await runAiJobsOnce();
+  await page.reload();
 
   const candidateChecks = page.locator('input[type="checkbox"]');
   await expect(candidateChecks.first()).toBeVisible();

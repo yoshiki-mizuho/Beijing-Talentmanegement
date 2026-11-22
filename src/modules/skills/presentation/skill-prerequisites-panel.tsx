@@ -11,6 +11,7 @@ import {
   createManualSkillPrerequisiteAction,
   createSuggestedSkillPrerequisitesAction,
   deleteSkillPrerequisiteAction,
+  getSkillPrerequisiteSuggestionsAction,
   generateSkillPrerequisiteSuggestionsAction,
 } from "@/modules/skills/presentation/actions";
 import { Badge } from "@/shared/ui/badge";
@@ -53,17 +54,21 @@ type Suggestion = {
 export function SkillPrerequisitesPanel({
   skills,
   prerequisites,
+  initialState,
 }: {
   skills: Skill[];
   prerequisites: Prerequisite[];
+  initialState: { status: string | null; result: unknown } | null;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [scope, setScope] = useState<"unrelated" | "all">("unrelated");
-  const [suggestions, setSuggestions] = useState<Suggestion[] | null>(null);
+  const initialResult = parseSuggestionResult(initialState?.result);
+  const [suggestions, setSuggestions] = useState<Suggestion[] | null>(initialResult?.suggestions ?? null);
+  const [jobStatus, setJobStatus] = useState(initialState?.status ?? null);
   const [selected, setSelected] = useState(new Set<string>());
   const [notice, setNotice] = useState<string | null>(null);
-  const [truncated, setTruncated] = useState(false);
+  const [truncated, setTruncated] = useState(initialResult?.truncated ?? false);
   const [manualOpen, setManualOpen] = useState(false);
   const [skillId, setSkillId] = useState<string | null>(null);
   const [prerequisiteSkillId, setPrerequisiteSkillId] = useState<string | null>(
@@ -102,16 +107,28 @@ export function SkillPrerequisitesPanel({
         toast.error(result.message);
         return;
       }
-      setSuggestions(result.data.suggestions);
-      setSelected(
-        new Set(
-          result.data.suggestions
-            .filter((item) => item.confidence === "high")
-            .map(keyOf),
-        ),
-      );
+      setJobStatus(result.data.jobStatus);
       setNotice(result.data.message);
-      setTruncated(result.data.truncated);
+    });
+  }
+
+  function refreshSuggestions() {
+    startTransition(async () => {
+      const response = await getSkillPrerequisiteSuggestionsAction();
+      if (response.status === "error" || !response.data) {
+        toast.error(response.message);
+        return;
+      }
+      setJobStatus(response.data.status);
+      const result = parseSuggestionResult(response.data.result);
+      if (result) {
+        setSuggestions(result.suggestions);
+        setTruncated(result.truncated);
+        setSelected(new Set(
+          result.suggestions.filter((item) => item.confidence === "high").map(keyOf),
+        ));
+        setNotice(null);
+      }
     });
   }
 
@@ -191,6 +208,19 @@ export function SkillPrerequisitesPanel({
           </div>
         </CardHeader>
         <CardContent>
+          {jobStatus === "QUEUED" || jobStatus === "RUNNING" ? (
+            <div className="mb-3 rounded-md border border-[var(--border)] p-3 text-sm">
+              <p>作成を受け付けました。数分後にできます。</p>
+              <Button variant="secondary" className="mt-2" onClick={refreshSuggestions}>
+                最新を確かめる
+              </Button>
+            </div>
+          ) : null}
+          {jobStatus === "FAILED" ? (
+            <p className="mb-3 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              候補を作れませんでした。手で追加できます。
+            </p>
+          ) : null}
           {truncated ? (
             <p className="mb-3 rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-900">
               多いため一部だけ対象にしました
@@ -444,6 +474,14 @@ export function SkillPrerequisitesPanel({
 
 function keyOf(item: Pick<Suggestion, "skillId" | "prerequisiteSkillId">) {
   return `${item.skillId}:${item.prerequisiteSkillId}`;
+}
+
+function parseSuggestionResult(value: unknown): { suggestions: Suggestion[]; truncated: boolean } | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const result = value as { suggestions?: unknown; truncated?: unknown };
+  return Array.isArray(result.suggestions)
+    ? { suggestions: result.suggestions as Suggestion[], truncated: result.truncated === true }
+    : null;
 }
 
 function formatPrerequisiteDate(value: Date) {

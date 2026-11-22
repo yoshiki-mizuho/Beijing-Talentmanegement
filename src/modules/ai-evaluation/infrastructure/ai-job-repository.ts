@@ -9,6 +9,20 @@ export function findLatestGrowthHintJob(targetMemberId: string) {
   });
 }
 
+export function findLatestProposalSheetJob(targetMemberId: string) {
+  return prisma.aiJob.findFirst({
+    where: { kind: "PROPOSAL_SHEET", targetMemberId },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export function findLatestSkillPrerequisiteJob() {
+  return prisma.aiJob.findFirst({
+    where: { kind: "SKILL_PREREQUISITE" },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
 export function reserveGrowthHintJob(input: {
   tenantId: string;
   targetMemberId: string;
@@ -45,6 +59,56 @@ export function reserveGrowthHintJob(input: {
       },
     });
     return { kind: "created" as const, job };
+  });
+}
+
+export function reserveAiJob(input: {
+  tenantId: string;
+  kind: AiJobKind;
+  targetMemberId?: string;
+  requestedByMemberId: string;
+  params: Prisma.InputJsonValue;
+  dayStartedAt: Date;
+  dailyLimit: number;
+}) {
+  return prisma.$transaction(async (transaction) => {
+    await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${input.tenantId}))`;
+    const active = await transaction.aiJob.findFirst({
+      where: {
+        kind: input.kind,
+        ...(input.targetMemberId
+          ? { targetMemberId: input.targetMemberId }
+          : {}),
+        status: { in: ["QUEUED", "RUNNING"] },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+    if (active) return { kind: "active" as const, job: active };
+    const count = await transaction.aiJob.count({
+      where: { createdAt: { gte: input.dayStartedAt } },
+    });
+    if (count >= input.dailyLimit) return { kind: "daily_limit" as const };
+    await transaction.hubTenant.upsert({
+      where: { id: input.tenantId },
+      create: { id: input.tenantId },
+      update: { lastSeenAt: new Date() },
+    });
+    const job = await transaction.aiJob.create({
+      data: {
+        kind: input.kind,
+        targetMemberId: input.targetMemberId,
+        requestedByMemberId: input.requestedByMemberId,
+        params: input.params,
+      },
+    });
+    return { kind: "created" as const, job };
+  });
+}
+
+export function getAiJobUsageRows(since: Date) {
+  return prisma.aiJob.findMany({
+    where: { createdAt: { gte: since } },
+    orderBy: { createdAt: "asc" },
   });
 }
 
