@@ -90,6 +90,19 @@ enum AiUsageStatus {
   FALLBACK
 }
 
+enum AiJobKind {
+  GROWTH_HINT
+  PROPOSAL_SHEET
+  SKILL_PREREQUISITE
+}
+
+enum AiJobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
 enum TeamGoalKind {
   LEVEL_UP_COUNT
   LEVEL_UP_MEMBERS
@@ -136,6 +149,8 @@ model Member {
   proposalSheetDraft    ProposalSheetDraft?   @relation("ProposalSheetDraftMember")
   updatedProposalSheets ProposalSheetDraft[]   @relation("ProposalSheetDraftUpdatedBy")
   updatedSkillSheetTemplates SkillSheetTemplate[] @relation("SkillSheetTemplateUpdatedBy")
+  targetedAiJobs         AiJob[]               @relation("AiJobTargetMember")
+  requestedAiJobs        AiJob[]               @relation("AiJobRequestedByMember")
   itCareerStartMonth    String?
   skillSheetNote        String?
   createdAt             DateTime              @default(now())
@@ -649,4 +664,36 @@ model AiUsageLog {
   @@index([tenantId])
   @@index([createdAt])
   @@index([feature, createdAt])
+}
+
+model AiJob {
+  id                    String       @id @default(cuid())
+  tenantId              String       @default(dbgenerated("(current_setting('app.tenant_id'::text, true))::uuid")) @map("tenant_id") @db.Uuid
+  kind                  AiJobKind
+  status                AiJobStatus  @default(QUEUED)
+  targetMemberId        String?
+  targetMember          Member?      @relation("AiJobTargetMember", fields: [targetMemberId], references: [id], onDelete: Cascade)
+  requestedByMemberId   String
+  requestedByMember     Member       @relation("AiJobRequestedByMember", fields: [requestedByMemberId], references: [id], onDelete: Cascade)
+  params                Json
+  result                Json?
+  attempts              Int          @default(0)
+  nextRunAt             DateTime     @default(now())
+  startedAt             DateTime?
+  finishedAt            DateTime?
+  errorCode             String?
+  model                 String?
+  durationMs            Int?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  @@index([tenantId])
+  @@index([status, nextRunAt])
+  @@index([kind, targetMemberId, status])
+}
+
+model HubTenant {
+  id          String   @id @db.Uuid
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
 }

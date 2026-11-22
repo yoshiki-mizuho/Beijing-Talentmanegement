@@ -11,6 +11,13 @@ export function buildGrowthHintMessages(input: GrowthHintInput) {
   ];
 }
 
+// 基盤の LLM に渡す JSON の形の見本（json_schema_hint）。
+export const GROWTH_HINT_JSON_SCHEMA_HINT = JSON.stringify({
+  strengthsSummary: "強みのまとめ（120字以内）",
+  nextSteps: ["次の一歩（80字以内、1〜3件）"],
+  oneOnOneTopics: ["1on1 で話すとよい話題（50字以内、1〜3件）"],
+});
+
 export function createFakeGrowthHintResponse(input: GrowthHintInput) {
   const strength = input.approvedSkills[0];
   const gap = input.skillGaps[0];

@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { createE2eTestData } from "./fixtures/test-data";
 import { openLoggedInContext } from "./helpers/auth";
+import { runAiJobsOnce, setFakeLlmError } from "./helpers/ai-jobs";
 
 test("MANAGERが育成のヒントを作り1on1メモへ追加できる", async ({ browser }) => {
   const data = createE2eTestData();
@@ -19,6 +20,10 @@ test("MANAGERが育成のヒントを作り1on1メモへ追加できる", async 
   await page.getByRole("button", { name: `${member.displayName}の詳細を開く` }).click();
   await page.getByRole("tab", { name: "育成のヒント" }).click();
   await page.getByRole("button", { name: /ヒントを作る|作り直す/ }).click();
+
+  await expect(page.getByText("作成を受け付けました。数分後にできます。").first()).toBeVisible();
+  await runAiJobsOnce();
+  await page.getByRole("button", { name: "最新を確かめる" }).click();
 
   await expect(page.getByText("AI", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "得意なこと" })).toBeVisible();
@@ -41,6 +46,33 @@ test("MANAGERが育成のヒントを作り1on1メモへ追加できる", async 
   await page.getByRole("button", { name: "ダイアログを閉じる" }).click();
   await expect(page.getByText("✦ ヒント").first()).toBeVisible();
   } finally {
+    await session?.context.close();
+    await data.cleanup();
+  }
+});
+
+test("LLMが停止していると育成のヒントは簡易版になる", async ({ browser }) => {
+  const data = createE2eTestData();
+  let session: Awaited<ReturnType<typeof openLoggedInContext>> | null = null;
+  try {
+    const node = await data.createDepartment("育成ヒント失敗部署");
+    const manager = await data.createMember({ label: "育成ヒント失敗管理者", nodeId: node.id, role: "MANAGER" });
+    const member = await data.createMember({ label: "育成ヒント失敗部下", nodeId: node.id, leaderMemberId: manager.member.id });
+    session = await openLoggedInContext(browser, manager.credential);
+    const page = session.page;
+    await page.goto("/talent/members");
+    await page.getByRole("button", { name: `${member.displayName}の詳細を開く` }).click();
+    await page.getByRole("tab", { name: "育成のヒント" }).click();
+    await page.getByRole("button", { name: "ヒントを作る" }).click();
+    await setFakeLlmError("unavailable");
+    await runAiJobsOnce();
+    await runAiJobsOnce();
+    await runAiJobsOnce();
+    await page.getByRole("button", { name: "最新を確かめる" }).click();
+    await expect(page.getByText("簡易版（AI なし）")).toBeVisible();
+    await expect(page.getByText("AI で作れなかったため、簡易版を表示しています。")).toBeVisible();
+  } finally {
+    await setFakeLlmError(null);
     await session?.context.close();
     await data.cleanup();
   }

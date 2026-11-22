@@ -40,7 +40,9 @@ export default defineConfig({
       timeout: 120_000,
       env: {
         ...process.env,
-        PLATFORM_USER_ORG_GRPC_ADDR: "127.0.0.1:50051"
+        PLATFORM_USER_ORG_GRPC_ADDR: "127.0.0.1:50051",
+        PLATFORM_LLM_GRPC_ADDR: "127.0.0.1:50051",
+        HUB_NAME: "talenthub"
       }
     }
   ]

@@ -42,4 +42,4 @@ TalentHub は Hub シリーズの製品 `talenthub` として、基盤（共通�
 - テストのコマンド: `npx.cmd vitest run`（単体）、E2E は `docs/LOCAL_DEVELOPMENT.md`
 - 定義からコードを作るコマンド: `npm.cmd run prisma:generate`
 - マイグレーションの道具と、ファイルの置き場所: Prisma Migrate（`prisma/migrations/`）。クラスタでは `migrate` のジョブで `prisma migrate deploy` を流す
-- DB とテナント分離の方式: 全テーブルに `tenant_id` を持たせて行単位の制限（RLS）を有効にし、リクエストごとに入口で受け取ったテナントの ID を `app.tenant_id` に設定してから読み書きする（`src/server/db/prisma.ts`。リクエストの外では `runWithTenant`）。`SkillLevel` だけはテナントに依らない共通の表。手元はアプリ用のロール `talent_app` で動かし、RLS を確かめる（`docs/LOCAL_DEVELOPMENT.md`）
+- DB とテナント分離の方式: 全テーブルに `tenant_id` を持たせて行単位の制限（RLS）を有効にし、リクエストごとに入口で受け取ったテナントの ID を `app.tenant_id` に設定してから読み書きする（`src/server/db/prisma.ts`。リクエストの外では `runWithTenant`）。`SkillLevel` と、定期実行で使うテナント ID だけを持つ `HubTenant` はテナントに依らない共通の表。手元はアプリ用のロール `talent_app` で動かし、RLS を確かめる（`docs/LOCAL_DEVELOPMENT.md`）

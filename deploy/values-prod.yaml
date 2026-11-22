@@ -8,6 +8,10 @@ services:
 migrate:
   tag: "0000000"
 
+cronJobs:
+  talenthub-ai-jobs:
+    tag: "0000000"
+
 # アプリが使う秘密の値は、talenthub-prod namespace 向けに暗号化する。
 # DB の接続情報は基盤が用意するため、ここには書かない。
 #

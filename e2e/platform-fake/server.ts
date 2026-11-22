@@ -15,20 +15,31 @@ import {
 type Call = grpc.ServerUnaryCall<Record<string, unknown>, unknown>;
 type Callback = grpc.sendUnaryData<unknown>;
 
-const protoPath = path.join(process.cwd(), "contract/proto/user/v1/user_service.proto");
-const definition = protoLoader.loadSync(protoPath, {
+const loaderOptions = {
   defaults: true,
   enums: String,
   keepCase: false,
   longs: String,
   oneofs: true
-});
-const loaded = grpc.loadPackageDefinition(definition) as unknown as {
+};
+const userDefinition = protoLoader.loadSync(
+  path.join(process.cwd(), "contract/proto/user/v1/user_service.proto"),
+  loaderOptions,
+);
+const loaded = grpc.loadPackageDefinition(userDefinition) as unknown as {
   user: { v1: { UserService: { service: grpc.ServiceDefinition } } };
+};
+const llmDefinition = protoLoader.loadSync(
+  path.join(process.cwd(), "contract/proto/llm/v1/llm_service.proto"),
+  loaderOptions,
+);
+const loadedLlm = grpc.loadPackageDefinition(llmDefinition) as unknown as {
+  llm: { v1: { LLMService: { service: grpc.ServiceDefinition } } };
 };
 
 let tenants = createDefaultTenants();
 let delayMs = 0;
+let llmError: "unavailable" | null = null;
 
 function grpcError(code: grpc.status, details: string): grpc.ServiceError {
   return Object.assign(new Error(details), { code, details, metadata: new grpc.Metadata() });
@@ -186,6 +197,38 @@ Object.assign(implementations, {
   })
 });
 
+const llmImplementations: grpc.UntypedServiceImplementation = {
+  generate: withTenant((call, callback, tenant) => {
+    if (tenant.slug === "no-hub") {
+      callback(grpcError(grpc.status.PERMISSION_DENIED, "product is not enabled"));
+      return;
+    }
+    if (llmError === "unavailable") {
+      callback(grpcError(grpc.status.UNAVAILABLE, "LLM unavailable"));
+      return;
+    }
+    callback(null, {
+      text: JSON.stringify({
+        strengthsSummary: "承認済みのスキルを強みに、次の成長へつなげられます。",
+        nextSteps: ["目標スキルを実務で試す機会を作る。"],
+        oneOnOneTopics: ["次に挑戦する仕事について"],
+      }),
+      modelUsed: "fake-internal",
+    });
+  }),
+  listModels: withTenant((_call, callback, tenant) => {
+    if (tenant.slug === "no-hub") {
+      callback(grpcError(grpc.status.PERMISSION_DENIED, "product is not enabled"));
+      return;
+    }
+    callback(null, {
+      models: ["fake-internal"],
+      defaultModel: "fake-internal",
+      modelInfos: [{ name: "fake-internal", external: false }],
+    });
+  }),
+};
+
 async function readJson(request: IncomingMessage) {
   const chunks: Buffer[] = [];
   for await (const chunk of request) chunks.push(Buffer.from(chunk));
@@ -195,6 +238,7 @@ async function readJson(request: IncomingMessage) {
 export async function startFakePlatform(grpcPort = 0, httpPort = 0) {
   const grpcServer = new grpc.Server();
   grpcServer.addService(loaded.user.v1.UserService.service, implementations);
+  grpcServer.addService(loadedLlm.llm.v1.LLMService.service, llmImplementations);
   const boundGrpcPort = await new Promise<number>((resolve, reject) => {
     grpcServer.bindAsync(`127.0.0.1:${grpcPort}`, grpc.ServerCredentials.createInsecure(), (error, port) => error ? reject(error) : resolve(port));
   });
@@ -216,6 +260,7 @@ export async function startFakePlatform(grpcPort = 0, httpPort = 0) {
     if (request.url === "/__fake/reset") {
       tenants = createDefaultTenants();
       delayMs = 0;
+      llmError = null;
     } else if (request.url === "/__fake/users") {
       const tenant = tenants.find((candidate) => candidate.id === body.tenantId);
       if (!tenant) response.statusCode = 404;
@@ -240,6 +285,8 @@ export async function startFakePlatform(grpcPort = 0, httpPort = 0) {
       else tenant.nodes = tenant.nodes.filter((node) => node.id !== body.nodeId);
     } else if (request.url === "/__fake/delay") {
       delayMs = Math.max(0, Number(body.delayMs) || 0);
+    } else if (request.url === "/__fake/llm-error") {
+      llmError = body.error === "unavailable" ? "unavailable" : null;
     } else {
       response.statusCode = 404;
     }

@@ -13,6 +13,7 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "platform:fake": "tsx e2e/platform-fake/server.ts",
+    "jobs:ai": "tsx scripts/run-ai-jobs.ts",
     "lint": "eslint src prisma scripts e2e next.config.ts playwright.config.ts vitest.config.ts vitest.db.config.ts prisma.config.ts",
     "typecheck": "prisma generate && next typegen && tsc --noEmit",
     "test": "vitest run",

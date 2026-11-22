@@ -5,6 +5,7 @@
 - 日常の開発、Codexによる実装、テストは、WindowsにネイティブでインストールしたPostgreSQL 17を使う。
 - Docker Desktopは、メモリ8GB級の端末ではLinux VMのメモリ不足でクラッシュしやすいため、日常の開発では必須にしない。`docker-compose.yml` は、hub-devkit（開発用の入口と偽の基盤）とともに動かす余裕のある環境向け（下の「hub-devkit で動かす」）。
 - Dockerイメージのビルド確認とKubernetes構成の検証は、GitLab CIで行う。
+- 育成のヒントを予約した後は `npm.cmd run jobs:ai` を 1 回実行すると、実行可能な AI 予約を最大 3 件処理する。devkit の偽 LLM を使うときも同じコマンドを使う。
 - 複数人で確認する場合や、ローカルにPostgreSQLを用意できない端末では、Neonのブランチを個別に作成して使う。複数人で同じDBを共有して開発しない。
 
 ## 初回セットアップ（Windows）

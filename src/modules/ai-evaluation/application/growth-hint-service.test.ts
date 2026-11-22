@@ -1,44 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  getAiConfig: vi.fn(),
-  createChatCompletion: vi.fn(),
   findGrowthHint: vi.fn(),
   saveGrowthHint: vi.fn(),
-  recordAiUsage: vi.fn(),
-  reserveAiUsage: vi.fn(),
-  completeAiUsageReservation: vi.fn(),
+  findLatestJob: vi.fn(),
+  reserveJob: vi.fn(),
   getContext: vi.fn(),
   getScope: vi.fn(),
   mentors: vi.fn(),
   resolveMemberProfiles: vi.fn(),
+  getTenantId: vi.fn(),
+  generatePlatformText: vi.fn(),
 }));
 
-vi.mock(
-  "@/modules/ai-evaluation/infrastructure/ai-client",
-  async (original) => {
-    const actual =
-      await original<
-        typeof import("@/modules/ai-evaluation/infrastructure/ai-client")
-      >();
-    return {
-      ...actual,
-      getAiConfig: mocks.getAiConfig,
-      createChatCompletion: mocks.createChatCompletion,
-    };
-  },
-);
-vi.mock(
-  "@/modules/ai-evaluation/infrastructure/growth-hint-repository",
-  () => ({
-    findGrowthHint: mocks.findGrowthHint,
-    saveGrowthHint: mocks.saveGrowthHint,
-  }),
-);
-vi.mock("@/modules/ai-evaluation/infrastructure/ai-usage-repository", () => ({
-  recordAiUsage: mocks.recordAiUsage,
-  reserveAiUsage: mocks.reserveAiUsage,
-  completeAiUsageReservation: mocks.completeAiUsageReservation,
+vi.mock("@/modules/ai-evaluation/infrastructure/growth-hint-repository", () => ({
+  findGrowthHint: mocks.findGrowthHint,
+  saveGrowthHint: mocks.saveGrowthHint,
+}));
+vi.mock("@/modules/ai-evaluation/infrastructure/ai-job-repository", () => ({
+  findLatestGrowthHintJob: mocks.findLatestJob,
+  reserveGrowthHintJob: mocks.reserveJob,
 }));
 vi.mock("@/modules/members/application/member-service", () => ({
   getGrowthHintMemberContext: mocks.getContext,
@@ -53,243 +34,154 @@ vi.mock("@/modules/growth/application/growth-service", () => ({
 }));
 vi.mock("@/modules/members/application/member-directory", () => ({
   resolveMemberProfiles: mocks.resolveMemberProfiles,
-  fallbackMemberProfile: (memberId: string) => ({
-    memberId,
-    name: "（名前未設定）",
-  }),
+  fallbackMemberProfile: (memberId: string) => ({ memberId, name: "（名前未設定）" }),
+}));
+vi.mock("@/server/db/prisma", () => ({ getTenantId: mocks.getTenantId }));
+vi.mock("@/server/platform/llm", () => ({
+  generatePlatformText: mocks.generatePlatformText,
 }));
 
-import { generateGrowthHint, getGrowthHint } from "./growth-hint-service";
-import { AiClientError } from "../infrastructure/ai-client";
+import {
+  generateGrowthHint,
+  getGrowthHint,
+  executeGrowthHintJob,
+  limitGrowthHintInput,
+} from "./growth-hint-service";
 
 const viewer = { memberId: "manager", role: "MANAGER" as const };
 const context = {
   id: "member",
-  memberSkills: [
-    {
-      skillId: "skill-1",
-      level: 4,
-      skill: { name: "TypeScript", category: { name: "開発" } },
-    },
-  ],
-  targetRole: {
-    name: "リード",
-    roleRequirements: [
-      { skillId: "skill-2", requiredLevel: 3, skill: { name: "設計" } },
-    ],
-  },
+  memberSkills: [{
+    skillId: "skill-1",
+    level: 4,
+    skill: { name: "TypeScript", category: { name: "開発" } },
+  }],
+  targetRole: null,
   skillLevelChanges: [],
 };
 
-function stored(source: "AI" | "FALLBACK" = "AI") {
-  return {
-    id: "hint",
-    memberId: "member",
-    source,
-    inputHash: "hash",
-    content: {
-      strengthsSummary: "強みです",
-      nextSteps: ["次の一歩"],
-      oneOnOneTopics: ["話題"],
-      strengths: [{ skillId: "skill-1", name: "TypeScript", level: 4 }],
-      skillGaps: [
-        { skillId: "skill-2", name: "設計", currentLevel: 0, requiredLevel: 3 },
-      ],
-      targetRoleName: "リード",
-      mentor: null,
-    },
-    model: source === "AI" ? "fake" : null,
-    generatedById: "manager",
-    generatedAt: new Date("2026-10-18T00:00:00Z"),
-    updatedAt: new Date("2026-10-18T00:00:00Z"),
-  };
-}
-
-describe("generateGrowthHint", () => {
+describe("growth hint reservations", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getContext.mockResolvedValue(context);
     mocks.getScope.mockResolvedValue({ memberIds: ["member"] });
+    mocks.findGrowthHint.mockResolvedValue(null);
+    mocks.findLatestJob.mockResolvedValue(null);
+    mocks.getTenantId.mockResolvedValue("11111111-1111-4111-8111-111111111111");
+    mocks.reserveJob.mockResolvedValue({
+      kind: "created",
+      job: { id: "job", status: "QUEUED" },
+    });
+    mocks.saveGrowthHint.mockImplementation(async (input) => ({
+      ...input,
+      id: "hint",
+      generatedAt: new Date(),
+      updatedAt: new Date(),
+    }));
     mocks.mentors.mockResolvedValue([]);
     mocks.resolveMemberProfiles.mockResolvedValue(new Map());
-    mocks.findGrowthHint.mockResolvedValue(null);
-    mocks.reserveAiUsage.mockResolvedValue({ kind: "reserved", id: "usage" });
-    vi.stubEnv("AI_MONTHLY_TOKEN_LIMIT", "");
-    mocks.saveGrowthHint.mockImplementation(async (value) => ({
-      ...stored(value.source),
-      inputHash: value.inputHash,
-      content: value.content,
-    }));
-  });
-
-  it("上限未満ならAIを呼ぶ", async () => {
-    vi.stubEnv("AI_MONTHLY_TOKEN_LIMIT", "10");
-    mocks.getAiConfig.mockReturnValue({ kind: "fake" });
-    mocks.createChatCompletion.mockResolvedValue({
-      content: JSON.stringify({
+    mocks.generatePlatformText.mockResolvedValue({
+      text: JSON.stringify({
         strengthsSummary: "強みです",
-        nextSteps: ["次へ"],
+        nextSteps: ["次の一歩"],
         oneOnOneTopics: ["話題"],
       }),
-      model: "fake",
-      usage: { totalTokens: 3 },
-      latencyMs: 4,
+      model: "internal",
     });
-    await generateGrowthHint("member", viewer);
-    expect(mocks.createChatCompletion).toHaveBeenCalledOnce();
   });
 
-  it("上限以上ならAIを呼ばず簡易版を保存する", async () => {
-    vi.stubEnv("AI_MONTHLY_TOKEN_LIMIT", "10");
-    mocks.reserveAiUsage.mockResolvedValue({ kind: "monthly_limit" });
-    mocks.getAiConfig.mockReturnValue({ kind: "fake" });
-    const result = await generateGrowthHint("member", viewer);
-    expect(mocks.createChatCompletion).not.toHaveBeenCalled();
-    expect(result.message).toContain("利用上限");
-    expect(mocks.recordAiUsage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        status: "FALLBACK",
-        errorCode: "monthly_limit",
-      }),
-    );
-  });
-
-  it("AI未設定なら簡易版を保存してFALLBACKを記録する", async () => {
-    mocks.getAiConfig.mockReturnValue({ kind: "none" });
-    const result = await generateGrowthHint("member", viewer);
-    expect(result.hint.source).toBe("FALLBACK");
-    expect(mocks.recordAiUsage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        status: "FALLBACK",
-        errorCode: "not_configured",
-      }),
-    );
-  });
-
-  it("成功ならAI版とSUCCESSを記録する", async () => {
-    mocks.getAiConfig.mockReturnValue({ kind: "fake" });
-    mocks.createChatCompletion.mockResolvedValue({
-      content: JSON.stringify({
-        strengthsSummary: "強みです",
-        nextSteps: ["次へ"],
-        oneOnOneTopics: ["話題"],
-      }),
-      model: "fake",
-      usage: { promptTokens: 1, completionTokens: 2, totalTokens: 3 },
-      latencyMs: 4,
+  it("同じ対象に実行中の予約があれば重複して作らない", async () => {
+    mocks.reserveJob.mockResolvedValue({
+      kind: "active",
+      job: { id: "existing", status: "RUNNING" },
     });
     const result = await generateGrowthHint("member", viewer);
-    expect(result.hint.source).toBe("AI");
-    expect(mocks.completeAiUsageReservation).toHaveBeenCalledWith(
-      "usage",
-      expect.objectContaining({ status: "SUCCESS", totalTokens: 3 }),
-    );
+    expect(result.jobStatus).toBe("RUNNING");
+    expect(mocks.reserveJob).toHaveBeenCalledOnce();
   });
 
-  it("失敗時に前回があれば上書きしない", async () => {
-    mocks.getAiConfig.mockReturnValue({ kind: "fake" });
-    mocks.findGrowthHint.mockResolvedValue(stored());
-    mocks.createChatCompletion.mockRejectedValue(new Error("failure"));
+  it("当日50件未満ならテナントを記録して予約する", async () => {
     const result = await generateGrowthHint("member", viewer);
-    expect(result.keptPrevious).toBe(true);
-    expect(result.message).toBe(
-      "作り直しに失敗しました。前回のヒントを表示しています。",
-    );
-    expect(mocks.saveGrowthHint).not.toHaveBeenCalled();
-    expect(mocks.completeAiUsageReservation).toHaveBeenCalledWith(
-      "usage",
-      expect.objectContaining({ status: "FAILED" }),
-    );
+    expect(result.jobStatus).toBe("QUEUED");
+    expect(mocks.reserveJob).toHaveBeenCalledWith({
+      tenantId: "11111111-1111-4111-8111-111111111111",
+      targetMemberId: "member",
+      requestedByMemberId: "manager",
+      dayStartedAt: expect.any(Date),
+      dailyLimit: 50,
+    });
   });
 
-  it("失敗時に前回がなければ簡易版を保存する", async () => {
-    mocks.getAiConfig.mockReturnValue({ kind: "fake" });
-    mocks.createChatCompletion.mockRejectedValue(new Error("failure"));
+  it("当日50件なら予約せず簡易版を保存する", async () => {
+    mocks.reserveJob.mockResolvedValue({ kind: "daily_limit" });
     const result = await generateGrowthHint("member", viewer);
-    expect(result.hint.source).toBe("FALLBACK");
-    expect(mocks.saveGrowthHint).toHaveBeenCalledWith(
-      expect.objectContaining({ source: "FALLBACK" }),
-    );
+    expect(result.jobStatus).toBeNull();
+    expect(result.hint?.source).toBe("FALLBACK");
+    expect(mocks.reserveJob).toHaveBeenCalledOnce();
   });
 
-  it("HTTPエラーのステータスを記録し混雑時の案内を返す", async () => {
-    mocks.getAiConfig.mockReturnValue({ kind: "fake" });
-    mocks.createChatCompletion.mockRejectedValue(
-      new AiClientError("http_error", 503),
-    );
-
-    const result = await generateGrowthHint("member", viewer);
-
-    expect(result.message).toBe(
-      "AI が混み合っていたため、簡易版で作りました。時間をおいて作り直してください。",
-    );
-    expect(mocks.completeAiUsageReservation).toHaveBeenCalledWith(
-      "usage",
-      expect.objectContaining({
-        status: "FAILED",
-        errorCode: "http_error:503",
-      }),
-    );
+  it("最新の予約状態をヒントと一緒に返す", async () => {
+    mocks.findLatestJob.mockResolvedValue({ status: "QUEUED" });
+    await expect(getGrowthHint("member", viewer)).resolves.toEqual({
+      hint: null,
+      jobStatus: "QUEUED",
+    });
   });
 
-  it("回数制限なら前回を残してAIを呼ばない", async () => {
-    mocks.getAiConfig.mockReturnValue({ kind: "fake" });
-    mocks.findGrowthHint.mockResolvedValue(stored());
-    mocks.reserveAiUsage.mockResolvedValue({ kind: "rate_limited_user" });
-
-    const result = await generateGrowthHint("member", viewer);
-
-    expect(result.keptPrevious).toBe(true);
-    expect(result.message).toContain("少し待って");
-    expect(mocks.createChatCompletion).not.toHaveBeenCalled();
-    expect(mocks.recordAiUsage).toHaveBeenCalledWith(
-      expect.objectContaining({ errorCode: "rate_limited_user" }),
-    );
-  });
-
-  it("権限外なら403にする", async () => {
+  it("権限外のMANAGERは予約できない", async () => {
     mocks.getScope.mockResolvedValue({ memberIds: [] });
-    await expect(generateGrowthHint("member", viewer)).rejects.toMatchObject({
-      status: 403,
+    await expect(generateGrowthHint("member", viewer)).rejects.toMatchObject({ status: 403 });
+  });
+
+  it("MEMBERは育成のヒントを取得も予約もできない", async () => {
+    const memberViewer = { memberId: "member", role: "MEMBER" as const };
+    await expect(getGrowthHint("member", memberViewer))
+      .rejects.toMatchObject({ status: 403 });
+    await expect(generateGrowthHint("member", memberViewer))
+      .rejects.toMatchObject({ status: 403 });
+  });
+
+  it("ADMINは担当範囲によらず予約できる", async () => {
+    mocks.getScope.mockResolvedValue({ memberIds: [] });
+    await expect(generateGrowthHint("member", {
+      memberId: "admin",
+      role: "ADMIN",
+    })).resolves.toMatchObject({ jobStatus: "QUEUED" });
+  });
+
+  it("定期実行では基盤LLMの結果をAI版として保存する", async () => {
+    const result = await executeGrowthHintJob({
+      targetMemberId: "member",
+      requestedByMemberId: "manager",
+      requestId: "request-id",
     });
+    expect(mocks.generatePlatformText).toHaveBeenCalledWith({
+      systemPrompt: expect.any(String),
+      userPrompt: expect.any(String),
+      jsonSchemaHint: expect.stringContaining("strengthsSummary"),
+      requestId: "request-id",
+    });
+    expect(mocks.saveGrowthHint).toHaveBeenCalledWith(expect.objectContaining({
+      source: "AI",
+      model: "internal",
+      generatedById: "manager",
+    }));
+    expect(result.model).toBe("internal");
   });
 
-  it.each([
-    [
-      "取得",
-      () => getGrowthHint("member", { memberId: "member", role: "MEMBER" }),
-    ],
-    [
-      "作成",
-      () => generateGrowthHint("member", { memberId: "member", role: "MEMBER" }),
-    ],
-  ])("MEMBERは育成のヒントを%sできない", async (_label, action) => {
-    await expect(action()).rejects.toMatchObject({ status: 403 });
-  });
-
-  it.each([
-    ["取得", () => getGrowthHint("member", viewer)],
-    ["作成", () => generateGrowthHint("member", viewer)],
-  ])(
-    "担当範囲外のMANAGERは育成のヒントを%sできない",
-    async (_label, action) => {
-      mocks.getScope.mockResolvedValue({ memberIds: [] });
-      await expect(action()).rejects.toMatchObject({ status: 403 });
-    },
-  );
-
-  it.each([
-    [
-      "取得",
-      () => getGrowthHint("member", { memberId: "admin", role: "ADMIN" }),
-    ],
-    [
-      "作成",
-      () => generateGrowthHint("member", { memberId: "admin", role: "ADMIN" }),
-    ],
-  ])("ADMINは誰の育成のヒントでも%sできる", async (_label, action) => {
-    mocks.getAiConfig.mockReturnValue({ kind: "none" });
-    await action();
-    expect(mocks.getScope).toHaveBeenCalledWith("ADMIN", "admin");
+  it("LLMへ渡す入力を推奨文字数内へ絞る", () => {
+    const items = Array.from({ length: 100 }, (_, index) => ({
+      skillId: `skill-${index}`,
+      name: "長いスキル名".repeat(20),
+      category: "開発",
+      level: 3,
+    }));
+    const limited = limitGrowthHintInput({
+      approvedSkills: items,
+      targetRole: null,
+      skillGaps: [],
+      recentGrowth: [],
+    });
+    expect(JSON.stringify(limited).length).toBeLessThanOrEqual(2_600);
   });
 });
