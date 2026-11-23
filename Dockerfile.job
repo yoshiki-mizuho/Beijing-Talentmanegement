@@ -17,7 +17,7 @@ RUN npm ci \
   && npm cache clean --force
 COPY prisma.config.ts tsconfig.json ./
 COPY prisma ./prisma
-RUN ./node_modules/.bin/prisma generate
+RUN DATABASE_URL="postgresql://localhost:5432/build" ./node_modules/.bin/prisma generate
 COPY src ./src
 COPY scripts ./scripts
 COPY contract/proto ./contract/proto
