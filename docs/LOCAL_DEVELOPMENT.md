@@ -102,12 +102,24 @@ DBの状態が壊れた場合は、`MIGRATE_DATABASE_URL` に migration 用 URL 
 
 基盤の担当の回答（hub-platform#4）にもとづく。
 
+ふだんは、下の 1〜5 をまとめた `scripts` の `.bat` を使う（エクスプローラーから開いてもよい）。
+
+| ファイル | すること |
+|---|---|
+| `scripts\devkit-start.bat` | PostgreSQL が動いているかを見て、TalentHub（`npm.cmd run dev`）と devkit をそれぞれのウィンドウで起動し、準備ができたらブラウザで `http://localhost:8000/login` を開く。`prod` を付けると本番ビルド（build してから `next start`）。devkit が無ければ、確かめてから下の 2 のとおりに作る |
+| `scripts\devkit-jobs.bat` | 予約した AI の処理を 1 回流す（`npm.cmd run jobs:ai`。偽の LLM が決まった答えを返す） |
+| `scripts\devkit-stop.bat` | ポート 3000 と 8000 で待ち受けているプロセスを止める |
+
+- devkit は、リポジトリの隣の `..\hub-platform`（契約の版のタグ `hub-contract/v0.20.0` に切り替えたもの）の `devkit\hub-devkit.exe` を使う。契約の版を上げたら、タグを切り替えて作り直し、`devkit-start.bat` の `CONTRACT_TAG` も直す。
+- 画面は必ず `localhost:8000` から開く。`localhost:3000` を直接開くと、入口が付けるログインの情報が届かない。
+- `.bat` は Shift_JIS・CRLF で保存する（UTF-8 だと cmd が日本語の行を読み違える）。
+
 1. Go 1.23 以上を用意する。
 2. 基盤のリポジトリを、契約の版のタグで取り、devkit をビルドする。
 
    ```bash
    git clone --depth 1 --branch hub-contract/v0.20.0 https://gitlab.com/chosen-ryoiki-group/hamburg/hub-platform.git ../hub-platform
-   cd ../hub-platform/devkit && go build -o hub-devkit .
+   cd ../hub-platform/devkit && go build -o hub-devkit.exe ./cmd/hub-devkit
    ```
 
 3. 手元の PostgreSQL と TalentHub（`npm.cmd run dev`、`localhost:3000`）を起動しておく。TalentHub には、偽の基盤の接続先を環境変数で渡す：`PLATFORM_USER_ORG_GRPC_ADDR=localhost:9192`、`PLATFORM_TENANT_GRPC_ADDR=localhost:9195`、`PLATFORM_NOTIFICATION_GRPC_ADDR=localhost:9193`、`PLATFORM_LLM_GRPC_ADDR=localhost:9184`、`HUB_NAME=talenthub`。
