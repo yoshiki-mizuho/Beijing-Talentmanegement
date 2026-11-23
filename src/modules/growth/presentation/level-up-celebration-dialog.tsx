@@ -1,9 +1,8 @@
 "use client";
 
-import confetti from "canvas-confetti";
 import { Award, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import type {
@@ -32,48 +31,8 @@ export function LevelUpCelebrationDialog({
     celebrations.length === 0 && roleAchievement !== null
   );
   const [pending, startTransition] = useTransition();
-  const contentRef = useRef<HTMLDivElement>(null);
   const current = celebrations[index];
   const multiple = celebrations.length > 1;
-
-  useEffect(() => {
-    if (!open || !current) return;
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reducedMotion) return;
-    const popAnimation = contentRef.current?.animate(
-      [
-        { opacity: 0, transform: "scale(0.95)" },
-        { opacity: 1, transform: "scale(1)" }
-      ],
-      { duration: 500, easing: "cubic-bezier(0.16, 1, 0.3, 1)" }
-    );
-    const endAt = Date.now() + 2500;
-    let confettiFrame = 0;
-    const celebrate = () => {
-      confetti({
-        particleCount: 3,
-        angle: 60,
-        spread: 65,
-        origin: { x: 0, y: 0.65 },
-        colors: ["#0F766E", "#5EEAD4", "#F59E0B", "#3B82F6"],
-        disableForReducedMotion: true
-      });
-      confetti({
-        particleCount: 3,
-        angle: 120,
-        spread: 65,
-        origin: { x: 1, y: 0.65 },
-        colors: ["#0F766E", "#5EEAD4", "#F59E0B", "#3B82F6"],
-        disableForReducedMotion: true
-      });
-      if (Date.now() < endAt) confettiFrame = window.requestAnimationFrame(celebrate);
-    };
-    celebrate();
-    return () => {
-      popAnimation?.cancel();
-      window.cancelAnimationFrame(confettiFrame);
-    };
-  }, [current, open]);
 
   const confirmAndThen = useCallback((destination: "next" | "close" | "timeline" | "role") => {
     if (!current) return;
@@ -122,7 +81,7 @@ export function LevelUpCelebrationDialog({
     <Dialog
       open={open}
       onClose={handleClose}
-      eyebrow={<span className="inline-flex rounded-full bg-amber-100 px-3 py-1 font-bold tracking-[0.2em] text-amber-800">LEVEL UP</span>}
+      eyebrow={<span className="inline-flex rounded-[var(--hub-radius-sm)] bg-[var(--hub-color-info-bg)] px-[var(--hub-space-2)] py-[var(--hub-space-0-5)] text-[length:var(--hub-text-xs)] font-medium text-[var(--hub-color-info-text)]">レベルが上がりました</span>}
       title={multiple
         ? getCelebrationHeading(celebrations)
         : `${current.skillName} が Lv${current.toLevel} になりました`}
@@ -141,11 +100,10 @@ export function LevelUpCelebrationDialog({
         </>
       }
     >
-      <div ref={contentRef} className="space-y-5 text-center">
+      <div className="space-y-5 text-center">
         {!multiple ? <div className="relative mx-auto grid h-28 w-28 place-items-center">
-          <span className="absolute inset-2 rounded-full border-2 border-[var(--primary)] animate-ping motion-reduce:hidden" style={{ animationDuration: "1.25s", animationIterationCount: 2 }} aria-hidden="true" />
-          <span className="relative flex h-24 w-24 flex-col items-center justify-center rounded-full bg-[var(--primary)] text-white shadow-lg">
-            <span className="text-xs font-semibold">NEW LEVEL</span>
+          <span className="relative flex h-24 w-24 flex-col items-center justify-center rounded-full bg-[var(--hub-color-primary)] text-[var(--hub-color-text-on-primary)] shadow-[var(--hub-shadow-sm)]">
+            <span className="text-xs font-semibold">新しいレベル</span>
             <strong className="text-4xl">{current.toLevel}</strong>
           </span>
         </div> : null}
@@ -157,7 +115,7 @@ export function LevelUpCelebrationDialog({
           <ul className="space-y-3 text-left">
             {celebrations.map((celebration) => (
               <li key={celebration.notificationId} className="grid grid-cols-[44px_minmax(0,1fr)] gap-3 rounded-xl border border-[var(--border)] p-3">
-                <span className="grid h-11 w-11 place-items-center rounded-full bg-[var(--primary)] font-bold text-white">{celebration.toLevel}</span>
+                <span className="grid h-11 w-11 place-items-center rounded-full bg-[var(--hub-color-primary)] font-bold text-[var(--hub-color-text-on-primary)]">{celebration.toLevel}</span>
                 <div>
                   <p className="font-semibold">{celebration.skillName}</p>
                   <p className="text-sm">{celebration.fromLevel === null ? `未登録 → Lv${celebration.toLevel}` : `Lv${celebration.fromLevel} → Lv${celebration.toLevel}`}</p>
@@ -195,7 +153,7 @@ export function LevelUpCelebrationDialog({
         ) : null}
 
         {!multiple && current.newBadges.length > 0 ? (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-left text-amber-900">
+          <div className="rounded-[var(--hub-radius-md)] border border-[var(--hub-color-border)] bg-[var(--hub-color-info-bg)] p-[var(--hub-space-3)] text-left text-[var(--hub-color-info-text)]">
             <p className="flex items-center gap-2 text-sm font-semibold"><Award className="h-4 w-4" aria-hidden="true" />新しいバッジを獲得しました</p>
             <ul className="mt-2 space-y-1 text-sm">{current.newBadges.map((badge) => <li key={badge.id} className="flex items-center gap-2"><Sparkles className="h-3.5 w-3.5" aria-hidden="true" />{badge.name}</li>)}</ul>
           </div>

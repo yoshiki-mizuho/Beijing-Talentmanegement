@@ -3,7 +3,7 @@
 import { HeartHandshake } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import type { CheerCelebration } from "@/modules/growth/application/growth-service";
@@ -17,21 +17,7 @@ export function CheerCelebrationDialog({ celebrations }: { celebrations: CheerCe
   const [index, setIndex] = useState(0);
   const [open, setOpen] = useState(celebrations.length > 0);
   const [pending, startTransition] = useTransition();
-  const iconRef = useRef<HTMLDivElement>(null);
   const current = celebrations[index];
-
-  useEffect(() => {
-    if (!open || !current) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const animation = iconRef.current?.animate(
-      [
-        { opacity: 0, transform: "scale(0.85)" },
-        { opacity: 1, transform: "scale(1)" }
-      ],
-      { duration: 500, easing: "cubic-bezier(0.16, 1, 0.3, 1)" }
-    );
-    return () => animation?.cancel();
-  }, [current, open]);
 
   // 次へ：今の1件だけを既読にして次へ進む。閉じる・Esc：残りもまとめて既読にして閉じる
   const confirmAndThen = useCallback(
@@ -65,8 +51,8 @@ export function CheerCelebrationDialog({ celebrations }: { celebrations: CheerCe
       open={open}
       onClose={handleClose}
       eyebrow={
-        <span className="inline-flex rounded-full bg-amber-100 px-3 py-1 font-bold tracking-[0.2em] text-amber-800">
-          CHEER
+        <span className="inline-flex rounded-[var(--hub-radius-sm)] bg-[var(--hub-color-info-bg)] px-[var(--hub-space-2)] py-[var(--hub-space-0-5)] text-[length:var(--hub-text-xs)] font-medium text-[var(--hub-color-info-text)]">
+          応援メッセージ
         </span>
       }
       title={`${current.sender.name}さんから応援が届きました`}
@@ -84,8 +70,7 @@ export function CheerCelebrationDialog({ celebrations }: { celebrations: CheerCe
     >
       <div className="space-y-5">
         <div
-          ref={iconRef}
-          className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-amber-50 text-amber-700"
+          className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-[var(--hub-color-info-bg)] text-[var(--hub-color-info-text)]"
           aria-hidden="true"
         >
           <HeartHandshake className="h-10 w-10" />

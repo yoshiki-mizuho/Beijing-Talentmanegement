@@ -1,10 +1,9 @@
 "use client";
 
-import confetti from "canvas-confetti";
 import { Check, Trophy } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useTransition, type KeyboardEvent } from "react";
+import { useState, useTransition, type KeyboardEvent } from "react";
 import { toast } from "sonner";
 
 import type { RoleAchievementCelebration } from "@/modules/growth/application/growth-service";
@@ -29,42 +28,7 @@ export function RoleAchievedDialog({
   const [step, setStep] = useState<"achievement" | "next">("achievement");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [pending, startTransition] = useTransition();
-  const contentRef = useRef<HTMLDivElement>(null);
   const selected = celebration.candidates[selectedIndex];
-
-  useEffect(() => {
-    if (!open || step !== "achievement") return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const animation = contentRef.current?.animate(
-      [{ opacity: 0, transform: "scale(0.94)" }, { opacity: 1, transform: "scale(1)" }],
-      { duration: 650, easing: "cubic-bezier(0.16, 1, 0.3, 1)" }
-    );
-    const requirementAnimations = Array.from(
-      contentRef.current?.querySelectorAll<HTMLElement>("[data-requirement]") ?? []
-    ).map((element, index) => element.animate(
-      [{ opacity: 0, transform: "translateY(8px)" }, { opacity: 1, transform: "translateY(0)" }],
-      { duration: 400, delay: 300 + index * 100, fill: "backwards", easing: "ease-out" }
-    ));
-    const endAt = Date.now() + 3500;
-    let frame = 0;
-    const celebrate = () => {
-      confetti({
-        particleCount: 8,
-        spread: 75,
-        startVelocity: 36,
-        origin: { x: Math.random(), y: 0.55 },
-        colors: ["#F59E0B", "#FBBF24", "#FDE68A", "#0F766E", "#5EEAD4"],
-        disableForReducedMotion: true
-      });
-      if (Date.now() < endAt) frame = window.requestAnimationFrame(celebrate);
-    };
-    celebrate();
-    return () => {
-      animation?.cancel();
-      requirementAnimations.forEach((requirementAnimation) => requirementAnimation.cancel());
-      window.cancelAnimationFrame(frame);
-    };
-  }, [open, step]);
 
   const closeAndRefresh = (message?: string) => {
     startTransition(async () => {
@@ -113,38 +77,36 @@ export function RoleAchievedDialog({
       closeOnBackdrop={false}
       className="max-w-2xl"
       eyebrow={step === "achievement"
-        ? <span className="font-bold tracking-[0.2em] text-amber-700">ROLE COMPLETE</span>
-        : <span className="inline-flex items-center gap-1.5 text-amber-700"><Trophy className="h-4 w-4" aria-hidden="true" />{celebration.roleName} 達成</span>}
+        ? <span className="inline-flex rounded-[var(--hub-radius-sm)] bg-[var(--hub-color-success-bg)] px-[var(--hub-space-2)] py-[var(--hub-space-0-5)] text-[length:var(--hub-text-xs)] font-medium text-[var(--hub-color-success-text)]">ロールを達成しました</span>
+        : <span className="inline-flex items-center gap-1.5 text-[var(--hub-color-success-text)]"><Trophy className="h-4 w-4" aria-hidden="true" />{celebration.roleName} 達成</span>}
       title={step === "achievement"
         ? `${celebration.roleName}になりました`
         : "次はどこを目指しますか"}
       footer={step === "achievement" ? <>
         <Button variant="secondary" onClick={() => closeAndRefresh()}>閉じる</Button>
-        <Button onClick={() => setStep("next")}>次の目標ロールを決める →</Button>
+        <Button onClick={() => setStep("next")}>次の目標ロールを決める</Button>
       </> : hasCandidates ? <>
         <Button variant="secondary" disabled={pending} onClick={() => closeAndRefresh("ダッシュボードの目標ロールから、いつでも選べます")}>あとで決める</Button>
         <Button disabled={pending || !selected} onClick={chooseRole}>{pending ? "更新中…" : `${selected?.name ?? "ロール"}を目標にする`}</Button>
       </> : <Button onClick={() => closeAndRefresh()}>閉じる</Button>}
     >
       {step === "achievement" ? (
-        <div ref={contentRef} className="space-y-6 text-center">
+        <div className="space-y-6 text-center">
           <div className="relative mx-auto grid h-28 w-28 place-items-center">
-            <span className="absolute inset-0 rounded-full bg-amber-300/30 blur-xl motion-reduce:hidden" aria-hidden="true" />
-            <span className="absolute inset-2 animate-ping rounded-full border-2 border-amber-400 motion-reduce:hidden" style={{ animationDuration: "1.5s", animationIterationCount: 3 }} aria-hidden="true" />
-            <span className="relative grid h-20 w-20 place-items-center rounded-full bg-amber-100 text-amber-700 shadow-lg"><Trophy className="h-10 w-10" aria-hidden="true" /></span>
+            <span className="relative grid h-20 w-20 place-items-center rounded-full bg-[var(--hub-color-success-bg)] text-[var(--hub-color-success-text)] shadow-[var(--hub-shadow-sm)]"><Trophy className="h-10 w-10" aria-hidden="true" /></span>
           </div>
           <p className="text-sm text-[var(--muted-foreground)]">必要なスキル {celebration.satisfiedRequirements.length}つ、すべて達成</p>
           <ul className="grid gap-3 text-left sm:grid-cols-2">
             {celebration.satisfiedRequirements.map((requirement) => (
-              <li key={requirement.skillId} data-requirement className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
-                <Check className="h-5 w-5 shrink-0 text-amber-700" aria-hidden="true" />
-                <span className="font-semibold text-amber-950">{requirement.skillName} Lv{requirement.requiredLevel}</span>
+              <li key={requirement.skillId} className="flex items-center gap-3 rounded-[var(--hub-radius-md)] border border-[var(--hub-color-border)] bg-[var(--hub-color-surface)] p-3">
+                <Check className="h-5 w-5 shrink-0 text-[var(--hub-color-success-text)]" aria-hidden="true" />
+                <span className="font-semibold text-[var(--hub-color-text-heading)]">{requirement.skillName} Lv{requirement.requiredLevel}</span>
               </li>
             ))}
           </ul>
           {celebration.newBadges.length > 0 ? (
             <div className="flex flex-wrap justify-center gap-2">
-              {celebration.newBadges.map((badge) => <span key={badge.id} className="rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-800">新しいバッジ「{badge.name}」</span>)}
+              {celebration.newBadges.map((badge) => <span key={badge.id} className="rounded-[var(--hub-radius-sm)] bg-[var(--hub-color-info-bg)] px-[var(--hub-space-2)] py-[var(--hub-space-0-5)] text-[length:var(--hub-text-xs)] font-medium text-[var(--hub-color-info-text)]">新しいバッジ「{badge.name}」</span>)}
             </div>
           ) : null}
         </div>
@@ -161,10 +123,10 @@ export function RoleAchievedDialog({
                   aria-checked={checked}
                   tabIndex={checked ? 0 : -1}
                   onClick={() => setSelectedIndex(index)}
-                  className={cn("min-h-11 w-full cursor-pointer rounded-xl border p-4 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-[var(--ring)]", checked ? "border-[var(--primary)] bg-teal-50" : "border-[var(--border)]")}
+                  className={cn("min-h-11 w-full cursor-pointer rounded-xl border p-4 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-[var(--ring)]", checked ? "border-[var(--hub-color-primary)] bg-[var(--hub-color-selected-bg)]" : "border-[var(--hub-color-border)]")}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div><p className="font-semibold">{candidate.name}{index === 0 ? <span className="ml-2 inline-block whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">いちばん近い</span> : null}</p>
+                    <div><p className="font-semibold">{candidate.name}{index === 0 ? <span className="ml-2 inline-block whitespace-nowrap rounded-[var(--hub-radius-sm)] bg-[var(--hub-color-neutral-bg)] px-[var(--hub-space-2)] py-[var(--hub-space-0-5)] text-[length:var(--hub-text-xs)] font-medium text-[var(--hub-color-neutral-text)]">いちばん近い</span> : null}</p>
                     <p className="mt-1 text-sm text-[var(--muted-foreground)]">あと{candidate.missingCount}スキル：{candidate.missingSkills.join("・")}{candidate.hasMoreMissingSkills ? "・ほか" : ""}</p></div>
                     <strong>{candidate.percentage}%</strong>
                   </div>

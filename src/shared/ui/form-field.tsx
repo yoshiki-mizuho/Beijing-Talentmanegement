@@ -38,12 +38,12 @@ function FieldMessages({
   return (
     <>
       {description ? (
-        <p id={`${id}-description`} className="mt-1 text-xs text-[var(--muted-foreground)]">
+        <p id={`${id}-description`} className="mt-[var(--hub-space-0-5)] text-[length:var(--hub-text-2xs)] text-[var(--hub-color-text-muted)]">
           {description}
         </p>
       ) : null}
       {error ? (
-        <p id={`${id}-error`} role="alert" className="mt-1 text-sm text-[var(--destructive)]">
+        <p id={`${id}-error`} role="alert" className="mt-[var(--hub-space-1)] text-[length:var(--hub-text-2xs)] text-[var(--hub-color-danger)]">
           {error}
         </p>
       ) : null}
@@ -123,8 +123,8 @@ export function TextareaField({
       <textarea
         id={id}
         className={cn(
-          "mt-1 min-h-24 w-full rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--foreground)] outline-none transition-colors placeholder:text-[var(--muted-foreground)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--ring)]/20 disabled:cursor-not-allowed disabled:bg-[var(--surface-subtle)]",
-          error && "border-[var(--destructive)]"
+          "mt-1 min-h-24 w-full rounded-[var(--hub-radius-md)] border border-[var(--hub-color-border-strong)] bg-[var(--hub-color-surface)] px-[var(--hub-space-3)] py-[var(--hub-space-2)] text-[length:var(--hub-text-sm)] text-[var(--hub-color-text-heading)] shadow-[var(--hub-shadow-sm)] outline-none transition-colors placeholder:text-[var(--hub-color-text-placeholder)] focus:border-[var(--hub-color-focus)] focus:ring-1 focus:ring-[var(--hub-color-focus)] disabled:cursor-not-allowed disabled:bg-[var(--hub-color-surface-subtle)]",
+          error && "border-[var(--hub-color-danger)]"
         )}
         aria-invalid={Boolean(error) || undefined}
         aria-describedby={describedBy(id, description, error, ariaDescribedBy)}

@@ -133,7 +133,7 @@ test.describe("UI check", () => {
     await page.goto("/talent/dashboard");
     await page.waitForLoadState("networkidle");
     // 未確認のレベルアップ・応援の演出を撮ってから閉じる（閉じると残りもまとめて既読になる）
-    const celebration = page.getByRole("dialog").filter({ hasText: /LEVEL UP|CHEER/ });
+    const celebration = page.getByRole("dialog").filter({ hasText: /レベルが上がりました|応援メッセージ/ });
     for (let count = 1; count <= 10 && (await celebration.count()); count += 1) {
       await capture(page, "MEMBER", `celebration-${count}`);
       await celebration.getByRole("button", { name: "ダイアログを閉じる" }).click();

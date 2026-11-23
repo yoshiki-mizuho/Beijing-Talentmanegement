@@ -1,6 +1,5 @@
 "use client";
 
-import { LoaderCircle } from "lucide-react";
 import { useFormStatus } from "react-dom";
 import type { ComponentProps } from "react";
 
@@ -32,8 +31,8 @@ export function SubmitButton({
     >
       {isCurrentSubmission ? (
         <>
-          <LoaderCircle
-            className="h-4 w-4 animate-spin motion-reduce:animate-none"
+          <span
+            className="h-3 w-3 animate-[spin_var(--hub-spinner-duration)_linear_infinite] rounded-full border-2 border-current border-r-transparent motion-reduce:animate-none"
             aria-hidden="true"
           />
           {pendingLabel}

@@ -146,7 +146,7 @@ export function Tooltip({
               id={id}
               role="tooltip"
               style={position}
-              className="pointer-events-none fixed z-[100] whitespace-nowrap rounded-md bg-[var(--foreground)] px-2 py-1 text-xs font-medium text-white shadow-lg"
+              className="pointer-events-none fixed z-[calc(var(--hub-z-toast)+1)] whitespace-nowrap rounded-[var(--hub-radius-md)] bg-[var(--hub-color-text)] px-[var(--hub-space-2)] py-[var(--hub-space-1)] text-[length:var(--hub-text-xs)] font-medium text-[var(--hub-color-surface)] shadow-[var(--hub-shadow-lg)]"
             >
               {content}
             </span>,

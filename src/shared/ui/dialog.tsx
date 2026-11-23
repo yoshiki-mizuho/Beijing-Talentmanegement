@@ -100,7 +100,7 @@ export function Dialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-2 sm:p-4"
+      className="fixed inset-0 z-[var(--hub-z-modal)] flex items-start justify-center bg-[var(--hub-color-overlay)] p-2 pt-[var(--hub-space-6)] sm:px-4"
       onMouseDown={handleBackdropMouseDown}
     >
       <div
@@ -110,27 +110,27 @@ export function Dialog({
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
         className={cn(
-          "max-h-[calc(100dvh-1rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-xl sm:max-h-[calc(100dvh-2rem)]",
+          "max-h-[calc(100dvh-var(--hub-space-6)-0.5rem)] w-full max-w-lg overflow-y-auto rounded-[var(--hub-radius-2xl)] bg-[var(--hub-color-surface)] shadow-[var(--hub-shadow-xl)]",
           className
         )}
       >
-        <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-[var(--border)] bg-[var(--surface)] px-4 py-3 sm:px-6 sm:py-4">
+        <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-[var(--hub-color-border)] bg-[var(--hub-color-surface)] px-[var(--hub-space-5)] py-[var(--hub-space-3)]">
           <div className="min-w-0">
             {eyebrow ? (
-              <p className="text-xs font-semibold text-[var(--muted-foreground)]">
+              <p className="text-xs font-semibold text-[var(--hub-color-text-muted)]">
                 {eyebrow}
               </p>
             ) : null}
             <h2
               id={titleId}
-              className="break-words text-lg font-semibold text-[var(--foreground)]"
+              className="break-words text-[length:var(--hub-text-base)] font-semibold text-[var(--hub-color-text-heading)]"
             >
               {title}
             </h2>
             {description ? (
               <p
                 id={descriptionId}
-                className="mt-1 text-sm leading-6 text-[var(--muted-foreground)]"
+                className="mt-1 text-[length:var(--hub-text-sm)] text-[var(--hub-color-text-sub)]"
               >
                 {description}
               </p>
@@ -150,9 +150,9 @@ export function Dialog({
             </Button>
           </div>
         </header>
-        <div className="p-4 sm:p-6">{children}</div>
+        <div className="p-[var(--hub-space-5)]">{children}</div>
         {footer ? (
-          <footer className="flex flex-wrap justify-end gap-2 border-t border-[var(--border)] px-4 py-3 sm:px-6 sm:py-4">
+          <footer className="flex flex-wrap justify-end gap-[var(--hub-space-2)] border-t border-[var(--hub-color-border)] px-[var(--hub-space-5)] py-[var(--hub-space-3)]">
             {footer}
           </footer>
         ) : null}
