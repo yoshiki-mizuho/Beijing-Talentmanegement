@@ -29,7 +29,7 @@ test("MANAGERの応援がMEMBERのダッシュボードに表示される", asyn
     await expect(managerSession.page.getByText("応援を送りました")).toBeVisible();
 
     await memberSession.page.reload();
-    const cheerDialog = memberSession.page.getByRole("dialog").filter({ hasText: "CHEER" });
+    const cheerDialog = memberSession.page.getByRole("dialog").filter({ hasText: "応援メッセージ" });
     await expect(cheerDialog.getByText(message)).toBeVisible();
     await cheerDialog.getByRole("button", { name: "ダイアログを閉じる" }).click();
     await expect(memberSession.page.getByRole("heading", { name: "応援が届いています" })).toBeVisible();
