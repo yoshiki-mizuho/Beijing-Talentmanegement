@@ -55,7 +55,8 @@ Next.js 16（App Router）、TypeScript、Tailwind CSS、PostgreSQL、Prisma、N
 | 画面のデザインと文言 | [`docs/DESIGN_GUIDELINES.md`](docs/DESIGN_GUIDELINES.md) |
 | セキュリティの対策と受け入れたリスク | [`docs/SECURITY.md`](docs/SECURITY.md) |
 | ブランチ、Merge Request、CI | [`docs/DEVELOPMENT_WORKFLOW.md`](docs/DEVELOPMENT_WORKFLOW.md) |
-| デモ環境（Vercel + Neon）の運用 | [`docs/DEMO_DEPLOYMENT.md`](docs/DEMO_DEPLOYMENT.md) |
+| Hub 基盤の上の構成と配布 | [`docs/HUB_PLATFORM.md`](docs/HUB_PLATFORM.md) |
+| 凍結したデモ環境（Vercel + Neon） | [`docs/DEMO_DEPLOYMENT.md`](docs/DEMO_DEPLOYMENT.md) |
 | Claude CodeとCodexの役割分担 | [`docs/AI_COLLABORATION.md`](docs/AI_COLLABORATION.md) |
 | 過去のフェーズの記録 | [`docs/archive/`](docs/archive/README.md) |
 
