@@ -100,7 +100,7 @@ export function SkillSheetTemplatePage({ templates }: { templates: Templates }) 
               <CardTitle>ひな形</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <TemplateRow id="standard" name="TalentHub 標準" standard />
+              <TemplateRow id="standard" name="TalentHub 標準" />
               {templates.map((template) => (
                 <div key={template.id} className="rounded-lg border border-[var(--border)] p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -235,23 +235,14 @@ export function SkillSheetTemplatePage({ templates }: { templates: Templates }) 
 
 function TemplateRow({
   id,
-  name,
-  standard = false
+  name
 }: {
   id: string;
   name: string;
-  standard?: boolean;
 }) {
   return (
     <div className="flex items-center justify-between rounded-lg border border-[var(--border)] p-4">
-      <p className="font-bold">
-        {name}
-        {standard ? (
-          <span className="ml-2 rounded-full bg-[var(--primary-subtle)] px-2 py-1 text-xs text-[var(--primary)]">
-            標準
-          </span>
-        ) : null}
-      </p>
+      <p className="font-bold">{name}</p>
       <DownloadLink id={id} />
     </div>
   );

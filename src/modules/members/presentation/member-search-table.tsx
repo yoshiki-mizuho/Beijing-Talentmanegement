@@ -289,7 +289,7 @@ function MemberSearchTableInner({
             <option value="">最低レベルなし</option>
             {[1, 2, 3, 4, 5].map((level) => (
               <option key={level} value={level}>
-                Lv.{level}以上
+                Lv{level}以上
               </option>
             ))}
           </Select>
@@ -572,12 +572,12 @@ function statusDot(status: string) {
 function MemberSkillsCell({ member }: { member: MemberListItem }) {
   const { visibleSkills, hiddenSkills } = summarizeMemberSkills(member.memberSkills);
   if (!visibleSkills.length) return <span className="text-[var(--muted-foreground)]">未設定</span>;
-  const summary = hiddenSkills.map((item) => `${item.skill.name} Lv.${item.level}`).join(" / ");
+  const summary = hiddenSkills.map((item) => `${item.skill.name} Lv${item.level}`).join(" / ");
   return (
     <div className="flex flex-wrap gap-1">
       {visibleSkills.map((item) => (
         <Badge key={item.id} variant="primary">
-          {item.skill.name} Lv.{item.level}
+          {item.skill.name} Lv{item.level}
         </Badge>
       ))}
       {hiddenSkills.length ? (

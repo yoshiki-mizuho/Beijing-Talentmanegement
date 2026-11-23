@@ -120,7 +120,7 @@ export default async function SkillApprovalsPage() {
         description={
           session.user.role === "ADMIN"
             ? "すべての申請です。待ち日数の長いものから並んでいます。"
-            : "部下からの申請です。待ち日数の長いものから並んでいます。"
+            : "担当のメンバーからの申請です。待ち日数の長いものから並んでいます。"
         }
       />
       <SkillApprovalList rows={rows} />

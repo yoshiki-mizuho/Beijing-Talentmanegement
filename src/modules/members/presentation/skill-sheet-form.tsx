@@ -699,7 +699,7 @@ export function SkillSheetForm({
         </Button>
       ) : null}
 
-      <div className="sticky bottom-4 z-20 flex flex-col gap-3 rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] p-3 shadow-lg sm:flex-row sm:items-center sm:justify-between">
+      {initial || changedCount > 0 ? <div className="sticky bottom-4 z-20 flex flex-col gap-3 rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] p-3 shadow-lg sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm font-semibold text-[var(--foreground)]" aria-live="polite">
           {initial
             ? `${changedCount}件を選んでいます${payload.length > 0 ? `（${payload.slice(0, 2).map((item) => `${rows.find((row) => row.skillId === item.skillId)?.skillName} Lv${item.requestedLevel}`).join("・")}${payload.length > 2 ? "・…" : ""}）` : ""}`
@@ -727,7 +727,7 @@ export function SkillSheetForm({
             {initial ? "上司に申請する" : `${changedCount}件を申請`}
           </SubmitButton>
         </div>
-      </div>
+      </div> : null}
     </ActionForm>
   );
 }

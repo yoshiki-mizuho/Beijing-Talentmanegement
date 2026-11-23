@@ -52,11 +52,13 @@ export const badgePalette: Readonly<Record<string, string>> = {
 export const badgeRarities: Readonly<
   Record<BadgeRarity, { label: string; frame: string; background: string }>
 > = {
-  common: { label: "コモン", frame: "#0F766E", background: "#E6F4F1" },
+  common: { label: "コモン", frame: "var(--hub-color-primary-600)", background: "var(--hub-color-primary-50)" },
   rare: { label: "レア", frame: "#2563EB", background: "#E8F0FE" },
   epic: { label: "エピック", frame: "#7C3AED", background: "#F1EAFE" },
   legend: { label: "レジェンド", frame: "#D97706", background: "#FEF3C7" }
 };
+
+export const unearnedBadgeColor = "#94A3B8";
 
 const badgeDefinitionSource: readonly BadgeDefinition[] = [
   {

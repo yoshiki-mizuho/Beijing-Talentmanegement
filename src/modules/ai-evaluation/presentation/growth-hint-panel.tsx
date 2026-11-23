@@ -212,7 +212,7 @@ function HintContent({
       ) : null}
       {hint.isStale ? (
         <p className="rounded-lg bg-[var(--hub-color-warning-bg)] px-4 py-3 text-sm text-[var(--hub-color-warning-text)]">
-          スキルや目標ロールが変わりました。 作り直せます。
+          スキルや目標ロールが変わりました。作り直せます。
         </p>
       ) : null}
       {message && jobStatus !== "QUEUED" && jobStatus !== "RUNNING" ? (

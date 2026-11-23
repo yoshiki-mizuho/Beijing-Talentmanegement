@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { getSkillProfile } from "@/modules/explore/application/explore-service";
-import { badgePalette } from "@/modules/growth/domain/badge-art";
+import { badgePalette, unearnedBadgeColor } from "@/modules/growth/domain/badge-art";
 
 type Profile = NonNullable<Awaited<ReturnType<typeof getSkillProfile>>>;
 type Badge = Profile["badges"][number];
@@ -92,7 +92,7 @@ function BadgeArt({ badge, size = "small" }: { badge: Badge; hidden?: boolean; s
             className={pixel}
             style={{
               backgroundColor:
-                value === "." ? "transparent" : earned ? badgePalette[value] : "#94A3B8"
+                value === "." ? "transparent" : earned ? badgePalette[value] : unearnedBadgeColor
             }}
           />
         ))

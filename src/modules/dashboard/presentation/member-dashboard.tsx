@@ -59,7 +59,7 @@ export function MemberDashboard({
     <div className="space-y-5">
       <TeamGoalCelebrationDialog celebration={teamGoalCelebration} />
       <PageHeader
-        title={`おかえりなさい、${viewModel.memberName}さん`}
+        title={`${viewModel.memberName}さんのダッシュボード`}
         description={viewModel.encouragement}
       />
 
@@ -141,7 +141,7 @@ export function MemberDashboard({
               description=""
             >
               <div className="flex flex-wrap gap-2">
-                {skillReminders.newSkills.map((skill) => (
+                {skillReminders.newSkills.slice(0, 3).map((skill) => (
                   <span key={skill.id} className="inline-flex items-center gap-2 rounded-full border border-[var(--hub-color-info-border)] bg-[var(--hub-color-info-bg)] px-3 py-1.5 text-sm">
                     <BadgeNew />
                     {skill.name}

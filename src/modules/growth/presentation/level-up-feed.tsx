@@ -167,7 +167,7 @@ function FeedItem({
         <div className="min-w-0 flex-1">
           <div className={cn("flex flex-wrap items-start justify-between gap-2", detail && "hidden")}>
             <p className="text-sm text-[var(--foreground)]">
-              <Link href={`/talent/people/${initialItem.memberId}` as Route} className="font-semibold hover:text-[var(--primary)] hover:underline">{initialItem.memberName} さん</Link>
+              <Link href={`/talent/people/${initialItem.memberId}` as Route} className="font-semibold hover:text-[var(--primary)] hover:underline">{initialItem.memberName}さん</Link>
               が <span className="font-semibold">{initialItem.skillName}</span> を <span className="font-semibold">Lv{initialItem.toLevel}</span> に
               {initialItem.isFirstMover ? <><span>・社内で最初に身につけました</span> <FirstMoverBadge /></> : null}
             </p>

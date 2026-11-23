@@ -65,7 +65,7 @@ test("レベルアップのリアクション、コメント、返信を通知�
       expect(notifications).toHaveLength(1);
       expect(notifications[0]?.status).toBe("UNREAD");
       expect(notifications[0]?.body).toBe(
-        `${skill.name} Lv.2 へのリアクションを確認しましょう。`
+        `${skill.name} Lv2 へのリアクションを確認しましょう。`
       );
     }).toPass({ timeout: 20_000 });
     await member.page.goto("/talent/notifications?view=unread");
