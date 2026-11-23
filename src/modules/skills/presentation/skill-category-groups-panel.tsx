@@ -240,7 +240,7 @@ export function SkillCategoryGroupsPanel({
                 className={cn(
                   "min-h-9 rounded-full px-4 text-sm font-semibold",
                   categoryFilter === value
-                    ? "bg-[var(--primary)] text-white"
+                    ? "bg-[var(--primary)] text-[var(--hub-color-text-on-primary)]"
                     : "bg-[var(--surface-subtle)] text-[var(--muted-foreground)]",
                 )}
               >
@@ -274,7 +274,7 @@ export function SkillCategoryGroupsPanel({
         ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-[var(--surface-subtle)] text-left text-xs text-[var(--muted-foreground)]">
+            <thead className="border-b border-[var(--hub-color-border)] bg-[var(--hub-color-surface-subtle)] text-left text-[length:var(--hub-text-xs)] font-medium tracking-[var(--hub-tracking-wide)] text-[var(--hub-color-text-muted)]">
               <tr>
                 <th className="w-11 p-0">
                   <label className="flex min-h-11 min-w-11 items-center justify-center">
@@ -298,7 +298,7 @@ export function SkillCategoryGroupsPanel({
               {visibleCategories.map((category) => (
                 <tr
                   key={category.id}
-                  className="border-t border-[var(--border)]"
+                  className="border-t border-[var(--hub-color-border-subtle)] text-[var(--hub-color-text-sub)]"
                 >
                   <td className="w-11 p-0">
                     <label className="flex min-h-11 min-w-11 items-center justify-center">
@@ -316,7 +316,7 @@ export function SkillCategoryGroupsPanel({
                       />
                     </label>
                   </td>
-                  <td className="px-4 py-3 font-medium">{category.name}</td>
+                  <td className="px-4 py-3 font-medium text-[var(--hub-color-text-heading)]">{category.name}</td>
                   <td className="px-4 py-3">{category._count.skills}</td>
                   <td className="px-4 py-3">
                     <select
@@ -329,7 +329,7 @@ export function SkillCategoryGroupsPanel({
                       className={cn(
                         "min-h-11 w-full rounded-lg border bg-[var(--surface)] px-3",
                         category.groupId === null
-                          ? "border-amber-500"
+                          ? "border-[var(--hub-color-warning-border-strong)]"
                           : "border-[var(--border-strong)]",
                       )}
                     >

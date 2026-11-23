@@ -78,8 +78,8 @@ export function GrowthCalendar({
               className={cn(
                 "grid h-7 place-items-center rounded-md text-[11px]",
                 day.day !== null && "border border-[var(--border)]",
-                kind === "assessment" && "border-teal-200 bg-teal-100 text-teal-950",
-                kind === "level-up" && "border-[var(--primary)] bg-[var(--primary)] font-semibold text-white"
+                kind === "assessment" && "border-[var(--hub-color-selected-border)] bg-[var(--hub-color-selected-bg)] text-[var(--hub-color-selected-text)]",
+                kind === "level-up" && "border-[var(--primary)] bg-[var(--primary)] font-semibold text-[var(--hub-color-text-on-primary)]"
               )}
             >
               {day.day}
@@ -88,7 +88,7 @@ export function GrowthCalendar({
         })}
       </div>
       <div className="mt-3 flex flex-wrap gap-4 text-xs text-[var(--muted-foreground)]">
-        <span className="inline-flex items-center gap-1.5"><span className="h-4 w-4 rounded border border-teal-200 bg-teal-100" />申請した日</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-4 w-4 rounded border border-[var(--hub-color-selected-border)] bg-[var(--hub-color-selected-bg)]" />申請した日</span>
         <span className="inline-flex items-center gap-1.5"><span className="h-4 w-4 rounded border border-[var(--primary)] bg-[var(--primary)]" />レベルアップした日</span>
       </div>
     </div>

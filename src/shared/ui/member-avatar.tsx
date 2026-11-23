@@ -14,17 +14,26 @@ const sizeClasses: Record<MemberAvatarSize, string> = {
   lg: "h-16 w-16 text-xl"
 };
 
+const avatarTones = {
+  primary: "bg-[var(--hub-color-selected-bg)] text-[var(--hub-color-selected-text)]",
+  info: "bg-[var(--hub-color-info-bg)] text-[var(--hub-color-info-text)]",
+  warning: "bg-[var(--hub-color-warning-bg)] text-[var(--hub-color-warning-text)]",
+  success: "bg-[var(--hub-color-success-bg)] text-[var(--hub-color-success-text)]",
+  danger: "bg-[var(--hub-color-danger-bg)] text-[var(--hub-color-danger-text)]",
+  neutral: "bg-[var(--hub-color-neutral-bg)] text-[var(--hub-color-neutral-text)]"
+} as const;
+
 export function getMemberInitial(name: string) {
   return Array.from(name.trim())[0]?.toLocaleUpperCase("ja") ?? "?";
 }
 
 export function getMemberAvatarTone(memberId: string) {
   const tones = [
-    "bg-teal-100 text-teal-800",
-    "bg-sky-100 text-sky-800",
-    "bg-violet-100 text-violet-800",
-    "bg-amber-100 text-amber-800",
-    "bg-rose-100 text-rose-800"
+    avatarTones.primary,
+    avatarTones.info,
+    avatarTones.neutral,
+    avatarTones.warning,
+    avatarTones.danger
   ] as const;
   const hash = Array.from(memberId).reduce(
     (total, character) => total + character.codePointAt(0)!,
@@ -33,28 +42,27 @@ export function getMemberAvatarTone(memberId: string) {
   return tones[hash % tones.length];
 }
 
-// 基盤の avatarColor（色の名前）ごとの色。Tailwind が拾えるように、クラス名をそのまま書く。
-// tokens.css を読み込む H-6 で、基盤の色の決まりに合わせて見直す。
+// 基盤の avatarColor の暖色・寒色・中性色の意味を、Hub の意味色へまとめる。
 const avatarColorTones: Record<string, string> = {
-  slate: "bg-slate-100 text-slate-800",
-  gray: "bg-gray-100 text-gray-800",
-  red: "bg-red-100 text-red-800",
-  orange: "bg-orange-100 text-orange-800",
-  amber: "bg-amber-100 text-amber-800",
-  yellow: "bg-yellow-100 text-yellow-800",
-  lime: "bg-lime-100 text-lime-800",
-  green: "bg-green-100 text-green-800",
-  emerald: "bg-emerald-100 text-emerald-800",
-  teal: "bg-teal-100 text-teal-800",
-  cyan: "bg-cyan-100 text-cyan-800",
-  sky: "bg-sky-100 text-sky-800",
-  blue: "bg-blue-100 text-blue-800",
-  indigo: "bg-indigo-100 text-indigo-800",
-  violet: "bg-violet-100 text-violet-800",
-  purple: "bg-purple-100 text-purple-800",
-  fuchsia: "bg-fuchsia-100 text-fuchsia-800",
-  pink: "bg-pink-100 text-pink-800",
-  rose: "bg-rose-100 text-rose-800"
+  slate: avatarTones.neutral,
+  gray: avatarTones.neutral,
+  red: avatarTones.danger,
+  orange: avatarTones.warning,
+  amber: avatarTones.warning,
+  yellow: avatarTones.warning,
+  lime: avatarTones.success,
+  green: avatarTones.success,
+  emerald: avatarTones.success,
+  teal: avatarTones.primary,
+  cyan: avatarTones.info,
+  sky: avatarTones.info,
+  blue: avatarTones.info,
+  indigo: avatarTones.info,
+  violet: avatarTones.neutral,
+  purple: avatarTones.neutral,
+  fuchsia: avatarTones.danger,
+  pink: avatarTones.danger,
+  rose: avatarTones.danger
 };
 
 export function MemberAvatar({

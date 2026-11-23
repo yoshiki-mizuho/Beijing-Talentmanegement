@@ -65,7 +65,7 @@ export function PeopleSearchFilters({
           className="sm:max-w-sm sm:flex-1"
         />
         <fieldset className="min-w-0">
-          <legend className="text-sm font-medium text-slate-700">最低レベル</legend>
+          <legend className="text-sm font-medium text-[var(--hub-color-text)]">最低レベル</legend>
           <div
             className="mt-1 flex max-w-full gap-1 overflow-x-auto"
             role="group"
@@ -80,7 +80,7 @@ export function PeopleSearchFilters({
                 className={cn(
                   "min-h-11 min-w-11 shrink-0 rounded-full border px-3 text-sm font-medium",
                   level === value
-                    ? "border-[var(--primary)] bg-[var(--primary)] text-white"
+                    ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--hub-color-text-on-primary)]"
                     : "border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-subtle)]"
                 )}
                 onClick={() => updateFilters(latestSkill.current, value)}

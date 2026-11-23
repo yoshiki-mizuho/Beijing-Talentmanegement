@@ -49,7 +49,7 @@ function SkillList({ skills }: { skills: Skill[] }) {
             {[1, 2, 3, 4, 5].map((level) => (
               <span
                 key={level}
-                className={`h-2 w-3 rounded-sm ${level <= skill.level ? "bg-[var(--primary)]" : "bg-[#E6F4F1]"}`}
+                className={`h-2 w-3 rounded-sm ${level <= skill.level ? "bg-[var(--primary)]" : "bg-[var(--hub-color-primary-50)]"}`}
               />
             ))}
           </span>

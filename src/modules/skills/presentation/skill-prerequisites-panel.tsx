@@ -217,17 +217,17 @@ export function SkillPrerequisitesPanel({
             </div>
           ) : null}
           {jobStatus === "FAILED" ? (
-            <p className="mb-3 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <p className="mb-3 rounded-md border border-[var(--hub-color-warning-border)] bg-[var(--hub-color-warning-bg)] px-4 py-3 text-sm text-[var(--hub-color-warning-text)]">
               候補を作れませんでした。手で追加できます。
             </p>
           ) : null}
           {truncated ? (
-            <p className="mb-3 rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <p className="mb-3 rounded-md bg-[var(--hub-color-warning-bg)] px-4 py-3 text-sm text-[var(--hub-color-warning-text)]">
               多いため一部だけ対象にしました
             </p>
           ) : null}
           {notice ? (
-            <p className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <p className="rounded-md border border-[var(--hub-color-warning-border)] bg-[var(--hub-color-warning-bg)] px-4 py-3 text-sm text-[var(--hub-color-warning-text)]">
               {notice}
             </p>
           ) : null}
@@ -409,31 +409,31 @@ export function SkillPrerequisitesPanel({
           </div>
           <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[720px] text-sm">
-              <thead>
-                <tr className="border-b text-left text-[var(--muted-foreground)]">
-                  <th className="p-3">スキル</th>
-                  <th className="p-3">前提スキル</th>
-                  <th className="p-3">登録のしかた</th>
-                  <th className="p-3">登録日</th>
-                  <th className="p-3 text-right">削除</th>
+              <thead className="bg-[var(--hub-color-surface-subtle)] text-[length:var(--hub-text-xs)] font-medium tracking-[var(--hub-tracking-wide)] text-[var(--hub-color-text-muted)]">
+                <tr className="border-b border-[var(--hub-color-border)] text-left">
+                  <th className="px-[var(--hub-space-4)] py-[var(--hub-space-2)]">スキル</th>
+                  <th className="px-[var(--hub-space-4)] py-[var(--hub-space-2)]">前提スキル</th>
+                  <th className="px-[var(--hub-space-4)] py-[var(--hub-space-2)]">登録のしかた</th>
+                  <th className="px-[var(--hub-space-4)] py-[var(--hub-space-2)]">登録日</th>
+                  <th className="px-[var(--hub-space-4)] py-[var(--hub-space-2)] text-right">削除</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[var(--border)]">
+              <tbody className="divide-y divide-[var(--hub-color-border-subtle)] text-[var(--hub-color-text-sub)]">
                 {filtered.map((item) => (
                   <tr key={item.id}>
-                    <td className="p-3 font-medium">{item.skill.name}</td>
-                    <td className="p-3">{item.prerequisiteSkill.name}</td>
-                    <td className="p-3">
+                    <td className="px-[var(--hub-space-4)] py-[var(--hub-space-3)] font-medium text-[var(--hub-color-text-heading)]">{item.skill.name}</td>
+                    <td className="px-[var(--hub-space-4)] py-[var(--hub-space-3)]">{item.prerequisiteSkill.name}</td>
+                    <td className="px-[var(--hub-space-4)] py-[var(--hub-space-3)]">
                       <Badge>
                         {item.source === "AI_SUGGESTION"
                           ? "AI の候補から"
                           : "手で追加"}
                       </Badge>
                     </td>
-                    <td className="p-3">
+                    <td className="px-[var(--hub-space-4)] py-[var(--hub-space-3)]">
                       {formatPrerequisiteDate(item.createdAt)}
                     </td>
-                    <td className="p-3 text-right">
+                    <td className="px-[var(--hub-space-4)] py-[var(--hub-space-3)] text-right">
                       <Button
                         size="icon"
                         variant="ghost"

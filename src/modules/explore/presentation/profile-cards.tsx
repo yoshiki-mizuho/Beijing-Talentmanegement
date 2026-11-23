@@ -93,7 +93,7 @@ function ChallengeCard({ profile, isOwner }: { profile: Profile; isOwner: boolea
               role="img"
               aria-label={`${target.name}まで${percent}%`}
             >
-              <circle cx="52" cy="52" r="42" fill="none" stroke="#E6F4F1" strokeWidth="12" />
+              <circle cx="52" cy="52" r="42" fill="none" stroke="var(--hub-color-primary-50)" strokeWidth="12" />
               <circle
                 cx="52"
                 cy="52"

@@ -16,7 +16,13 @@ type SkillHolder = {
   avatarColor: string | null;
   level: number;
 };
-const colors = ["#CCFBF1", "#99F6E4", "#2DD4BF", "#0D9488", "#115E59"];
+const colors = [
+  "var(--hub-color-primary-50)",
+  "var(--hub-color-primary-100)",
+  "var(--hub-color-primary-200)",
+  "var(--hub-color-primary-600)",
+  "var(--hub-color-primary-800)"
+];
 export function SkillMapTiles({
   skills,
   categories,
@@ -74,7 +80,7 @@ function SkillMapTilesInner({
             placeholder="スキルを探す"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            className="h-9 rounded-full border border-[var(--border)] bg-white px-4 pr-10 text-sm"
+            className="h-9 rounded-full border border-[var(--border)] bg-[var(--hub-color-surface)] px-4 pr-10 text-sm"
           />
           {query ? (
             <button
@@ -110,7 +116,7 @@ function SkillMapTilesInner({
         ))}
       </div>
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,1fr)]">
-        <section className="rounded-2xl border border-[var(--border)] bg-white p-5">
+        <section className="rounded-2xl border border-[var(--border)] bg-[var(--hub-color-surface)] p-5">
           <div className="mb-4 flex flex-wrap gap-4 text-xs text-[var(--muted-foreground)]">
             <span>大きさ：保有者の数</span>
             <span className="flex items-center gap-2">
@@ -127,7 +133,7 @@ function SkillMapTilesInner({
               下位 → 上位20%
             </span>
             <span>
-              <b className="rounded-full bg-white px-1 text-[var(--primary)]">
+              <b className="rounded-full bg-[var(--hub-color-surface)] px-1 text-[var(--primary)]">
                 ↑
               </b>{" "}
               直近90日で伸びている
@@ -149,7 +155,7 @@ function SkillMapTilesInner({
                       type="button"
                       aria-pressed={selected?.id === skill.id}
                       onClick={() => setSelectedId(skill.id)}
-                      className={`relative flex min-w-0 flex-col justify-between gap-1 rounded-lg p-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 ${skill.holderCount === 0 ? "text-[var(--muted-foreground)]" : skill.strength >= 4 ? "text-white" : "text-teal-950"} ${selected?.id === skill.id ? "outline-3 outline-amber-500" : ""}`}
+                      className={`relative flex min-w-0 flex-col justify-between gap-1 rounded-lg p-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 ${skill.holderCount === 0 ? "text-[var(--muted-foreground)]" : skill.strength >= 4 ? "text-[var(--hub-color-text-on-primary)]" : "text-[var(--hub-color-primary-900)]"} ${selected?.id === skill.id ? "outline-3 outline-[var(--hub-color-focus)]" : ""}`}
                       style={{
                         // 保有者がいないスキルは強さの色を付けず、灰色で区別する
                         background:
@@ -170,7 +176,7 @@ function SkillMapTilesInner({
                           : `${skill.holderCount}名・平均Lv${skill.averageLevel.toFixed(1)}`}
                       </span>
                       {skill.growthCount ? (
-                        <em className="absolute right-2 top-2 rounded-full bg-white px-1.5 text-xs font-bold not-italic text-[var(--primary)]">
+                        <em className="absolute right-2 top-2 rounded-full bg-[var(--hub-color-surface)] px-1.5 text-xs font-bold not-italic text-[var(--primary)]">
                           ↑ {skill.growthCount}
                         </em>
                       ) : null}
@@ -184,7 +190,7 @@ function SkillMapTilesInner({
         {selected ? (
           <SkillDetail skill={selected} nodeId={nodeId} />
         ) : (
-          <aside className="rounded-2xl border border-[var(--border)] bg-white p-5">
+          <aside className="rounded-2xl border border-[var(--border)] bg-[var(--hub-color-surface)] p-5">
             表示できるスキルがありません
           </aside>
         )}
@@ -207,7 +213,7 @@ function SkillDetail({ skill, nodeId }: { skill: Skill; nodeId: string | null })
   const max = Math.max(1, ...skill.levelCounts.map((item) => item.count));
   return (
     <aside
-      className="rounded-2xl border border-[var(--border)] bg-white p-5"
+      className="rounded-2xl border border-[var(--border)] bg-[var(--hub-color-surface)] p-5"
       aria-label={`${skill.name} の詳細`}
     >
       <div className="flex items-baseline gap-2">
@@ -332,5 +338,5 @@ export function getTileSpan(holderCount: number, maxHolderCount: number) {
 }
 
 function chip(active: boolean) {
-  return `min-h-9 rounded-full border px-3 text-sm ${active ? "border-[var(--primary)] bg-[var(--primary)] font-bold text-white" : "border-[var(--border)] bg-white"}`;
+  return `min-h-9 rounded-full border px-3 text-sm ${active ? "border-[var(--primary)] bg-[var(--primary)] font-bold text-[var(--hub-color-text-on-primary)]" : "border-[var(--border)] bg-[var(--hub-color-surface)]"}`;
 }

@@ -72,7 +72,7 @@ export function MemberDashboard({
               <h2 id="monthly-recap-heading" className="mt-1 font-semibold">{monthlyRecap.hasEvents ? monthlyRecap.encouragement : "先月は記録がありませんでした。今月はひとつ申請してみませんか"}</h2>
               {monthlyRecap.hasEvents ? <p className="mt-2 text-sm text-[var(--muted-foreground)]">レベルアップ {monthlyRecap.levelUpCount}・新しいスキル {monthlyRecap.newSkillCount}・届いた声 {monthlyRecap.voiceCount}</p> : null}
             </div>
-            <Link href={(monthlyRecap.hasEvents ? "/talent/my/recap" : "/talent/my/skills") as Route} className="inline-flex h-10 shrink-0 items-center justify-center rounded-md bg-[var(--primary)] px-4 text-sm font-semibold text-white hover:bg-[var(--primary-hover)]">
+            <Link href={(monthlyRecap.hasEvents ? "/talent/my/recap" : "/talent/my/skills") as Route} className="inline-flex h-10 shrink-0 items-center justify-center rounded-md bg-[var(--primary)] px-4 text-sm font-semibold text-[var(--hub-color-text-on-primary)] hover:bg-[var(--primary-hover)]">
               {monthlyRecap.hasEvents ? "振り返りを見る" : "スキルシートを開く"}
             </Link>
           </div>
@@ -143,7 +143,7 @@ export function MemberDashboard({
             >
               <div className="flex flex-wrap gap-2">
                 {skillReminders.newSkills.map((skill) => (
-                  <span key={skill.id} className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm">
+                  <span key={skill.id} className="inline-flex items-center gap-2 rounded-full border border-[var(--hub-color-info-border)] bg-[var(--hub-color-info-bg)] px-3 py-1.5 text-sm">
                     <BadgeNew />
                     {skill.name}
                   </span>
@@ -353,7 +353,7 @@ function FirstDashboard({
             action={!hasTargetRole ? (
               <Link
                 href="/talent/dashboard#target-role"
-                className="inline-flex min-h-11 items-center rounded-md bg-[var(--primary)] px-4 text-sm font-semibold text-white"
+                className="inline-flex min-h-11 items-center rounded-md bg-[var(--primary)] px-4 text-sm font-semibold text-[var(--hub-color-text-on-primary)]"
               >
                 ロールを選ぶ
               </Link>
@@ -368,7 +368,7 @@ function FirstDashboard({
             action={!waiting ? (
               <Link
                 href="/talent/my/skills"
-                className="inline-flex min-h-11 items-center rounded-md bg-[var(--primary)] px-4 text-sm font-semibold text-white"
+                className="inline-flex min-h-11 items-center rounded-md bg-[var(--primary)] px-4 text-sm font-semibold text-[var(--hub-color-text-on-primary)]"
               >
                 スキルを選ぶ
               </Link>
@@ -462,7 +462,7 @@ function FirstStep({
       className={`flex flex-wrap items-center gap-3 rounded-xl border p-4 ${current ? "border-[var(--primary)] bg-[var(--primary-subtle)]" : "border-[var(--border)]"}`}
     >
       <span
-        className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm font-bold ${completed ? "bg-[var(--primary)] text-white" : "border-2 border-[var(--border-strong)]"}`}
+        className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm font-bold ${completed ? "bg-[var(--primary)] text-[var(--hub-color-text-on-primary)]" : "border-2 border-[var(--border-strong)]"}`}
       >
         {completed ? <Check className="h-4 w-4" aria-hidden="true" /> : number}
       </span>
@@ -476,7 +476,7 @@ function FirstStep({
         {description ? <p className="mt-1 text-sm text-[var(--muted-foreground)]">{description}</p> : null}
       </div>
       {tag ? (
-        <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+        <span className="rounded-full bg-[var(--hub-color-warning-bg)] px-3 py-1 text-xs font-semibold text-[var(--hub-color-warning-text)]">
           {tag}
         </span>
       ) : null}
@@ -496,7 +496,7 @@ function PreviewCard({ icon: Icon, text }: { icon: typeof Award; text: string })
 
 function BadgeNew() {
   return (
-    <span className="rounded bg-blue-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+    <span className="rounded bg-[var(--hub-color-info-text)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--hub-color-text-on-primary)]">
       NEW
     </span>
   );
@@ -506,7 +506,7 @@ function DashboardLink({ href }: { href: Route }) {
   return (
     <Link
       href={href}
-      className="mt-4 inline-flex min-h-11 items-center rounded-md bg-[var(--primary)] px-4 text-sm font-semibold text-white hover:bg-[var(--primary-hover)]"
+      className="mt-4 inline-flex min-h-11 items-center rounded-md bg-[var(--primary)] px-4 text-sm font-semibold text-[var(--hub-color-text-on-primary)] hover:bg-[var(--primary-hover)]"
     >
       スキルシートで見る
     </Link>

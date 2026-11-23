@@ -248,7 +248,7 @@ function chip(active: boolean) {
   return cn(
     "min-h-9 rounded-full border px-3 text-sm font-medium",
     active
-      ? "border-[var(--primary)] bg-[var(--primary)] text-white"
+      ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--hub-color-text-on-primary)]"
       : "border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-subtle)]",
   );
 }

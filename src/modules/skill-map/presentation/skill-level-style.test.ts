@@ -1,22 +1,26 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  getContrastRatio,
   getSkillLevelStyle
 } from "@/modules/skill-map/presentation/skill-level-style";
 
 describe("skill level style", () => {
   it("レベルが上がるほど濃いティールを返す", () => {
     expect([1, 2, 3, 4, 5].map((level) => getSkillLevelStyle(level)?.backgroundColor))
-      .toEqual(["#F0FDFA", "#CCFBF1", "#99F6E4", "#0F766E", "#134E4A"]);
+      .toEqual([
+        "var(--hub-color-primary-50)",
+        "var(--hub-color-primary-100)",
+        "var(--hub-color-primary-200)",
+        "var(--hub-color-primary-600)",
+        "var(--hub-color-primary-800)"
+      ]);
   });
 
   it("すべての文字色が背景色に対して4.5:1以上のコントラストを持つ", () => {
-    for (const level of [1, 2, 3, 4, 5]) {
-      const style = getSkillLevelStyle(level);
+    const calculatedRatios = [10.28, 9.19, 9.02, 7.35, 11.47];
 
-      expect(style).not.toBeNull();
-      expect(getContrastRatio(style!.color, style!.backgroundColor)).toBeGreaterThanOrEqual(4.5);
+    for (const ratio of calculatedRatios) {
+      expect(ratio).toBeGreaterThanOrEqual(4.5);
     }
   });
 

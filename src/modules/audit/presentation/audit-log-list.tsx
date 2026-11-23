@@ -92,7 +92,7 @@ function AuditRow({ item }: { item: AuditLogListItem }) {
             size="sm"
           />
         ) : (
-          <span className="grid h-8 w-8 place-items-center rounded-full bg-slate-100 text-xs">
+          <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--hub-color-neutral-bg)] text-xs">
             S
           </span>
         )}
@@ -194,14 +194,14 @@ function DiffCells({ row }: { row: AuditLogListItem["diffRows"][number] }) {
 function operationPill(operation: AuditLogListItem["operation"]) {
   switch (operation) {
     case "create":
-      return "bg-emerald-50 text-emerald-800";
+      return "bg-[var(--hub-color-success-bg)] text-[var(--hub-color-success-text)]";
     case "update":
-      return "bg-blue-50 text-blue-800";
+      return "bg-[var(--hub-color-info-bg)] text-[var(--hub-color-info-text)]";
     case "deactivate":
     case "delete":
-      return "bg-red-50 text-red-800";
+      return "bg-[var(--hub-color-danger-bg)] text-[var(--hub-color-danger-text)]";
     case "reject":
-      return "bg-orange-50 text-orange-800";
+      return "bg-[var(--hub-color-warning-bg)] text-[var(--hub-color-warning-text)]";
     case "export":
       return "bg-[var(--surface-subtle)] text-[var(--foreground)]";
     default:

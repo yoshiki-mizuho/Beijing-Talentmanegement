@@ -38,11 +38,11 @@ export function TeamGoalCelebrationDialog({
     >
       <div className="relative flex min-h-56 flex-col items-center justify-center gap-5 overflow-hidden text-center">
         <span
-          className="absolute left-5 top-3 h-2.5 w-2.5 rounded-full bg-[var(--accent-amber)]"
+          className="absolute left-5 top-3 h-2.5 w-2.5 rounded-full bg-[var(--hub-color-warning-text)]"
           aria-hidden="true"
         />
         <span
-          className="absolute left-16 top-24 h-2 w-2 rounded-sm bg-[var(--accent-blue)]"
+          className="absolute left-16 top-24 h-2 w-2 rounded-sm bg-[var(--hub-color-info-text)]"
           aria-hidden="true"
         />
         <span

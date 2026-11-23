@@ -45,12 +45,12 @@ export function DashboardVisualizations({
         {metrics.map(([label, value, note], index) => (
           <article
             key={label}
-            className={`rounded-2xl border bg-white p-5 ${index === 3 && summary.stalePendingCount ? "border-amber-400" : "border-[var(--border)]"}`}
+            className={`rounded-2xl border bg-[var(--hub-color-surface)] p-5 ${index === 3 && summary.stalePendingCount ? "border-[var(--hub-color-warning-border)]" : "border-[var(--border)]"}`}
           >
             <p className="text-sm text-[var(--muted-foreground)]">{label}</p>
             <p className="mt-2 text-3xl font-bold">{value}</p>
             <p
-              className={`mt-2 text-xs ${index === 3 && summary.stalePendingCount ? "font-semibold text-amber-800" : "text-[var(--muted-foreground)]"}`}
+              className={`mt-2 text-xs ${index === 3 && summary.stalePendingCount ? "font-semibold text-[var(--hub-color-warning-text)]" : "text-[var(--muted-foreground)]"}`}
             >
               {note}
             </p>
@@ -112,9 +112,9 @@ export function DashboardVisualizations({
         <Panel title="部署ごとの状況">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-[var(--muted-foreground)]">
-                  <th className="py-3">部署</th>
+              <thead className="border-b border-[var(--hub-color-border)] bg-[var(--hub-color-surface-subtle)] text-[length:var(--hub-text-xs)] font-medium tracking-[var(--hub-tracking-wide)] text-[var(--hub-color-text-muted)]">
+                <tr className="text-left">
+                  <th className="px-[var(--hub-space-4)] py-[var(--hub-space-2)]">部署</th>
                   <th>人数</th>
                   <th>ロール達成率</th>
                   <th>今月のレベルアップ</th>
@@ -123,8 +123,8 @@ export function DashboardVisualizations({
               </thead>
               <tbody>
                 {summary.nodeSummaries.map((item) => (
-                  <tr key={item.id} className="border-t border-[var(--border)]">
-                    <td className="py-3 font-semibold">{item.name}</td>
+                  <tr key={item.id} className="border-t border-[var(--hub-color-border-subtle)] text-[var(--hub-color-text-sub)]">
+                    <td className="px-[var(--hub-space-4)] py-[var(--hub-space-3)] font-medium text-[var(--hub-color-text-heading)]">{item.name}</td>
                     <td>{item.memberCount}名</td>
                     <td>
                       <Progress value={item.achievedRate} />
@@ -133,7 +133,7 @@ export function DashboardVisualizations({
                     <td>{item.levelUps}件</td>
                     <td
                       className={
-                        item.stalePending ? "font-semibold text-amber-800" : ""
+                        item.stalePending ? "font-semibold text-[var(--hub-color-warning-text)]" : ""
                       }
                     >
                       {item.pending}件
@@ -168,7 +168,7 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-[var(--border)] bg-white p-5">
+    <section className="rounded-2xl border border-[var(--border)] bg-[var(--hub-color-surface)] p-5">
       <h2 className="mb-5 text-base font-bold">{title}</h2>
       {children}
     </section>

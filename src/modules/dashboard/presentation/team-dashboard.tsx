@@ -307,13 +307,13 @@ function OneOnOneQuickDialog({ target, onClose, onSuccess }: {
 
 function KpiCard({ href, icon: Icon, label, value, caption, warning = false }: { href: Route; icon: typeof ClipboardCheck; label: string; value: string; caption: string; warning?: boolean }) {
   return (
-    <Link href={href} className={cn("rounded-2xl border bg-[var(--surface)] p-5 transition-colors hover:bg-[var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]", warning ? "border-amber-400 bg-amber-50" : "border-[var(--border)]")}>
+    <Link href={href} className={cn("rounded-2xl border bg-[var(--surface)] p-5 transition-colors hover:bg-[var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]", warning ? "border-[var(--hub-color-warning-border)] bg-[var(--hub-color-warning-bg)]" : "border-[var(--border)]")}>
       <div className="flex items-center justify-between gap-3">
         <span className="text-sm font-medium text-[var(--muted-foreground)]">{label}</span>
-        <span className={cn("grid h-9 w-9 place-items-center rounded-lg", warning ? "bg-amber-100 text-amber-800" : "bg-[var(--primary-subtle)] text-[var(--primary)]")}><Icon className="h-4 w-4" aria-hidden="true" /></span>
+        <span className={cn("grid h-9 w-9 place-items-center rounded-lg", warning ? "bg-[var(--hub-color-warning-bg)] text-[var(--hub-color-warning-text)]" : "bg-[var(--primary-subtle)] text-[var(--primary)]")}><Icon className="h-4 w-4" aria-hidden="true" /></span>
       </div>
       <p className="mt-4 text-2xl font-bold">{value}</p>
-      <p className={cn("mt-1 text-xs", warning ? "font-medium text-amber-800" : "text-[var(--muted-foreground)]")}>{caption}</p>
+      <p className={cn("mt-1 text-xs", warning ? "font-medium text-[var(--hub-color-warning-text)]" : "text-[var(--muted-foreground)]")}>{caption}</p>
     </Link>
   );
 }

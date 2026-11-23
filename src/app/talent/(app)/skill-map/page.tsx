@@ -50,5 +50,5 @@ export default async function SkillMapPage({
   );
 }
 function chip(active: boolean) {
-  return `inline-flex min-h-9 items-center rounded-full border px-3 text-sm font-semibold ${active ? "border-[var(--primary)] bg-[var(--primary)] text-white" : "border-[var(--border)] bg-white"}`;
+  return `inline-flex min-h-9 items-center rounded-full border px-3 text-sm font-semibold ${active ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--hub-color-text-on-primary)]" : "border-[var(--border)] bg-[var(--hub-color-surface)]"}`;
 }

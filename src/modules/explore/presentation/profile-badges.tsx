@@ -81,7 +81,7 @@ function BadgeArt({ badge, size = "small" }: { badge: Badge; hidden?: boolean; s
   // 未獲得のシークレットはサーバーで「？」の絵に差し替え済み
   return (
     <span
-      className={`grid w-fit shrink-0 self-start grid-cols-12 grid-rows-12 rounded-xl border-2 p-2 sm:self-center ${earned ? "" : "border-dashed border-slate-400 bg-slate-100"}`}
+      className={`grid w-fit shrink-0 self-start grid-cols-12 grid-rows-12 rounded-xl border-2 p-2 sm:self-center ${earned ? "" : "border-dashed border-[var(--hub-color-neutral-text)] bg-[var(--hub-color-neutral-bg)]"}`}
       style={earned ? { borderColor: badge.frameColor, backgroundColor: badge.backgroundColor } : undefined}
       aria-hidden="true"
     >

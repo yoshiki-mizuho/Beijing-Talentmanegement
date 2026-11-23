@@ -65,7 +65,7 @@ function DashboardViewSwitch({ current }: { current: DashboardView }) {
             key={item.view}
             href={item.href}
             aria-current={item.view === current ? "page" : undefined}
-            className={`inline-flex h-11 items-center rounded-lg px-4 text-sm ${item.view === current ? "bg-white font-semibold shadow-sm" : "text-[var(--muted-foreground)]"}`}
+            className={`inline-flex h-11 items-center rounded-lg px-4 text-sm ${item.view === current ? "bg-[var(--hub-color-surface)] font-semibold shadow-sm" : "text-[var(--muted-foreground)]"}`}
           >
             {item.label}
           </Link>

@@ -1,4 +1,5 @@
 import type { MemberDashboardViewModel } from "@/modules/dashboard/presentation/member-dashboard-view-model";
+import { chartColors } from "@/shared/ui/chart-colors";
 
 export function GrowthRadarChart({
   values
@@ -25,8 +26,8 @@ export function GrowthRadarChart({
             const point = pointAt(index, values.length, radius * (level / 5), centerX, centerY);
             return `${point.x},${point.y}`;
           }).join(" ")}
-          fill={level === 5 ? "#F8FAFC" : "none"}
-          stroke="#CBD5E1"
+          fill={level === 5 ? chartColors.surfaceSubtle : "none"}
+          stroke={chartColors.border}
           strokeWidth="1"
         />
       ))}
@@ -38,7 +39,7 @@ export function GrowthRadarChart({
           label.x > centerX + 5 ? "start" : label.x < centerX - 5 ? "end" : "middle";
         return (
           <g key={value.id}>
-            <line x1={centerX} y1={centerY} x2={axis.x} y2={axis.y} stroke="#CBD5E1" />
+            <line x1={centerX} y1={centerY} x2={axis.x} y2={axis.y} stroke={chartColors.border} />
             <text x={label.x} y={label.y} textAnchor={anchor} dominantBaseline="middle" className="fill-[var(--muted-foreground)] text-[10px]">
               {truncate(value.name)}
             </text>
@@ -46,8 +47,8 @@ export function GrowthRadarChart({
           </g>
         );
       })}
-      <polygon points={points.map((point) => `${point.x},${point.y}`).join(" ")} fill="#0F766E33" stroke="#0F766E" strokeWidth="2" />
-      {points.map((point, index) => <circle key={values[index]!.id} cx={point.x} cy={point.y} r="3" fill="#0F766E" />)}
+      <polygon points={points.map((point) => `${point.x},${point.y}`).join(" ")} fill="var(--hub-color-primary-100)" stroke={chartColors.primary} strokeWidth="2" />
+      {points.map((point, index) => <circle key={values[index]!.id} cx={point.x} cy={point.y} r="3" fill={chartColors.primary} />)}
     </svg>
   );
 }

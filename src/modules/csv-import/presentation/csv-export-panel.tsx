@@ -101,7 +101,7 @@ function ScopeLink({
       className={cn(
         "inline-flex min-h-9 items-center rounded-full border px-3 text-sm font-medium",
         active
-          ? "border-[var(--primary)] bg-[var(--primary)] text-white"
+          ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--hub-color-text-on-primary)]"
           : "border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-subtle)]",
       )}
     >
