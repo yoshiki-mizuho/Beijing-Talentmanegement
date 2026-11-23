@@ -1,5 +1,4 @@
 # TalentHub の環境共通設定。
-# H-2 で経路を付け替えるまではクラスタへ配らない。
 
 env:
   LOG_LEVEL: info

@@ -155,7 +155,7 @@ erDiagram
 | `Member` | TalentHub 固有データを持つスキル管理対象者 | `platformUserId` は必須かつテナント内で一意。氏名、メール、社員番号、所属、役職、上司、アバターは保存せず基盤から取得する |
 | `SkillCategory` | スキルの分類 | 表示順を持つ |
 | `Skill` | 管理対象スキル | コードは自動採番し、作成後は変更しない。CSVの照合に使う。名前、カテゴリ、大分類は後から変更できる。同一カテゴリ内で名称重複を避け、カテゴリ内の表示順を持つ |
-| `SkillLevel` | 1から5のレベル定義 | 初期値は固定マスタとして扱う |
+| `SkillLevel` | 1から5のレベル定義 | 初期値は固定マスタとして扱う。5段の行は migration（`20261127000000_h7a_seed_skill_levels`）で入れる（クラスタの migrate のジョブは seed を流さないため） |
 | `MemberSkill` | 承認済みのメンバーとスキルの紐付け | `memberId` と `skillId` の組み合わせは一意。manager承認後の値を保持する |
 | `SkillSelfAssessment` | メンバー自身が申告したスキル更新依頼 | `pending`、`approved`、`corrected`、`rejected` の状態を持つ |
 | `Notification` | ユーザーへの業務通知 | 承認依頼、承認結果、差し戻しを通知する |
