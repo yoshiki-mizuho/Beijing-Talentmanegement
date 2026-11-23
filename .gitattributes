@@ -3,3 +3,5 @@
 contract/** text eol=lf
 .claude/skills/hub-*/** text eol=lf
 devkit.version text eol=lf
+# Windows のバッチは CRLF で取り出す（LF だと cmd がラベルや日本語の行を読み違える）
+*.bat text eol=crlf
