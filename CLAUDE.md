@@ -30,6 +30,7 @@ TalentHub は Hub シリーズの製品 `talenthub` として、基盤（共通�
 | ほかの Hub の情報や基盤に無いものが要る、この Hub の口をほかの Hub 向けに出す | `hub-other-hub` |
 | 基盤の契約の版を上げる | `hub-contract-update` |
 | 既存のアプリを Hub に載せ替える（この載せ替えの全体の手順） | `migrate-to-hub` |
+| 運用中に issue をきっかけに直す・issue を起票する（フェーズ H の後から） | `issue-flow` |
 
 ## この Hub の決まり
 
