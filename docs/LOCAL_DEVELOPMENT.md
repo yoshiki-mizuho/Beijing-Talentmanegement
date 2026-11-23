@@ -106,11 +106,12 @@ DBの状態が壊れた場合は、`MIGRATE_DATABASE_URL` に migration 用 URL 
 
 | ファイル | すること |
 |---|---|
-| `scripts\devkit-start.bat` | PostgreSQL が動いているかを見て、TalentHub（`npm.cmd run dev`）と devkit をそれぞれのウィンドウで起動し、準備ができたらブラウザで `http://localhost:8000/login` を開く。`prod` を付けると本番ビルド（build してから `next start`）。devkit が無ければ、確かめてから下の 2 のとおりに作る |
+| `scripts\devkit-start.bat` | PostgreSQL が動いているかを見て、TalentHub を本番ビルド（build してから `next start`。3〜4 分かかる）で、devkit とそれぞれのウィンドウで起動し、準備ができたらブラウザで `http://localhost:8000/login` を開く。`dev` を付けると開発モード（`npm.cmd run dev`）。devkit が無ければ、確かめてから下の 2 のとおりに作る |
 | `scripts\devkit-jobs.bat` | 予約した AI の処理を 1 回流す（`npm.cmd run jobs:ai`。偽の LLM が決まった答えを返す） |
 | `scripts\devkit-stop.bat` | ポート 3000 と 8000 で待ち受けているプロセスを止める |
 
 - devkit は、リポジトリの隣の `..\hub-platform`（契約の版のタグ `hub-contract/v0.20.0` に切り替えたもの）の `devkit\hub-devkit.exe` を使う。契約の版を上げたら、タグを切り替えて作り直し、`devkit-start.bat` の `CONTRACT_TAG` も直す。
+- 開発モードを devkit 越しに開くと、どの画面も約 1 秒ごとに読み込み直しを繰り返す。devkit の入口が、Next.js の自動更新の接続（WebSocket、`/talent/_next/hmr`）を中継しないため。画面の確認は本番ビルドで行う（2026-11-23 確認）。
 - 画面は必ず `localhost:8000` から開く。`localhost:3000` を直接開くと、入口が付けるログインの情報が届かない。
 - `.bat` は Shift_JIS・CRLF で保存する（UTF-8 だと cmd が日本語の行を読み違える）。
 
