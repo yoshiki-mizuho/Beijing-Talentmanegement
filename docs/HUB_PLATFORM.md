@@ -13,7 +13,7 @@ TalentHub は、Hub シリーズの製品 `talenthub` として、社内サー�
 | TalentHub | `deploy/values.yaml`・`values-dev.yaml`・`values-prod.yaml` | 配布の設定。書ける項目は `contract/deploy-values.md` |
 | TalentHub | `Dockerfile`（画面と API の `web`）、`Dockerfile.migrate`（`prisma migrate deploy` を流す `migrate`）、`Dockerfile.job`（AI の予約を処理する `job`） | 基盤の CI はビルドの段（target）を選べないので、イメージごとにファイルを分ける |
 | TalentHub | `dev/devkit.yaml`（Docker 版）、`dev/devkit.local.yaml`（Docker なし）、`docker-compose.yml` | 手元の devkit の設定 |
-| TalentHub（基盤へ写す） | `deploy/platform/talenthub-dev.yaml`・`talenthub-prod.yaml` | 基盤のリポジトリの一覧ファイル（`deploy/applications/hubs/`）の下書き。H-7 で基盤への MR に写す。このリポジトリでは使わない |
+| TalentHub（基盤へ写す） | `deploy/platform/talenthub-dev.yaml`・`talenthub-prod.yaml` | 基盤のリポジトリの一覧ファイル（`deploy/applications/hubs/`）の下書き。このリポジトリでは使わない。dev は hub-platform!56 で出した。経路を変えるときは、基盤のリポジトリの方を MR で直す |
 
 ## サービスと経路
 
@@ -50,12 +50,21 @@ AI の予約は `cronJobs.talenthub-ai-jobs` が 5 分ごとに `job` イメー�
 
 | 変数 | 意味 |
 |---|---|
-| `HUB_DEPLOY_ENABLED` | `true` にすると、`main`・`production` のパイプラインでイメージを作り、タグを書き換える。載せ替えが終わり、基盤への登録（H-7）が済むまでは設定しない |
+| `HUB_DEPLOY_ENABLED` | `true` にすると、`main`・`production` のパイプラインでイメージを作り、タグを書き換える。2026-11-23 に設定済み（保護あり） |
 | `HUB_BUILD_CHECK` | `true` を付けて手動のパイプライン（web）を動かすと、イメージの作成だけを確かめる（タグは書き換えない） |
 
 どちらも無いときは、MR の検証（verify）とデモ DB の作業だけが今までどおり動く。
 
-タグの書き換えには、リポジトリの「設定 → CI/CD → ジョブトークンの権限」で「ジョブトークンでの Git push を許可」を有効にしておく（`HUB_DEPLOY_ENABLED` を入れる前に、人が 1 回だけ行う）。
+タグの書き換えには、リポジトリの「設定 → CI/CD → ジョブトークンの権限」で「ジョブトークンでの Git push を許可」を有効にしておく（2026-11-23 に設定済み）。
+
+イメージの作成は `main` と `production` でだけ動き、MR の CI では流れない。Dockerfile・`.dockerignore`・依存を変える MR は、merge 後の `main` の CI で `build:*` と `deploy:dev` が通ったことを確かめる。`job` イメージは `NODE_ENV=production` で `npm ci` するため、起動に要るもの（`tsx` など）は `dependencies` に置く。
+
+## dev で確かめる
+
+- 画面は `https://<dev の入口>/talent`。基盤のログインを通る。`/talent/health` は認証なしで応答する。
+- アプリ・`migrate` のジョブ・定期実行の状態とログは、ArgoCD の `talenthub-dev` で見る。
+- 最初はスキルとロールが空。ADMIN が CSV の画面から取り込む（スキル → 書き出し → ロールの 2 段階。スキルのコードは TalentHub が振る）。
+- `SkillLevel`（Lv1〜5）は migration で入る。seed はクラスタでは流さない（デモの架空のデータが入るため）。
 
 ## 契約の版を上げる
 
