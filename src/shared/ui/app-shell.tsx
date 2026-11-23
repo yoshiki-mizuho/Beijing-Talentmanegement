@@ -491,13 +491,14 @@ function getContentWidth(pathname: string) {
       "/talent/ai-usage",
       "/talent/skill-sheet-templates",
       "/talent/members",
-      "/talent/skill-map"
+      "/talent/skill-map",
+      "/talent/skill-approvals"
     ].some((href) => isSameOrNestedPath(pathname, href))
   ) {
     return "max-w-[var(--hub-content-max-wide)]";
   }
   if (
-    ["/talent/my/skills", "/talent/proposal-sheets"].some((href) =>
+    ["/talent/my/skills", "/talent/proposal-sheets", "/talent/people"].some((href) =>
       isSameOrNestedPath(pathname, href)
     )
   ) {
