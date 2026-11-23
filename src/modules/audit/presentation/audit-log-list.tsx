@@ -5,7 +5,6 @@ import type { AuditLogListItem } from "../application/audit-log-service";
 import { MemberAvatar } from "@/shared/ui/member-avatar";
 import { displayMemberName } from "@/modules/members/domain/member-display";
 import { EmptyState } from "@/shared/ui/empty-state";
-import { cn } from "@/shared/lib/utils";
 import { Pagination } from "@/shared/ui/pagination";
 
 const dateHeading = new Intl.DateTimeFormat("ja-JP", {
@@ -109,21 +108,14 @@ function AuditRow({ item }: { item: AuditLogListItem }) {
           ) : (
             <strong>{item.description.target}</strong>
           )}
-          {item.description.suffix}{" "}
-          <span
-            className={cn(
-              "inline-flex rounded-full px-2 py-0.5 text-xs font-semibold",
-              operationPill(item.operation),
-            )}
-          >
-            {item.operationLabel}
-          </span>
+          {item.description.suffix}
         </div>
         <p className="col-start-3 break-words text-sm text-[var(--muted-foreground)] md:col-start-4 md:text-right">
           {item.summary}
         </p>
       </summary>
       <div className="border-t border-[var(--border)] bg-[var(--surface-subtle)] px-4 py-4">
+        <p className="mb-2 text-sm">操作：{item.operationLabel}</p>
         <table className="w-full table-fixed text-sm">
           <thead>
             <tr className="text-left">
@@ -189,22 +181,4 @@ function DiffCells({ row }: { row: AuditLogListItem["diffRows"][number] }) {
       <td className="break-words py-2 font-semibold">{row.after}</td>
     </>
   );
-}
-
-function operationPill(operation: AuditLogListItem["operation"]) {
-  switch (operation) {
-    case "create":
-      return "bg-[var(--hub-color-success-bg)] text-[var(--hub-color-success-text)]";
-    case "update":
-      return "bg-[var(--hub-color-info-bg)] text-[var(--hub-color-info-text)]";
-    case "deactivate":
-    case "delete":
-      return "bg-[var(--hub-color-danger-bg)] text-[var(--hub-color-danger-text)]";
-    case "reject":
-      return "bg-[var(--hub-color-warning-bg)] text-[var(--hub-color-warning-text)]";
-    case "export":
-      return "bg-[var(--surface-subtle)] text-[var(--foreground)]";
-    default:
-      return "bg-[var(--primary-subtle)] text-[var(--primary)]";
-  }
 }

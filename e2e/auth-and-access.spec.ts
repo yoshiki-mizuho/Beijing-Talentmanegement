@@ -17,7 +17,7 @@ for (const { role, label } of roles) {
     const { context, page } = await openLoggedInContext(browser, credentials[role]);
 
     try {
-      // 見出しの文言はロールで異なる（MEMBER は「おかえりなさい、…さん」）ため、ページの主見出しの表示を確認する。
+      // 見出しの文言はロールで異なるため、ページの主見出しの表示を確認する。
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     } finally {
       await context.close();

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import { badgePalette } from "@/modules/growth/domain/badge-art";
+import { badgePalette, unearnedBadgeColor } from "@/modules/growth/domain/badge-art";
 import type { MemberDashboardViewModel } from "@/modules/dashboard/presentation/member-dashboard-view-model";
 
 type DashboardBadge = MemberDashboardViewModel["badges"][number];
@@ -75,7 +75,7 @@ function BadgeItem({ badge }: { badge: DashboardBadge }) {
                       ? "transparent"
                       : earned
                         ? badgePalette[pixel]
-                        : "#94A3B8"
+                        : unearnedBadgeColor
                 }}
               />
             ))

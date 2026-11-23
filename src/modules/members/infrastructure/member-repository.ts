@@ -761,7 +761,7 @@ async function reviewSkillAssessmentInTransaction(
           : NotificationType.SKILL_ASSESSMENT_REJECTED;
 
     const resultBody = reviewStatus === SkillSelfAssessmentStatus.APPROVED
-      ? `${assessment.skill.name} Lv.${assessment.requestedLevel} の申請が承認されました。`
+      ? `${assessment.skill.name} Lv${assessment.requestedLevel} の申請が承認されました。`
       : reviewStatus === SkillSelfAssessmentStatus.CORRECTED
         ? `${assessment.skill.name} の申請が Lv${approvedLevel} に補正して承認されました。`
         : input.managerComment

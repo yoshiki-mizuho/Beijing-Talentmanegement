@@ -54,7 +54,7 @@ export function TeamDashboard({
       <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
         <EmptyState
           icon={UsersRound}
-          title="部下が登録されていません"
+          title="担当のメンバーが登録されていません"
           description="上司の設定は ADMIN がメンバー詳細から行えます。"
         />
       </section>
@@ -72,7 +72,7 @@ export function TeamDashboard({
           <div>
             <h1 className="text-[26px] font-bold tracking-tight">チームの成長</h1>
             <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-              {viewModel.manager.nodeName}・部下 {viewModel.memberCount}名
+              {viewModel.manager.nodeName}・メンバー {viewModel.memberCount}名
             </p>
             <p className="mt-3 text-sm text-[var(--foreground)]">{viewModel.encouragement}</p>
           </div>
@@ -135,7 +135,7 @@ export function TeamDashboard({
       </section>
 
       <div className="grid gap-5 lg:grid-cols-2">
-        <TeamSection icon={UserRoundCheck} id="almost-heading" title="あと一歩のメンバー" description="目標ロールの必須要件が、あと1件でそろうメンバーです。">
+        <TeamSection icon={UserRoundCheck} id="almost-heading" title="あと一歩のメンバー" description={viewModel.almostThere.length > 0 ? "目標ロールの必須要件が、あと1件でそろうメンバーです。" : undefined}>
           {viewModel.almostThere.length > 0 ? (
             <ul className="divide-y divide-[var(--border)] border-t border-[var(--border)]">
               {viewModel.almostThere.map((item) => (
@@ -165,11 +165,11 @@ export function TeamDashboard({
               ))}
             </ul>
           ) : (
-            <EmptyState icon={UserRoundCheck} title="あと一歩のメンバーはいません" description="目標に近づいたメンバーが見つかると、ここに表示します。" />
+            <p className="border-t border-[var(--border)] px-5 py-4 text-sm text-[var(--muted-foreground)]">該当するメンバーはいません。</p>
           )}
         </TeamSection>
 
-        <TeamSection icon={CalendarClock} id="inactive-heading" title="しばらく申請のない部下" description="申請もレベルの変化も60日以上ないメンバーです。">
+        <TeamSection icon={CalendarClock} id="inactive-heading" title="しばらく申請のないメンバー" description={viewModel.inactiveMembers.length > 0 ? "申請もレベルの変化も60日以上ないメンバーです。" : undefined}>
           {viewModel.inactiveMembers.length > 0 ? (
             <ul className="divide-y divide-[var(--border)] border-t border-[var(--border)]">
               {viewModel.inactiveMembers.map((item) => (
@@ -197,7 +197,7 @@ export function TeamDashboard({
               ))}
             </ul>
           ) : (
-            <EmptyState icon={CalendarClock} title="長く更新のないメンバーはいません" description="チームの成長が継続して記録されています。" />
+            <p className="border-t border-[var(--border)] px-5 py-4 text-sm text-[var(--muted-foreground)]">該当するメンバーはいません。</p>
           )}
         </TeamSection>
       </div>
@@ -217,7 +217,7 @@ export function TeamDashboard({
           ) : null}
         </section>
 
-        <TeamSection icon={Target} id="missing-heading" title="チームで不足しているスキル" description="部下の目標ロールに必要なスキルを、未達の人数で集計しています。">
+        <TeamSection icon={Target} id="missing-heading" title="チームで不足しているスキル" description={viewModel.missingSkills.length > 0 ? "メンバーの目標ロールに必要なスキルを、未達の人数で集計しています。" : undefined}>
         {viewModel.missingSkills.length > 0 ? (
           <div className="border-t border-[var(--border)] p-5">
             <ul className="space-y-4">
@@ -238,7 +238,7 @@ export function TeamDashboard({
             </p>
           </div>
         ) : (
-          <EmptyState icon={Target} title="不足している必須スキルはありません" description="設定済みの目標ロールに向けた必須要件を、チーム全員が満たしています。" />
+          <p className="border-t border-[var(--border)] px-5 py-4 text-sm text-[var(--muted-foreground)]">不足している必須スキルはありません。</p>
         )}
         </TeamSection>
       </div>
@@ -318,7 +318,7 @@ function KpiCard({ href, icon: Icon, label, value, caption, warning = false }: {
   );
 }
 
-function TeamSection({ icon, id, title, description, children }: { icon: typeof ClipboardCheck; id: string; title: string; description: string; children: React.ReactNode }) {
+function TeamSection({ icon, id, title, description, children }: { icon: typeof ClipboardCheck; id: string; title: string; description?: string; children: React.ReactNode }) {
   return (
     <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]" aria-labelledby={id}>
       <SectionHeader icon={icon} id={id} title={title} description={description} />
@@ -327,11 +327,11 @@ function TeamSection({ icon, id, title, description, children }: { icon: typeof 
   );
 }
 
-function SectionHeader({ icon: Icon, id, title, description }: { icon: typeof ClipboardCheck; id: string; title: string; description: string }) {
+function SectionHeader({ icon: Icon, id, title, description }: { icon: typeof ClipboardCheck; id: string; title: string; description?: string }) {
   return (
     <div className="flex items-start gap-3 p-5">
       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[var(--primary-subtle)] text-[var(--primary)]"><Icon className="h-4 w-4" aria-hidden="true" /></span>
-      <div><h2 id={id} className="text-sm font-semibold">{title}</h2><p className="mt-1 text-xs leading-5 text-[var(--muted-foreground)]">{description}</p></div>
+      <div><h2 id={id} className="text-sm font-semibold">{title}</h2>{description ? <p className="mt-1 text-xs leading-5 text-[var(--muted-foreground)]">{description}</p> : null}</div>
     </div>
   );
 }

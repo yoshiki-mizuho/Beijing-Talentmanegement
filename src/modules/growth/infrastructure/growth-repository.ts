@@ -43,7 +43,7 @@ export function addLevelUpReaction(input: LevelUpReactionInput) {
       });
     const data = {
       title: "レベルアップにリアクションが届きました",
-      body: `${levelChange.skill.name} Lv.${levelChange.toLevel} へのリアクションを確認しましょう。`,
+      body: `${levelChange.skill.name} Lv${levelChange.toLevel} へのリアクションを確認しましょう。`,
       status: "UNREAD" as const,
       readAt: null,
       createdAt: new Date()
@@ -106,7 +106,7 @@ export function createLevelUpComment(input: LevelUpCommentInput) {
           type: NotificationType.LEVEL_UP_COMMENTED,
           skillLevelChangeId: levelChange.id,
           title: "レベルアップにコメントが届きました",
-          body: `${levelChange.skill.name} Lv.${levelChange.toLevel} へのコメントを確認しましょう。`
+          body: `${levelChange.skill.name} Lv${levelChange.toLevel} へのコメントを確認しましょう。`
         }
       });
     } else {

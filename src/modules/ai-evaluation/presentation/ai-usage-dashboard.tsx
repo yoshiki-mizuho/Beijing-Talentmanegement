@@ -9,6 +9,9 @@ import { Metric } from "@/shared/ui/metric";
 type Summary = Awaited<ReturnType<typeof getAiUsageSummary>>;
 
 export function AiUsageDashboard({ summary }: { summary: Summary }) {
+  const activeDays = summary.days.filter((day) =>
+    day.SUCCEEDED + day.FAILED + day.QUEUED + day.RUNNING + day.GROWTH_HINT + day.PROPOSAL_SHEET + day.SKILL_PREREQUISITE > 0
+  );
   const totals = summary.days.reduce((result, day) => ({
     succeeded: result.succeeded + day.SUCCEEDED,
     failed: result.failed + day.FAILED,
@@ -31,12 +34,12 @@ export function AiUsageDashboard({ summary }: { summary: Summary }) {
         </div>
       </ChartPanel>
       <ChartPanel title="日ごとの作成回数（直近30日）">
-        <div className="overflow-x-auto">
+        {activeDays.length > 0 ? <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] text-sm">
             <thead><tr className="border-b text-left text-[var(--muted-foreground)]"><th className="p-2">日</th><th className="p-2">成功</th><th className="p-2">失敗</th><th className="p-2">待ち</th><th className="p-2">実行中</th><th className="p-2">育成</th><th className="p-2">提案</th><th className="p-2">前提</th></tr></thead>
-            <tbody>{summary.days.map((day) => <tr key={day.date.toISOString()} className="border-b"><td className="p-2">{formatDate(day.date)}</td><td className="p-2">{day.SUCCEEDED}</td><td className="p-2">{day.FAILED}</td><td className="p-2">{day.QUEUED}</td><td className="p-2">{day.RUNNING}</td><td className="p-2">{day.GROWTH_HINT}</td><td className="p-2">{day.PROPOSAL_SHEET}</td><td className="p-2">{day.SKILL_PREREQUISITE}</td></tr>)}</tbody>
+            <tbody>{activeDays.map((day) => <tr key={day.date.toISOString()} className="border-b"><td className="p-2">{formatDate(day.date)}</td><td className="p-2">{day.SUCCEEDED}</td><td className="p-2">{day.FAILED}</td><td className="p-2">{day.QUEUED}</td><td className="p-2">{day.RUNNING}</td><td className="p-2">{day.GROWTH_HINT}</td><td className="p-2">{day.PROPOSAL_SHEET}</td><td className="p-2">{day.SKILL_PREREQUISITE}</td></tr>)}</tbody>
           </table>
-        </div>
+        </div> : <p className="text-sm text-[var(--muted-foreground)]">直近30日の利用はありません。</p>}
       </ChartPanel>
       <ChartPanel title="最近の失敗">
         {summary.recentFailures.length === 0 ? <EmptyState icon={Gauge} title="失敗はありません" /> : (

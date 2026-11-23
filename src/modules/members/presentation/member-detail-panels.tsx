@@ -275,7 +275,7 @@ function EditableSkillRow({
           </p>
         </div>
         {pendingLevel ? <Badge>Lv{pendingLevel} を申請中</Badge> : null}
-        <Badge variant="primary">Lv.{memberSkill.level}</Badge>
+        <Badge variant="primary">Lv{memberSkill.level}</Badge>
         <Button type="button" variant="ghost" onClick={() => setEditing(true)}>
           訂正
         </Button>
