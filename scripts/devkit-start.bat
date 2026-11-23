@@ -1,7 +1,8 @@
 @echo off
 rem TalentHub を hub-devkit（開発用の入口と偽の基盤）の後ろで起動する。Docker を使わない手元向け。
-rem 使い方: scripts\devkit-start.bat         開発モード（npm run dev。コードの変更がすぐ反映される）
-rem         scripts\devkit-start.bat prod    本番ビルド（build してから next start）
+rem 使い方: scripts\devkit-start.bat         本番ビルド（build してから next start。画面の確認はこちら）
+rem         scripts\devkit-start.bat dev     開発モード（npm run dev。devkit が自動更新の接続を中継しないため、
+rem                                           devkit 越しでは画面が読み込み直しを繰り返す。localhost:3000 だけで見るとき用）
 rem 止めるときは scripts\devkit-stop.bat
 rem このファイルは Shift_JIS で保存する（cmd は UTF-8 の日本語の行を読み違えることがある）。
 setlocal
@@ -47,16 +48,16 @@ set "DEVKIT_HUB_PATH_PREFIX=talent"
 set "DEVKIT_CONFIG=%ROOT%\dev\devkit.local.yaml"
 
 rem 5. TalentHub と devkit を、それぞれのウィンドウで起動する
-if /i "%~1"=="prod" (
-  echo TalentHub を本番ビルドで起動します（build に 1 分ほどかかります）。
-  start "TalentHub" /D "%ROOT%" cmd /k "npm.cmd run build && node --env-file=.env node_modules\next\dist\bin\next start"
-) else (
-  echo TalentHub を開発モードで起動します。
+if /i "%~1"=="dev" (
+  echo TalentHub を開発モードで起動します。devkit 越しでは画面が読み込み直しを繰り返します。
   start "TalentHub" /D "%ROOT%" cmd /k "npm.cmd run dev"
+) else (
+  echo TalentHub を本番ビルドで起動します（build に 3 分ほどかかります）。
+  start "TalentHub" /D "%ROOT%" cmd /k "npm.cmd run build && node --env-file=.env node_modules\next\dist\bin\next start"
 )
 start "hub-devkit" /D "%PLATFORM_DIR%\devkit" cmd /k ""%DEVKIT_EXE%""
 
-rem 6. 応答するまで待ってからブラウザで開く（最大 3 分）
+rem 6. 応答するまで待ってからブラウザで開く（最大 7 分。本番ビルドは build に 3～4 分かかる）
 echo 起動を待っています...
 set /a WAITED=0
 :wait
@@ -67,8 +68,8 @@ curl -s -o nul http://localhost:8000/login || goto :wait_next
 curl -s -o nul http://localhost:3000/talent/health || goto :wait_next
 goto :ready
 :wait_next
-if %WAITED% geq 180 (
-  echo [エラー] 3 分たっても起動しませんでした。TalentHub と hub-devkit のウィンドウのメッセージを確かめてください。
+if %WAITED% geq 420 (
+  echo [エラー] 7 分たっても起動しませんでした。TalentHub と hub-devkit のウィンドウのメッセージを確かめてください。
   goto :fail
 )
 goto :wait
