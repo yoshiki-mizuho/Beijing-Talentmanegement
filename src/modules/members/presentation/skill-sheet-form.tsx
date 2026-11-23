@@ -34,7 +34,6 @@ const filters: Array<{ value: SkillSheetFilter; label: string }> = [
   { value: "all", label: "すべて" },
   { value: "new", label: "新着" },
   { value: "target", label: "目標ロールに必要" },
-  { value: "stale", label: "しばらく申請なし" },
   { value: "unowned", label: "未登録" },
   { value: "changed", label: "変更あり" }
 ];
@@ -364,49 +363,7 @@ export function SkillSheetForm({
         </div>
       ) : null}
 
-      {showAllSkills ? <div
-        className={cn(
-          "grid gap-4 md:items-end",
-          groupOptions.length > 0
-            ? "md:grid-cols-[minmax(240px,1fr)_auto]"
-            : "md:grid-cols-[minmax(240px,1fr)_minmax(180px,0.6fr)_auto]"
-        )}
-      >
-        <div>
-          <label htmlFor="skill-sheet-search" className="sr-only">
-            スキルを検索
-          </label>
-          <div className="relative">
-            <Search
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]"
-              aria-hidden="true"
-            />
-            <Input
-              id="skill-sheet-search"
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="スキルを検索"
-              className="w-full pl-9"
-            />
-          </div>
-        </div>
-
-        {groupOptions.length === 0 ? (
-          <SelectField
-            id="skill-sheet-category"
-            label="カテゴリ"
-            labelClassName="sr-only"
-            value={categoryId}
-            onChange={(event) => setCategoryId(event.target.value)}
-          >
-            <option value="all">すべてのカテゴリ</option>
-            {categoryOptions.map((category) => (
-              <option key={category.id} value={category.id}>{category.name}</option>
-            ))}
-          </SelectField>
-        ) : null}
-
+      {showAllSkills ? <div className="space-y-4">
         <div>
           <span className="sr-only">
             表示するスキル
@@ -437,6 +394,46 @@ export function SkillSheetForm({
               );
             })}
           </div>
+        </div>
+        <div className={cn(
+          "grid gap-4 md:items-end",
+          groupOptions.length === 0 &&
+            "md:grid-cols-[minmax(240px,1fr)_minmax(180px,0.6fr)]"
+        )}>
+          <div>
+            <label htmlFor="skill-sheet-search" className="sr-only">
+              スキルを検索
+            </label>
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]"
+                aria-hidden="true"
+              />
+              <Input
+                id="skill-sheet-search"
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="スキルを検索"
+                className="w-full pl-9"
+              />
+            </div>
+          </div>
+
+          {groupOptions.length === 0 ? (
+            <SelectField
+              id="skill-sheet-category"
+              label="カテゴリ"
+              labelClassName="sr-only"
+              value={categoryId}
+              onChange={(event) => setCategoryId(event.target.value)}
+            >
+              <option value="all">すべてのカテゴリ</option>
+              {categoryOptions.map((category) => (
+                <option key={category.id} value={category.id}>{category.name}</option>
+              ))}
+            </SelectField>
+          ) : null}
         </div>
       </div> : null}
 

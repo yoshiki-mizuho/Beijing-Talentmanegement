@@ -11,7 +11,7 @@ export function ProfileVisibility({ isPublic }: { isPublic: boolean }) {
       <button
         type="submit"
         role="switch"
-        aria-label="プロフィールを公開"
+        aria-label="マイスキルを公開"
         aria-checked={isPublic}
         className="inline-flex h-11 items-center gap-2 rounded-full border border-[var(--border)] px-3 hover:bg-[var(--surface-subtle)] focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
       >

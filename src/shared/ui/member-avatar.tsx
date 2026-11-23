@@ -118,7 +118,7 @@ export function MemberAvatar({
   return (
     <Link
       href={href as Route}
-      aria-label={`${name}さんのプロフィールを見る`}
+      aria-label={`${name}さんのスキルを見る`}
       className="shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2"
     >
       {avatar}

@@ -16,12 +16,12 @@ export function SkillProfileHeader({
   isOwner: boolean;
 }) {
   const stats = [
-    [`${profile.stats.daysSinceJoined}日`, "TalentHub を始めて"],
-    [`${profile.stats.levelUpCount}回`, "これまでのレベルアップ"],
-    [`${profile.achievedRoles.length}つ`, "達成したロール"],
-    [String(profile.stats.encouragementCount), "受け取った応援・リアクション"],
-    [`${profile.stats.mentoredCount}人`, "から「教えてもらえそうな人」に"],
-    [`バッジ ${profile.badges.filter((badge) => badge.earnedAt).length}`, "獲得したバッジ"],
+    [`${profile.stats.daysSinceJoined}日`, "TalentHubを始めて"],
+    [`${profile.stats.levelUpCount}回`, "レベルアップ"],
+    [`${profile.achievedRoles.length}個`, "保有ロール"],
+    [String(profile.stats.encouragementCount), "応援・リアクション"],
+    [`${profile.stats.mentoredCount}人`, "頼られた人数"],
+    [String(profile.badges.filter((badge) => badge.earnedAt).length), "獲得バッジ"],
   ];
 
   return (
@@ -74,13 +74,13 @@ export function SkillProfileHeader({
               </div>
             ) : null}
           </div>
-          <div className="flex flex-wrap gap-x-7 gap-y-4 border-t border-[var(--border)] pt-4 md:col-span-3">
+          <div className="grid grid-cols-2 gap-4 border-t border-[var(--border)] pt-4 sm:grid-cols-3 md:col-span-3 lg:grid-cols-6">
             {stats.map(([value, label]) => (
-              <div key={label} className="min-w-24">
-                <strong className="block text-[22px] font-black text-[var(--primary)]">
+              <div key={label} className="min-w-0">
+                <strong className="block text-[length:var(--hub-text-xl)] font-black text-[var(--hub-color-primary)]">
                   {value}
                 </strong>
-                <span className="text-xs text-[var(--muted-foreground)]">
+                <span className="text-[length:var(--hub-text-xs)] text-[var(--hub-color-text-muted)]">
                   {label}
                 </span>
               </div>

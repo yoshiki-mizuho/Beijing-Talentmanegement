@@ -18,7 +18,7 @@ export async function setProfileVisibilityAction(formData: FormData) {
       revalidatePath("/talent/explore");
       return isPublic;
     },
-    (isPublic) => (isPublic ? "プロフィールを公開しました。" : "プロフィールを非公開にしました。")
+    (isPublic) => (isPublic ? "マイスキルを公開しました。" : "マイスキルを非公開にしました。")
   );
 }
 
@@ -30,5 +30,5 @@ export async function updateMyProfileAction(formData: FormData) {
       consultTopics: formData.getAll("consultTopics").map(String)
     });
     revalidatePath(`/talent/people/${session.user.memberId}`);
-  }, "プロフィールを更新しました");
+  }, "マイスキルを更新しました");
 }

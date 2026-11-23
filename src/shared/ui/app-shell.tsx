@@ -300,7 +300,7 @@ function AccountMenu({ user }: { user: AppShellProps["user"] }) {
           className="mt-1 flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium hover:bg-[var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
         >
           <Sparkles className="h-4 w-4 text-[var(--muted-foreground)]" aria-hidden="true" />
-          スキルプロフィール
+          マイスキル
         </Link>
         <SignOutButton className="h-11 w-full justify-start px-2" />
       </div>

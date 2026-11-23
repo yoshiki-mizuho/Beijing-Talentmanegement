@@ -52,12 +52,12 @@ export function ProfileEditor({ profile, compact = false }: { profile: Profile; 
     <>
       <Button variant="secondary" className={compact ? "w-full" : undefined} onClick={() => setOpen(true)}>
         <Pencil className="h-4 w-4" aria-hidden="true" />
-        プロフィールを編集
+        マイスキルを編集
       </Button>
       <Dialog
         open={open}
         onClose={close}
-        title="プロフィールを編集"
+        title="マイスキルを編集"
         className="max-w-2xl"
         footer={
           <>

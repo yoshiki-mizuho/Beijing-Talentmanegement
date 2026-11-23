@@ -106,7 +106,7 @@ export function MemberDetailModal({
             className="inline-flex h-8 items-center gap-2 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-sm font-semibold text-[var(--foreground)] hover:bg-[var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
           >
             <UserRound className="h-4 w-4" aria-hidden="true" />
-            <span className="hidden sm:inline">プロフィールを見る</span>
+            <span className="hidden sm:inline">スキルを見る</span>
           </Link>
         </div>
       )}

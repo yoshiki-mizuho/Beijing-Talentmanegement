@@ -117,7 +117,7 @@ test.describe("UI check", () => {
     await capture(page, "MANAGER", "member-growth-hint");
     await page.getByRole("tab", { name: "1on1 メモ" }).click();
     await capture(page, "MANAGER", "member-one-on-one");
-    await page.getByRole("link", { name: "プロフィールを見る", exact: true }).click();
+    await page.getByRole("link", { name: "スキルを見る", exact: true }).click();
     await page.waitForURL("**/talent/people/**");
     await capture(page, "MANAGER", "subordinate-profile");
     await page.getByRole("link", { name: "経歴・資格", exact: true }).click();
@@ -158,7 +158,7 @@ test.describe("UI check", () => {
     await page.waitForURL(/level=3/);
     await capture(page, "MEMBER", "explore-results");
     await page.getByLabel("アカウントメニューを開く").click();
-    await page.getByRole("link", { name: "スキルプロフィール" }).click();
+    await page.getByRole("banner").getByRole("link", { name: "マイスキル" }).click();
     await page.waitForURL("**/talent/people/**");
     await capture(page, "MEMBER", "skill-profile");
     // アイコン画像を登録した状態を撮り、最後に削除して元に戻す（1×1 の PNG を 256px に拡大した単色の画像になる）

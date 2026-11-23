@@ -1,4 +1,4 @@
-import { Award, CalendarDays, Check, Clock, Heart, History, MessageCircle, PartyPopper, Radar, Sparkles, Target, Users } from "lucide-react";
+import { Award, CalendarDays, Check, Heart, History, MessageCircle, PartyPopper, Radar, Sparkles, Target, Users } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 
@@ -37,7 +37,6 @@ export function MemberDashboard({
   skillReminders: {
     newSkillCount: number;
     newSkills: Array<{ id: string; name: string }>;
-    staleSkills: Array<{ id: string; name: string; level: number; monthsAgo: number }>;
   };
   monthlyRecap: NonNullable<Awaited<ReturnType<typeof getMonthlyRecap>>>["recap"] | null;
   teamGoal: TeamGoalCardData | null;
@@ -132,7 +131,7 @@ export function MemberDashboard({
 
       {teamGoal ? <MemberTeamGoalCard goal={teamGoal} /> : null}
 
-      {skillReminders.newSkills.length > 0 || skillReminders.staleSkills.length > 0 ? (
+      {skillReminders.newSkills.length > 0 || viewModel.cheers.length > 0 ? (
         <div className="grid gap-5 lg:grid-cols-2">
           {skillReminders.newSkills.length > 0 ? (
             <DashboardCard
@@ -152,57 +151,38 @@ export function MemberDashboard({
               <DashboardLink href="/talent/my/skills?filter=new" />
             </DashboardCard>
           ) : null}
-          {skillReminders.staleSkills.length > 0 ? (
-            <DashboardCard
-              id="stale-skills-heading"
-              icon={Clock}
-              title="見直してみませんか"
-              description=""
-            >
-              <ul className="divide-y divide-[var(--border)]">
-                {skillReminders.staleSkills.map((skill) => (
-                  <li key={skill.id} className="flex items-center justify-between gap-3 py-2 text-sm">
-                    <span className="font-semibold">{skill.name} Lv{skill.level}</span>
-                    <span className="text-xs text-[var(--muted-foreground)]">{skill.monthsAgo}か月前</span>
+          {viewModel.cheers.length > 0 ? (
+            <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]" aria-labelledby="cheers-heading">
+              <div className="p-5"><SectionHeading id="cheers-heading" icon={Heart} title="応援が届いています" /></div>
+              <ul className="divide-y divide-[var(--border)] border-t border-[var(--border)] px-5">
+                {viewModel.cheers.map((cheer) => (
+                  <li key={cheer.id} className="flex gap-3 py-4">
+                    <MemberAvatar
+                      memberId={cheer.senderId}
+                      name={cheer.senderName}
+                      avatarUrl={cheer.senderAvatarUrl}
+                      avatarColor={cheer.senderAvatarColor}
+                      href={`/talent/people/${cheer.senderId}` as Route}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-baseline justify-between gap-2">
+                        <p className="text-sm font-semibold">{cheer.senderName}さんが応援しています</p>
+                        <time className="text-xs text-[var(--muted-foreground)]">{formatShortDate(cheer.createdAt)}</time>
+                      </div>
+                      <p className="mt-2 whitespace-pre-wrap text-sm leading-6">{cheer.message}</p>
+                      {cheer.mentor ? (
+                        <p className="mt-2 text-xs font-medium text-[var(--primary)]">
+                          {cheer.mentor.name}さん（{cheer.mentor.skillName} Lv
+                          {cheer.mentor.level ?? "-"}）に相談してみよう
+                        </p>
+                      ) : null}
+                    </div>
                   </li>
                 ))}
               </ul>
-              <DashboardLink href="/talent/my/skills?filter=stale" />
-            </DashboardCard>
+            </section>
           ) : null}
         </div>
-      ) : null}
-
-      {viewModel.cheers.length > 0 ? (
-        <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]" aria-labelledby="cheers-heading">
-          <div className="p-5"><SectionHeading id="cheers-heading" icon={Heart} title="応援が届いています" /></div>
-          <ul className="divide-y divide-[var(--border)] border-t border-[var(--border)] px-5">
-            {viewModel.cheers.map((cheer) => (
-              <li key={cheer.id} className="flex gap-3 py-4">
-                <MemberAvatar
-                  memberId={cheer.senderId}
-                  name={cheer.senderName}
-                  avatarUrl={cheer.senderAvatarUrl}
-                  avatarColor={cheer.senderAvatarColor}
-                  href={`/talent/people/${cheer.senderId}` as Route}
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <p className="text-sm font-semibold">{cheer.senderName}さんが応援しています</p>
-                    <time className="text-xs text-[var(--muted-foreground)]">{formatShortDate(cheer.createdAt)}</time>
-                  </div>
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-6">{cheer.message}</p>
-                  {cheer.mentor ? (
-                    <p className="mt-2 text-xs font-medium text-[var(--primary)]">
-                      {cheer.mentor.name}さん（{cheer.mentor.skillName} Lv
-                      {cheer.mentor.level ?? "-"}）に相談してみよう
-                    </p>
-                  ) : null}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
       ) : null}
 
       <div className="grid gap-5 xl:grid-cols-2">

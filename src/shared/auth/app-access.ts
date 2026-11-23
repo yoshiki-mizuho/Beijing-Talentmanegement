@@ -43,10 +43,10 @@ export const appNavigationGroups: readonly AppNavigationGroup[] = [
   {
     label: "メンバーの機能",
     items: [
-      { href: "/talent/my/skills", label: "自分のスキル", icon: "mySkills", allowedRoles: allRoles },
+      { href: "/talent/my/skills", label: "スキル申請", icon: "mySkills", allowedRoles: allRoles },
       { href: "/talent/explore", label: "得意な人を探す", icon: "explore", allowedRoles: allRoles },
       { href: "/talent/roles", label: "ロール", icon: "roles", allowedRoles: allRoles },
-      { href: "/talent/people/:memberId", label: "プロフィール", icon: "profile", allowedRoles: allRoles }
+      { href: "/talent/people/:memberId", label: "マイスキル", icon: "profile", allowedRoles: allRoles }
     ]
   },
   {
