@@ -173,7 +173,7 @@ export function SkillApprovalList({ rows }: { rows: SkillApprovalRow[] }) {
 
       <Card className="overflow-hidden rounded-2xl">
         <div className="overflow-x-auto">
-        <div className="hidden min-w-[1140px] grid-cols-[40px_150px_120px_120px_64px_100px_minmax(120px,1fr)_340px] gap-2 border-b border-[var(--border)] bg-[var(--surface-subtle)] px-4 py-3 text-xs font-semibold text-[var(--muted-foreground)] lg:grid">
+        <div className="hidden grid-cols-[40px_140px_120px_120px_64px_100px_minmax(0,1fr)_300px] gap-2 border-b border-[var(--border)] bg-[var(--surface-subtle)] px-4 py-3 text-xs font-semibold text-[var(--muted-foreground)] xl:grid">
           <span>
             <span className="sr-only">選択</span>
           </span>
@@ -233,11 +233,11 @@ function SkillApprovalItem({
       role="listitem"
       aria-label={`${row.memberName} / ${row.skillName}の承認`}
       className={cn(
-        "grid gap-2 px-4 py-4 lg:min-w-[1140px] lg:grid-cols-[40px_150px_120px_120px_64px_100px_minmax(120px,1fr)_340px] lg:items-center",
+        "grid gap-2 px-4 py-4 xl:grid-cols-[40px_140px_120px_120px_64px_100px_minmax(0,1fr)_300px] xl:items-center",
         selected && "bg-[var(--primary-subtle)]"
       )}
     >
-      <div className="grid grid-cols-[44px_minmax(0,1fr)_minmax(0,1fr)] items-center gap-3 lg:contents">
+      <div className="grid grid-cols-[44px_minmax(0,1fr)_minmax(0,1fr)] items-center gap-3 xl:contents">
         <label className="flex min-h-11 cursor-pointer items-center" title="一括承認の対象に選択">
           <input
             type="checkbox"
@@ -275,7 +275,7 @@ function SkillApprovalItem({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 items-center gap-3 border-t border-[var(--border)] pt-3 lg:contents">
+      <div className="grid grid-cols-2 items-center gap-3 border-t border-[var(--border)] pt-3 xl:contents">
         <div>
           <p className="text-sm font-semibold">
             {getSkillApprovalLevelChange(row.currentLevel, row.requestedLevel)}
@@ -287,7 +287,7 @@ function SkillApprovalItem({
           ) : null}
         </div>
         <p className="text-sm font-semibold">
-          <span className="mr-2 text-xs text-[var(--muted-foreground)] lg:hidden">経験年数</span>
+          <span className="mr-2 text-xs text-[var(--muted-foreground)] xl:hidden">経験年数</span>
           {row.yearsOfExperience === null ? "—" : `${row.yearsOfExperience}年`}
         </p>
         <div>
@@ -329,7 +329,7 @@ function SkillApprovalItem({
         <div
           className={cn(
             // 1つ目はフォームに包まれているので、フォームも1列として扱う。
-            "col-span-2 grid grid-cols-2 gap-2 lg:col-span-1 lg:grid-cols-3",
+            "col-span-2 grid grid-cols-2 gap-2 xl:col-span-1 xl:grid-cols-3",
             "[&_button]:min-h-9 [&_button]:w-full [&_button]:whitespace-nowrap [&_button]:px-2 [&_button]:text-sm"
           )}
         >

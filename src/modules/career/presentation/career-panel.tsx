@@ -53,8 +53,14 @@ export function CareerPanel({
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   return (
-    <div className="grid gap-5 lg:grid-cols-3">
-      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 lg:col-span-2">
+    <div className="space-y-5">
+      <BasicsCard
+        memberId={memberId}
+        itCareerStartMonth={itCareerStartMonth}
+        skillSheetNote={skillSheetNote}
+      />
+      <CertificationCard memberId={memberId} certifications={certifications} />
+      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-lg font-bold">案件の経歴</h2>
           <Button variant="secondary" onClick={() => setAdding(true)} disabled={adding}>
@@ -106,14 +112,6 @@ export function CareerPanel({
           ))}
         </div>
       </section>
-      <div className="space-y-5">
-        <CertificationCard memberId={memberId} certifications={certifications} />
-        <BasicsCard
-          memberId={memberId}
-          itCareerStartMonth={itCareerStartMonth}
-          skillSheetNote={skillSheetNote}
-        />
-      </div>
     </div>
   );
 }
