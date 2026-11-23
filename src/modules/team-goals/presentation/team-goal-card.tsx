@@ -194,7 +194,7 @@ function GoalDialog({ data, onClose }: { data: ManagerTeamGoalData; onClose: () 
               className={cn(
                 "h-11 rounded-full border text-sm",
                 months === option.months
-                  ? "border-[var(--primary)] bg-[var(--primary)] font-bold text-white"
+                  ? "border-[var(--primary)] bg-[var(--primary)] font-bold text-[var(--hub-color-text-on-primary)]"
                   : "border-[var(--border-strong)] bg-[var(--surface)] font-medium hover:bg-[var(--surface-subtle)]"
               )}
               onClick={() => setMonths(option.months)}

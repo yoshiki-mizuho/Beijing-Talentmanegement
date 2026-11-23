@@ -1,14 +1,14 @@
 export type SkillLevel = 1 | 2 | 3 | 4 | 5;
 
 const skillLevelStyles = {
-  1: { backgroundColor: "#F0FDFA", color: "#115E59" },
-  2: { backgroundColor: "#CCFBF1", color: "#115E59" },
-  3: { backgroundColor: "#99F6E4", color: "#134E4A" },
-  4: { backgroundColor: "#0F766E", color: "#FFFFFF" },
-  5: { backgroundColor: "#134E4A", color: "#FFFFFF" }
+  1: { backgroundColor: "var(--hub-color-primary-50)", color: "var(--hub-color-primary-800)" },
+  2: { backgroundColor: "var(--hub-color-primary-100)", color: "var(--hub-color-primary-800)" },
+  3: { backgroundColor: "var(--hub-color-primary-200)", color: "var(--hub-color-primary-900)" },
+  4: { backgroundColor: "var(--hub-color-primary-600)", color: "var(--hub-color-text-on-primary)" },
+  5: { backgroundColor: "var(--hub-color-primary-800)", color: "var(--hub-color-text-on-primary)" }
 } as const satisfies Record<SkillLevel, {
-  backgroundColor: `#${string}`;
-  color: `#${string}`;
+  backgroundColor: string;
+  color: string;
 }>;
 
 export function getSkillLevelStyle(level: number) {

@@ -57,7 +57,7 @@ function BadgeItem({ badge }: { badge: DashboardBadge }) {
       <button
         type="button"
         aria-label={`${badge.name}、${badge.rarityLabel}、${earnedLabel}`}
-        className={`grid h-16 w-16 place-items-center rounded-xl border-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 ${earned ? "" : "border-dashed border-slate-400 bg-slate-100"}`}
+        className={`grid h-16 w-16 place-items-center rounded-xl border-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 ${earned ? "" : "border-dashed border-[var(--hub-color-neutral-text)] bg-[var(--hub-color-neutral-bg)]"}`}
         style={earned ? { borderColor: badge.frameColor, backgroundColor: badge.backgroundColor } : undefined}
       >
         <span
@@ -87,12 +87,12 @@ function BadgeItem({ badge }: { badge: DashboardBadge }) {
       </span>
       <span
         role="tooltip"
-        className="pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-30 hidden w-56 -translate-x-1/2 rounded-lg bg-[var(--foreground)] p-3 text-left text-xs leading-5 text-white shadow-xl group-hover:block group-focus-within:block"
+        className="pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-30 hidden w-56 -translate-x-1/2 rounded-lg bg-[var(--foreground)] p-3 text-left text-xs leading-5 text-[var(--hub-color-text-on-primary)] shadow-xl group-hover:block group-focus-within:block"
       >
         <strong className="block text-sm">{badge.name}</strong>
         <span className="block">レア度: {badge.rarityLabel}</span>
         <span className="block">条件: {badge.condition}</span>
-        <span className="mt-1 block text-slate-200">{earnedLabel}</span>
+        <span className="mt-1 block text-[var(--hub-color-text-placeholder)]">{earnedLabel}</span>
       </span>
     </div>
   );

@@ -253,9 +253,9 @@ function RoleDetail({
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b">
-                <th className="py-2">必要なスキル</th>
+            <thead className="bg-[var(--hub-color-surface-subtle)] text-[length:var(--hub-text-xs)] font-medium tracking-[var(--hub-tracking-wide)] text-[var(--hub-color-text-muted)]">
+              <tr className="border-b border-[var(--hub-color-border)]">
+                <th className="px-[var(--hub-space-4)] py-[var(--hub-space-2)]">必要なスキル</th>
                 <th>必要</th>
                 <th>あなた</th>
                 <th>状態</th>
@@ -274,8 +274,8 @@ function RoleDetail({
                       </td>
                     </tr>
                   ) : null}
-                  <tr className={`border-b border-[var(--border)] ${requirement.anyOfGroup === null ? "" : "bg-[var(--surface-subtle)]"}`}>
-                  <td className={`py-3 ${requirement.anyOfGroup === null ? "" : "border-l-2 border-[var(--primary)] pl-6"}`}>
+                  <tr className={`border-b border-[var(--hub-color-border-subtle)] text-[var(--hub-color-text-sub)] ${requirement.anyOfGroup === null ? "" : "bg-[var(--surface-subtle)]"}`}>
+                  <td className={`px-[var(--hub-space-4)] py-[var(--hub-space-3)] font-medium text-[var(--hub-color-text-heading)] ${requirement.anyOfGroup === null ? "" : "border-l-2 border-[var(--primary)] pl-6"}`}>
                     {requirement.skill.name}
                     {requirement.isRequired ? null : (
                       <span className="ml-2 text-xs text-[var(--muted-foreground)]">
@@ -472,7 +472,7 @@ function RoleFormDialog({
           onSuccess={mode === "create" ? onSuccess : onRefresh}
         >
           {formError ? (
-            <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm font-medium text-[var(--danger)]">
+            <p role="alert" className="rounded-lg bg-[var(--hub-color-danger-bg)] p-3 text-sm font-medium text-[var(--danger)]">
               {formError}
             </p>
           ) : null}

@@ -113,7 +113,7 @@ export function SkillApprovalList({ rows }: { rows: SkillApprovalRow[] }) {
                 className={cn(
                   "min-h-9 rounded-full px-4 text-sm font-semibold",
                   filter === value
-                    ? "bg-[var(--primary)] text-white"
+                    ? "bg-[var(--primary)] text-[var(--hub-color-text-on-primary)]"
                     : "bg-[var(--surface-subtle)] text-[var(--muted-foreground)]"
                 )}
               >
@@ -575,7 +575,7 @@ function CorrectionDialog({
                 className={cn(
                   "h-11 min-w-11 rounded-md border px-3 text-sm font-semibold",
                   correctedLevel === level
-                    ? "border-[var(--primary)] bg-[var(--primary)] text-white"
+                    ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--hub-color-text-on-primary)]"
                     : "border-[var(--border-strong)]"
                 )}
               >

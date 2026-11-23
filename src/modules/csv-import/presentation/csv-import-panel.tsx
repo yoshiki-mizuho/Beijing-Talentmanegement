@@ -161,7 +161,7 @@ export function CsvImportPanel() {
             className={cn(
               "rounded-full px-3 py-2",
               step === index + 1
-                ? "bg-[var(--primary)] text-white"
+                ? "bg-[var(--primary)] text-[var(--hub-color-text-on-primary)]"
                 : "bg-[var(--surface-subtle)] text-[var(--muted-foreground)]",
             )}
             aria-current={step === index + 1 ? "step" : undefined}
@@ -183,8 +183,8 @@ export function CsvImportPanel() {
             className={cn(
               "min-h-11 rounded-full border px-5 text-sm font-semibold",
               target === value
-                ? "border-[var(--primary)] bg-[var(--primary)] text-white"
-                : "border-[var(--border)] bg-white",
+                ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--hub-color-text-on-primary)]"
+                : "border-[var(--border)] bg-[var(--hub-color-surface)]",
             )}
           >
             {labels[value]}
@@ -255,7 +255,7 @@ export function CsvImportPanel() {
         </div>
       ) : (
         <>
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-white p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--hub-color-surface)] p-4">
             <p className="text-sm">
               <span className="font-semibold">{file?.name}</span>　
               {preview.totalRows}行
@@ -305,7 +305,7 @@ export function CsvImportPanel() {
                   setVisible(50);
                 }}
                 className={cn(
-                  "min-h-20 rounded-2xl border bg-white p-3 text-left",
+                  "min-h-20 rounded-2xl border bg-[var(--hub-color-surface)] p-3 text-left",
                   value !== "errors" && filter === value
                     ? "border-[var(--primary)] ring-2 ring-[var(--primary)]/20"
                     : "border-[var(--border)]",
@@ -330,7 +330,7 @@ export function CsvImportPanel() {
           {preview.errors.length > 0 && (
             <ErrorTable ref={errorTable} errors={preview.errors} />
           )}
-          <section className="mb-28 overflow-hidden rounded-2xl border border-[var(--border)] bg-white">
+          <section className="mb-28 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--hub-color-surface)]">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] p-4">
               <h2 className="font-semibold">変更の内容</h2>
               <div className="flex gap-1">
@@ -348,7 +348,7 @@ export function CsvImportPanel() {
                       className={cn(
                         "min-h-9 rounded-full px-3 text-sm",
                         filter === value
-                          ? "bg-[var(--primary)] text-white"
+                          ? "bg-[var(--primary)] text-[var(--hub-color-text-on-primary)]"
                           : "bg-[var(--surface-subtle)]",
                       )}
                     >
@@ -368,22 +368,22 @@ export function CsvImportPanel() {
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
-                <thead className="bg-[var(--surface-subtle)]">
+                <thead className="border-b border-[var(--hub-color-border)] bg-[var(--hub-color-surface-subtle)] text-[length:var(--hub-text-xs)] font-medium tracking-[var(--hub-tracking-wide)] text-[var(--hub-color-text-muted)]">
                   <tr>
-                    <th className="p-3">行</th>
-                    <th className="p-3">区分</th>
-                    <th className="p-3">対象</th>
-                    <th className="p-3">変更</th>
+                    <th className="px-[var(--hub-space-4)] py-[var(--hub-space-2)]">行</th>
+                    <th className="px-[var(--hub-space-4)] py-[var(--hub-space-2)]">区分</th>
+                    <th className="px-[var(--hub-space-4)] py-[var(--hub-space-2)]">対象</th>
+                    <th className="px-[var(--hub-space-4)] py-[var(--hub-space-2)]">変更</th>
                   </tr>
                 </thead>
                 <tbody>
                   {shown.slice(0, visible).map((change) => (
                     <tr
                       key={`${change.row}-${change.code}`}
-                      className="border-t border-[var(--border)]"
+                      className="border-t border-[var(--hub-color-border-subtle)] text-[var(--hub-color-text-sub)]"
                     >
-                      <td className="p-3">{change.row}</td>
-                      <td className="p-3">
+                      <td className="px-[var(--hub-space-4)] py-[var(--hub-space-3)]">{change.row}</td>
+                      <td className="px-[var(--hub-space-4)] py-[var(--hub-space-3)]">
                         {change.kind === "new"
                           ? "新規"
                           : change.kind === "update"
@@ -392,10 +392,10 @@ export function CsvImportPanel() {
                               ? "削除"
                               : "変更なし"}
                       </td>
-                      <td className="p-3">
+                      <td className="px-[var(--hub-space-4)] py-[var(--hub-space-3)] font-medium text-[var(--hub-color-text-heading)]">
                         {change.code} {change.name}
                       </td>
-                      <td className="p-3">
+                      <td className="px-[var(--hub-space-4)] py-[var(--hub-space-3)]">
                         <ChangeSummary change={change} />
                       </td>
                     </tr>
@@ -414,7 +414,7 @@ export function CsvImportPanel() {
               </div>
             )}
           </section>
-          <div className="sticky bottom-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-white p-4 shadow-lg">
+          <div className="sticky bottom-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--hub-color-surface)] p-4 shadow-lg">
             {preview.errors.length > 0 ? (
               <p className="font-semibold text-[var(--destructive)]">
                 エラーが {preview.errors.length}件あるため登録できません
@@ -461,29 +461,29 @@ function ErrorTable({
   return (
     <section
       ref={ref}
-      className="scroll-mt-4 overflow-hidden rounded-2xl border border-[var(--destructive)] bg-white"
+      className="scroll-mt-4 overflow-hidden rounded-2xl border border-[var(--destructive)] bg-[var(--hub-color-surface)]"
     >
       <h2 className="p-4 font-semibold text-[var(--destructive)]">
         エラー {errors.length}件
       </h2>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
-          <thead className="bg-red-50">
+          <thead className="border-b border-[var(--hub-color-border)] bg-[var(--hub-color-danger-bg)] text-[length:var(--hub-text-xs)] font-medium tracking-[var(--hub-tracking-wide)] text-[var(--hub-color-danger-text)]">
             <tr>
-              <th className="p-3">行</th>
-              <th className="p-3">列</th>
-              <th className="p-3">内容</th>
+              <th className="px-[var(--hub-space-4)] py-[var(--hub-space-2)]">行</th>
+              <th className="px-[var(--hub-space-4)] py-[var(--hub-space-2)]">列</th>
+              <th className="px-[var(--hub-space-4)] py-[var(--hub-space-2)]">内容</th>
             </tr>
           </thead>
           <tbody>
             {errors.map((error, index) => (
               <tr
                 key={`${error.row}-${error.column}-${index}`}
-                className="border-t border-[var(--border)]"
+                className="border-t border-[var(--hub-color-border-subtle)] text-[var(--hub-color-text-sub)]"
               >
-                <td className="p-3">{error.row}</td>
-                <td className="p-3">{error.column}</td>
-                <td className="p-3">{error.message}</td>
+                <td className="px-[var(--hub-space-4)] py-[var(--hub-space-3)]">{error.row}</td>
+                <td className="px-[var(--hub-space-4)] py-[var(--hub-space-3)]">{error.column}</td>
+                <td className="px-[var(--hub-space-4)] py-[var(--hub-space-3)]">{error.message}</td>
               </tr>
             ))}
           </tbody>

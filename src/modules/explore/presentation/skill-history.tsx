@@ -38,7 +38,7 @@ export function SkillHistory({
                     {skill.marker?.type === "new" ? (
                       <Tooltip content="新しく習得">
                         <span tabIndex={0} aria-label="新しく習得">
-                          <Sparkles className="h-4 w-4 text-amber-600" aria-hidden="true" />
+                          <Sparkles className="h-4 w-4 text-[var(--hub-color-warning-text)]" aria-hidden="true" />
                         </span>
                       </Tooltip>
                     ) : skill.marker?.type === "up" ? (

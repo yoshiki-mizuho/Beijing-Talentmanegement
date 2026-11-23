@@ -467,7 +467,7 @@ export function SkillSheetForm({
                       className={cn(
                         "grid h-9 w-9 shrink-0 place-items-center rounded-md text-sm font-bold",
                         level === levelGuideWindow.baseLevel
-                          ? "bg-[var(--primary)] text-white"
+                          ? "bg-[var(--primary)] text-[var(--hub-color-text-on-primary)]"
                           : "bg-[var(--surface-subtle)] text-[var(--muted-foreground)]"
                       )}
                     >
@@ -589,7 +589,7 @@ export function SkillSheetForm({
                           ) : null}
                           {isStaleSkill(row) ? (
                             <Tooltip content="半年以上申請していません。見直してみませんか">
-                              <button type="button" aria-label="半年以上申請していません。見直してみませんか" className="rounded p-1 text-amber-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]">
+                              <button type="button" aria-label="半年以上申請していません。見直してみませんか" className="rounded p-1 text-[var(--hub-color-warning-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]">
                                 <Clock className="h-4 w-4" aria-hidden="true" />
                               </button>
                             </Tooltip>
@@ -622,7 +622,7 @@ export function SkillSheetForm({
                               key={status}
                               className={cn(
                                 row.pendingLevel !== null &&
-                                  "font-semibold text-amber-800"
+                                  "font-semibold text-[var(--hub-color-warning-text)]"
                               )}
                             >
                               {status}

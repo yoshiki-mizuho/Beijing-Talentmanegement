@@ -390,7 +390,7 @@ function MemberSearchTableInner({
         {query.isFetching ? "検索中..." : `${total}名`}
       </p>
       {query.isError ? (
-        <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">
+        <p role="alert" className="rounded-md bg-[var(--hub-color-danger-bg)] p-3 text-sm text-[var(--hub-color-danger-text)]">
           メンバーの検索に失敗しました。
         </p>
       ) : null}
@@ -559,14 +559,14 @@ function chipClass(active: boolean) {
   return cn(
     "min-h-9 rounded-full border px-3 text-sm font-medium",
     active
-      ? "border-[var(--primary)] bg-[var(--primary)] text-white"
+      ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--hub-color-text-on-primary)]"
       : "border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-subtle)]"
   );
 }
 function statusDot(status: string) {
   return status === "ACTIVE"
-    ? "bg-emerald-500"
-    : "bg-slate-400";
+    ? "bg-[var(--hub-color-success)]"
+    : "bg-[var(--hub-color-neutral-text)]";
 }
 
 function MemberSkillsCell({ member }: { member: MemberListItem }) {

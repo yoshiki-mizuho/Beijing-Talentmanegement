@@ -272,7 +272,7 @@ export function ProposalSheetEditor({
             </div>
           ) : null}
           {aiJob?.status === "FAILED" ? (
-            <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            <div className="rounded-md border border-[var(--hub-color-warning-border)] bg-[var(--hub-color-warning-bg)] p-3 text-sm text-[var(--hub-color-warning-text)]">
               <p>AI の下書きを作れませんでした。</p>
               <Button variant="secondary" className="mt-2" onClick={makeFallback}>簡易版で作る</Button>
             </div>

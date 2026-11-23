@@ -74,8 +74,8 @@ export function TargetRoleCard({
           <div className="grid gap-5 sm:grid-cols-[120px_minmax(0,1fr)] sm:items-center">
             <div className="relative mx-auto h-28 w-28">
               <svg viewBox="0 0 100 100" role="img" aria-label={`${role.name}の必須要件を${role.requiredSkillCount}件中${role.satisfiedSkillCount}件達成`} className="-rotate-90">
-                <circle cx="50" cy="50" r="42" fill="none" stroke="#E3E8E6" strokeWidth="8" />
-                <circle cx="50" cy="50" r="42" fill="none" stroke="#0F766E" strokeWidth="8" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={dashOffset} />
+                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--hub-color-border)" strokeWidth="8" />
+                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--hub-color-primary-600)" strokeWidth="8" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={dashOffset} />
               </svg>
               <span className="absolute inset-0 grid place-items-center text-lg font-bold">{role.satisfiedSkillCount}/{role.requiredSkillCount}</span>
             </div>
@@ -86,7 +86,7 @@ export function TargetRoleCard({
                 </Link>
               </h3>
               {role.achieved ? (
-                <p className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-50 p-3 text-sm font-medium text-emerald-800">
+                <p className="mt-3 flex items-center gap-2 rounded-lg bg-[var(--hub-color-success-bg)] p-3 text-sm font-medium text-[var(--hub-color-success-text)]">
                   <CheckCircle2 className="h-4 w-4" aria-hidden="true" />達成
                   {role.requirementsUpdated ? (
                     <Tooltip content="要件が更新されました">

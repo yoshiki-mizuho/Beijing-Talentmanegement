@@ -203,7 +203,7 @@ export default async function MySkillsPage({
                   <p
                     className={
                       assessment.status === "REJECTED"
-                        ? "mt-3 rounded-lg border border-[var(--destructive)]/30 bg-red-50 px-3 py-2 text-sm font-medium leading-6 text-[var(--destructive)]"
+                        ? "mt-3 rounded-lg border border-[var(--destructive)]/30 bg-[var(--hub-color-danger-bg)] px-3 py-2 text-sm font-medium leading-6 text-[var(--destructive)]"
                         : "mt-2 text-sm leading-6 text-[var(--muted-foreground)]"
                     }
                   >

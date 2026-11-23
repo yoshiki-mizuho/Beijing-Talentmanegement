@@ -211,12 +211,12 @@ function HintContent({
         </p>
       ) : null}
       {hint.isStale ? (
-        <p className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <p className="rounded-lg bg-[var(--hub-color-warning-bg)] px-4 py-3 text-sm text-[var(--hub-color-warning-text)]">
           スキルや目標ロールが変わりました。 作り直せます。
         </p>
       ) : null}
       {message && jobStatus !== "QUEUED" && jobStatus !== "RUNNING" ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--hub-color-warning-border-strong)] bg-[var(--hub-color-warning-bg)] px-4 py-3 text-sm text-[var(--hub-color-warning-text)]">
           <span>{message}</span>
           <Button
             type="button"

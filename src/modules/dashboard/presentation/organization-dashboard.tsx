@@ -3,6 +3,7 @@ import type { Route } from "next";
 import { Lock } from "lucide-react";
 import { DashboardVisualizations } from "./dashboard-visualizations";
 import type { getDashboardSummary } from "../application/dashboard-service";
+import { chartColors, chartSeries } from "@/shared/ui/chart-colors";
 
 type Model = Awaited<ReturnType<typeof getDashboardSummary>>;
 const momentum = {
@@ -12,14 +13,14 @@ const momentum = {
     icon: "▶",
     color: "text-[var(--muted-foreground)]",
   },
-  slowing: { label: "鈍化", icon: "▼", color: "text-amber-800" },
+  slowing: { label: "鈍化", icon: "▼", color: "text-[var(--hub-color-warning-text)]" },
 } as const;
 
 export function OrganizationDashboard({ model }: { model: Model }) {
   const state = momentum[model.metrics.momentum];
   return (
     <div className="grid gap-5 lg:grid-cols-[250px_minmax(0,1fr)]">
-      <aside className="self-start overflow-x-auto rounded-2xl border border-[var(--border)] bg-white p-3 lg:sticky lg:top-4">
+      <aside className="self-start overflow-x-auto rounded-2xl border border-[var(--border)] bg-[var(--hub-color-surface)] p-3 lg:sticky lg:top-4">
         <h2 className="px-2 pb-2 text-sm font-bold">組織</h2>
         <nav aria-label="組織の階層" className="min-w-56 space-y-1">
           {model.showCompany ? (
@@ -28,7 +29,7 @@ export function OrganizationDashboard({ model }: { model: Model }) {
               aria-current={
                 model.scope.nodeId === null ? "page" : undefined
               }
-              className={`flex min-h-11 items-center rounded-lg px-2 text-sm font-semibold ${model.scope.nodeId === null ? "bg-[var(--primary)] text-white" : "hover:bg-[var(--muted)]"}`}
+              className={`flex min-h-11 items-center rounded-lg px-2 text-sm font-semibold ${model.scope.nodeId === null ? "bg-[var(--primary)] text-[var(--hub-color-text-on-primary)]" : "hover:bg-[var(--muted)]"}`}
             >
               全社
               <span className="ml-auto text-xs">
@@ -49,12 +50,12 @@ export function OrganizationDashboard({ model }: { model: Model }) {
                 aria-current={
                   item.id === model.scope.nodeId ? "page" : undefined
                 }
-                className={`flex min-h-11 items-center gap-2 rounded-lg px-2 text-sm ${item.id === model.scope.nodeId ? "bg-[var(--primary)] font-semibold text-white" : "hover:bg-[var(--muted)]"}`}
+                className={`flex min-h-11 items-center gap-2 rounded-lg px-2 text-sm ${item.id === model.scope.nodeId ? "bg-[var(--primary)] font-semibold text-[var(--hub-color-text-on-primary)]" : "hover:bg-[var(--muted)]"}`}
                 style={{ paddingLeft: `${8 + item.depth * 16}px` }}
               >
                 <span className="truncate">{item.name}</span>
                 {item.own ? (
-                  <span className="rounded-full bg-white/80 px-2 py-0.5 text-xs text-[var(--primary)]">
+                  <span className="rounded-full bg-[var(--hub-color-surface)]/80 px-2 py-0.5 text-xs text-[var(--primary)]">
                     自分
                   </span>
                 ) : null}
@@ -151,7 +152,7 @@ function Metric({
   tone?: string;
 }) {
   return (
-    <article className="rounded-2xl border border-[var(--border)] bg-white p-5">
+    <article className="rounded-2xl border border-[var(--border)] bg-[var(--hub-color-surface)] p-5">
       <p className="text-sm text-[var(--muted-foreground)]">{title}</p>
       <p className={`mt-2 text-2xl font-bold ${tone}`}>{value}</p>
       <p className="mt-2 text-xs text-[var(--muted-foreground)]">{note}</p>
@@ -166,7 +167,7 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-[var(--border)] bg-white p-5">
+    <section className="rounded-2xl border border-[var(--border)] bg-[var(--hub-color-surface)] p-5">
       <h2 className="mb-4 font-bold">{title}</h2>
       {children}
     </section>
@@ -196,14 +197,14 @@ function MonthlyChart({
         viewBox="0 0 480 200"
         className="w-full"
       >
-        <rect x="366" y="15" width="110" height="150" rx="8" fill="#E6F4F1" />
-        <text x="371" y="31" fontSize="12" fill="#115E59">
+        <rect x="366" y="15" width="110" height="150" rx="8" fill="var(--hub-color-primary-50)" />
+        <text x="371" y="31" fontSize="12" fill="var(--hub-color-primary-800)">
           直近3か月
         </text>
-        <text x="16" y="54" textAnchor="end" fontSize="11" fill="#5B6B6A">
+        <text x="16" y="54" textAnchor="end" fontSize="11" fill={chartColors.textMuted}>
           {max}
         </text>
-        <text x="16" y="109" textAnchor="end" fontSize="11" fill="#5B6B6A">
+        <text x="16" y="109" textAnchor="end" fontSize="11" fill={chartColors.textMuted}>
           {Math.round((max / 2) * 10) / 10}
         </text>
         {metrics.monthly.map((item, i) => (
@@ -214,14 +215,14 @@ function MonthlyChart({
               width="20"
               height={Math.max(2, (item.count / max) * 110)}
               rx="2"
-              fill="#0F766E"
+              fill={chartColors.primary}
             />
             <text
               x={32 + i * 38}
               y="182"
               textAnchor="middle"
               fontSize="11"
-              fill="#5B6B6A"
+              fill={chartColors.textMuted}
             >
               {item.label}
             </text>
@@ -230,17 +231,17 @@ function MonthlyChart({
         <polyline
           points={points}
           fill="none"
-          stroke="#D97706"
+          stroke={chartColors.amber}
           strokeWidth="3"
         />
-        <line x1="20" y1="105" x2="470" y2="105" stroke="#E3E8E6" />
-        <line x1="20" y1="50" x2="470" y2="50" stroke="#E3E8E6" />
+        <line x1="20" y1="105" x2="470" y2="105" stroke={chartColors.border} />
+        <line x1="20" y1="50" x2="470" y2="50" stroke={chartColors.border} />
       </svg>
     </Panel>
   );
 }
 function CategoryChart({ metrics }: { metrics: Model["metrics"] }) {
-  const colors = ["#115E59", "#0F766E", "#2A9188", "#65B8B0", "#D97706"];
+  const colors = chartSeries;
   const totals = metrics.categories.series.map((row) =>
     Object.values(row).reduce((a, b) => a + b, 0),
   );
@@ -285,11 +286,11 @@ function CategoryChart({ metrics }: { metrics: Model["metrics"] }) {
             />
           );
         })}
-        <line x1="20" y1="165" x2="465" y2="165" stroke="#E3E8E6" />
-        <text x="25" y="185" fontSize="11" fill="#5B6B6A">
+        <line x1="20" y1="165" x2="465" y2="165" stroke={chartColors.border} />
+        <text x="25" y="185" fontSize="11" fill={chartColors.textMuted}>
           {metrics.monthly[0]?.label}
         </text>
-        <text x="443" y="185" textAnchor="end" fontSize="11" fill="#5B6B6A">
+        <text x="443" y="185" textAnchor="end" fontSize="11" fill={chartColors.textMuted}>
           {metrics.monthly.at(-1)?.label}
         </text>
       </svg>
@@ -331,7 +332,7 @@ function Comparisons({ model }: { model: Model }) {
               href={
                 `/talent/dashboard?view=organization&node=${item.id}` as Route
               }
-              className={`rounded-xl border bg-white p-4 ${item.id === model.scope.nodeId ? "border-2 border-[var(--primary)]" : "border-[var(--border)]"}`}
+              className={`rounded-xl border bg-[var(--hub-color-surface)] p-4 ${item.id === model.scope.nodeId ? "border-2 border-[var(--primary)]" : "border-[var(--border)]"}`}
             >
               <div className="flex justify-between">
                 <b>{item.name}</b>
@@ -353,10 +354,10 @@ function Comparisons({ model }: { model: Model }) {
                   fill="none"
                   stroke={
                     item.momentum === "slowing"
-                      ? "#92400E"
+                      ? chartColors.amber
                       : item.momentum === "accelerating"
-                        ? "#0F766E"
-                        : "#5B6B6A"
+                        ? chartColors.primary
+                        : chartColors.textMuted
                   }
                   strokeWidth="2"
                 />

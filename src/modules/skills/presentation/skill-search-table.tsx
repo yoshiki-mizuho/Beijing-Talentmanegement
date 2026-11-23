@@ -224,7 +224,7 @@ function SkillSearchTableInner({
           <span
             className={
               row.original.isActive
-                ? "font-medium text-emerald-700"
+                ? "font-medium text-[var(--hub-color-success-text)]"
                 : "text-[var(--muted-foreground)]"
             }
           >
@@ -442,7 +442,7 @@ function SkillSearchTableInner({
               key={category.id || "all"}
               type="button"
               aria-pressed={filters.categoryId === category.id}
-              className={`min-h-9 shrink-0 rounded-full border px-3 text-sm ${filters.categoryId === category.id ? "border-[var(--primary)] bg-[var(--primary)] text-white" : "border-[var(--border)]"}`}
+              className={`min-h-9 shrink-0 rounded-full border px-3 text-sm ${filters.categoryId === category.id ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--hub-color-text-on-primary)]" : "border-[var(--border)]"}`}
               onClick={() => setFilters((current) => ({ ...current, categoryId: category.id }))}
             >
               {category.name}
@@ -494,7 +494,7 @@ function SkillSearchTableInner({
       {query.isError ? (
         <p
           role="alert"
-          className="border-l-4 border-[var(--destructive)] bg-red-50 px-4 py-3 text-sm text-red-800"
+          className="border-l-4 border-[var(--destructive)] bg-[var(--hub-color-danger-bg)] px-4 py-3 text-sm text-[var(--hub-color-danger-text)]"
         >
           スキルの検索に失敗しました。時間を置いて再度お試しください。
         </p>
@@ -778,7 +778,7 @@ function SortableCategorySection({
         {canManage ? (
           <button
             type="button"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg hover:bg-[var(--hub-color-surface)] disabled:cursor-not-allowed disabled:opacity-50"
             aria-label={`${category.name}を並び替える`}
             disabled={disabled}
             title={title}

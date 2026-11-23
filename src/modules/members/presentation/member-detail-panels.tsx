@@ -190,7 +190,7 @@ export function MemberOverviewPanel({
         </CardHeader>
         <CardContent className="space-y-4">
           {pendingNewSkills.length > 0 ? (
-            <div className="divide-y divide-[var(--border)] rounded-md border border-amber-200 bg-amber-50 px-3">
+            <div className="divide-y divide-[var(--border)] rounded-md border border-[var(--hub-color-warning-border)] bg-[var(--hub-color-warning-bg)] px-3">
               {pendingNewSkills.map((assessment) => (
                 <div
                   key={assessment.skillId}

@@ -201,7 +201,7 @@ function FeedItem({
                       className={cn(
                         "inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-full border px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] disabled:cursor-not-allowed disabled:opacity-45",
                         reaction.reactedByViewer
-                          ? "border-teal-200 bg-[var(--primary-subtle)] text-[var(--primary)]"
+                          ? "border-[var(--hub-color-selected-border)] bg-[var(--primary-subtle)] text-[var(--primary)]"
                           : "border-[var(--border)] text-[var(--muted-foreground)] hover:bg-[var(--surface-subtle)]"
                       )}
                     >

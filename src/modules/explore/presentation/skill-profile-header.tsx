@@ -26,7 +26,7 @@ export function SkillProfileHeader({
 
   return (
     <>
-      <div className="h-24 bg-gradient-to-r from-[#0F766E] via-[#14B8A6] to-[#5EEAD4] sm:h-[120px]" />
+      <div className="h-24 bg-gradient-to-r from-[var(--hub-color-primary-800)] via-[var(--hub-color-primary-600)] to-[var(--hub-color-primary-300)] sm:h-[120px]" />
       <div className="relative mx-auto -mt-12 max-w-6xl px-4 sm:px-6">
         <header className="grid gap-5 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-end md:pt-0">
           <div className="relative w-fit md:-mt-8">
@@ -36,7 +36,7 @@ export function SkillProfileHeader({
               avatarUrl={profile.avatarUrl}
               avatarColor={profile.avatarColor}
               size="lg"
-              className="h-28 w-28 border-4 border-white text-4xl shadow-lg"
+              className="h-28 w-28 border-4 border-[var(--hub-color-surface)] text-4xl shadow-lg"
               href={`/talent/people/${profile.id}`}
             />
           </div>
@@ -61,7 +61,7 @@ export function SkillProfileHeader({
                 href={profile.chatUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex h-11 items-center gap-2 rounded-md bg-[var(--primary)] px-4 text-sm font-bold text-white"
+                className="inline-flex h-11 items-center gap-2 rounded-md bg-[var(--primary)] px-4 text-sm font-bold text-[var(--hub-color-text-on-primary)]"
               >
                 相談する
                 <ExternalLink className="h-4 w-4" aria-hidden="true" />
