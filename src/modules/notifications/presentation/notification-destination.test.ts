@@ -32,7 +32,7 @@ describe("getNotificationDestination", () => {
   it.each([
     NotificationType.SKILL_ASSESSMENT_APPROVED,
     NotificationType.SKILL_ASSESSMENT_CORRECTED
-  ])("申告結果 %s は自分のスキル画面へ遷移する", (type) => {
+  ])("申告結果 %s はスキル申請画面へ遷移する", (type) => {
     expect(
       getNotificationDestination({
         type,

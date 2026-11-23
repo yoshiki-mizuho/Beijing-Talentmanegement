@@ -38,8 +38,7 @@ export async function getMemberDashboard(memberId: string) {
     skillReminders: buildSkillReminderCards({
       skills,
       memberSkills: growthData.member?.memberSkills ?? [],
-      assessments: badgeData.assessments,
-      levelChanges: badgeData.levelChanges
+      assessments: badgeData.assessments
     })
   };
 }

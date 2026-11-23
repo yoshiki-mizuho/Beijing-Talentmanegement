@@ -33,7 +33,7 @@ export default async function SkillProfilePage({
   if (!profile) {
     return (
       <div className="grid min-h-[55vh] place-items-center">
-        <h1 className="text-lg font-bold">このプロフィールは非公開です</h1>
+        <h1 className="text-lg font-bold">このページは非公開です</h1>
       </div>
     );
   }

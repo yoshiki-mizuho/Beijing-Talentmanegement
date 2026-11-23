@@ -25,8 +25,8 @@ test("本人にはバッジの進み具合を表示し、他の人には表示�
     await expect(managerMain.getByRole("heading", { name: /バッジ（\d+ \/ 19）/ })).toBeVisible();
     await expect(managerMain.getByRole("progressbar")).toHaveCount(0);
 
-    await ownerMain.getByRole("button", { name: "プロフィールを編集" }).first().click();
-    await expect(owner.page.getByRole("dialog", { name: "プロフィールを編集" }).getByText("飾るバッジ")).toHaveCount(0);
+    await ownerMain.getByRole("button", { name: "マイスキルを編集" }).first().click();
+    await expect(owner.page.getByRole("dialog", { name: "マイスキルを編集" }).getByText("飾るバッジ")).toHaveCount(0);
   } finally {
     await owner?.context.close();
     await manager?.context.close();

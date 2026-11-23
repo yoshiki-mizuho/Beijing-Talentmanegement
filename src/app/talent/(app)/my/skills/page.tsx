@@ -81,7 +81,7 @@ export default async function MySkillsPage({
       <h1 className="sr-only">スキル申請</h1>
       <div
         role="tablist"
-        aria-label="自分のスキル"
+        aria-label="スキル申請の表示切り替え"
         className="flex gap-1 border-b border-[var(--border)]"
       >
         {[
@@ -125,7 +125,7 @@ export default async function MySkillsPage({
               encouragement={encouragement}
               initial={initial}
               popularSkillIds={popularSkills.skillIds}
-              initialFilter={query.filter === "new" || query.filter === "stale"
+              initialFilter={query.filter === "new"
                 ? query.filter
                 : "all"}
               initialQuery={rows.find((row) => row.skillId === query.skill)?.skillName ?? ""}

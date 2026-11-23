@@ -22,7 +22,6 @@ export type SkillSheetFilter =
   | "all"
   | "new"
   | "target"
-  | "stale"
   | "unowned"
   | "changed";
 
@@ -230,7 +229,6 @@ export function filterSkillSheetRows(
     const matchesFilter = options.filter === "all" ||
       (options.filter === "new" && isNewSkill(row.createdAt, options.now)) ||
       (options.filter === "target" && row.targetLevel !== null) ||
-      (options.filter === "stale" && isStaleSkill(row, options.now)) ||
       (options.filter === "unowned" && row.currentLevel === null) ||
       (options.filter === "changed" && options.changedSkillIds.has(row.skillId));
     const matchesCategory = options.categoryId === "all" ||
@@ -248,7 +246,7 @@ export function countSkillSheetFilters(
   options: Omit<Parameters<typeof filterSkillSheetRows>[1], "query" | "filter">
 ) {
   const filters: SkillSheetFilter[] = [
-    "all", "new", "target", "stale", "unowned", "changed"
+    "all", "new", "target", "unowned", "changed"
   ];
   return Object.fromEntries(filters.map((filter) => [
     filter,

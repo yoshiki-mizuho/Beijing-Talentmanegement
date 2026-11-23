@@ -173,7 +173,7 @@ export function SkillApprovalList({ rows }: { rows: SkillApprovalRow[] }) {
 
       <Card className="overflow-hidden rounded-2xl">
         <div className="overflow-x-auto">
-        <div className="hidden grid-cols-[40px_140px_120px_120px_64px_100px_minmax(0,1fr)_300px] gap-2 border-b border-[var(--border)] bg-[var(--surface-subtle)] px-4 py-3 text-xs font-semibold text-[var(--muted-foreground)] xl:grid">
+        <div className="hidden grid-cols-[40px_140px_120px_120px_64px_100px_minmax(0,1fr)_360px] gap-2 border-b border-[var(--border)] bg-[var(--surface-subtle)] px-4 py-3 text-xs font-semibold text-[var(--muted-foreground)] xl:grid">
           <span>
             <span className="sr-only">選択</span>
           </span>
@@ -233,7 +233,7 @@ function SkillApprovalItem({
       role="listitem"
       aria-label={`${row.memberName} / ${row.skillName}の承認`}
       className={cn(
-        "grid gap-2 px-4 py-4 xl:grid-cols-[40px_140px_120px_120px_64px_100px_minmax(0,1fr)_300px] xl:items-center",
+        "grid gap-2 px-4 py-4 xl:grid-cols-[40px_140px_120px_120px_64px_100px_minmax(0,1fr)_360px] xl:items-center",
         selected && "bg-[var(--primary-subtle)]"
       )}
     >
@@ -329,7 +329,7 @@ function SkillApprovalItem({
         <div
           className={cn(
             // 1つ目はフォームに包まれているので、フォームも1列として扱う。
-            "col-span-2 grid grid-cols-2 gap-2 xl:col-span-1 xl:grid-cols-3",
+            "col-span-2 grid grid-cols-2 gap-2 xl:col-span-1 xl:grid-cols-[auto_auto_auto]",
             "[&_button]:min-h-9 [&_button]:w-full [&_button]:whitespace-nowrap [&_button]:px-2 [&_button]:text-sm"
           )}
         >

@@ -10,7 +10,7 @@ export function ProfileTabs({
   return (
     <nav
       className="flex border-b border-[var(--border)]"
-      aria-label="プロフィールの表示切り替え"
+      aria-label="表示の切り替え"
     >
       <Link
         className={`px-4 py-3 text-sm font-semibold ${
