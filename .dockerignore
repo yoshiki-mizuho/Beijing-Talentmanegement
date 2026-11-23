@@ -6,7 +6,6 @@ coverage
 test-results
 playwright-report
 blob-report
-e2e
 docs
 .env*
 npm-debug.log*
