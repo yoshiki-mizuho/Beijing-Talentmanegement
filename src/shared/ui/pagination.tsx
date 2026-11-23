@@ -38,7 +38,7 @@ export function Pagination({
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <p className="text-sm text-[var(--muted-foreground)]">
+      <p className="text-sm text-[var(--hub-color-text-muted)]">
         {total}件中 {start}〜{end}件
       </p>
       <div className="flex items-center gap-1">
@@ -102,8 +102,8 @@ function PageControl({
   const className = cn(
     "inline-flex min-h-9 min-w-9 items-center justify-center rounded-full border px-3 text-sm font-medium",
     current
-      ? "border-[var(--primary)] bg-[var(--primary)] text-white"
-      : "border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-subtle)]"
+      ? "border-[var(--hub-color-primary)] bg-[var(--hub-color-primary)] text-[var(--hub-color-text-on-primary)]"
+      : "border-[var(--hub-color-border)] bg-[var(--hub-color-surface)] text-[var(--hub-color-text)] hover:bg-[var(--hub-color-surface-subtle)]"
   );
 
   if (href) {

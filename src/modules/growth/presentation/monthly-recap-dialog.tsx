@@ -43,7 +43,7 @@ export function MonthlyRecapDialog({ celebration }: { celebration: Celebration |
       onClose={() => close(false)}
       eyebrow={(
         <span className="inline-flex items-center gap-1 text-[var(--primary)]">
-          <Sparkles className="h-4 w-4 motion-safe:animate-pulse" aria-hidden="true" />
+          <Sparkles className="h-4 w-4" aria-hidden="true" />
           先月の振り返り
         </span>
       )}
@@ -61,7 +61,7 @@ export function MonthlyRecapDialog({ celebration }: { celebration: Celebration |
       )}
     >
       <div className="space-y-5">
-        <p className="rounded-xl bg-[#E6F4F1] p-4 font-semibold">{celebration.encouragement}</p>
+        <p className="rounded-[var(--hub-radius-md)] bg-[var(--hub-color-info-bg)] p-[var(--hub-space-3)] font-semibold text-[var(--hub-color-info-text)]">{celebration.encouragement}</p>
         <div className="grid grid-cols-3 gap-2 text-center">
           <DialogMetric label="レベルアップ" value={celebration.levelUpCount} />
           <DialogMetric label="新しいスキル" value={celebration.newSkillCount} />
@@ -84,7 +84,7 @@ export function MonthlyRecapDialog({ celebration }: { celebration: Celebration |
             {celebration.levelUps.length > 3 ? <p className="mt-1 text-xs text-[var(--muted-foreground)]">ほか {celebration.levelUps.length - 3}件</p> : null}
           </div>
         ) : null}
-        {celebration.badges.length ? <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">新しいバッジ：{celebration.badges.map((badge) => badge.name).join("、")}</p> : null}
+        {celebration.badges.length ? <p className="rounded-[var(--hub-radius-md)] border border-[var(--hub-color-border)] bg-[var(--hub-color-info-bg)] p-[var(--hub-space-3)] text-[length:var(--hub-text-xs)] text-[var(--hub-color-info-text)]">新しいバッジ：{celebration.badges.map((badge) => badge.name).join("、")}</p> : null}
         {celebration.roleProgress ? (
           <div>
             <p className="text-sm font-semibold">{celebration.roleProgress.roleName}</p>
@@ -111,7 +111,7 @@ function Progress({ startValue, endValue }: { startValue: number; endValue: numb
   return (
     <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-[var(--surface-subtle)]" role="progressbar" aria-valuenow={endValue} aria-valuemin={0} aria-valuemax={100}>
       <span className="block h-full bg-[var(--primary)]" style={{ width: `${startValue}%` }} />
-      <span className="block h-full bg-[#5EEAD4]" style={{ width: `${increase}%` }} />
+      <span className="block h-full bg-[var(--hub-color-primary-300)]" style={{ width: `${increase}%` }} />
     </div>
   );
 }

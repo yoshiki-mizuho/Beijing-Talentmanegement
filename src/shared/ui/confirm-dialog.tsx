@@ -46,7 +46,7 @@ export function ConfirmDialog({
         </>
       }
     >
-      <p className="text-sm text-[var(--muted-foreground)]">
+      <p className="text-[length:var(--hub-text-sm)] text-[var(--hub-color-text-sub)]">
         実行前に内容を確認してください。
       </p>
     </Dialog>

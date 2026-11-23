@@ -9,7 +9,7 @@ import {
 describe("cheer and one-on-one helpers", () => {
   it("応援の文面案を組み立てる", () => {
     expect(buildCheerMessage({ memberName: "佐藤", roleName: "シニア", skillName: "TypeScript", requiredLevel: 4 }))
-      .toBe("佐藤さん、シニアまであと一歩ですね。TypeScriptの Lv4 に向けて応援しています！");
+      .toBe("佐藤さん、シニアまであと一歩ですね。TypeScriptの Lv4 に向けて応援しています");
   });
 
   it("紹介候補を在籍・Lv4以上に絞り、除外後にレベル順で5人まで返す", () => {

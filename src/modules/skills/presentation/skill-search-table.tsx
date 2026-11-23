@@ -542,7 +542,7 @@ function SkillSearchTableInner({
               }
             >
               {!collapsedCategories.has(category.id) ? (
-                <table className="w-full min-w-[680px] table-fixed text-sm">
+                <table className="w-full min-w-[680px] table-fixed text-[length:var(--hub-text-sm)]">
                   <colgroup>
                     {canManage ? <col className="w-14" /> : null}
                     <col className={canManage ? "w-[30%]" : "w-[34%]"} />
@@ -551,7 +551,7 @@ function SkillSearchTableInner({
                     <col className="w-[12%]" />
                     {canManage ? <col className="w-[12%]" /> : null}
                   </colgroup>
-                  <thead className="bg-[var(--surface-subtle)] text-left text-[var(--muted-foreground)]">
+                  <thead className="border-b border-[var(--hub-color-border)] bg-[var(--hub-color-surface-subtle)] text-left text-[length:var(--hub-text-xs)] tracking-[var(--hub-tracking-wide)] text-[var(--hub-color-text-muted)]">
                     {table.getHeaderGroups().map((headerGroup) => (
                       <tr key={headerGroup.id}>
                         {canManage ? <th scope="col" aria-label="並び替え" className="w-14" /> : null}
@@ -559,7 +559,7 @@ function SkillSearchTableInner({
                           <th
                             key={header.id}
                             scope="col"
-                            className="whitespace-nowrap px-3 py-3 font-medium"
+                            className="whitespace-nowrap px-[var(--hub-space-4)] py-[var(--hub-space-2)] font-medium"
                           >
                             {header.isPlaceholder
                               ? null
@@ -573,7 +573,7 @@ function SkillSearchTableInner({
                     items={categoryRows.map((row) => skillKey(row.original.id))}
                     strategy={verticalListSortingStrategy}
                   >
-                  <tbody className="divide-y divide-[var(--border)] bg-[var(--surface)]">
+                  <tbody className="divide-y divide-[var(--hub-color-border-subtle)] bg-[var(--hub-color-surface)] text-[var(--hub-color-text-sub)]">
                     {categoryRows.map((row) => (
                       <SortableSkillRow
                         key={row.id}
@@ -586,7 +586,7 @@ function SkillSearchTableInner({
                         {row.getVisibleCells().map((cell) => (
                           <td
                             key={cell.id}
-                            className="px-3 py-3 align-top text-[var(--foreground)]"
+                            className="px-[var(--hub-space-4)] py-[var(--hub-space-3)] align-top text-[var(--hub-color-text-sub)]"
                           >
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </td>
@@ -772,7 +772,7 @@ function SortableCategorySection({
         transform: CSS.Translate.toString(transform),
         transition: reducedMotion ? undefined : transition
       }}
-      className={`overflow-hidden rounded-xl border ${isDragging || isOver ? "border-[var(--primary)] shadow-md" : "border-[var(--border)]"}`}
+      className={`overflow-hidden rounded-[var(--hub-radius-xl)] border bg-[var(--hub-color-surface)] shadow-[var(--hub-shadow-sm)] ${isDragging || isOver ? "border-[var(--hub-color-primary)]" : "border-[var(--hub-color-border)]"}`}
     >
       <div className="flex min-h-11 items-center bg-[var(--surface-subtle)]">
         {canManage ? (

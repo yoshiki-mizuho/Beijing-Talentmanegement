@@ -147,7 +147,7 @@ export function Combobox({
           <button
             type="button"
             aria-label="選択を解除"
-            className="absolute right-0 top-0 grid h-10 w-11 place-items-center rounded-r-md text-[var(--muted-foreground)] hover:text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--primary)]"
+            className="absolute right-0 top-0 grid h-10 w-11 place-items-center rounded-r-[var(--hub-radius-md)] text-[var(--hub-color-text-muted)] hover:text-[var(--hub-color-text)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--hub-color-focus)]"
             onClick={() => {
               setQuery("");
               setIsOpen(false);
@@ -163,7 +163,7 @@ export function Combobox({
         <ul
           id={listboxId}
           role="listbox"
-          className="absolute left-0 top-full z-50 mt-1 max-h-64 w-full max-w-[calc(100vw-2rem)] overflow-y-auto rounded-md border border-[var(--border-strong)] bg-[var(--surface)] py-1 shadow-lg"
+          className="absolute left-0 top-full z-[var(--hub-z-dropdown)] mt-1 max-h-64 w-full max-w-[calc(100vw-2rem)] overflow-y-auto rounded-[var(--hub-radius-md)] border border-[var(--hub-color-border-strong)] bg-[var(--hub-color-surface)] py-1 shadow-[var(--hub-shadow-lg)]"
         >
           {groups.length ? (
             groups.map((group, groupIndex) => {
@@ -177,7 +177,7 @@ export function Combobox({
                   {group.name ? (
                     <div
                       id={groupId}
-                      className="px-3 py-1.5 text-xs font-semibold text-[var(--muted-foreground)]"
+                      className="px-3 py-1.5 text-xs font-semibold text-[var(--hub-color-text-muted)]"
                     >
                       {group.name}
                     </div>
@@ -198,10 +198,10 @@ export function Combobox({
                           className={cn(
                             "cursor-pointer px-3 py-2 text-sm",
                             optionIndex === activeIndex
-                              ? "bg-[var(--primary-light)] text-[var(--foreground)]"
-                              : "hover:bg-[var(--surface-subtle)]",
+                              ? "bg-[var(--hub-color-selected-bg)] text-[var(--hub-color-text)]"
+                              : "hover:bg-[var(--hub-color-surface-subtle)]",
                             option.value === value
-                              ? "font-semibold text-[var(--primary)]"
+                              ? "font-semibold text-[var(--hub-color-selected-text)]"
                               : undefined
                           )}
                           onMouseDown={(event) => {
@@ -218,7 +218,7 @@ export function Combobox({
               );
             })
           ) : (
-            <li className="px-3 py-3 text-sm text-[var(--muted-foreground)]">{emptyText}</li>
+            <li className="px-3 py-3 text-sm text-[var(--hub-color-text-muted)]">{emptyText}</li>
           )}
         </ul>
       ) : null}

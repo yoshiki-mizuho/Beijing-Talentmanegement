@@ -29,7 +29,7 @@ test("承認後のレベルアップ演出は閉じると再表示されない",
     await member.page.goto("/talent/dashboard");
     const dialog = member.page.getByRole("dialog");
     await expect(dialog).toBeVisible();
-    await expect(dialog.getByText("LEVEL UP", { exact: true })).toBeVisible();
+    await expect(dialog.getByText("レベルが上がりました", { exact: true })).toBeVisible();
     await dialog.getByRole("button", { name: "閉じる", exact: true }).click();
     await expect(dialog).toHaveCount(0);
 

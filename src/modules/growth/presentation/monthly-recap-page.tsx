@@ -36,7 +36,7 @@ export function MonthlyRecapPage({ result }: { result: Result }) {
           <MonthLink month={months[index + 1]} direction="next" />
         </nav>
       </div>
-      <section className="rounded-2xl border border-teal-200 bg-[#E6F4F1] p-5">
+      <section className="rounded-[var(--hub-radius-xl)] border border-[var(--hub-color-border)] bg-[var(--hub-color-info-bg)] p-[var(--hub-space-5)] text-[var(--hub-color-info-text)]">
         <p className="text-sm font-semibold text-[var(--primary)]">
           {Number(recap.month.slice(5))}月のあなた
         </p>
@@ -54,7 +54,7 @@ export function MonthlyRecapPage({ result }: { result: Result }) {
           {recap.history.map((item) => (
             <div key={item.month} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1">
               <span className="text-[10px]">{item.count}</span>
-              <span className={`w-full rounded-t ${item.month === recap.month ? "bg-[var(--primary)]" : item.count === 0 ? "bg-[var(--muted)]" : "bg-teal-200"}`} style={{ height: `${Math.max(4, item.count / historyMax * 80)}px` }} />
+              <span className={`w-full rounded-t ${item.month === recap.month ? "bg-[var(--hub-color-primary)]" : item.count === 0 ? "bg-[var(--hub-color-surface-muted)]" : "bg-[var(--hub-color-primary-200)]"}`} style={{ height: `${Math.max(4, item.count / historyMax * 80)}px` }} />
               <span className="text-[10px] text-[var(--muted-foreground)]">{Number(item.month.slice(5))}月</span>
             </div>
           ))}
@@ -102,7 +102,7 @@ export function MonthlyRecapPage({ result }: { result: Result }) {
           ) : null}
           <RecapCard>
             <h2 className="flex items-center gap-2 font-semibold">
-              <Award className="h-5 w-5 text-amber-600" aria-hidden="true" />
+              <Award className="h-5 w-5 text-[var(--hub-color-info-text)]" aria-hidden="true" />
               新しいバッジ
             </h2>
             {recap.badges.length ? (
@@ -139,7 +139,7 @@ export function MonthlyRecapPage({ result }: { result: Result }) {
             来月の一歩
           </h2>
           <p className="mt-2 text-sm">{recap.nextStep}</p>
-          <Link href="/talent/my/skills" className="mt-4 inline-flex h-10 items-center rounded-md bg-[var(--primary)] px-4 text-sm font-semibold text-white hover:bg-[var(--primary-hover)]">スキルシートで申請する</Link>
+          <Link href="/talent/my/skills" className="mt-4 inline-flex h-10 items-center rounded-[var(--hub-radius-lg)] bg-[var(--hub-color-primary)] px-[var(--hub-space-4)] text-[length:var(--hub-text-sm)] font-medium text-[var(--hub-color-text-on-primary)] shadow-[var(--hub-shadow-sm)] hover:bg-[var(--hub-color-primary-hover)]">スキルシートで申請する</Link>
         </section>
       ) : null}
     </div>
@@ -203,7 +203,7 @@ function Progress({ startValue, endValue }: { startValue: number; endValue: numb
       aria-valuemax={100}
     >
       <span className="block h-full bg-[var(--primary)]" style={{ width: `${startValue}%` }} />
-      <span className="block h-full bg-[#5EEAD4]" style={{ width: `${increase}%` }} />
+      <span className="block h-full bg-[var(--hub-color-primary-300)]" style={{ width: `${increase}%` }} />
     </div>
   );
 }

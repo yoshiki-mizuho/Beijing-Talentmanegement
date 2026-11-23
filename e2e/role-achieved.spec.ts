@@ -34,11 +34,11 @@ test("目標ロール達成を祝い、次の目標をあとで決めると再�
 
     await member.page.goto("/talent/dashboard");
     let dialog = member.page.getByRole("dialog");
-    await expect(dialog.getByText("LEVEL UP", { exact: true })).toBeVisible();
+    await expect(dialog.getByText("レベルが上がりました", { exact: true })).toBeVisible();
     await dialog.getByRole("button", { name: "続ける", exact: true }).click();
     dialog = member.page.getByRole("dialog");
     await expect(dialog.getByRole("heading", { name: `${role.name}になりました` })).toBeVisible();
-    await dialog.getByRole("button", { name: "次の目標ロールを決める →" }).click();
+    await dialog.getByRole("button", { name: "次の目標ロールを決める" }).click();
     await expect(dialog.getByRole("heading", { name: "次はどこを目指しますか" })).toBeVisible();
     await dialog.getByRole("button", { name: "あとで決める" }).click();
     await expect(dialog).toHaveCount(0);

@@ -409,23 +409,23 @@ function MemberSearchTableInner({
       ) : null}
       {members.length > 0 ? (
         <div
-          className="overflow-x-auto rounded-xl border border-[var(--border)]"
+          className="relative overflow-x-auto rounded-[var(--hub-radius-xl)] border border-[var(--hub-color-border)] bg-[var(--hub-color-surface)] shadow-[var(--hub-shadow-sm)]"
           tabIndex={0}
           aria-label="メンバー検索結果"
         >
-          <table className="w-full min-w-[850px] text-sm">
-            <thead className="bg-[var(--surface-subtle)] text-left text-[var(--muted-foreground)]">
+          <table className="w-full min-w-[850px] text-[length:var(--hub-text-sm)]">
+            <thead className="border-b border-[var(--hub-color-border)] bg-[var(--hub-color-surface-subtle)] text-left text-[length:var(--hub-text-xs)] font-medium tracking-[var(--hub-tracking-wide)] text-[var(--hub-color-text-muted)]">
               <tr>
-                <th className="px-4 py-3">メンバー</th>
-                <th className="px-4 py-3">得意なスキル</th>
-                <th className="px-4 py-3">目標ロール</th>
-                <th className="px-4 py-3">状態</th>
-                <th>
+                <th className="px-[var(--hub-space-4)] py-[var(--hub-space-2)] font-medium">メンバー</th>
+                <th className="px-[var(--hub-space-4)] py-[var(--hub-space-2)] font-medium">得意なスキル</th>
+                <th className="px-[var(--hub-space-4)] py-[var(--hub-space-2)] font-medium">目標ロール</th>
+                <th className="px-[var(--hub-space-4)] py-[var(--hub-space-2)] font-medium">状態</th>
+                <th className="px-[var(--hub-space-4)] py-[var(--hub-space-2)] text-right font-medium">
                   <span className="sr-only">詳細</span>
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[var(--border)]">
+            <tbody className="divide-y divide-[var(--hub-color-border-subtle)] text-[var(--hub-color-text-sub)]">
               {members.map((member) => (
                 <tr
                   key={member.id}
@@ -435,7 +435,7 @@ function MemberSearchTableInner({
                     openMemberDetail(member.id);
                   }}
                 >
-                  <td className="px-4 py-3">
+                  <td className="px-[var(--hub-space-4)] py-[var(--hub-space-3)]">
                     <div className="flex items-center gap-3">
                       <MemberAvatar
                         memberId={member.id}
@@ -447,7 +447,7 @@ function MemberSearchTableInner({
                       <div>
                         <button
                           type="button"
-                          className="font-semibold hover:underline"
+                          className="font-medium text-[var(--hub-color-text-heading)] hover:underline"
                           aria-haspopup="dialog"
                           aria-label={`${member.name}の詳細を開く`}
                           onClick={(event) => {
@@ -472,19 +472,19 @@ function MemberSearchTableInner({
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-[var(--hub-space-4)] py-[var(--hub-space-3)]">
                     <MemberSkillsCell member={member} />
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-[var(--hub-space-4)] py-[var(--hub-space-3)]">
                     <TargetRoleCell member={member} roles={roles} />
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-[var(--hub-space-4)] py-[var(--hub-space-3)]">
                     <span className="inline-flex items-center gap-2 whitespace-nowrap">
                       <span className={cn("h-2 w-2 rounded-full", statusDot(member.status))} />
                       {getMemberStatusLabel(member.status)}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-xl text-[var(--muted-foreground)]">›</td>
+                  <td className="px-[var(--hub-space-4)] py-[var(--hub-space-3)] text-right text-xl text-[var(--hub-color-text-muted)]">›</td>
                 </tr>
               ))}
             </tbody>

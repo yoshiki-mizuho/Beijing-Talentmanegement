@@ -11,7 +11,7 @@ export function buildCheerMessage(input: {
   skillName: string;
   requiredLevel: number;
 }) {
-  return `${input.memberName}さん、${input.roleName}まであと一歩ですね。${input.skillName}の Lv${input.requiredLevel} に向けて応援しています！`;
+  return `${input.memberName}さん、${input.roleName}まであと一歩ですね。${input.skillName}の Lv${input.requiredLevel} に向けて応援しています`;
 }
 
 export function selectMentorCandidates(
