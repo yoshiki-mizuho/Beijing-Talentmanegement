@@ -44,4 +44,4 @@
 ## 現在の状態
 
 - Phase0〜Phase6と、使い勝手の改善R4・R5、スキルシートと承認の改善R6、振り返りとわくわく感R7、セキュリティ強化S、リポジトリの整理C、変更に耐える設計E、顧客提案用スキルシートF、性能改善Gは完了済み。性能で守ることは `docs/PERFORMANCE.md` を確認する。Vercel のデモ環境は凍結済み（`docs/DEMO_DEPLOYMENT.md`）。
-- 今の対象は、社内サーバ（Hub シリーズの基盤）に `hub-template` の形で載せること（フェーズ H。Phase 7 を置き換える）。H-1〜H-6 は完了し、H-7（dev への配布）で基盤への登録を待っている。段と決定事項は `docs/ROADMAP.md`、構成と配布は `docs/HUB_PLATFORM.md`。E2Eは専用のデータを作って消す（`docs/LOCAL_DEVELOPMENT.md`）。セキュリティの対策と受け入れたリスクは `docs/SECURITY.md` を確認する。
+- 今の対象は、社内サーバ（Hub シリーズの基盤）に `hub-template` の形で載せること（フェーズ H。Phase 7 を置き換える）。H-1〜H-6 は完了し、H-7（dev への配布）で基盤への登録を待っている。H の後は、issue 運用の開始から本番への初回リリース、一部の部署での試しの利用までをフェーズ P で進める。段と決定事項は `docs/ROADMAP.md`、構成と配布は `docs/HUB_PLATFORM.md`。E2Eは専用のデータを作って消す（`docs/LOCAL_DEVELOPMENT.md`）。セキュリティの対策と受け入れたリスクは `docs/SECURITY.md` を確認する。
