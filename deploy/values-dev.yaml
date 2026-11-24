@@ -2,13 +2,13 @@
 
 services:
   talenthub-web:
-    tag: "1a03d719"
+    tag: "60c0cc0e"
     replicas: 1
 migrate:
-  tag: "1a03d719"
+  tag: "60c0cc0e"
 cronJobs:
   talenthub-ai-jobs:
-    tag: "1a03d719"
+    tag: "60c0cc0e"
 # アプリが使う秘密の値は、talenthub-dev namespace 向けに暗号化する。
 # DB の接続情報は基盤が用意するため、ここには書かない。
 #
