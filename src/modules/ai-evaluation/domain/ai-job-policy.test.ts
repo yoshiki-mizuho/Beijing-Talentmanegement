@@ -3,9 +3,26 @@ import { describe, expect, it } from "vitest";
 
 import { PlatformLlmError } from "@/server/platform/llm";
 
-import { batchWindowEnd, decideAiJobFailure, nextJstDay } from "./ai-job-policy";
+import {
+  batchWindowEnd,
+  decideAiJobFailure,
+  isInBatchWindow,
+  nextJstDay,
+} from "./ai-job-policy";
 
 describe("AI job retry policy", () => {
+  it.each([
+    ["平日01:59", "2026-11-22T16:59:00.000Z", false],
+    ["平日02:00", "2026-11-22T17:00:00.000Z", true],
+    ["平日03:59", "2026-11-22T18:59:00.000Z", true],
+    ["平日04:00", "2026-11-22T19:00:00.000Z", false],
+    ["土曜11:59", "2026-11-21T02:59:00.000Z", true],
+    ["土曜12:00", "2026-11-21T03:00:00.000Z", false],
+    ["日曜02:00", "2026-11-21T17:00:00.000Z", true],
+  ])("%sのbatch windowを日本時間で判定する", (_label, date, expected) => {
+    expect(isInBatchWindow(new Date(date))).toBe(expected);
+  });
+
   it("busyは10分後にする", () => {
     const now = new Date("2026-11-22T01:00:00.000Z");
     const decision = decideAiJobFailure(
