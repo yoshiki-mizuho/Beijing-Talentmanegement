@@ -5,6 +5,7 @@ import {
   AI_JOB_RUN_LIMIT,
   AI_JOB_STALE_MINUTES,
   decideAiJobFailure,
+  isInBatchWindow,
 } from "@/modules/ai-evaluation/domain/ai-job-policy";
 import * as jobs from "@/modules/ai-evaluation/infrastructure/ai-job-repository";
 import {
@@ -22,18 +23,34 @@ function increment(counts: ResultCounts, code: string) {
   counts[code] = (counts[code] ?? 0) + 1;
 }
 
-export async function runAiJobs() {
+export async function runAiJobs(now = new Date()) {
+  if (isInBatchWindow(now)) {
+    console.info("AI jobs skipped", { reason: "batch window" });
+    return { processed: 0, counts: {}, skipped: "batch window" };
+  }
+
   const tenants = await jobs.listHubTenantIds();
   const counts: ResultCounts = {};
   let processed = 0;
 
   for (const tenant of tenants) {
+    await runWithTenant(tenant.id, () => jobs.requeueStaleJobs(new Date(
+      now.getTime() - AI_JOB_STALE_MINUTES * 60_000,
+    )));
+  }
+
+  let running = 0;
+  for (const tenant of tenants) {
+    running += await runWithTenant(tenant.id, () => jobs.countRunningJobs());
+  }
+  if (running > 0) {
+    console.info("AI jobs skipped", { reason: "running" });
+    return { processed: 0, counts: {}, skipped: "running" };
+  }
+
+  for (const tenant of tenants) {
     if (processed >= AI_JOB_RUN_LIMIT) break;
     const skipTenant = await runWithTenant(tenant.id, async () => {
-      const now = new Date();
-      await jobs.requeueStaleJobs(new Date(
-        now.getTime() - AI_JOB_STALE_MINUTES * 60_000,
-      ));
       const runnable = await jobs.listRunnableJobs(
         now,
         AI_JOB_RUN_LIMIT - processed,

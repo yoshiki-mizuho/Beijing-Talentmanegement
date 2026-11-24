@@ -126,6 +126,10 @@ export function requeueStaleJobs(staleBefore: Date) {
   });
 }
 
+export function countRunningJobs() {
+  return prisma.aiJob.count({ where: { status: "RUNNING" } });
+}
+
 export function listRunnableJobs(now: Date, take: number) {
   return prisma.aiJob.findMany({
     where: { status: "QUEUED", nextRunAt: { lte: now } },

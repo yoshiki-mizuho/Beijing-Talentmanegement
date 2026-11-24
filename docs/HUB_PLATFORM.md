@@ -44,7 +44,7 @@ H-4d では、自前の社員の列（社員番号・氏名・メール・部署
 
 イメージの作成とタグの書き換えは、基盤の CI のひな形（`ci/hub/deploy.gitlab-ci.yml` の `.hub_build_image`・`.hub_update_tag`）を使う。サービスを足したら、ジョブと `TAG_KEYS` にも足す。
 
-AI の予約は `cronJobs.talenthub-ai-jobs` が 5 分ごとに `job` イメージを起動して処理する。DB は `talenthub-web` と同じものを使い、基盤の LLM 接続先は共通 chart が環境変数で入れる。
+AI の予約は `cronJobs.talenthub-ai-jobs` が 5 分ごとに `job` イメージを起動して処理する。DB は `talenthub-web` と同じものを使い、基盤の LLM 接続先は共通 chart が環境変数で入れる。LLM を呼ぶのは 1 回の実行で 1 件までとし、処理中の依頼があるときと断られる時間帯（利用ガイド §4.9）は何もせずに終える。
 
 ### CI の変数
 

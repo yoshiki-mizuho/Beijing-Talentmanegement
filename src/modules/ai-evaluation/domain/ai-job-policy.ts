@@ -3,7 +3,7 @@ import { status } from "@grpc/grpc-js";
 import { PlatformLlmError } from "@/server/platform/llm";
 
 export const AI_JOB_DAILY_LIMIT = 50;
-export const AI_JOB_RUN_LIMIT = 3;
+export const AI_JOB_RUN_LIMIT = 1;
 export const AI_JOB_MAX_ATTEMPTS = 3;
 export const AI_JOB_STALE_MINUTES = 15;
 
@@ -33,6 +33,12 @@ export function startOfJstDay(date: Date) {
 export function nextJstDay(date: Date) {
   const start = startOfJstDay(date);
   return new Date(start.getTime() + 24 * 60 * MINUTE_MS);
+}
+
+export function isInBatchWindow(date: Date) {
+  const parts = jstParts(date);
+  const endHour = parts.dayOfWeek === 6 ? 12 : 4;
+  return parts.hour >= 2 && parts.hour < endHour;
 }
 
 export function batchWindowEnd(date: Date) {

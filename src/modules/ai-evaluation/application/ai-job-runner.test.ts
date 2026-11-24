@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   listTenants: vi.fn(),
   requeueStale: vi.fn(),
+  countRunning: vi.fn(),
   listRunnable: vi.fn(),
   claim: vi.fn(),
   complete: vi.fn(),
@@ -19,6 +20,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/modules/ai-evaluation/infrastructure/ai-job-repository", () => ({
   listHubTenantIds: mocks.listTenants,
   requeueStaleJobs: mocks.requeueStale,
+  countRunningJobs: mocks.countRunning,
   listRunnableJobs: mocks.listRunnable,
   claimJob: mocks.claim,
   completeJob: mocks.complete,
@@ -50,6 +52,7 @@ describe("runAiJobs", () => {
     vi.clearAllMocks();
     mocks.listTenants.mockResolvedValue([{ id: "tenant" }]);
     mocks.requeueStale.mockResolvedValue({ count: 0 });
+    mocks.countRunning.mockResolvedValue(0);
     mocks.listRunnable.mockResolvedValue([{ id: "job" }]);
     mocks.claim.mockResolvedValue({
       id: "job",
@@ -65,7 +68,11 @@ describe("runAiJobs", () => {
   });
 
   it("1件を条件付きで取得してLLMの結果を完了として保存する", async () => {
-    const result = await runAiJobs();
+    const result = await runAiJobs(new Date("2026-11-23T00:00:00.000Z"));
+    expect(mocks.listRunnable).toHaveBeenCalledWith(
+      new Date("2026-11-23T00:00:00.000Z"),
+      1,
+    );
     expect(mocks.claim).toHaveBeenCalledWith("job", expect.any(Date));
     expect(mocks.execute).toHaveBeenCalledWith(expect.objectContaining({
       targetMemberId: "member",
@@ -85,7 +92,7 @@ describe("runAiJobs", () => {
       id: "job", kind: "PROPOSAL_SHEET", targetMemberId: "member",
       requestedByMemberId: "manager", attempts: 1, params: {},
     });
-    await runAiJobs();
+    await runAiJobs(new Date("2026-11-23T00:00:00.000Z"));
     expect(mocks.executeProposal).toHaveBeenCalledWith({ projects: [] });
     expect(mocks.complete).toHaveBeenCalledWith(expect.objectContaining({
       result: { content: {}, inputHash: "hash" },
@@ -97,7 +104,25 @@ describe("runAiJobs", () => {
       id: "job", kind: "SKILL_PREREQUISITE", targetMemberId: null,
       requestedByMemberId: "admin", attempts: 1, params: { scope: "all" },
     });
-    await runAiJobs();
+    await runAiJobs(new Date("2026-11-23T00:00:00.000Z"));
     expect(mocks.executePrerequisite).toHaveBeenCalledWith("all");
+  });
+
+  it("断られる時間帯はDBに触れずに終了する", async () => {
+    const result = await runAiJobs(new Date("2026-11-22T17:00:00.000Z"));
+    expect(mocks.listTenants).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      processed: 0,
+      counts: {},
+      skipped: "batch window",
+    });
+  });
+
+  it("処理中の依頼があれば新しいジョブを取り出さない", async () => {
+    mocks.countRunning.mockResolvedValue(1);
+    const result = await runAiJobs(new Date("2026-11-23T00:00:00.000Z"));
+    expect(mocks.claim).not.toHaveBeenCalled();
+    expect(mocks.execute).not.toHaveBeenCalled();
+    expect(result).toEqual({ processed: 0, counts: {}, skipped: "running" });
   });
 });
